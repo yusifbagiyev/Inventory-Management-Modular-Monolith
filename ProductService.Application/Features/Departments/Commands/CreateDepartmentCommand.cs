@@ -1,0 +1,37 @@
+﻿using AutoMapper;
+using MediatR;
+using ProductService.Application.DTOs;
+using ProductService.Domain.Entities;
+using ProductService.Domain.Repositories;
+
+namespace ProductService.Application.Features.Departments.Commands
+{
+    public record CreateDepartmentCommand(CreateDepartmentDto DepartmentDto) : IRequest<DepartmentDto>;
+
+    public class CreateDepartmentCommandHandler : IRequestHandler<CreateDepartmentCommand, DepartmentDto>
+    {
+        private readonly IDepartmentRepository _departmentRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+
+        public CreateDepartmentCommandHandler(
+            IDepartmentRepository departmentRepository, 
+            IUnitOfWork unitOfWork,
+            IMapper mapper)
+        {
+            _departmentRepository = departmentRepository;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+        }
+
+        public async Task<DepartmentDto> Handle(CreateDepartmentCommand request, CancellationToken cancellationToken)
+        {
+            var department = new Department(request.DepartmentDto.Name, request.DepartmentDto.Description);
+
+            await _departmentRepository.AddAsync(department, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return _mapper.Map<DepartmentDto>(department);
+        }
+    }
+}
