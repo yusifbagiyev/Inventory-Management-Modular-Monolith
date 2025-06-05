@@ -104,7 +104,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                     // Update product department
-                    await _productClient.UpdateProductInfoAfterRouting(dto.ProductId, dto.ToDepartmentId, cancellationToken);
+                    await _productClient.UpdateProductInfoAfterRouting(dto.ProductId, dto.ToDepartmentId, dto.ToWorker, cancellationToken);
 
                     // Complete route
                     route.Complete();

@@ -35,7 +35,7 @@ namespace RouteService.Domain.Entities
         {
             return new InventoryRoute
             {
-                RouteType = isNewItem ? RouteType.NewInventoryNewItem : RouteType.NewInventoryExistingItem,
+                RouteType = isNewItem ? RouteType.New : RouteType.Existing,
                 ProductSnapshot = productSnapshot,
                 FromDepartmentId=null,
                 FromDepartmentName = null,
@@ -63,7 +63,7 @@ namespace RouteService.Domain.Entities
         {
             return new InventoryRoute
             {
-                RouteType = RouteType.TransferBetweenDepartments,
+                RouteType = RouteType.Transfer,
                 ProductSnapshot = productSnapshot,
                 FromDepartmentId = fromDepartmentId,
                 FromDepartmentName = fromDepartmentName,
@@ -89,7 +89,7 @@ namespace RouteService.Domain.Entities
         {
             return new InventoryRoute
             {
-                RouteType = RouteType.RemoveFromInventory,
+                RouteType = RouteType.Removal,
                 ProductSnapshot = productSnapshot,
                 FromDepartmentId = fromDepartmentId,
                 FromDepartmentName = fromDepartmentName,

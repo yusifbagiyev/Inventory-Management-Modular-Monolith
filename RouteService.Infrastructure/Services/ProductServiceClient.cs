@@ -33,12 +33,11 @@ namespace RouteService.Infrastructure.Services
 
             return await response.Content.ReadFromJsonAsync<DepartmentDto>(cancellationToken: cancellationToken);
         }
-
-        public async Task<bool> UpdateProductInfoAfterRouting(int productId, int departmentId, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateProductInfoAfterRouting(int productId, int departmentId, string? worker, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.PatchAsync(
-                $"{_baseUrl}/api/products/{productId}/department",
-                JsonContent.Create(new { DepartmentId = departmentId }),
+                $"{_baseUrl}/api/products/{productId}/routed",
+                JsonContent.Create(new { DepartmentId = departmentId, Worker = worker }),
                 cancellationToken);
 
             return response.IsSuccessStatusCode;

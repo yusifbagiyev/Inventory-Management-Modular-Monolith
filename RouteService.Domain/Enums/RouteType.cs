@@ -2,9 +2,9 @@
 {
     public enum RouteType
     {
-        NewInventoryNewItem=1,
-        NewInventoryExistingItem=2,
-        TransferBetweenDepartments=3,
-        RemoveFromInventory=4,
+        New=1,
+        Existing=2,
+        Transfer=3,
+        Removal=4,
     }
 }

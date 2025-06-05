@@ -19,7 +19,7 @@ namespace ProductService.Infrastructure.Services
             if (!IsValidImage(fileName))
                 throw new ArgumentException("Invalid image format");
 
-            var uniqueFileName = $"{inventoryCode}-{Guid.NewGuid()}{Path.GetExtension(fileName)}";
+            var uniqueFileName = $"{inventoryCode}-{DateTime.UtcNow.Ticks}{Path.GetExtension(fileName)}";
             var filePath = Path.Combine(_imagePath, uniqueFileName);
 
             using var fileStream = new FileStream(filePath, FileMode.Create);

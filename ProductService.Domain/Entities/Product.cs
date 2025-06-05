@@ -67,6 +67,11 @@
             Worker = worker;
             UpdatedAt = DateTime.UtcNow;
         }
+        public void UpdateImage(string imageUrl)
+        {
+            ImageUrl = imageUrl;
+            UpdatedAt = DateTime.UtcNow;
+        }
         public void ChangeInventoryCode(int inventoryCode)
         {
             if (inventoryCode <= 0)
