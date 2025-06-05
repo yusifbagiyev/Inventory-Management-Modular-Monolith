@@ -13,18 +13,6 @@ namespace ProductService.Application.Mappings
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category!.Name))
                 .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department!.Name));
 
-            CreateMap<CreateProductDto, Product>()
-                .ConstructUsing(src => new Product(
-                    src.InventoryCode,
-                    src.Model,
-                    src.Vendor,
-                    src.CategoryId,
-                    src.DepartmentId,
-                    src.ImageUrl,
-                    src.Description,
-                    src.IsActive,
-                    src.IsWorking));
-
             // Category mappings
             CreateMap<Category, CategoryDto>();
             CreateMap<CreateCategoryDto, Category>()

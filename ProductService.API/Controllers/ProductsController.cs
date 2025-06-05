@@ -34,23 +34,25 @@ namespace ProductService.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ProductDto>> Create(CreateProductDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ProductDto>> Create([FromForm] CreateProductDto dto)
         {
-            var product = await _mediator.Send(new CreateProductCommand(dto));
+            var product = await _mediator.Send(new CreateProduct.Command(dto));
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
 
         [HttpPut("{id}")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(int id, UpdateProductDto dto)
         {
-            await _mediator.Send(new UpdateProductCommand(id, dto));
+            await _mediator.Send(new UpdateProduct.Command(id, dto));
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _mediator.Send(new DeleteProductCommand(id));
+            await _mediator.Send(new DeleteProduct.Command(id));
             return NoContent();
         }
     }

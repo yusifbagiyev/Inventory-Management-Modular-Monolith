@@ -36,21 +36,21 @@ namespace ProductService.API.Controllers
         [HttpPost]
         public async Task<ActionResult<DepartmentDto>> Create(CreateDepartmentDto dto)
         {
-            var department = await _mediator.Send(new CreateDepartmentCommand(dto));
+            var department = await _mediator.Send(new CreateDepartment.Command(dto));
             return CreatedAtAction(nameof(GetById), new { id = department.Id }, department);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateDepartmentDto dto)
         {
-            await _mediator.Send(new UpdateDepartmentCommand(id, dto));
+            await _mediator.Send(new UpdateDepartment.Command(id, dto));
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _mediator.Send(new DeleteDepartmentCommand(id));
+            await _mediator.Send(new DeleteDepartment.Command(id));
             return NoContent();
         }
     }

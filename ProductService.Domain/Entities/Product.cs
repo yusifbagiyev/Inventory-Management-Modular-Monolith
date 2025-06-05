@@ -6,8 +6,8 @@
         public int InventoryCode { get; private set; }
         public string Model { get; private set; } = string.Empty;
         public string Vendor { get; private set; } = string.Empty;
-        public string ImageUrl { get; private set; } = string.Empty;
-        public string Description { get; private set; } = string.Empty;
+        public string? ImageUrl { get; private set; } = string.Empty;
+        public string? Description { get; private set; } = string.Empty;
         public bool IsWorking { get; private set; } = true;
         public bool IsActive { get; private set; } = true;
         public int CategoryId { get; private set; }
@@ -20,7 +20,7 @@
         // For EF Core
         protected Product() { }
 
-        public Product(int inventoryCode, string model, string vendor, int categoryId, int departmentId, string imageUrl, string description, bool isActive, bool isWorking)
+        public Product(int inventoryCode, string model, string vendor, int categoryId, int departmentId, string? imageUrl, string? description, bool isActive, bool isWorking)
         {
             if (inventoryCode <= 0)
                 throw new ArgumentException("Inventory Code must be greater than zero", nameof(inventoryCode));
@@ -41,7 +41,7 @@
             CreatedAt = DateTime.UtcNow;
         }
 
-        public void Update(string model, string vendor, int categoryId, int departmentId, string imageUrl, string description)
+        public void Update(string model, string vendor, int categoryId, int departmentId, string? imageUrl, string? description)
         {
             if(categoryId <= 0)
                 throw new ArgumentException("Category ID must be greater than zero", nameof(categoryId));

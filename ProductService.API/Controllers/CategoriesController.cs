@@ -36,21 +36,21 @@ namespace ProductService.API.Controllers
         [HttpPost]
         public async Task<ActionResult<CategoryDto>> Create(CreateCategoryDto dto)
         {
-            var category = await _mediator.Send(new CreateCategoryCommand(dto));
+            var category = await _mediator.Send(new CreateCategory.Command(dto));
             return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
         {
-            await _mediator.Send(new UpdateCategoryCommand(id, dto));
+            await _mediator.Send(new UpdateCategory.Command(id, dto));
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _mediator.Send(new DeleteCategoryCommand(id));
+            await _mediator.Send(new DeleteCategory.Command(id));
             return NoContent();
         }
     }

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36119.2 d17.14
+VisualStudioVersion = 17.14.36119.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -18,6 +18,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Application", "ProductService.Application\ProductService.Application.csproj", "{97394323-FBE2-491D-8AC1-11D9DFD578C8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductService.Infrastructure", "ProductService.Infrastructure\ProductService.Infrastructure.csproj", "{A1808339-89C7-45B6-AFEE-9AD235EF0FEF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteService.API", "RouteService.API\RouteService.API.csproj", "{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteService.Domain", "RouteService.Domain\RouteService.Domain.csproj", "{66E684E0-DE0F-46D0-8B92-01E5E2E56502}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteService.Application", "RouteService.Application\RouteService.Application.csproj", "{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteService.Infrastructure", "RouteService.Infrastructure\RouteService.Infrastructure.csproj", "{31397AA6-F272-40FB-A450-202AB812C604}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +49,22 @@ Global
 		{A1808339-89C7-45B6-AFEE-9AD235EF0FEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1808339-89C7-45B6-AFEE-9AD235EF0FEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1808339-89C7-45B6-AFEE-9AD235EF0FEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66E684E0-DE0F-46D0-8B92-01E5E2E56502}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66E684E0-DE0F-46D0-8B92-01E5E2E56502}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66E684E0-DE0F-46D0-8B92-01E5E2E56502}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66E684E0-DE0F-46D0-8B92-01E5E2E56502}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31397AA6-F272-40FB-A450-202AB812C604}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31397AA6-F272-40FB-A450-202AB812C604}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31397AA6-F272-40FB-A450-202AB812C604}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31397AA6-F272-40FB-A450-202AB812C604}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,6 +76,10 @@ Global
 		{696E058B-F189-4688-BFE1-7D027E0968FD} = {55A9664E-70F8-411D-ADD9-78F895F29752}
 		{97394323-FBE2-491D-8AC1-11D9DFD578C8} = {55A9664E-70F8-411D-ADD9-78F895F29752}
 		{A1808339-89C7-45B6-AFEE-9AD235EF0FEF} = {55A9664E-70F8-411D-ADD9-78F895F29752}
+		{F40A3EEF-6ED4-4FF1-96E5-0E968C9B521A} = {882B7447-D306-4805-962F-3137267408B8}
+		{66E684E0-DE0F-46D0-8B92-01E5E2E56502} = {882B7447-D306-4805-962F-3137267408B8}
+		{28C36FB3-9B02-4E1F-BAA0-1AF73EA50361} = {882B7447-D306-4805-962F-3137267408B8}
+		{31397AA6-F272-40FB-A450-202AB812C604} = {882B7447-D306-4805-962F-3137267408B8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {84FE07F4-99FE-4567-A335-75A1939DE03C}
