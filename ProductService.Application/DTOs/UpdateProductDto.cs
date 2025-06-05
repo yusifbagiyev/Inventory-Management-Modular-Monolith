@@ -6,6 +6,7 @@ namespace ProductService.Application.DTOs
     {
         public string Model { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
+        public string Worker { get; set; } = string.Empty;
         public IFormFile? ImageFile { get; set; }
         public string Description { get; set; } = string.Empty;
         public int CategoryId { get; set; }

@@ -1,0 +1,33 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using RouteService.Application.Interfaces;
+using RouteService.Domain.Repositories;
+using RouteService.Infrastructure.Data;
+using RouteService.Infrastructure.Repositories;
+using RouteService.Infrastructure.Services;
+
+namespace RouteService.Infrastructure
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+        {
+            // Database
+            services.AddDbContext<RouteDbContext>(options =>
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
+                b => b.MigrationsAssembly(typeof(RouteDbContext).Assembly.FullName)));
+
+            // Repositories
+            services.AddScoped<IInventoryRouteRepository, InventoryRouteRepository>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            // Services
+            services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
+            services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
+            services.AddScoped<IImageService, ImageService>();
+
+            return services;
+        }
+    }
+}

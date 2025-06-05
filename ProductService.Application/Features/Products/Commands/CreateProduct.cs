@@ -82,6 +82,7 @@ namespace ProductService.Application.Features.Products.Commands
                         dto.Vendor,
                         dto.CategoryId,
                         dto.DepartmentId,
+                        dto.Worker,
                         imageUrl,
                         dto.Description,
                         dto.IsActive,

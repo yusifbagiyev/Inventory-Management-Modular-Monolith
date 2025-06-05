@@ -8,6 +8,7 @@ namespace ProductService.Application.DTOs
         public string Model { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
         public IFormFile? ImageFile { get; set; }  // New property
+        public string? Worker { get; set; } = string.Empty;
         public string? Description { get; set; } = string.Empty;
         public bool IsWorking { get; set; } = true;
         public bool IsActive { get; set; } = true;

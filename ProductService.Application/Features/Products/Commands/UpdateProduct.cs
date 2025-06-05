@@ -79,9 +79,10 @@ namespace ProductService.Application.Features.Products.Commands
                         // Update product with new image URL or keep the old one
                         product.Update(
                             dto.Model,
-                            dto.Vendor, 
+                            dto.Vendor,
                             dto.CategoryId,
-                            dto.DepartmentId, 
+                            dto.DepartmentId,
+                            dto.Worker,
                             shouldUpdateImage ? newImageUrl : oldImageUrl,
                             dto.Description);
 

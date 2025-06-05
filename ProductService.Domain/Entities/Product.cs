@@ -6,6 +6,7 @@
         public int InventoryCode { get; private set; }
         public string Model { get; private set; } = string.Empty;
         public string Vendor { get; private set; } = string.Empty;
+        public string? Worker { get; private set; } = string.Empty;
         public string? ImageUrl { get; private set; } = string.Empty;
         public string? Description { get; private set; } = string.Empty;
         public bool IsWorking { get; private set; } = true;
@@ -20,7 +21,7 @@
         // For EF Core
         protected Product() { }
 
-        public Product(int inventoryCode, string model, string vendor, int categoryId, int departmentId, string? imageUrl, string? description, bool isActive, bool isWorking)
+        public Product(int inventoryCode, string model, string vendor, int categoryId, int departmentId, string? worker, string? imageUrl, string? description, bool isActive, bool isWorking)
         {
             if (inventoryCode <= 0)
                 throw new ArgumentException("Inventory Code must be greater than zero", nameof(inventoryCode));
@@ -36,12 +37,13 @@
             Vendor = vendor ?? "No Name";
             ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
+            Worker = Worker;
             IsActive = isActive;
             IsWorking = isWorking;
             CreatedAt = DateTime.UtcNow;
         }
 
-        public void Update(string model, string vendor, int categoryId, int departmentId, string? imageUrl, string? description)
+        public void Update(string model, string vendor, int categoryId, int departmentId,string? worker, string? imageUrl, string? description)
         {
             if(categoryId <= 0)
                 throw new ArgumentException("Category ID must be greater than zero", nameof(categoryId));
@@ -50,10 +52,19 @@
 
             Model = model ?? "No Name";
             Vendor = vendor ?? "No Name";
+            Worker = worker;
             CategoryId = categoryId;
             DepartmentId = departmentId;
             ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
+            UpdatedAt = DateTime.UtcNow;
+        }
+        public void UpdateAfterRouting(int departmentId, string? worker)
+        {
+            if (departmentId <= 0)
+                throw new ArgumentException("Department ID must be greater than zero", nameof(departmentId));
+            DepartmentId = departmentId;
+            Worker = worker;
             UpdatedAt = DateTime.UtcNow;
         }
         public void ChangeInventoryCode(int inventoryCode)
@@ -65,15 +76,9 @@
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public void Activate()
+        public void SetActiveStatus(bool isActive)
         {
-            IsActive = true;
-            UpdatedAt = DateTime.UtcNow;
-        }
-
-        public void Deactivate()
-        {
-            IsActive = false;
+            IsActive = isActive;
             UpdatedAt = DateTime.UtcNow;
         }
         public void SetWorkingStatus()
