@@ -110,17 +110,14 @@ namespace RouteService.Application.Features.Routes.Commands
                     route.Complete();
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Publish image update event if image was added
-                    if (!string.IsNullOrEmpty(imageUrl))
+                    // After creating the route, update product image in ProductService
+                    if (dto.ImageFile != null && dto.ImageFile.Length > 0)
                     {
-                        await _messagePublisher.PublishAsync(
-                            new ProductImageUpdatedEvent
-                            {
-                                ProductId = dto.ProductId,
-                                NewImageUrl = imageUrl,
-                                UpdatedAt = DateTime.UtcNow
-                            },
-                            "product.image.updated",
+                        using var stream = dto.ImageFile.OpenReadStream();
+                        await _productClient.UpdateProductImageAsync(
+                            dto.ProductId,
+                            stream,
+                            dto.ImageFile.FileName,
                             cancellationToken);
                     }
 

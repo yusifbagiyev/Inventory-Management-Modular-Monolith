@@ -3,7 +3,6 @@ using FluentValidation;
 using MediatR;
 using RouteService.Application.DTOs;
 using RouteService.Application.DTOs.Commands;
-using RouteService.Application.Events;
 using RouteService.Application.Interfaces;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Exceptions;
@@ -31,7 +30,6 @@ namespace RouteService.Application.Features.Routes.Commands
             private readonly IInventoryRouteRepository _repository;
             private readonly IProductServiceClient _productClient;
             private readonly IImageService _imageService;
-            private readonly IMessagePublisher _messagePublisher;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
 
@@ -39,14 +37,12 @@ namespace RouteService.Application.Features.Routes.Commands
                 IInventoryRouteRepository repository,
                 IProductServiceClient productClient,
                 IImageService imageService,
-                IMessagePublisher messagePublisher,
                 IUnitOfWork unitOfWork,
                 IMapper mapper)
             {
                 _repository = repository;
                 _productClient = productClient;
                 _imageService = imageService;
-                _messagePublisher = messagePublisher;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
             }
@@ -104,17 +100,14 @@ namespace RouteService.Application.Features.Routes.Commands
                     route.Complete();
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Publish image update event if image was added
-                    if (!string.IsNullOrEmpty(imageUrl))
+                    // After creating the route, update product image in ProductService
+                    if (dto.ImageFile != null && dto.ImageFile.Length > 0)
                     {
-                        await _messagePublisher.PublishAsync(
-                            new ProductImageUpdatedEvent
-                            {
-                                ProductId = dto.ProductId,
-                                NewImageUrl = imageUrl,
-                                UpdatedAt = DateTime.UtcNow
-                            },
-                            "product.image.updated",
+                        using var stream = dto.ImageFile.OpenReadStream();
+                        await _productClient.UpdateProductImageAsync(
+                            dto.ProductId,
+                            stream,
+                            dto.ImageFile.FileName,
                             cancellationToken);
                     }
 

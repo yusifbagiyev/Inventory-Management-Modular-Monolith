@@ -23,6 +23,8 @@ namespace RouteService.Infrastructure.Data
                     snapshot.Property(s => s.Vendor).HasColumnName("Vendor").HasMaxLength(100);
                     snapshot.Property(s => s.CategoryName).HasColumnName("CategoryName").HasMaxLength(100);
                     snapshot.Property(s => s.IsWorking).HasColumnName("IsWorking");
+                    // Add index inside the owned entity configuration
+                    snapshot.HasIndex(s => s.ProductId).HasDatabaseName("IX_InventoryRoutes_ProductId");
                 });
 
                 entity.Property(e => e.RouteType).HasConversion<string>();
@@ -32,7 +34,6 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.ToWorker).HasMaxLength(100);
                 entity.Property(e => e.Notes).HasMaxLength(500);
 
-                entity.HasIndex(e => e.ProductSnapshot.ProductId).HasDatabaseName("IX_InventoryRoutes_ProductId");
                 entity.HasIndex(e => e.FromDepartmentId).HasDatabaseName("IX_InventoryRoutes_FromDepartmentId");
                 entity.HasIndex(e => e.ToDepartmentId).HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
                 entity.HasIndex(e => e.CreatedAt);

@@ -69,5 +69,14 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new UpdateProductStatus.Command(id, request.IsActive));
             return NoContent();
         }
+
+
+        [HttpPatch("{id}/image")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateImage(int id, IFormFile imageFile)
+        {
+            await _mediator.Send(new UpdateProductImage.Command(id, imageFile));
+            return NoContent();
+        }
     }
 }

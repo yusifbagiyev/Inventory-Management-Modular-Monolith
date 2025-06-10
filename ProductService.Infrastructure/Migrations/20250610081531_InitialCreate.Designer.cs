@@ -12,7 +12,7 @@ using ProductService.Infrastructure.Data;
 namespace ProductService.Infrastructure.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    [Migration("20250603124739_InitialCreate")]
+    [Migration("20250610081531_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -105,11 +105,9 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("InventoryCode")
@@ -133,6 +131,9 @@ namespace ProductService.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Worker")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
