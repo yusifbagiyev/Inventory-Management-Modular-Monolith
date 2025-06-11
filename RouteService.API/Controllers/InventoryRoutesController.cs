@@ -16,15 +16,6 @@ namespace RouteService.API.Controllers
         {
             _mediator = mediator;
         }
-        [HttpPost("new-inventory")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<InventoryRouteDto>> AddNewInventory([FromForm] AddNewInventoryDto dto)
-        {
-            var result = await _mediator.Send(new AddNewInventory.Command(dto));
-            return Ok(result);
-        }
-
-
         [HttpPost("transfer")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<InventoryRouteDto>> TransferInventory([FromForm] TransferInventoryDto dto)
@@ -43,7 +34,7 @@ namespace RouteService.API.Controllers
         }
 
 
-        [HttpGet("product/{roductId}")]
+        [HttpGet("product/{productId}")]
         public async Task<ActionResult<IEnumerable<InventoryRouteDto>>> GetInventoryByProductId(int productId)
         {
             var result = await _mediator.Send(new GetRoutesByProductQuery(productId));

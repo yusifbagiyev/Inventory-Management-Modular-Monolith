@@ -29,10 +29,6 @@ namespace ProductService.Infrastructure
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<ITransactionService, TransactionService>();
 
-            // Add RabbitMQ consumer
-            services.AddSingleton<RabbitMQConsumer>();
-            services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
-
             return services;
         }
     }

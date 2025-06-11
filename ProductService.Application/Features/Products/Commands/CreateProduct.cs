@@ -90,7 +90,8 @@ namespace ProductService.Application.Features.Products.Commands
                         imageUrl,
                         dto.Description,
                         dto.IsActive,
-                        dto.IsWorking);
+                        dto.IsWorking,
+                        dto.IsNewItem);
 
                     await _productRepository.AddAsync(newProduct, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -99,18 +100,28 @@ namespace ProductService.Application.Features.Products.Commands
 
                     var productCreatedEvent = new ProductCreatedEvent
                     {
-                        ProductId= createdProduct!.Id,
+                        ProductId = createdProduct!.Id,
                         InventoryCode = createdProduct.InventoryCode,
                         Model = createdProduct.Model,
                         Vendor = createdProduct.Vendor,
-                        CategoryName=createdProduct.Category!.Name,
+                        CategoryName = createdProduct.Category!.Name,
                         DepartmentId = createdProduct.DepartmentId,
                         DepartmentName = createdProduct.Department!.Name,
                         Worker = createdProduct.Worker ?? string.Empty,
                         IsWorking = createdProduct.IsWorking,
                         ImageUrl = createdProduct.ImageUrl,
-                        CreatedAt = createdProduct.CreatedAt
+                        CreatedAt = createdProduct.CreatedAt,
+                        IsNewItem = createdProduct.IsNewItem
                     };
+
+                    // Add image data if available
+                    if(dto.ImageFile != null && dto.ImageFile.Length > 0)
+                    {
+                        using var ms= new MemoryStream();
+                        await dto.ImageFile.CopyToAsync(ms);
+                        productCreatedEvent.ImageData =ms.ToArray();
+                        productCreatedEvent.ImageFileName = dto.ImageFile.FileName;
+                    }
 
                     await _messagePublisher.PublishAsync(productCreatedEvent, "product.created", cancellationToken);
 

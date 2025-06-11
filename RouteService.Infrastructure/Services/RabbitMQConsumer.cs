@@ -7,9 +7,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using RouteService.Application.DTOs.Commands;
 using RouteService.Application.Events;
-using RouteService.Application.Features.Routes.Commands;
+using RouteService.Application.Interfaces;
+using RouteService.Domain.Entities;
+using RouteService.Domain.Repositories;
+using RouteService.Domain.ValueObjects;
 
 namespace RouteService.Infrastructure.Services
 {
@@ -82,18 +84,42 @@ namespace RouteService.Infrastructure.Services
         {
             using var scope = _serviceProvider.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var imageService = scope.ServiceProvider.GetRequiredService<IImageService>();
+            var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
+            string? imageUrl = null;
 
-            var dto = new AddNewInventoryDto
+            // Upload image if data is provided
+            if(productCreatedEvent.ImageData!=null&& productCreatedEvent.ImageData.Length > 0)
             {
-                ProductId = productCreatedEvent.ProductId,
-                ToDepartmentId = productCreatedEvent.DepartmentId,
-                ToWorker = productCreatedEvent.Worker ?? string.Empty,
-                IsNewItem = true,
-                Notes = $"Auto-created from new product: {productCreatedEvent.Model}"
-            };
+                using var stream= new MemoryStream(productCreatedEvent.ImageData);
+                imageUrl=await imageService.UploadImageAsync(
+                    stream,
+                    productCreatedEvent.ImageFileName ?? $"image-{DateTime.Now}.jpg", 
+                    productCreatedEvent.InventoryCode);
+            }
+            var productSnapshot = new ProductSnapshot(
+                productCreatedEvent.ProductId,
+                productCreatedEvent.InventoryCode,
+                productCreatedEvent.Model,
+                productCreatedEvent.Vendor,
+                productCreatedEvent.CategoryName,
+                productCreatedEvent.IsWorking);
 
-            await mediator.Send(new AddNewInventory.Command(dto));
+            var route = InventoryRoute.CreateNewInventory(
+                productSnapshot,
+                productCreatedEvent.DepartmentId,
+                productCreatedEvent.DepartmentName,
+                productCreatedEvent.Worker,
+                productCreatedEvent.IsNewItem,
+                imageUrl,
+                $"Auto-created from product service");
+            
+            await repository.AddAsync(route);
+            route.Complete();
+            await unitOfWork.SaveChangesAsync();
+
             _logger.LogInformation($"Created inventory route for new product {productCreatedEvent.ProductId}");
         }
 

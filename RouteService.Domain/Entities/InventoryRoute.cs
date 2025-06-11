@@ -28,7 +28,7 @@ namespace RouteService.Domain.Entities
             ProductSnapshot productSnapshot,
             int toDepartmentId,
             string toDepartmentName,
-            string toWorker,
+            string? toWorker,
             bool isNewItem,
             string? imageUrl = null,
             string? notes = null)
@@ -56,8 +56,8 @@ namespace RouteService.Domain.Entities
             string fromDepartmentName,
             int toDepartmentId,
             string toDepartmentName,
-            string fromWorker,
-            string toWorker,
+            string? fromWorker,
+            string? toWorker,
             string? imageUrl = null,
             string? notes = null)
         {

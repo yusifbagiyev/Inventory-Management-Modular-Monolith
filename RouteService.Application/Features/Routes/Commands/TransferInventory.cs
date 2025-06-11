@@ -22,7 +22,6 @@ namespace RouteService.Application.Features.Routes.Commands
             {
                 RuleFor(x => x.Dto.ProductId).GreaterThan(0);
                 RuleFor(x => x.Dto.ToDepartmentId).GreaterThan(0);
-                RuleFor(x => x.Dto.FromWorker).NotEmpty().MaximumLength(100);
                 RuleFor(x => x.Dto.ToWorker).NotEmpty().MaximumLength(100);
             }
         }
@@ -95,7 +94,6 @@ namespace RouteService.Application.Features.Routes.Commands
                         fromDepartment.Name,
                         dto.ToDepartmentId,
                         toDepartment.Name,
-                        dto.FromWorker,
                         dto.ToWorker,
                         imageUrl,
                         dto.Notes);

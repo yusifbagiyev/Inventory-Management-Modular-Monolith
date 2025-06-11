@@ -12,6 +12,7 @@ namespace ProductService.Application.DTOs
         public string? Description { get; set; } = string.Empty;
         public bool IsWorking { get; set; } = true;
         public bool IsActive { get; set; } = true;
+        public bool IsNewItem { get; set; } = true;
         public int CategoryId { get; set; }
         public int DepartmentId { get; set; }
     }
