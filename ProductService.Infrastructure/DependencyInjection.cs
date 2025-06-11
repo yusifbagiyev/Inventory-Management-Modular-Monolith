@@ -25,6 +25,7 @@ namespace ProductService.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             //Services
+            services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<ITransactionService, TransactionService>();
 

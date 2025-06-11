@@ -2,6 +2,7 @@
 using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Application.Events;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
@@ -35,6 +36,7 @@ namespace ProductService.Application.Features.Products.Commands
             private readonly IMapper _mapper;
             private readonly IImageService _imageService;
             private readonly ITransactionService _transactionService;
+            private readonly IMessagePublisher _messagePublisher;
 
             public CreateProductCommandHandler(
                 IProductRepository productRepository,
@@ -43,7 +45,8 @@ namespace ProductService.Application.Features.Products.Commands
                 IUnitOfWork unitOfWork,
                 IMapper mapper,
                 IImageService ımageService,
-                ITransactionService transactionService)
+                ITransactionService transactionService,
+                IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
                 _categoryRepository = categoryRepository;
@@ -52,6 +55,7 @@ namespace ProductService.Application.Features.Products.Commands
                 _mapper = mapper;
                 _imageService = ımageService;
                 _transactionService = transactionService;
+                _messagePublisher = messagePublisher;
             }
 
             public async Task<ProductDto> Handle(Command request, CancellationToken cancellationToken)
@@ -92,6 +96,23 @@ namespace ProductService.Application.Features.Products.Commands
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                     var createdProduct = await _productRepository.GetByIdAsync(newProduct.Id, cancellationToken);
+
+                    var productCreatedEvent = new ProductCreatedEvent
+                    {
+                        ProductId= createdProduct!.Id,
+                        InventoryCode = createdProduct.InventoryCode,
+                        Model = createdProduct.Model,
+                        Vendor = createdProduct.Vendor,
+                        CategoryName=createdProduct.Category!.Name,
+                        DepartmentId = createdProduct.DepartmentId,
+                        DepartmentName = createdProduct.Department!.Name,
+                        Worker = createdProduct.Worker ?? string.Empty,
+                        IsWorking = createdProduct.IsWorking,
+                        ImageUrl = createdProduct.ImageUrl,
+                        CreatedAt = createdProduct.CreatedAt
+                    };
+
+                    await _messagePublisher.PublishAsync(productCreatedEvent, "product.created", cancellationToken);
 
                     return _mapper.Map<ProductDto>(createdProduct);
                 },

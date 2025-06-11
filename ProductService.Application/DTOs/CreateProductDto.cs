@@ -5,8 +5,8 @@ namespace ProductService.Application.DTOs
     public record CreateProductDto
     {
         public int InventoryCode { get; set; }
-        public string Model { get; set; } = string.Empty;
-        public string Vendor { get; set; } = string.Empty;
+        public string? Model { get; set; } = string.Empty;
+        public string? Vendor { get; set; } = string.Empty;
         public IFormFile? ImageFile { get; set; }  // New property
         public string? Worker { get; set; } = string.Empty;
         public string? Description { get; set; } = string.Empty;

@@ -23,6 +23,8 @@ namespace RouteService.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // Services
+            services.AddSingleton<RabbitMQConsumer>();
+            services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
             services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
             services.AddScoped<IImageService, ImageService>();
