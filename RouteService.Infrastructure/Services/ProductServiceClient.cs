@@ -50,19 +50,5 @@ namespace RouteService.Infrastructure.Services
 
             return response.IsSuccessStatusCode;
         }
-        public async Task<bool> UpdateProductImageAsync(int productId, Stream imageStream, string fileName, CancellationToken cancellationToken = default)
-        {
-            using var content = new MultipartFormDataContent();
-            using var streamContent = new StreamContent(imageStream);
-            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
-            content.Add(streamContent, "imageFile", fileName);
-
-            var response = await _httpClient.PatchAsync(
-                $"{_baseUrl}/api/products/{productId}/image",
-                content,
-                cancellationToken);
-
-            return response.IsSuccessStatusCode;
-        }
     }
 }

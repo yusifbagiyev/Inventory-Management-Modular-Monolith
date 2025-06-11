@@ -22,7 +22,6 @@ namespace RouteService.Application.Features.Routes.Commands
             {
                 RuleFor(x => x.Dto.ProductId).GreaterThan(0);
                 RuleFor(x => x.Dto.ToDepartmentId).GreaterThan(0);
-                RuleFor(x => x.Dto.ToWorker).NotEmpty().MaximumLength(100);
             }
         }
 
@@ -94,6 +93,7 @@ namespace RouteService.Application.Features.Routes.Commands
                         fromDepartment.Name,
                         dto.ToDepartmentId,
                         toDepartment.Name,
+                        product.Worker,
                         dto.ToWorker,
                         imageUrl,
                         dto.Notes);
@@ -111,12 +111,17 @@ namespace RouteService.Application.Features.Routes.Commands
                     // After creating the route, update product image in ProductService
                     if (dto.ImageFile != null && dto.ImageFile.Length > 0)
                     {
-                        using var stream = dto.ImageFile.OpenReadStream();
-                        await _productClient.UpdateProductImageAsync(
-                            dto.ProductId,
-                            stream,
-                            dto.ImageFile.FileName,
-                            cancellationToken);
+                        using var ms=new MemoryStream();
+                        await dto.ImageFile.CopyToAsync(ms, cancellationToken);
+
+                        var imageEvent = new ProductImageUpdatedEvent
+                        {
+                            ProductId = dto.ProductId,
+                            ImageData = ms.ToArray(),
+                            ImageFileName = dto.ImageFile.FileName,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _messagePublisher.PublishAsync(imageEvent, "product.image.updated", cancellationToken);
                     }
 
                     await _unitOfWork.CommitTransactionAsync(cancellationToken);

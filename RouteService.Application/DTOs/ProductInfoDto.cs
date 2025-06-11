@@ -10,6 +10,7 @@
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public bool IsWorking { get; set; }
+        public string? Worker { get; set; }
         public string? ImageUrl { get; set; }
     }
 }

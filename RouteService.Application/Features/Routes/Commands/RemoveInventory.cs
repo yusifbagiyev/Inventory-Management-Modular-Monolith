@@ -99,17 +99,6 @@ namespace RouteService.Application.Features.Routes.Commands
                     route.Complete();
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // After creating the route, update product image in ProductService
-                    if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-                    {
-                        using var stream = dto.ImageFile.OpenReadStream();
-                        await _productClient.UpdateProductImageAsync(
-                            dto.ProductId,
-                            stream,
-                            dto.ImageFile.FileName,
-                            cancellationToken);
-                    }
-
                     await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                     return _mapper.Map<InventoryRouteDto>(route);

@@ -8,6 +8,5 @@ namespace RouteService.Application.Interfaces
         Task<DepartmentDto?> GetDepartmentByIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<bool> UpdateProductStatusAsync(int productId, bool isActive, CancellationToken cancellationToken = default);
         Task<bool> UpdateProductInfoAfterRouting(int productId, int departmentId, string? worker, CancellationToken cancellationToken = default);
-        Task<bool> UpdateProductImageAsync(int productId, Stream imageStream, string fileName, CancellationToken cancellationToken = default);
     }
 }
