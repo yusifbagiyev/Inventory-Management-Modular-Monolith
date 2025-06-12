@@ -53,7 +53,7 @@ namespace RouteService.Infrastructure.Repositories
 
         public Task UpdateAsync(InventoryRoute route, CancellationToken cancellationToken = default)
         {
-            _context.InventoryRoutes.Update(route);
+            _context.Entry(route).State = EntityState.Modified;
             return Task.CompletedTask;
         }
 

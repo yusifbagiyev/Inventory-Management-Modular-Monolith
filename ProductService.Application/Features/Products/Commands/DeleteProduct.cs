@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using ProductService.Application.Events;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
@@ -13,15 +14,18 @@ namespace ProductService.Application.Features.Products.Commands
             private readonly IProductRepository _productRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IImageService _imageService;
+            private readonly IMessagePublisher _messagePublisher;
 
             public DeleteProductCommandHandler(
                 IProductRepository productRepository,
                 IUnitOfWork unitOfWork,
-                IImageService ımageService)
+                IImageService ımageService,
+                IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
                 _imageService = ımageService;
+                _messagePublisher = messagePublisher;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
@@ -29,11 +33,21 @@ namespace ProductService.Application.Features.Products.Commands
                 var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Product with ID {request.Id} not found");
 
-                //Delete image if exists
-                if(!string.IsNullOrEmpty(product.ImageUrl))
+                var deletedEvent = new ProductDeletedEvent
                 {
-                    await _imageService.DeleteImageAsync(product.ImageUrl);
-                }
+                    ProductId = product.Id,
+                    InventoryCode = product.InventoryCode,
+                    Model = product.Model,
+                    Vendor = product.Vendor,
+                    Worker = product.Worker,
+                    CategoryName = product.Category?.Name ?? "No Name",
+                    DepartmentId = product.DepartmentId,
+                    IsWorking= product.IsWorking,
+                    DeletedAt = DateTime.UtcNow
+                };
+                await _messagePublisher.PublishAsync(deletedEvent, "product.deleted", cancellationToken);
+
+                await _imageService.DeleteInventoryFolderAsync(product.InventoryCode);
 
                 await _productRepository.DeleteAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

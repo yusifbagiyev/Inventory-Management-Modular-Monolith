@@ -2,7 +2,6 @@
 using FluentValidation;
 using MediatR;
 using RouteService.Application.DTOs;
-using RouteService.Application.DTOs.Commands;
 using RouteService.Application.Events;
 using RouteService.Application.Interfaces;
 using RouteService.Domain.Entities;
@@ -66,15 +65,20 @@ namespace RouteService.Application.Features.Routes.Commands
                     ?? throw new RouteException($"Department {dto.ToDepartmentId} not found");
 
                 string? imageUrl = null;
+                byte[]? imageData = null;
 
                 await _unitOfWork.BeginTransactionAsync(cancellationToken);
                 try
                 {
-                    // Upload image if provided
+                    // Prepare image data
                     if (dto.ImageFile != null && dto.ImageFile.Length > 0)
                     {
-                        using var stream = dto.ImageFile.OpenReadStream();
-                        imageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
+                        using var ms = new MemoryStream();
+                        await dto.ImageFile.CopyToAsync(ms, cancellationToken);
+                        imageData = ms.ToArray();
+
+                        ms.Position = 0;
+                        imageUrl = await _imageService.UploadImageAsync(ms, dto.ImageFile.FileName, product.InventoryCode);
                     }
 
                     // Create product snapshot
@@ -101,29 +105,21 @@ namespace RouteService.Application.Features.Routes.Commands
                     await _repository.AddAsync(route, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    // Update product department
-                    await _productClient.UpdateProductInfoAfterRouting(dto.ProductId, dto.ToDepartmentId, dto.ToWorker, cancellationToken);
+                    var transferEvent = new ProductTransferredEvent
+                    {
+                        ProductId = dto.ProductId,
+                        ToDepartmentId = dto.ToDepartmentId,
+                        ToWorker = dto.ToWorker,
+                        ImageData = imageData,
+                        ImageFileName = dto.ImageFile?.FileName,
+                        TransferredAt = DateTime.UtcNow
+                    };
+
+                    await _messagePublisher.PublishAsync(transferEvent, "product.transferred", cancellationToken);
 
                     // Complete route
                     route.Complete();
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                    // After creating the route, update product image in ProductService
-                    if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-                    {
-                        using var ms=new MemoryStream();
-                        await dto.ImageFile.CopyToAsync(ms, cancellationToken);
-
-                        var imageEvent = new ProductImageUpdatedEvent
-                        {
-                            ProductId = dto.ProductId,
-                            ImageData = ms.ToArray(),
-                            ImageFileName = dto.ImageFile.FileName,
-                            UpdatedAt = DateTime.UtcNow
-                        };
-                        await _messagePublisher.PublishAsync(imageEvent, "product.image.updated", cancellationToken);
-                    }
-
                     await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                     return _mapper.Map<InventoryRouteDto>(route);

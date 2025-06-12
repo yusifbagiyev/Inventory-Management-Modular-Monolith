@@ -19,13 +19,15 @@ namespace RouteService.Infrastructure.Services
             if (!IsValidImage(fileName))
                 throw new ArgumentException("Invalid image format");
 
-            var uniqueFileName = $"route-{inventoryCode}-{DateTime.UtcNow.Ticks}{Path.GetExtension(fileName)}";
-            var filePath = Path.Combine(_imagePath, uniqueFileName);
+            var inventoryFolder = Path.Combine(_imagePath, inventoryCode.ToString());
+            Directory.CreateDirectory(inventoryFolder);
+            var uniqueFileName = $"{DateTime.UtcNow.Ticks}{Path.GetExtension(fileName)}";
+            var filePath = Path.Combine(inventoryFolder, uniqueFileName);
 
             using var fileStream = new FileStream(filePath, FileMode.Create);
             await imageStream.CopyToAsync(fileStream);
 
-            return $"/images/routes/{uniqueFileName}";
+            return $"/images/routes/{inventoryFolder}/{uniqueFileName}";
         }
 
         public Task DeleteImageAsync(string imageUrl)
@@ -33,12 +35,16 @@ namespace RouteService.Infrastructure.Services
             if (string.IsNullOrEmpty(imageUrl))
                 return Task.CompletedTask;
 
-            var fileName = Path.GetFileName(imageUrl);
-            var filePath = Path.Combine(_imagePath, fileName);
+            var segments = imageUrl.Split('/');
+            if(segments.Length >= 2)
+            {
+                var inventoryCode = segments[^2];
+                var fileName = segments[^1];
+                var filePath = Path.Combine(_imagePath, inventoryCode, fileName);
 
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+            }
             return Task.CompletedTask;
         }
 

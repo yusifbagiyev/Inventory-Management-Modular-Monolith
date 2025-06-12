@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace RouteService.Application.DTOs.Commands
+namespace RouteService.Application.DTOs
 {
     public record TransferInventoryDto
     {

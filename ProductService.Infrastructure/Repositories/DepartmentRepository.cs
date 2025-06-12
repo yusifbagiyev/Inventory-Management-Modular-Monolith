@@ -32,7 +32,7 @@ namespace ProductService.Infrastructure.Repositories
 
         public Task UpdateAsync(Department department, CancellationToken cancellationToken = default)
         {
-            _context.Departments.Update(department);
+            _context.Entry(department).State = EntityState.Modified;
             return Task.CompletedTask;
         }
 

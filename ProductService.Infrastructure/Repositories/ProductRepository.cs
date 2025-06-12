@@ -56,7 +56,7 @@ namespace ProductService.Infrastructure.Repositories
 
         public Task UpdateAsync(Product product, CancellationToken cancellationToken = default)
         {
-            _context.Products.Update(product);
+            _context.Entry(product).State = EntityState.Modified;
             return Task.CompletedTask;
         }
 

@@ -55,9 +55,17 @@ namespace RouteService.Infrastructure.Services
                     var message = Encoding.UTF8.GetString(body);
                     var productCreatedEvent = JsonSerializer.Deserialize<ProductCreatedEvent>(message);
 
-                    if (productCreatedEvent != null)
+                    if (ea.RoutingKey == "product.created")
                     {
-                        await ProcessProductCreated(productCreatedEvent);
+                        var createdEvent = JsonSerializer.Deserialize<ProductCreatedEvent>(message);
+                        if (createdEvent != null)
+                            await ProcessProductCreated(createdEvent);
+                    }
+                    else if (ea.RoutingKey == "product.deleted")
+                    {
+                        var deletedEvent = JsonSerializer.Deserialize<ProductDeletedEvent>(message);
+                        if (deletedEvent != null)
+                            await ProcessProductDeleted(deletedEvent);
                     }
 
                     _channel.BasicAck(ea.DeliveryTag, false);
@@ -76,6 +84,8 @@ namespace RouteService.Infrastructure.Services
                 }
             };
 
+            _channel.QueueBind(_queueName, "inventory-events", "product.created");
+            _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
             _channel.BasicConsume(_queueName, false, consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -123,6 +133,31 @@ namespace RouteService.Infrastructure.Services
             _logger.LogInformation($"Created inventory route for new product {productCreatedEvent.ProductId}");
         }
 
+
+        private async Task ProcessProductDeleted(ProductDeletedEvent productDeletedEvent)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            var productSnapshot= new ProductSnapshot(
+                productDeletedEvent.ProductId,
+                productDeletedEvent.InventoryCode,
+                productDeletedEvent.Model ?? "No Name",
+                productDeletedEvent.Vendor ?? "No Name",
+                productDeletedEvent.CategoryName ?? "Unknown",
+                productDeletedEvent.IsWorking);
+
+            var route = InventoryRoute.CreateRemoval(
+                productSnapshot,
+                productDeletedEvent.DepartmentId,
+                "Deleted",
+                productDeletedEvent.Worker ?? "No Worker",
+                "Product removed from system");
+
+            await repository.AddAsync(route);
+            await unitOfWork.SaveChangesAsync();
+        }
         public override void Dispose()
         {
             _channel?.Dispose();

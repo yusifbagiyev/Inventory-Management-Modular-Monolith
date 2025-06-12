@@ -55,28 +55,5 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new DeleteProduct.Command(id));
             return NoContent();
         }
-
-        [HttpPatch("{id}/routed")]
-        public async Task<IActionResult> UpdateProductWhenRouted(int id, [FromBody] UpdateProductRequest request)
-        {
-            await _mediator.Send(new UpdateProductAfterRouting.Command(id, request.DepartmentId,request.Worker));
-            return NoContent();
-        }
-
-        [HttpPatch("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest request)
-        {
-            await _mediator.Send(new UpdateProductStatus.Command(id, request.IsActive));
-            return NoContent();
-        }
-
-
-        [HttpPatch("{id}/image")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateImage(int id, IFormFile imageFile)
-        {
-            await _mediator.Send(new UpdateProductImage.Command(id, imageFile));
-            return NoContent();
-        }
     }
 }

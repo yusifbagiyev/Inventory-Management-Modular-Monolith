@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using RouteService.Application.DTOs;
-using RouteService.Application.DTOs.Commands;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 
@@ -21,15 +20,6 @@ namespace RouteService.API.Controllers
         public async Task<ActionResult<InventoryRouteDto>> TransferInventory([FromForm] TransferInventoryDto dto)
         {
             var result = await _mediator.Send(new TransferInventory.Command(dto));
-            return Ok(result);
-        }
-
-
-        [HttpPost("remove")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<InventoryRouteDto>> RemoveInventory([FromForm] RemoveInventoryDto dto)
-        {
-            var result = await _mediator.Send(new RemoveInventory.Command(dto));
             return Ok(result);
         }
 

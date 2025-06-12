@@ -18,7 +18,7 @@ namespace ProductService.Infrastructure.Services
         private readonly ILogger<RabbitMQConsumer> _logger;
         private readonly IConnection _connection;
         private readonly IModel _channel;
-        private readonly string _queueName = "product-image-updates";
+        private readonly string _queueName = "product-transfers";
 
         public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<RabbitMQConsumer> logger)
         {
@@ -50,12 +50,10 @@ namespace ProductService.Infrastructure.Services
                 {
                     var body = ea.Body.ToArray();
                     var message = Encoding.UTF8.GetString(body);
-                    var imageEvent = JsonSerializer.Deserialize<ProductImageUpdatedEvent>(message);
 
-                    if (imageEvent != null)
-                    {
-                        await ProcessImageUpdate(imageEvent);
-                    }
+                    var transferEvent = JsonSerializer.Deserialize<ProductTransferredEvent>(message);
+                    if (transferEvent != null)
+                        await ProcessProductTransfer(transferEvent);
 
                     _channel.BasicAck(ea.DeliveryTag, false);
                 }
@@ -65,44 +63,54 @@ namespace ProductService.Infrastructure.Services
                     _channel.BasicNack(ea.DeliveryTag, false, true);
                 }
             };
-
+            _channel.QueueBind(_queueName, "inventory-events", "product.transferred");
             _channel.BasicConsume(_queueName, false, consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async Task ProcessImageUpdate(ProductImageUpdatedEvent imageEvent)
+        private async Task ProcessProductTransfer(ProductTransferredEvent transferEvent)
         {
             using var scope = _serviceProvider.CreateScope();
             var productRepository = scope.ServiceProvider.GetRequiredService<IProductRepository>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var imageService = scope.ServiceProvider.GetRequiredService<IImageService>();
 
-            var product = await productRepository.GetByIdAsync(imageEvent.ProductId);
+            var product = await productRepository.GetByIdAsync(transferEvent.ProductId);
             if (product == null)
             {
-                _logger.LogWarning($"Product {imageEvent.ProductId} not found");
+                _logger.LogWarning($"Product {transferEvent.ProductId} not found");
                 return;
             }
 
-            // Delete old image
-            if (!string.IsNullOrEmpty(product.ImageUrl))
-            {
-                await imageService.DeleteImageAsync(product.ImageUrl);
-            }
+            // Update product info
+            product.UpdateAfterRouting(transferEvent.ToDepartmentId, transferEvent.ToWorker);
 
-            // Upload new image
-            if (imageEvent.ImageData != null && imageEvent.ImageData.Length > 0)
+            // Update image if provided
+            if(transferEvent.ImageData != null && transferEvent.ImageData.Length > 0)
             {
-                using var stream = new MemoryStream(imageEvent.ImageData);
+                // Delete old image
+                if (!string.IsNullOrEmpty(product.ImageUrl))
+                    await imageService.DeleteImageAsync(product.ImageUrl);
+
+                // Upload new image
+                using var stream = new MemoryStream(transferEvent.ImageData);
                 var imageUrl = await imageService.UploadImageAsync(
                     stream,
-                    imageEvent.ImageFileName ?? $"{product.InventoryCode}-{Guid.NewGuid().ToString()}.jpg",
+                    transferEvent.ImageFileName ?? $"{product.InventoryCode}.jpg",
                     product.InventoryCode);
 
                 product.UpdateImage(imageUrl);
-                await productRepository.UpdateAsync(product);
-                await unitOfWork.SaveChangesAsync();
             }
+
+            await productRepository.UpdateAsync(product);
+            await unitOfWork.SaveChangesAsync();
+        }
+
+        public override void Dispose()
+        {
+            _channel?.Close();
+            _connection?.Close();
+            base.Dispose();
         }
     }
 }

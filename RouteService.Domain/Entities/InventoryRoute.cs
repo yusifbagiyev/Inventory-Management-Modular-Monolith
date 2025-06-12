@@ -84,8 +84,7 @@ namespace RouteService.Domain.Entities
             int fromDepartmentId,
             string fromDepartmentName,
             string fromWorker,
-            string reason,
-            string? imageUrl = null)
+            string reason)
         {
             return new InventoryRoute
             {
@@ -97,7 +96,6 @@ namespace RouteService.Domain.Entities
                 ToDepartmentName = "Removed",
                 FromWorker = fromWorker,
                 ToWorker = "System",
-                ImageUrl = imageUrl,
                 Notes = reason,
                 IsCompleted = false,
                 CreatedAt = DateTime.UtcNow
