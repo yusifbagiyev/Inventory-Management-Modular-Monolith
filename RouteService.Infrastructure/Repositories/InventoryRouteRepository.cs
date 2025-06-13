@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using RouteService.Domain.Common;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Repositories;
@@ -63,6 +64,49 @@ namespace RouteService.Infrastructure.Repositories
                 .Where(r => r.ProductSnapshot.ProductId == productId)
                 .OrderByDescending(r => r.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
+        }
+        public async Task<PagedResult<InventoryRoute>> GetAllAsync(
+            int pageNumber,
+            int pageSize,
+            bool? isCompleted,
+            DateTime? startDate,
+            DateTime? endDate,
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.InventoryRoutes.AsQueryable();
+
+            if (isCompleted.HasValue)
+                query = query.Where(r => r.IsCompleted == isCompleted.Value);
+
+            if (startDate.HasValue)
+                query = query.Where(r => r.CreatedAt >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(r => r.CreatedAt <= endDate.Value);
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<InventoryRoute>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.InventoryRoutes
+                .Where(r => !r.IsCompleted)
+                .OrderBy(r => r.CreatedAt)
+                .ToListAsync(cancellationToken);
         }
     }
 }

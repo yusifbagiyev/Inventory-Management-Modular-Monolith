@@ -38,7 +38,7 @@
             Vendor = vendor ?? "No Name";
             ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
-            Worker = Worker;
+            Worker = worker;
             IsActive = isActive;
             IsWorking = isWorking;
             IsNewItem = isNewItem;

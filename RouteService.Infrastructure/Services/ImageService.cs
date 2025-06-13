@@ -19,6 +19,10 @@ namespace RouteService.Infrastructure.Services
             if (!IsValidImage(fileName))
                 throw new ArgumentException("Invalid image format");
 
+            // Add size validation
+            if (imageStream.Length > 5 * 1024 * 1024) // 5MB
+                throw new ArgumentException("Image size exceeds 5MB limit");
+
             var inventoryFolder = Path.Combine(_imagePath, inventoryCode.ToString());
             Directory.CreateDirectory(inventoryFolder);
             var uniqueFileName = $"{DateTime.UtcNow.Ticks}{Path.GetExtension(fileName)}";
@@ -27,7 +31,7 @@ namespace RouteService.Infrastructure.Services
             using var fileStream = new FileStream(filePath, FileMode.Create);
             await imageStream.CopyToAsync(fileStream);
 
-            return $"/images/routes/{inventoryFolder}/{uniqueFileName}";
+            return $"/images/routes/{inventoryCode}/{uniqueFileName}";
         }
 
         public Task DeleteImageAsync(string imageUrl)

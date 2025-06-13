@@ -19,6 +19,10 @@ namespace ProductService.Infrastructure.Services
             if (!IsValidImage(fileName))
                 throw new ArgumentException("Invalid image format");
 
+            // Add size validation
+            if (imageStream.Length > 5 * 1024 * 1024) // 5MB
+                throw new ArgumentException("Image size exceeds 5MB limit");
+
             var inventoryFolder=Path.Combine(_imagePath,inventoryCode.ToString());
             Directory.CreateDirectory(inventoryFolder);
 

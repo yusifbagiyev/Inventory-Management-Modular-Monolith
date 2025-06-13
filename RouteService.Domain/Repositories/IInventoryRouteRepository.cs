@@ -1,4 +1,5 @@
-﻿using RouteService.Domain.Entities;
+﻿using RouteService.Domain.Common;
+using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 
 namespace RouteService.Domain.Repositories
@@ -12,5 +13,13 @@ namespace RouteService.Domain.Repositories
         Task<InventoryRoute> AddAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task UpdateAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task<InventoryRoute?> GetLatestRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
+        Task<PagedResult<InventoryRoute>> GetAllAsync(
+            int pageNumber = 1,
+            int pageSize = 20,
+            bool? isCompleted = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            CancellationToken cancellationToken = default);
+        Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default);
     }
 }
