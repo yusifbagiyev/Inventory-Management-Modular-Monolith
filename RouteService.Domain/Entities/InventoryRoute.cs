@@ -103,19 +103,17 @@ namespace RouteService.Domain.Entities
         }
         public void Complete()
         {
-            if (IsCompleted)
-                throw new InvalidOperationException("Route is already completed");
-
             IsCompleted = true;
             CompletedAt = DateTime.UtcNow;
         }
 
         public void UpdateImage(string imageUrl)
         {
-            if (IsCompleted)
-                throw new InvalidOperationException("Cannot update completed route");
-
             ImageUrl = imageUrl;
+        }
+        public void UpdateNotes(string notes)
+        {
+            Notes = notes;
         }
     }
 }

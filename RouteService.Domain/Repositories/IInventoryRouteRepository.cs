@@ -21,5 +21,6 @@ namespace RouteService.Domain.Repositories
             DateTime? endDate = null,
             CancellationToken cancellationToken = default);
         Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default);
+        Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default);
     }
 }

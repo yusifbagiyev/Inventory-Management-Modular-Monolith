@@ -108,5 +108,11 @@ namespace RouteService.Infrastructure.Repositories
                 .OrderBy(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
+
+        public Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default)
+        {
+            _context.InventoryRoutes.Remove(route);
+            return Task.CompletedTask;
+        }
     }
 }
