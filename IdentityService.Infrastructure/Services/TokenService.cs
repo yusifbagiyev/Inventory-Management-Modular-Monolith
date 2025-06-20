@@ -24,7 +24,7 @@ namespace IdentityService.Infrastructure.Services
         public async Task<string> GenerateAccessToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Secret"]!);
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 
             var claims = new List<Claim>
             {
@@ -77,7 +77,7 @@ namespace IdentityService.Infrastructure.Services
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["Jwt:Secret"]!)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!)),
                 ValidateLifetime = false
             };
 

@@ -33,7 +33,7 @@
             }
         },
         {
-            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamPathTemplate": "/api/auth/{everything}",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [
                 {
