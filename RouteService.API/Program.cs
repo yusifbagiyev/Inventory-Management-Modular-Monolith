@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Ocelot.Middleware;
 using RouteService.Application;
 using RouteService.Application.Mappings;
 using RouteService.Infrastructure;
@@ -25,16 +24,6 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowProductService", builder =>
-    {
-        builder.WithOrigins("http://localhost:5090")
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
-});
-
 //Add JWT Authentication configuration
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -50,7 +39,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
-
 
 // Add authorization with permissions
 builder.Services.AddAuthorization(options =>
@@ -78,7 +66,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseCors("AllowProductService");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

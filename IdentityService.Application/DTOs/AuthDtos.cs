@@ -30,8 +30,6 @@ namespace IdentityService.Application.DTOs
         [Required]
         public string LastName { get; init; } = string.Empty;
 
-        public string Department { get; init; } = string.Empty;
-
         public string? Role { get; init; }
     }
 
@@ -50,7 +48,6 @@ namespace IdentityService.Application.DTOs
         public string Email { get; init; } = string.Empty;
         public string FirstName { get; init; } = string.Empty;
         public string LastName { get; init; } = string.Empty;
-        public string Department { get; init; } = string.Empty;
         public List<string> Roles { get; init; } = new();
         public List<string> Permissions { get; init; } = new();
     }

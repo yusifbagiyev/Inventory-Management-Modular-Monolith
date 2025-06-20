@@ -59,12 +59,6 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
 
-// Add HttpClient for inter-service communication
-builder.Services.AddHttpClient("RouteService", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Services:RouteService"]!);
-});
-
 var app = builder.Build();
 
 // Configure pipeline
@@ -75,8 +69,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ErrorHandlingMiddleware>();
+
 app.UseHttpsRedirection();
+
 app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
