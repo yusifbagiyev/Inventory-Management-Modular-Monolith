@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdatingRolesForSeed : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -211,10 +211,10 @@ namespace IdentityService.Infrastructure.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Description", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { 1, null, "System Administrator", "Admin", "ADMİN" },
+                    { 1, null, "System Administrator", "Admin", "ADMIN" },
                     { 2, null, "Department Manager", "Manager", "MANAGER" },
                     { 3, null, "Regular User", "User", "USER" },
-                    { 4, null, "Read-only Access", "Viewer", "VİEWER" }
+                    { 4, null, "Read-only Access", "Viewer", "VIEWER" }
                 });
 
             migrationBuilder.InsertData(

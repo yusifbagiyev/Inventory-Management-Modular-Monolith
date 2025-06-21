@@ -62,10 +62,10 @@ namespace IdentityService.Infrastructure.Data
             // Seed Roles
             var roles = new[]
             {
-                new Role { Id = 1, Name = AllRoles.Admin, NormalizedName = AllRoles.Admin.ToUpper(), Description = "System Administrator" },
-                new Role { Id = 2, Name = AllRoles.Manager, NormalizedName = AllRoles.Manager.ToUpper(), Description = "Department Manager" },
-                new Role { Id = 3, Name = AllRoles.User, NormalizedName = AllRoles.User.ToUpper(), Description = "Regular User" },
-                new Role { Id = 4, Name = AllRoles.Viewer, NormalizedName = AllRoles.Viewer.ToUpper(), Description = "Read-only Access" }
+                new Role { Id = 1, Name = AllRoles.Admin, NormalizedName = AllRoles.Admin.ToUpperInvariant(), Description = "System Administrator" },
+                new Role { Id = 2, Name = AllRoles.Manager, NormalizedName = AllRoles.Manager.ToUpperInvariant(), Description = "Department Manager" },
+                new Role { Id = 3, Name = AllRoles.User, NormalizedName = AllRoles.User.ToUpperInvariant(), Description = "Regular User" },
+                new Role { Id = 4, Name = AllRoles.Viewer, NormalizedName = AllRoles.Viewer.ToUpperInvariant(), Description = "Read-only Access" }
             };
             builder.Entity<Role>().HasData(roles);
 

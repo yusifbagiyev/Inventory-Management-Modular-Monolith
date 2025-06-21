@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20250619134620_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250621063254_UpdatingRolesForSeed")]
+    partial class UpdatingRolesForSeed
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -188,7 +188,7 @@ namespace IdentityService.Infrastructure.Migrations
                             Id = 1,
                             Description = "System Administrator",
                             Name = "Admin",
-                            NormalizedName = "ADMİN"
+                            NormalizedName = "ADMIN"
                         },
                         new
                         {
@@ -209,7 +209,7 @@ namespace IdentityService.Infrastructure.Migrations
                             Id = 4,
                             Description = "Read-only Access",
                             Name = "Viewer",
-                            NormalizedName = "VİEWER"
+                            NormalizedName = "VIEWER"
                         });
                 });
 

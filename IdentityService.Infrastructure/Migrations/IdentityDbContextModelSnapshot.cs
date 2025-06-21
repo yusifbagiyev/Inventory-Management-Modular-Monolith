@@ -185,7 +185,7 @@ namespace IdentityService.Infrastructure.Migrations
                             Id = 1,
                             Description = "System Administrator",
                             Name = "Admin",
-                            NormalizedName = "ADMİN"
+                            NormalizedName = "ADMIN"
                         },
                         new
                         {
@@ -206,7 +206,7 @@ namespace IdentityService.Infrastructure.Migrations
                             Id = 4,
                             Description = "Read-only Access",
                             Name = "Viewer",
-                            NormalizedName = "VİEWER"
+                            NormalizedName = "VIEWER"
                         });
                 });
 
