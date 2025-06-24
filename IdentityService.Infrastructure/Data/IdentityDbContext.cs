@@ -9,6 +9,7 @@ namespace IdentityService.Infrastructure.Data
     {
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         public IdentityDbContext(DbContextOptions<IdentityDbContext> options)
             : base(options)
@@ -20,18 +21,30 @@ namespace IdentityService.Infrastructure.Data
             base.OnModelCreating(builder);
 
             // Configure RolePermission many-to-many
-            builder.Entity<RolePermission>()
-                .HasKey(rp => new { rp.RoleId, rp.PermissionId });
+            builder.Entity<RolePermission>(entity =>
+            {
+                entity.HasKey(r => new { r.RoleId, r.PermissionId });
 
-            builder.Entity<RolePermission>()
-                .HasOne(rp => rp.Role)
-                .WithMany(r => r.RolePermissions)
-                .HasForeignKey(rp => rp.RoleId);
+                entity.HasOne(r => r.Role)
+                    .WithMany(r => r.RolePermissions)
+                    .HasForeignKey(r => r.RoleId);
 
-            builder.Entity<RolePermission>()
-                .HasOne(rp => rp.Permission)
-                .WithMany(p => p.RolePermissions)
-                .HasForeignKey(rp => rp.PermissionId);
+                entity.HasOne(r => r.Permission)
+                    .WithMany(p => p.RolePermissions)
+                    .HasForeignKey(rp => rp.PermissionId);
+            });
+
+            builder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Token).IsUnique();
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
 
             // Seed initial data
             SeedData(builder);

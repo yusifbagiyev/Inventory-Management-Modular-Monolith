@@ -8,5 +8,8 @@ namespace IdentityService.Application.Services
         Task<string> GenerateAccessToken(User user);
         Task<string> GenerateRefreshToken();
         ClaimsPrincipal GetPrincipalFromExpiredToken(string token);
+        Task<RefreshToken> CreateRefreshTokenAsync(int userId, string token);
+        Task<RefreshToken?> GetRefreshTokenAsync(string token);
+        Task RevokeRefreshTokenAsync(string token,string? replacedByToken=null);
     }
 }

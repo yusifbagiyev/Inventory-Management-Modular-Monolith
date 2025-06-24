@@ -4,7 +4,9 @@ using System.Security.Cryptography;
 using System.Text;
 using IdentityService.Application.Services;
 using IdentityService.Domain.Entities;
+using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -14,11 +16,16 @@ namespace IdentityService.Infrastructure.Services
     {
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly IdentityDbContext _dbContext;
 
-        public TokenService(UserManager<User> userManager, IConfiguration configuration)
+        public TokenService(
+            UserManager<User> userManager,
+            IConfiguration configuration,
+            IdentityDbContext dbContext)
         {
             _userManager = userManager;
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
         public async Task<string> GenerateAccessToken(User user)
@@ -42,8 +49,7 @@ namespace IdentityService.Infrastructure.Services
             }
 
             // Add permissions
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var permissions = await GetUserPermissionsAsync(user.Id, userRoles);
+            var permissions = await GetUserPermissionsAsync(user.Id, roles);
             foreach (var permission in permissions)
             {
                 claims.Add(new Claim("permission", permission));
@@ -95,14 +101,48 @@ namespace IdentityService.Infrastructure.Services
 
         private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
         {
-            // This would query the database for permissions based on roles
-            // For now, returning a simplified version
-            var permissions = new List<string>();
-
-            // You would implement actual database query here
-            // Example implementation is in AuthService
+            var permissions = await _dbContext.RolePermissions
+                .Include(rp => rp.Permission)
+                .Where(rp => roles.Contains(rp.Role.Name!))
+                .Select(rp => rp.Permission.Name)
+                .Distinct()
+                .ToListAsync();
 
             return permissions;
+        }
+
+        public async Task<RefreshToken> CreateRefreshTokenAsync(int userId, string token)
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = token,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7"))
+            };
+
+            _dbContext.RefreshTokens.Add(refreshToken);
+            await _dbContext.SaveChangesAsync();
+            return refreshToken;
+        }
+
+        public async Task<RefreshToken?> GetRefreshTokenAsync(string token)
+        {
+            return await _dbContext.RefreshTokens
+                .Include(u => u.User)
+                .FirstOrDefaultAsync(rt => rt.Token == token);
+        }
+
+        public async Task RevokeRefreshTokenAsync(string token, string? replacedByToken = null)
+        {
+            var refreshToken = await GetRefreshTokenAsync(token);
+            if (refreshToken != null)
+            {
+                refreshToken.IsRevoked = true;
+                refreshToken.RevokedAt = DateTime.UtcNow;
+                refreshToken.ReplacedByToken = replacedByToken;
+                await _dbContext.SaveChangesAsync();
+            }
         }
     }
 }

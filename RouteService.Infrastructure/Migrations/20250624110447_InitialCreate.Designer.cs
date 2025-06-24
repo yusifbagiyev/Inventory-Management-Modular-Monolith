@@ -12,7 +12,7 @@ using RouteService.Infrastructure.Data;
 namespace RouteService.Infrastructure.Migrations
 {
     [DbContext(typeof(RouteDbContext))]
-    [Migration("20250610080803_InitialCreate")]
+    [Migration("20250624110447_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace RouteService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.5")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);

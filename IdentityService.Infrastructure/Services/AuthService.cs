@@ -1,10 +1,12 @@
-﻿using IdentityService.Application.DTOs;
+﻿using System.Security.Claims;
+using IdentityService.Application.DTOs;
 using IdentityService.Application.Services;
 using IdentityService.Domain.Constants;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace IdentityService.Infrastructure.Services
 {
@@ -14,17 +16,20 @@ namespace IdentityService.Infrastructure.Services
         private readonly SignInManager<User> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly IdentityDbContext _context;
+        private readonly IConfiguration _configuration;
 
         public AuthService(
             UserManager<User> userManager,
             SignInManager<User> signInManager,
             ITokenService tokenService,
-            IdentityDbContext context)
+            IdentityDbContext context,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _context = context;
+            _configuration = configuration;
         }
 
         public async Task<TokenDto> LoginAsync(LoginDto dto)
@@ -33,12 +38,15 @@ namespace IdentityService.Infrastructure.Services
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password,false);
             if (!result.Succeeded)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
+
+            // Revoke old refresh tokens
+            await RevokeAllUserRefreshTokensAsync(user.Id);
 
             return await GenerateTokenResponse(user);
         }
@@ -65,11 +73,51 @@ namespace IdentityService.Infrastructure.Services
             return await GenerateTokenResponse(user);
         }
 
-        public Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
+        public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
         {
-            // Implement refresh token logic
-            // This would validate the refresh token and generate new tokens
-            throw new NotImplementedException();
+            //Validate the refresh token
+            var refreshToken = await _tokenService.GetRefreshTokenAsync(dto.RefreshToken);
+            if(refreshToken == null || !refreshToken.IsActive)
+                throw new UnauthorizedAccessException("Invalid refresh token");
+
+            //Get user from the refresh token
+            var user=refreshToken.User;
+            if(!user.IsActive)
+                throw new UnauthorizedAccessException("User is inactive");
+
+            //Get the principal from the expired token
+            ClaimsPrincipal principal;
+            try
+            {
+                principal=_tokenService.GetPrincipalFromExpiredToken(refreshToken.Token);
+            }
+            catch
+            {
+                throw new UnauthorizedAccessException("Invalid access token");
+            }
+
+            // Verify the user from the access token matches the refresh token user
+            var userIdFromToken=principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdFromToken != user.Id.ToString())
+                throw new UnauthorizedAccessException("Token mismatch");
+
+            // Generate new tokens
+            var newAccessToken = await _tokenService.GenerateAccessToken(user);
+            var newRefreshToken = await _tokenService.GenerateRefreshToken();
+
+            // Revoke old refresh token and create new one
+            await _tokenService.RevokeRefreshTokenAsync(dto.RefreshToken, newRefreshToken);
+            await _tokenService.CreateRefreshTokenAsync(user.Id, newRefreshToken);
+
+            var userDto=await GetUserAsync(user.Id);
+
+            return new TokenDto
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "20")),
+                User = userDto
+            };
         }
 
         public async Task<bool> HasPermissionAsync(int userId, string permission)
@@ -134,6 +182,22 @@ namespace IdentityService.Infrastructure.Services
                 .ToListAsync();
 
             return permissions;
+        }
+
+        private async Task RevokeAllUserRefreshTokensAsync(int userId)
+        {
+            var activeTokens= await _context.RefreshTokens
+                .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+                .ToListAsync();
+
+            foreach(var token in activeTokens)
+            {
+                token.IsRevoked = true;
+                token.RevokedAt = DateTime.UtcNow;
+            }
+
+            if(activeTokens.Any())
+                await _context.SaveChangesAsync();
         }
     }
 }
