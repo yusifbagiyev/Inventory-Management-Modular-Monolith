@@ -89,7 +89,7 @@ namespace IdentityService.Infrastructure.Services
             ClaimsPrincipal principal;
             try
             {
-                principal=_tokenService.GetPrincipalFromExpiredToken(refreshToken.Token);
+                principal=_tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
             }
             catch
             {
@@ -160,6 +160,9 @@ namespace IdentityService.Infrastructure.Services
         {
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken();
+
+            // Save the refresh token to database
+            await _tokenService.CreateRefreshTokenAsync(user.Id, refreshToken);
 
             var userDto = await GetUserAsync(user.Id);
 
