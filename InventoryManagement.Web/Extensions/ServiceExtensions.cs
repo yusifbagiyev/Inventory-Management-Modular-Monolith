@@ -1,0 +1,55 @@
+﻿using System.Globalization;
+using System.Security.Claims;
+using InventoryManagement.Web.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+
+namespace InventoryManagement.Web.Extensions
+{
+    public static class ServiceExtensions
+    {
+        public static IServiceCollection AddCustomServices(this IServiceCollection services)
+        {
+            // Add HTTP clients
+            services.AddHttpClient<IApiService, ApiService>();
+            services.AddHttpClient<IAuthService, AuthService>();
+
+            // Add other services
+            services.AddScoped<IApiService, ApiService>();
+            services.AddScoped<IAuthService, AuthService>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            .AddCookie(options =>
+            {
+                options.LoginPath = "/Account/Login";
+                options.LogoutPath = "/Account/Logout";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 60));
+                options.SlidingExpiration = true;
+            });
+
+            return services;
+        }
+
+        public static bool HasPermission(this ClaimsPrincipal user, string permission)
+        {
+            return user.Claims.Any(c => c.Type == "permission" && c.Value == permission);
+        }
+        public static string ToTitleCase(this string str)
+        {
+            if (string.IsNullOrEmpty(str))
+                return str;
+
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.ToLower());
+        }
+    }
+}

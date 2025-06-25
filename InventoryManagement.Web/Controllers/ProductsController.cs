@@ -1,0 +1,125 @@
+﻿using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace InventoryManagement.Web.Controllers
+{
+    [Authorize]
+    public class ProductsController : Controller
+    {
+        private readonly IApiService _apiService;
+        public ProductsController(IApiService apiService)
+        {
+            _apiService = apiService;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+            return View(products ?? []);
+        }
+
+        public async Task<IActionResult> Details(int id)
+        {
+            var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
+            if (product == null)
+                return NotFound();
+
+            return View(product);
+        }
+
+        public async Task<IActionResult> Create()
+        {
+            var model = new ProductViewModel();
+            await LoadDropdowns(model);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ProductViewModel productModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _apiService.PostFormAsync<ProductViewModel>("api/products", HttpContext.Request.Form);
+
+                if (result != null)
+                {
+                    TempData["Success"] = "Product created successfully.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                ModelState.AddModelError("", "Failed to create product.");
+            }
+            await LoadDropdowns(productModel);
+            return View(productModel);
+        }
+
+        public async Task<IActionResult> Edit(int id)
+        {
+            var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
+            if (product == null)
+                return NotFound();
+
+            await LoadDropdowns(product);
+            return View(product);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, ProductViewModel productModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _apiService.PutAsync<ProductViewModel, bool>($"api/products/{id}", productModel);
+
+                if (result)
+                {
+                    TempData["Success"] = "Product updated successfully.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                ModelState.AddModelError("", "Failed to update product.");
+            }
+
+            await LoadDropdowns(productModel);
+            return View(productModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var result = await _apiService.DeleteAsync($"api/products/{id}");
+            if (result)
+            {
+                TempData["Success"] = "Product deleted successfully.";
+            }
+            else
+            {
+                TempData["Error"] = "Failed to delete product.";
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
+        private async Task LoadDropdowns(ProductViewModel model)
+        {
+            var categories=await _apiService.GetAsync<List<dynamic>>("api/categories");
+            var departments = await _apiService.GetAsync<List<dynamic>>("api/departments");
+
+            model.Categories=categories?.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = c.Name
+            }).ToList() ?? [];
+
+            model.Departments=departments?.Select(d=>new SelectListItem
+            {
+                Value = d.Id.ToString(),
+                Text = d.Name
+            }).ToList() ?? [];
+        }
+    }
+}

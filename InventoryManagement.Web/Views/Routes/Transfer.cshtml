@@ -1,0 +1,121 @@
+﻿@model TransferViewModel
+@{
+    ViewData["Title"] = "Transfer Product";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Transfer Product</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
+        <li class="breadcrumb-item active">Transfer</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-exchange-alt me-1"></i>
+                    Transfer Information
+                </div>
+                <div class="card-body">
+                    <form asp-action="Transfer" method="post" enctype="multipart/form-data">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="ProductId" class="form-label"></label>
+                            <select asp-for="ProductId" asp-items="Model.Products" class="form-select" id="productSelect">
+                                <option value="">-- Select Product --</option>
+                            </select>
+                            <span asp-validation-for="ProductId" class="text-danger"></span>
+                        </div>
+
+                        <div id="productInfo" class="alert alert-info d-none">
+                            <h6>Product Information:</h6>
+                            <div id="productDetails"></div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ToDepartmentId" class="form-label"></label>
+                                    <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select">
+                                        <option value="">-- Select Department --</option>
+                                    </select>
+                                    <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ToWorker" class="form-label"></label>
+                                    <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name" />
+                                    <span asp-validation-for="ToWorker" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ImageFile" class="form-label">Transfer Image (Optional)</label>
+                            <input asp-for="ImageFile" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview')" />
+                            <span asp-validation-for="ImageFile" class="text-danger"></span>
+                            <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label"></label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-exchange-alt"></i> Transfer Product
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Transfer Guidelines
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Select the product to transfer
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Choose destination department
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Assign to specific worker if needed
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Add transfer image for documentation
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Include notes for special instructions
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/routes.js"></script>
+}

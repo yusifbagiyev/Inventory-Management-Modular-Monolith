@@ -1,0 +1,31 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid px-4">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <h1 class="display-1 fw-bold text-danger">@(Model?.StatusCode ?? 500)</h1>
+                <p class="fs-3"><span class="text-danger">Oops!</span> Something went wrong.</p>
+                <p class="lead">
+                    @(Model?.Message ?? "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.")
+                </p>
+                <a href="/Home/Dashboard" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Go to Dashboard
+                </a>
+            </div>
+
+            @if (Model?.ShowRequestId ?? false)
+            {
+                <div class="mt-4">
+                    <p class="text-muted text-center">
+                        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+                    </p>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,182 @@
+﻿@model PagedResultDto<RouteViewModel>
+@{
+    ViewData["Title"] = "Routes";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Inventory Routes</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">Routes</li>
+    </ol>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <div class="row">
+                <div class="col">
+                    <i class="fas fa-route me-1"></i>
+                    Route History
+                </div>
+                <div class="col text-end">
+                    <a asp-action="Transfer" class="btn btn-primary btn-sm">
+                        <i class="fas fa-exchange-alt"></i> New Transfer
+                    </a>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <a asp-action="Index" asp-route-isCompleted="" class="btn btn-outline-secondary @(ViewBag.CurrentFilter == null ? "active" : "")">
+                            All
+                        </a>
+                        <a asp-action="Index" asp-route-isCompleted="false" class="btn btn-outline-warning @(ViewBag.CurrentFilter == false ? "active" : "")">
+                            Pending
+                        </a>
+                        <a asp-action="Index" asp-route-isCompleted="true" class="btn btn-outline-success @(ViewBag.CurrentFilter == true ? "active" : "")">
+                            Completed
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Product</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var route in Model.Items)
+                    {
+                        <tr>
+                            <td>@route.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge bg-info">@route.RouteTypeName</span>
+                            </td>
+                            <td>
+                                <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId">
+                                    @route.InventoryCode - @route.Model
+                                </a>
+                            </td>
+                            <td>
+                                @if (route.FromDepartmentName != null)
+                                {
+                                    <div>@route.FromDepartmentName</div>
+                                    <small class="text-muted">@route.FromWorker</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td>
+                                <div>@route.ToDepartmentName</div>
+                                <small class="text-muted">@route.ToWorker</small>
+                            </td>
+                            <td>
+                                @if (route.IsCompleted)
+                                {
+                                    <span class="badge bg-success">Completed</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Pending</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@route.Id" class="btn btn-sm btn-info" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                @if (!route.IsCompleted)
+                                {
+                                    <button type="button" class="btn btn-sm btn-success" onclick="completeRoute(@route.Id)" title="Complete">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteRoute(@route.Id)" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@(Model.PageNumber - 1)"
+                                   asp-route-isCompleted="@ViewBag.CurrentFilter">Previous</a>
+                            </li>
+                        }
+
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@i"
+                                   asp-route-isCompleted="@ViewBag.CurrentFilter">@i</a>
+                            </li>
+                        }
+
+                        @if (Model.HasNextPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@(Model.PageNumber + 1)"
+                                   asp-route-isCompleted="@ViewBag.CurrentFilter">Next</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function completeRoute(id) {
+            if (confirm('Are you sure you want to mark this route as completed?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Routes/Complete/' + id;
+
+                const token = document.createElement('input');
+                token.type = 'hidden';
+                token.name = '__RequestVerificationToken';
+                token.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteRoute(id) {
+            if (confirm('Are you sure you want to delete this route?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Routes/Delete/' + id;
+
+                const token = document.createElement('input');
+                token.type = 'hidden';
+                token.name = '__RequestVerificationToken';
+                token.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}

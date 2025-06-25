@@ -1,0 +1,206 @@
+﻿@model RouteViewModel
+@{
+    ViewData["Title"] = "Route Details";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Route Details</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
+        <li class="breadcrumb-item active">Details</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col">
+                            <i class="fas fa-route me-1"></i>
+                            Route Information
+                        </div>
+                        <div class="col text-end">
+                            @if (Model.IsCompleted)
+                            {
+                                <span class="badge bg-success fs-6">
+                                    <i class="fas fa-check-circle"></i> Completed
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning fs-6">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Route Type</h6>
+                            <p class="mb-3">
+                                <span class="badge bg-info fs-6">@Model.RouteTypeName</span>
+                            </p>
+
+                            <h6 class="text-muted">Product Information</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <th width="40%">Code:</th>
+                                    <td>@Model.InventoryCode</td>
+                                </tr>
+                                <tr>
+                                    <th>Model:</th>
+                                    <td>@Model.Model</td>
+                                </tr>
+                                <tr>
+                                    <th>Vendor:</th>
+                                    <td>@Model.Vendor</td>
+                                </tr>
+                                <tr>
+                                    <th>Category:</th>
+                                    <td>@Model.CategoryName</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Transfer Details</h6>
+                            <table class="table table-sm table-borderless">
+                                @if (Model.FromDepartmentName != null)
+                                {
+                                    <tr>
+                                        <th width="30%">From:</th>
+                                        <td>
+                                            <strong>@Model.FromDepartmentName</strong><br />
+                                            <small class="text-muted">Worker: @(Model.FromWorker ?? "N/A")</small>
+                                        </td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <th>To:</th>
+                                    <td>
+                                        <strong>@Model.ToDepartmentName</strong><br />
+                                        <small class="text-muted">Worker: @(Model.ToWorker ?? "N/A")</small>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Created:</th>
+                                    <td>@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                </tr>
+                                @if (Model.IsCompleted && Model.CompletedAt.HasValue)
+                                {
+                                    <tr>
+                                        <th>Completed:</th>
+                                        <td>@Model.CompletedAt.Value.ToString("MM/dd/yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <hr />
+                        <h6 class="text-muted">Notes</h6>
+                        <p>@Model.Notes</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    {
+                        <hr />
+                        <h6 class="text-muted">Transfer Image</h6>
+                        <img src="@Model.ImageUrl" class="img-fluid rounded" style="max-width: 400px;" alt="Transfer Image" />
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                        <div>
+                            @if (!Model.IsCompleted)
+                            {
+                                <button type="button" class="btn btn-success" onclick="completeRoute(@Model.Id)">
+                                    <i class="fas fa-check"></i> Mark as Complete
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="deleteRoute(@Model.Id)">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            }
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
+                               class="btn btn-primary">
+                                <i class="fas fa-box"></i> View Product
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-history me-1"></i>
+                    Quick Actions
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="btn btn-outline-primary">
+                            <i class="fas fa-timeline"></i> View Full Timeline
+                        </a>
+                        <a asp-action="Transfer" class="btn btn-outline-success">
+                            <i class="fas fa-exchange-alt"></i> New Transfer
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="printRoute()">
+                            <i class="fas fa-print"></i> Print Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function completeRoute(id) {
+            if (confirm('Are you sure you want to mark this route as completed?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Routes/Complete/' + id;
+
+                const token = document.createElement('input');
+                token.type = 'hidden';
+                token.name = '__RequestVerificationToken';
+                token.value = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)[1];
+
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function deleteRoute(id) {
+            if (confirm('Are you sure you want to delete this route?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Routes/Delete/' + id;
+
+                const token = document.createElement('input');
+                token.type = 'hidden';
+                token.name = '__RequestVerificationToken';
+                token.value = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)[1];
+
+                form.appendChild(token);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function printRoute() {
+            window.print();
+        }
+    </script>
+}

@@ -1,0 +1,162 @@
+﻿@model InventoryManagement.Web.Models.DTOs.UserDto
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">My Profile</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">Profile</li>
+    </ol>
+
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card mb-4 shadow">
+                <div class="card-body text-center">
+                    <div class="avatar-circle mx-auto mb-3">
+                        <span class="initials">@Model.FirstName[0]@Model.LastName[0]</span>
+                    </div>
+                    <h5 class="card-title">@Model.FirstName @Model.LastName</h5>
+                    <p class="text-muted">@Model.Username</p>
+
+                    <div class="d-flex justify-content-center mb-2">
+                        @foreach (var role in Model.Roles)
+                        {
+                            <span class="badge bg-primary me-1">@role</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Permissions
+                </div>
+                <div class="card-body">
+                    <div class="permissions-list">
+                        @foreach (var permission in Model.Permissions.Take(10))
+                        {
+                            <div class="permission-item">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <span>@permission.Replace(".", " ").ToTitleCase()</span>
+                            </div>
+                        }
+                        @if (Model.Permissions.Count > 10)
+                        {
+                            <div class="text-center mt-2">
+                                <small class="text-muted">And @(Model.Permissions.Count - 10) more...</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-user me-1"></i>
+                    User Information
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" class="form-control" value="@Model.FirstName" readonly />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" value="@Model.LastName" readonly />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control" value="@Model.Username" readonly />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" value="@Model.Email" readonly />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            To update your profile information, please contact your system administrator.
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow">
+                <div class="card-header">
+                    <i class="fas fa-key me-1"></i>
+                    Security Settings
+                </div>
+                <div class="card-body">
+                    <button type="button" class="btn btn-warning" onclick="changePassword()">
+                        <i class="fas fa-lock"></i> Change Password
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="logoutAllDevices()">
+                        <i class="fas fa-sign-out-alt"></i> Logout from All Devices
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 100px;
+        height: 100px;
+        background-color: #3B82F6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .initials {
+        color: white;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .permission-item {
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+        .permission-item:last-child {
+            border-bottom: none;
+        }
+</style>
+
+@section Scripts {
+    <script>
+        function changePassword() {
+            // Implement password change modal
+            alert('Password change functionality coming soon!');
+        }
+
+        function logoutAllDevices() {
+            if (confirm('Are you sure you want to logout from all devices?')) {
+                // Implement logout from all devices
+                alert('Logout from all devices functionality coming soon!');
+            }
+        }
+    </script>
+}

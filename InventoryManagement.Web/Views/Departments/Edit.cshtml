@@ -1,0 +1,80 @@
+﻿@model DepartmentViewModel
+@{
+    ViewData["Title"] = "Edit Department";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Edit Department</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Departments</a></li>
+        <li class="breadcrumb-item active">Edit</li>
+    </ol>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card mb-4 shadow">
+                <div class="card-header">
+                    <i class="fas fa-edit me-1"></i>
+                    Edit Department Information
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label"></label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label"></label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Statistics:</strong>
+                            This department has <strong>@Model.ProductCount</strong> products and
+                            <strong>@Model.WorkerCount</strong> assigned workers.
+                        </div>
+
+                        <div class="row text-muted">
+                            <div class="col-md-6">
+                                <small>Created: @Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</small>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                @if (Model.UpdatedAt.HasValue)
+                                {
+                                    <small>Updated: @Model.UpdatedAt.Value.ToString("MM/dd/yyyy HH:mm")</small>
+                                }
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
