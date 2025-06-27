@@ -33,8 +33,8 @@ builder.Services.AddHttpContextAccessor();
 
 
 // Add custom services
-builder.Services.AddScoped<IApiService,ApiService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IApiService,ApiService>();
 
 
 //Add memory cache

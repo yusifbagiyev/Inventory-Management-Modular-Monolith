@@ -15,7 +15,7 @@
             <div class="row">
                 <div class="col">
                     <i class="fas fa-boxes me-1"></i>
-                    Product Inventory
+                    Product Inventory (@Model.Count items))
                 </div>
                 <div class="col text-end">
                     <a asp-action="Create" class="btn btn-primary btn-sm">
@@ -25,62 +25,109 @@
             </div>
         </div>
         <div class="card-body">
-            <table class="table table-bordered table-hover" id="productsTable">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Model</th>
-                        <th>Vendor</th>
-                        <th>Category</th>
-                        <th>Department</th>
-                        <th>Worker</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var product in Model)
-                    {
-                        <tr>
-                            <td>@product.InventoryCode</td>
-                            <td>@product.Model</td>
-                            <td>@product.Vendor</td>
-                            <td>@product.CategoryName</td>
-                            <td>@product.DepartmentName</td>
-                            <td>@(product.Worker ?? "N/A")</td>
-                            <td>
-                                @if (product.IsWorking)
-                                {
-                                    <span class="badge bg-success">Working</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-danger">Not Working</span>
-                                }
-                                @if (product.IsActive)
-                                {
-                                    <span class="badge bg-primary">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            <td>
-                                <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteProduct(@product.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Image</th>
+                                <th>Code</th>
+                                <th>Product Details</th>
+                                <th>Location</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th style="width: 120px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var product in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        @if(!string.IsNullOrEmpty(product.ImageUrl))
+                                        {
+                                            <img src="@product.ImageUrl" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;" alt="@product.Model">
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="fas fa-image text-muted"></i>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary fs-6">@product.InventoryCode</span>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>@product.Model</strong>
+                                            <small class="text-muted">by @product.Vendor</small>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-tag"></i> @product.CategoryName
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <i class="fas fa-building"></i> @product.DepartmentName
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(product.Worker))
+                                        {
+                                            <small class="text-muted">
+                                                <i class="fas fa-user"></i> @product.Worker
+                                            </small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1 flex-wrap">
+                                            @if (product.IsWorking)
+                                            {
+                                                <span class="badge bg-success">Working</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Not Working</span>
+                                            }
+                                            @if (product.IsNewItem)
+                                            {
+                                                <span class="badge bg-info">New</span>
+                                            }
+                                            @if (!product.IsActive)
+                                            {
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-box open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No products found in inventory</p>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>Add First Product
+                    </a>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -113,7 +160,10 @@
             $('#productsTable').DataTable({
                 pageLength: 25,
                 responsive: true,
-                order: [[0, 'desc']]
+                order: [[1, 'desc']],
+                columnDefs:[
+                    {orderable:false, targets:[0,5]}
+                ]
             });
         });
 

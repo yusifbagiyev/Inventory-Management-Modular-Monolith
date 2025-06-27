@@ -1,6 +1,7 @@
-﻿using System.Net.Http.Headers;
+﻿using Newtonsoft.Json;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
-using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Services
 {
@@ -9,14 +10,17 @@ namespace InventoryManagement.Web.Services
         private readonly HttpClient _httpClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
+        private readonly IAuthService _authService;
         public ApiService(
             HttpClient httpClient,
             IHttpContextAccessor httpContextAccessor,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IAuthService authService)
         {
             _httpClient = httpClient;
             _httpContextAccessor = httpContextAccessor;
             _configuration = configuration;
+            _authService = authService;
             _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
         }
         private void AddAuthorizationHeader()
@@ -24,9 +28,28 @@ namespace InventoryManagement.Web.Services
             var token=_httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
             if (!string.IsNullOrEmpty(token))
             {
-                _httpClient.DefaultRequestHeaders.Authorization=
-                    new AuthenticationHeaderValue("Bearer", token);
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
+        }
+        
+        private async Task<bool> TryRefreshTokenAsync()
+        {
+            var accessToken = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
+            var refreshToken = _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken");
+            if(string.IsNullOrEmpty(refreshToken)||string.IsNullOrEmpty(accessToken))
+            {
+                return false;
+            }
+            
+            var tokenDto = await _authService.RefreshTokenAsync(accessToken, refreshToken);
+
+            if(tokenDto != null)
+            {
+                _httpContextAccessor.HttpContext?.Session.SetString("JwtToken", tokenDto.AccessToken);
+                _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", tokenDto.RefreshToken);
+                return true;
+            }
+            return false;
         }
 
         public async Task<T?> GetAsync<T>(string endpoint)
@@ -36,9 +59,15 @@ namespace InventoryManagement.Web.Services
                 AddAuthorizationHeader();
                 var response = await _httpClient.GetAsync(endpoint);
 
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.GetAsync(endpoint);
+                }
+
                 if (response.IsSuccessStatusCode)
                 {
-                    var content= await response.Content.ReadAsStringAsync();
+                    var content = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<T>(content);
                 }
 
@@ -61,7 +90,13 @@ namespace InventoryManagement.Web.Services
 
                 var response=await _httpClient.PostAsync(endpoint, content);
 
-                if(response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+
+                if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<TResponse>(responseContent);
@@ -87,7 +122,7 @@ namespace InventoryManagement.Web.Services
                 {
                     if (field.Key != "__RequestVerificationToken")
                     {
-                        content.Add(new StringContent(field.Value), field.Key);
+                        content.Add(new StringContent(field.Value!), field.Key);
                     }
                 }
 
@@ -100,7 +135,13 @@ namespace InventoryManagement.Web.Services
 
                 var response= await _httpClient.PostAsync(endpoint, content);
 
-                if(response.IsSuccessStatusCode)
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+
+                if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<TResponse>(responseContent);
@@ -114,7 +155,6 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-
         public async Task<TResponse?> PutAsync<TRequest,TResponse>(string endpoint, TRequest data)
         {
             try
@@ -123,7 +163,14 @@ namespace InventoryManagement.Web.Services
                 var json=JsonConvert.SerializeObject(data);
                 var content=new StringContent(json, Encoding.UTF8, "application/json");
                 var response=await _httpClient.PutAsync(endpoint, content);
-                if(response.IsSuccessStatusCode)
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PutAsync(endpoint, content);
+                }
+
+                if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
                     return JsonConvert.DeserializeObject<TResponse>(responseContent);
@@ -143,6 +190,13 @@ namespace InventoryManagement.Web.Services
             {
                 AddAuthorizationHeader();
                 var response = await _httpClient.DeleteAsync(endpoint);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.DeleteAsync(endpoint);
+                }
+
                 return response.IsSuccessStatusCode;
             }
             catch
