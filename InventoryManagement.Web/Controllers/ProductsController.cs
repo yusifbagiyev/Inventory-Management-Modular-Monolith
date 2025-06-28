@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +44,24 @@ namespace InventoryManagement.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                var result = await _apiService.PostFormAsync<ProductViewModel>("api/products", HttpContext.Request.Form);
+                var dto = new CreateProductDto
+                {
+                    InventoryCode = productModel.InventoryCode,
+                    Model = productModel.Model,
+                    Vendor = productModel.Vendor,
+                    Worker = productModel.Worker,
+                    Description = productModel.Description,
+                    IsWorking = productModel.IsWorking,
+                    IsActive = productModel.IsActive,
+                    IsNewItem = productModel.IsNewItem,
+                    CategoryId = productModel.CategoryId,
+                    DepartmentId = productModel.DepartmentId
+                };
+
+                //Get the form collection
+                var form =HttpContext.Request.Form;
+
+                var result = await _apiService.PostFormAsync<CreateProductDto>("api/products", form,dto);
 
                 if (result != null)
                 {
@@ -106,20 +124,28 @@ namespace InventoryManagement.Web.Controllers
 
         private async Task LoadDropdowns(ProductViewModel model)
         {
-            var categories=await _apiService.GetAsync<List<dynamic>>("api/categories");
-            var departments = await _apiService.GetAsync<List<dynamic>>("api/departments");
-
-            model.Categories=categories?.Select(c => new SelectListItem
+            try
             {
-                Value = c.Id.ToString(),
-                Text = c.Name
-            }).ToList() ?? [];
+                var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
 
-            model.Departments=departments?.Select(d=>new SelectListItem
+                model.Categories = categories?.Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = c.Name
+                }).ToList() ?? [];
+
+                model.Departments = departments?.Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = d.Name
+                }).ToList() ?? [];
+            }
+            catch
             {
-                Value = d.Id.ToString(),
-                Text = d.Name
-            }).ToList() ?? [];
+                model.Categories = [];
+                model.Departments = [];
+            }
         }
     }
 }

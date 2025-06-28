@@ -1,6 +1,8 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using InventoryManagement.Web.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Middleware
 {
@@ -15,36 +17,75 @@ namespace InventoryManagement.Web.Middleware
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext context,IAuthService authService)
         {
             try
             {
-                var token = context.Session.GetString("JwtToken");
-
-                if (!string.IsNullOrEmpty(token))
+                //Check if the user is authenticated via cookie but has no JWT token in session
+                if (context.User.Identity?.IsAuthenticated == true)
                 {
-                    // Check if token is expired
-                    var handler = new JwtSecurityTokenHandler();
-                    var jwtToken = handler.ReadJwtToken(token);
+                    var token = context.Session.GetString("JwtToken");
+                    var refreshToken = context.Session.GetString("RefreshToken");
 
-                    if (jwtToken.ValidTo < DateTime.UtcNow)
+                    // If no tokens in session, user might have logged in with saved password
+                    if ((string.IsNullOrEmpty(token)&& string.IsNullOrEmpty(refreshToken)))
                     {
-                        _logger.LogInformation("JWT token expired, attempting refresh");
+                        _logger.LogInformation("Authenticated user missing JWT tokens, redirecting to login");
 
-                        // Token is expired, try to refresh
-                        var refreshToken = context.Session.GetString("RefreshToken");
-
-                        if (!string.IsNullOrEmpty(refreshToken))
+                        // Sign out and redirect to login
+                        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        context.Session.Clear();
+                         
+                        if(!context.Request.Path.StartsWithSegments("/Account/Login"))
                         {
-                            // Call the refresh endpoint through the AccountController
-                            // This would typically be done via the AuthService
-                            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                            context.Session.Clear();
+                            context.Response.Redirect($"/Account/Login?returnUrl={context.Request.Path}");
+                            return;
+                        }
+                    }
 
-                            if (!context.Request.Path.StartsWithSegments("/Account/Login"))
+                    else
+                    {
+                        //Check if token is expired
+                        var handler = new JwtSecurityTokenHandler();
+                        if (handler.CanReadToken(token))
+                        {
+                            var jwtToken = handler.ReadJwtToken(token);
+
+                            if (jwtToken.ValidTo < DateTime.UtcNow)
                             {
-                                context.Response.Redirect("/Account/Login");
-                                return;
+                                _logger.LogInformation("JWT token expired, attempting to refresh");
+
+                                try
+                                {
+                                    if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(refreshToken))
+                                    {
+                                        var result = await authService.RefreshTokenAsync(token, refreshToken);
+                                        if (result != null)
+                                        {
+                                            context.Session.SetString("JwtToken", result.AccessToken);
+                                            context.Session.SetString("RefreshToken", result.RefreshToken);
+                                            context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+                                            _logger.LogInformation("Token refreshed successfully");
+                                        }
+                                        else
+                                        {
+                                            throw new Exception("Failed to refresh token");
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Token refresh failed");
+                                    // Sign out and redirect to login
+                                    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                                    context.Session.Clear();
+
+                                    if (!context.Request.Path.StartsWithSegments("/Account/Login"))
+                                    {
+                                        context.Response.Redirect("/Account/Login");
+                                        return;
+                                    }
+                                }
                             }
                         }
                     }

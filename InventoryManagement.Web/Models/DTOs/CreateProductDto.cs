@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-
-namespace ProductService.Application.DTOs
+﻿namespace InventoryManagement.Web.Models.DTOs
 {
     public record CreateProductDto
     {

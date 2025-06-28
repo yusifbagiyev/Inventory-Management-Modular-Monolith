@@ -24,9 +24,22 @@ namespace InventoryManagement.Web.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
-            if (User.Identity?.IsAuthenticated??false)
+            if (User.Identity?.IsAuthenticated ?? false)
             {
-                return RedirectToAction("Index", "Home");
+                //Check if we have a valid JWT tokens
+                var token = HttpContext.Session.GetString("JwtToken");
+                if (string.IsNullOrEmpty(token))
+                {
+                    // User is authenticated via cookie but has no JWT token
+                    // Sign them out and continue with login
+                    HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).Wait();
+                    HttpContext.Session.Clear();
+                }
+                else
+                {
+                    // User has valid session, redirect to home
+                    return RedirectToAction("Index", "Home");
+                }
             }
 
             ViewData["ReturnUrl"] = returnUrl;

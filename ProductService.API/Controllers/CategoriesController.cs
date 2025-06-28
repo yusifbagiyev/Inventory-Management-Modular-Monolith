@@ -1,4 +1,7 @@
-﻿using MediatR;
+﻿using IdentityService.Domain.Constants;
+using IdentityService.Shared.Authorization;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Commands;
@@ -8,6 +11,7 @@ namespace ProductService.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CategoriesController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,6 +22,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpGet]
+        [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
         {
             var categories = await _mediator.Send(new GetAllCategoriesQuery());
@@ -25,6 +30,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<CategoryDto>> GetById(int id)
         {
             var category = await _mediator.Send(new GetCategoryByIdQuery(id));
@@ -34,6 +40,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpPost]
+        [Permission(AllPermissions.ProductCreate)]
         public async Task<ActionResult<CategoryDto>> Create(CreateCategoryDto dto)
         {
             var category = await _mediator.Send(new CreateCategory.Command(dto));
@@ -41,6 +48,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Permission(AllPermissions.ProductUpdate)] 
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
         {
             await _mediator.Send(new UpdateCategory.Command(id, dto));
@@ -48,6 +56,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Permission(AllPermissions.ProductDelete)]
         public async Task<IActionResult> Delete(int id)
         {
             await _mediator.Send(new DeleteCategory.Command(id));

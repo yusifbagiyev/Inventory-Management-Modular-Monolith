@@ -110,7 +110,10 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public async Task<TResponse?> PostFormAsync<TResponse>(string endpoint,IFormCollection form)
+        public async Task<TResponse?> PostFormAsync<TResponse>(
+            string endpoint,
+            IFormCollection form,
+            object? dataDto=null)
         {
             try
             {
@@ -118,22 +121,40 @@ namespace InventoryManagement.Web.Services
 
                 using var content = new MultipartFormDataContent();
 
-                foreach(var field in form)
+                // Add DTO properties first
+                if (dataDto != null)
                 {
-                    if (field.Key != "__RequestVerificationToken")
+                    var properties = dataDto.GetType().GetProperties();
+                    foreach (var prop in properties)
                     {
-                        content.Add(new StringContent(field.Value!), field.Key);
+                        if (prop.Name == "ImageFile") continue;
+
+                        var value = prop.GetValue(dataDto)?.ToString() ?? "";
+                        content.Add(new StringContent(value), prop.Name);
                     }
                 }
 
-                foreach(var file in form.Files)
+                // Add form files
+                foreach (var file in form.Files)
                 {
                     var streamContent = new StreamContent(file.OpenReadStream());
-                    streamContent.Headers.ContentType=new MediaTypeHeaderValue(file.ContentType);
-                    content.Add(streamContent, file.Name, file.FileName);
+                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+                    content.Add(streamContent, "ImageFile", file.FileName);
                 }
 
-                var response= await _httpClient.PostAsync(endpoint, content);
+
+                // Add remaining form fields (prioritizing DTO values)
+                foreach (var field in form)
+                {
+                    if(field.Key=="ImageFile"||
+                        field.Key=="__RequestVerificationToken"||
+                        (dataDto?.GetType().GetProperty(field.Key)!=null))
+                        continue; // Skip if already handled fields
+
+                    content.Add(new StringContent(field.Value), field.Key);
+                }
+
+                var response = await _httpClient.PostAsync(endpoint, content);
 
                 if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
                 {

@@ -94,7 +94,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
-
 var app = builder.Build();
 
 // Configure pipeline

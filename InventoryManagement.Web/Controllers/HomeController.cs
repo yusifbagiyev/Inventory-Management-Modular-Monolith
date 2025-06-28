@@ -23,20 +23,47 @@ namespace InventoryManagement.Web.Controllers
         {
             var model = new DashboardViewModel();
 
-            //Fetch dashboard data from API
-            var products=await _apiService.GetAsync<List<dynamic>>("api/products");
-            var routes=await _apiService.GetAsync<List<dynamic>>("api/inventoryroutes");
-
-            if(products != null)
+            try
             {
-                model.TotalProducts = products.Count;
-                model.ActiveProducts = products.Count(p => (bool)p.IsActive);
+                //Fetch dashboard data from API
+                var products = await _apiService.GetAsync<List<dynamic>>("api/products");
+                var routes = await _apiService.GetAsync<List<dynamic>>("api/inventoryroutes");
+
+                if (products != null)
+                {
+                    model.TotalProducts=products.Count;
+                    model.ActiveProducts = products.Count(p =>
+                    {
+                        try
+                        {
+                            return p.IsActive == true;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+                }
+
+                if (routes != null)
+                {
+                    model.TotalRoutes = routes.Count;
+                    model.PendingTransfers = routes.Count(r =>
+                    {
+                        try
+                        {
+                            return r.isCompleted != true;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    });
+                }
             }
-
-            if(routes != null)
+            catch (UnauthorizedAccessException)
             {
-                model.TotalRoutes = routes.Count;
-                model.PendingTransfers = routes.Count(r => !(bool)r.isCompleted);
+                return RedirectToAction("Login", "Account", new { returnUrl = Request.Path });
             }
 
             //Mock data for demo

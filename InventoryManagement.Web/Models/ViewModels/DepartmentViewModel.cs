@@ -13,7 +13,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         [Display(Name = "Description")]
         [MaxLength(500)]
-        public string Description { get; set; } = string.Empty;
+        public string? Description { get; set; } = string.Empty;
 
         [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
