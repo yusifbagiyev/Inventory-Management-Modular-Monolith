@@ -91,15 +91,24 @@ namespace InventoryManagement.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                var result = await _apiService.PutAsync<ProductViewModel, bool>($"api/products/{id}", productModel);
-
-                if (result)
+                try
                 {
-                    TempData["Success"] = "Product updated successfully.";
-                    return RedirectToAction(nameof(Index));
-                }
+                    // Always use form data for updates
+                    var form = HttpContext.Request.Form;
+                    var result = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
 
-                ModelState.AddModelError("", "Failed to update product.");
+                    if (result)
+                    {
+                        TempData["Success"] = "Product updated successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+
+                    ModelState.AddModelError("", "Failed to update product.");
+                }
+                catch 
+                {
+                    ModelState.AddModelError("", "An error occurred while updating the product.");
+                }
             }
 
             await LoadDropdowns(productModel);

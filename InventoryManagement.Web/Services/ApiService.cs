@@ -205,6 +205,56 @@ namespace InventoryManagement.Web.Services
             }
         }
 
+        public async Task<TResponse?> PutFormAsync<TResponse>(
+    string endpoint,
+    IFormCollection form,
+    object? dataDto = null)
+        {
+            try
+            {
+                AddAuthorizationHeader();
+                using var content = new MultipartFormDataContent();
+
+                // Add all form fields
+                foreach (var field in form)
+                {
+                    if (field.Key == "__RequestVerificationToken") continue;
+
+                    content.Add(new StringContent(field.Value.ToString()), field.Key);
+                }
+
+                // Add files if any
+                foreach (var file in form.Files)
+                {
+                    if (file.Length > 0)
+                    {
+                        var streamContent = new StreamContent(file.OpenReadStream());
+                        streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+                        content.Add(streamContent, file.Name, file.FileName);
+                    }
+                }
+
+                var response = await _httpClient.PutAsync(endpoint, content);
+
+                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PutAsync(endpoint, content);
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return (TResponse)(object)true;
+                }
+
+                return default;
+            }
+            catch
+            {
+                return default;
+            }
+        }
+
         public async Task<bool> DeleteAsync(string endpoint)
         {
             try

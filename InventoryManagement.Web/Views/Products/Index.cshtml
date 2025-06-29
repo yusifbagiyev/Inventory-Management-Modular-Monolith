@@ -10,57 +10,17 @@
         <li class="breadcrumb-item active">Products</li>
     </ol>
 
-    <!-- Filters Card -->
-    <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <input type="text" class="form-control" id="searchBox" placeholder="Search code, model, vendor...">
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                        @foreach (var cat in Model.Select(p => p.CategoryName).Distinct().OrderBy(c => c))
-                        {
-                            <option value="@cat">@cat</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="departmentFilter">
-                        <option value="">All Departments</option>
-                        @foreach (var dept in Model.Select(p => p.DepartmentName).Distinct().OrderBy(d => d))
-                        {
-                            <option value="@dept">@dept</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="working">Working</option>
-                        <option value="not-working">Not Working</option>
-                        <option value="new">New Items</option>
-                    </select>
-                </div>
-                <div class="col-md-3 text-end">
-                    <button class="btn btn-secondary" id="resetFilters">
-                        <i class="fas fa-undo"></i> Reset
-                    </button>
-                    <a asp-action="Create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Product
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="card mb-4 shadow">
         <div class="card-header">
             <div class="row">
                 <div class="col">
                     <i class="fas fa-boxes me-1"></i>
                     Product Inventory
+                </div>
+                <div class="col text-end">
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Product
+                    </a>
                 </div>
             </div>
         </div>
@@ -106,12 +66,12 @@
                                             <small class="text-muted">by @product.Vendor</small>
                                         </div>
                                         <small class="text-muted">
-                                            <i class="fas fa-tag"></i> <span class="category-name">@product.CategoryName</span>
+                                            <i class="fas fa-tag"></i> @product.CategoryName
                                         </small>
                                     </td>
                                     <td>
                                         <div>
-                                            <i class="fas fa-building"></i> <span class="department-name">@product.DepartmentName</span>
+                                            <i class="fas fa-building"></i> @product.DepartmentName
                                         </div>
                                         @if (!string.IsNullOrEmpty(product.Worker))
                                         {
@@ -124,15 +84,15 @@
                                         <div class="d-flex gap-1 flex-wrap">
                                             @if (product.IsWorking)
                                             {
-                                                <span class="badge bg-success status-badge" data-status="working">Working</span>
+                                                <span class="badge bg-success">Working</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-danger status-badge" data-status="not-working">Not Working</span>
+                                                <span class="badge bg-danger">Not Working</span>
                                             }
                                             @if (product.IsNewItem)
                                             {
-                                                <span class="badge bg-info status-badge" data-status="new">New</span>
+                                                <span class="badge bg-info">New</span>
                                             }
                                             @if (!product.IsActive)
                                             {
@@ -162,10 +122,10 @@
             else
             {
                 <div class="text-center py-5">
-                    <i class="fas fa-box open fa-3x text-muted mb-3"></i>
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                     <p class="text-muted">No products found in inventory</p>
                     <a asp-action="Create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>Add First Product
+                        <i class="fas fa-plus"></i> Add First Product
                     </a>
                 </div>
             }
@@ -173,7 +133,7 @@
     </div>
 </div>
 
-<!-- Delete Modal remains same -->
+<!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -197,73 +157,27 @@
 
 @section Scripts {
     <script>
-        let dataTable;
-
         $(document).ready(function() {
-            // Initialize DataTable with performance optimizations
-            $.fn.dataTable.ext.search.push(customFilters);
-
-            dataTable = $('#productsTable').DataTable({
-                pageLength: 50,
+            $('#productsTable').DataTable({
+                pageLength: 100, // Show more items per page for large datasets
+                lengthMenu: [[50, 100, 250, 500, -1], [50, 100, 250, 500, "All"]],
                 responsive: true,
                 ordering:false,
-                deferRender: true
+                deferRender: true, // Improve performance
+                stateSave: true, // Remember user's preferences
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ products",
+                    info: "Showing _START_ to _END_ of _TOTAL_ products",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                }
             });
-
-            // Filter event handlers
-            $('#searchBox').on('keyup', () => dataTable.draw());
-            $('#categoryFilter, #departmentFilter, #statusFilter').on('change', () => dataTable.draw());
-            $('#resetFilters').click(resetFilters);
         });
-
-                function customFilters(settings, data, dataIndex) {
-            const search = $('#searchBox').val().toLowerCase();
-            const category = $('#categoryFilter').val();
-            const department = $('#departmentFilter').val();
-            const status = $('#statusFilter').val();
-
-            // data array contains text from each column: [image, code, details, location, status, actions]
-            const code = data[1].toLowerCase();
-            const details = data[2].toLowerCase();
-            const location = data[3].toLowerCase();
-            const statusText = data[4].toLowerCase();
-
-            // Search filter
-            if (search && !(code.includes(search) || details.includes(search) || location.includes(search))) {
-                return false;
-            }
-
-            // Category filter
-            if (category && !details.includes(category.toLowerCase())) {
-                return false;
-            }
-
-            // Department filter
-            if (department && !location.includes(department.toLowerCase())) {
-                return false;
-            }
-
-            // Status filter
-            if (status === 'working' && !statusText.includes('working') || statusText.includes('not working')) {
-                return false;
-            }
-            if (status === 'not-working' && !statusText.includes('not working')) {
-                return false;
-            }
-            if (status === 'new' && !statusText.includes('new')) {
-                return false;
-            }
-
-            return true;
-        }
-
-        function resetFilters() {
-            $('#searchBox').val('');
-            $('#categoryFilter').val('');
-            $('#departmentFilter').val('');
-            $('#statusFilter').val('');
-            dataTable.draw();
-        }
 
         function deleteProduct(id) {
             $('#deleteForm').attr('action', '/Products/Delete/' + id);

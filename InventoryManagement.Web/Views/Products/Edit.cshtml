@@ -61,7 +61,7 @@
                                     <label asp-for="CategoryId" class="form-label"></label>
                                     <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
                                         <option value="">-- Select Category --</option>
-                                    </select>   
+                                    </select>
                                     <span asp-validation-for="CategoryId" class="text-danger"></span>
                                 </div>
                             </div>
@@ -83,24 +83,55 @@
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="ImageFile" class="form-label">New Image (leave empty to keep current)</label>
-                            <input asp-for="ImageFile" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview')" />
-                            <span asp-validation-for="ImageFile" class="text-danger"></span>
+                            <label class="form-label">Product Image</label>
 
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
-                                <div class="mt-2">
-                                    <p class="text-muted">Current image:</p>
-                                    <div class="image-container" style="max-width: 200px;">
+                                <div id="currentImageContainer" class="mb-3">
+                                    <p class="text-muted mb-2">Current image:</p>
+                                    <div class="position-relative" style="max-width: 200px;">
                                         <img src="@Model.FullImageUrl"
-                                             class="img-thumbnail image-zoom zoomable-image"
+                                             class="img-thumbnail"
                                              alt="@Model.Model"
-                                             style="cursor: zoom-in;" />
+                                             id="currentImage" />
+                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                                onclick="removeCurrentImage()" title="Remove image">
+                                            <i class="fas fa-times"></i>
+                                        </button>
                                     </div>
                                 </div>
                             }
 
-                            <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                            <div id="newImageContainer">
+                                <label asp-for="ImageFile" class="form-label">
+                                    @(string.IsNullOrEmpty(Model.ImageUrl) ? "Upload Image" : "Replace with New Image")
+                                </label>
+                                <input asp-for="ImageFile" class="form-control" accept="image/*"
+                                       onchange="previewNewImage(this, 'imagePreview')" />
+                                <span asp-validation-for="ImageFile" class="text-danger"></span>
+                                <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="IsWorking" class="form-check-input" />
+                                    <label asp-for="IsWorking" class="form-check-label"></label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="IsActive" class="form-check-input" />
+                                    <label asp-for="IsActive" class="form-check-label"></label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mb-3">
+                                    <input asp-for="IsNewItem" class="form-check-input" />
+                                    <label asp-for="IsNewItem" class="form-check-label"></label>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -120,4 +151,30 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        function removeCurrentImage() {
+            // Hide current image
+            $('#currentImageContainer').hide();
+            // Set flag to remove image
+            $('#RemoveImage').val('true');
+            // Change label text
+            $('#newImageContainer label').text('Upload New Image');
+        }
+
+        function previewNewImage(input, previewId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#' + previewId).attr('src', e.target.result).show();
+                };
+                reader.readAsDataURL(input.files[0]);
+
+                // If there was a current image and user selects new one, hide current
+                if ($('#currentImageContainer').length) {
+                    $('#currentImageContainer').hide();
+                    $('#RemoveImage').val('true');
+                }
+            }
+        }
+    </script>
 }
