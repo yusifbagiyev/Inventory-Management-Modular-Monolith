@@ -94,3 +94,36 @@ function createToastContainer() {
     document.body.appendChild(container);
     return container;
 }
+
+function initializeImageZoom() {
+    $('.zoomable-image').click(function () {
+        var src = $(this).attr('src');
+        var alt = $(this).attr('alt');
+        showImageModal(src, alt);
+    });
+}
+
+function showImageModal(src, filename) {
+    var modal = $(`
+        <div class="image-modal" onclick="closeImageModal()">
+            <img class="image-modal-content" src="${src}" alt="${filename}">
+            <a class="image-download" onclick="event.stopPropagation(); downloadImage('${src}', '${filename}')" title="Download">
+                <i class="fas fa-download"></i>
+            </a>
+        </div>
+    `);
+
+    $('body').append(modal);
+    $('.image-modal').fadeIn();
+}
+
+function closeImageModal() {
+    $('.image-modal').fadeOut(function () {
+        $(this).remove();
+    });
+}
+
+// Initialize on page load
+$(document).ready(function () {
+    initializeImageZoom();
+});

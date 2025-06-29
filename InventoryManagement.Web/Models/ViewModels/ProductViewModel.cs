@@ -66,5 +66,9 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<SelectListItem>? Categories { get; set; }
         public List<SelectListItem>? Departments { get; set; }
 
+
+        public string? FullImageUrl => !string.IsNullOrEmpty(ImageUrl)
+            ? $"http://localhost:5000{ImageUrl}"
+            : null;
     }
 }

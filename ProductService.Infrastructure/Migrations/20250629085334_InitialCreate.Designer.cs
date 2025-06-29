@@ -12,7 +12,7 @@ using ProductService.Infrastructure.Data;
 namespace ProductService.Infrastructure.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    [Migration("20250628163954_InitialCreate")]
+    [Migration("20250629085334_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -110,7 +110,6 @@ namespace ProductService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")

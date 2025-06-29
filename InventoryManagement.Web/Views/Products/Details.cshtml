@@ -35,7 +35,14 @@
                         <div class="col-md-4">
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
-                                <img src="@Model.ImageUrl" class="img-fluid rounded" alt="Product Image" />
+                                <div class="image-container">
+                                    <img src="@Model.FullImageUrl" 
+                                    class="img-fluid rounded image-zoom zoomable-image" 
+                                    alt="Product Image" 
+                                    style="cursor:zoom-in;"/>
+                                </div>
+                                <div class="text-center mt-2">
+                                </div>
                             }
                             else
                             {

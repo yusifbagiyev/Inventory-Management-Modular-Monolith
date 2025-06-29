@@ -11,7 +11,9 @@ namespace ProductService.Application.Mappings
             // Product mappings
             CreateMap<Product, ProductDto>()
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category!.Name))
-                .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department!.Name));
+                .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department!.Name))
+                .ForMember(dest=>dest.ImageUrl,opt=>opt.MapFrom(src=>
+                    !string.IsNullOrEmpty(src.ImageUrl) ? $"/images/{src.ImageUrl}" : null));
 
             // Category mappings
             CreateMap<Category, CategoryDto>();
