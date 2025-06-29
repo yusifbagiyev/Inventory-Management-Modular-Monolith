@@ -45,9 +45,9 @@ namespace ProductService.Infrastructure.Services
             {
                 var inventoryCode = segments[^2];
                 var fileName = segments[^1];
-                var filePath = Path.Combine(_imagePath, inventoryCode);
+                var filePath = Path.Combine(_imagePath, inventoryCode,fileName);
 
-                if(File.Exists(filePath))
+                if (File.Exists(filePath))
                     File.Delete(filePath);
             }
             return Task.CompletedTask;

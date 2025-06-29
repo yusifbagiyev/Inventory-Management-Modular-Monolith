@@ -18,9 +18,12 @@
                     Route History
                 </div>
                 <div class="col text-end">
-                    <a asp-action="Transfer" class="btn btn-primary btn-sm">
-                        <i class="fas fa-exchange-alt"></i> New Transfer
-                    </a>
+                    @if (User.HasPermission("route.create"))
+                    {
+                        <a asp-action="Transfer" class="btn btn-primary btn-sm">
+                            <i class="fas fa-exchange-alt"></i> New Transfer
+                        </a>
+                    }
                     <div class="btn-group btn-group-sm" role="group">
                         <a asp-action="Index" asp-route-isCompleted="" class="btn btn-outline-secondary @(ViewBag.CurrentFilter == null ? "active" : "")">
                             All
@@ -36,74 +39,124 @@
             </div>
         </div>
         <div class="card-body">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Product</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var route in Model.Items)
-                    {
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
                         <tr>
-                            <td>@route.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
-                            <td>
-                                <span class="badge bg-info">@route.RouteTypeName</span>
-                            </td>
-                            <td>
-                                <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId">
-                                    @route.InventoryCode - @route.Model
-                                </a>
-                            </td>
-                            <td>
-                                @if (route.FromDepartmentName != null)
-                                {
-                                    <div>@route.FromDepartmentName</div>
-                                    <small class="text-muted">@route.FromWorker</small>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">N/A</span>
-                                }
-                            </td>
-                            <td>
-                                <div>@route.ToDepartmentName</div>
-                                <small class="text-muted">@route.ToWorker</small>
-                            </td>
-                            <td>
-                                @if (route.IsCompleted)
-                                {
-                                    <span class="badge bg-success">Completed</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-warning">Pending</span>
-                                }
-                            </td>
-                            <td>
-                                <a asp-action="Details" asp-route-id="@route.Id" class="btn btn-sm btn-info" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                @if (!route.IsCompleted)
-                                {
-                                    <button type="button" class="btn btn-sm btn-success" onclick="completeRoute(@route.Id)" title="Complete">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteRoute(@route.Id)" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                }
-                            </td>
+                            <th style="width: 80px;">Image</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Product</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th style="width: 150px;">Actions</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var route in Model.Items)
+                        {
+                            <tr>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(route.ImageUrl))
+                                    {
+                                        <img src="@($"http://localhost:5000{route.ImageUrl}")"
+                                             class="img-thumbnail"
+                                             style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
+                                             onclick="showImageModal('@($"http://localhost:5000{route.ImageUrl}")', 'Route @route.Id')"
+                                             alt="Route Image">
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                                             style="width: 60px; height: 60px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <small>
+                                        @route.CreatedAt.ToString("MM/dd/yyyy")<br />
+                                        @route.CreatedAt.ToString("HH:mm")
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@route.RouteTypeName</span>
+                                </td>
+                                <td>
+                                    <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId"
+                                       class="text-decoration-none">
+                                        <span class="badge bg-primary">@route.InventoryCode</span>
+                                        @route.Model
+                                    </a>
+                                    <br />
+                                    <small class="text-muted">@route.Vendor</small>
+                                </td>
+                                <td>
+                                    @if (route.FromDepartmentName != null)
+                                    {
+                                        <div>@route.FromDepartmentName</div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-user"></i> @(route.FromWorker ?? "N/A")
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div>@route.ToDepartmentName</div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user"></i> @(route.ToWorker ?? "N/A")
+                                    </small>
+                                </td>
+                                <td>
+                                    @if (route.IsCompleted)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle"></i> Completed
+                                        </span>
+                                        @if (route.CompletedAt.HasValue)
+                                        {
+                                            <br />
+                                            <small class="text-muted">@route.CompletedAt.Value.ToString("MM/dd HH:mm")</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock"></i> Pending
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@route.Id"
+                                           class="btn btn-sm btn-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        @if (!route.IsCompleted && User.HasPermission("route.complete"))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success"
+                                                    onclick="completeRoute(@route.Id)" title="Complete">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        }
+                                        @if (!route.IsCompleted && User.HasPermission("route.delete"))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-danger"
+                                                    onclick="deleteRoute(@route.Id)" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Pagination -->
             @if (Model.TotalPages > 1)
@@ -115,11 +168,13 @@
                             <li class="page-item">
                                 <a class="page-link" asp-action="Index"
                                    asp-route-pageNumber="@(Model.PageNumber - 1)"
-                                   asp-route-isCompleted="@ViewBag.CurrentFilter">Previous</a>
+                                   asp-route-isCompleted="@ViewBag.CurrentFilter">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
                             </li>
                         }
 
-                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        @for (int i = Math.Max(1, Model.PageNumber - 2); i <= Math.Min(Model.TotalPages, Model.PageNumber + 2); i++)
                         {
                             <li class="page-item @(i == Model.PageNumber ? "active" : "")">
                                 <a class="page-link" asp-action="Index"
@@ -133,7 +188,9 @@
                             <li class="page-item">
                                 <a class="page-link" asp-action="Index"
                                    asp-route-pageNumber="@(Model.PageNumber + 1)"
-                                   asp-route-isCompleted="@ViewBag.CurrentFilter">Next</a>
+                                   asp-route-isCompleted="@ViewBag.CurrentFilter">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
                             </li>
                         }
                     </ul>
@@ -143,20 +200,47 @@
     </div>
 </div>
 
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Route Image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" class="img-fluid" alt="Route Image">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for CSRF token -->
+<form id="csrfForm" style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
 @section Scripts {
     <script>
+        function showImageModal(imageUrl, title) {
+            $('#modalImage').attr('src', imageUrl);
+            $('#imageModalTitle').text(title);
+            $('#imageModal').modal('show');
+        }
+
         function completeRoute(id) {
             if (confirm('Are you sure you want to mark this route as completed?')) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/Routes/Complete/' + id;
 
-                const token = document.createElement('input');
-                token.type = 'hidden';
-                token.name = '__RequestVerificationToken';
-                token.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const token = document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
 
-                form.appendChild(token);
+                form.appendChild(tokenInput);
                 document.body.appendChild(form);
                 form.submit();
             }
@@ -168,12 +252,13 @@
                 form.method = 'POST';
                 form.action = '/Routes/Delete/' + id;
 
-                const token = document.createElement('input');
-                token.type = 'hidden';
-                token.name = '__RequestVerificationToken';
-                token.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const token = document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
 
-                form.appendChild(token);
+                form.appendChild(tokenInput);
                 document.body.appendChild(form);
                 form.submit();
             }

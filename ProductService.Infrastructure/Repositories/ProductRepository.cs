@@ -48,6 +48,14 @@ namespace ProductService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<Product?> GetByInventoryCodeAsync(int inventoryCode, CancellationToken cancellationToken = default)
+        {
+            return await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Department)
+                .FirstOrDefaultAsync(p => p.InventoryCode == inventoryCode, cancellationToken);
+        }
+
         public async Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
         {
             await _context.Products.AddAsync(product, cancellationToken);

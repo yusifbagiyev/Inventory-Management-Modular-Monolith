@@ -17,6 +17,22 @@
       }
     },
     {
+      "DownstreamPathTemplate": "/api/products/search/inventory-code/{inventoryCode}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5001
+        }
+      ],
+      "UpstreamPathTemplate": "/api/products/search/inventory-code/{inventoryCode}",
+      "UpstreamHttpMethod": [ "GET" ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer",
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/categories/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [

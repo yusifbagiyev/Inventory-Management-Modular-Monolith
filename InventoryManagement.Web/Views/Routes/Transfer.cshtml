@@ -23,17 +23,34 @@
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                         <div class="mb-3">
-                            <label asp-for="ProductId" class="form-label"></label>
-                            <select asp-for="ProductId" asp-items="Model.Products" class="form-select" id="productSelect">
-                                <option value="">-- Select Product --</option>
-                            </select>
-                            <span asp-validation-for="ProductId" class="text-danger"></span>
+                            <label class="form-label">Inventory Code</label>
+                            <div class="input-group">
+                                <input type="number" id="inventoryCodeInput" class="form-control"
+                                       placeholder="Enter inventory code" min="1" max="9999" />
+                                <button type="button" class="btn btn-primary" onclick="searchProduct()">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                            <div id="searchError" class="text-danger mt-1" style="display:none;"></div>
                         </div>
 
-                        <div id="productInfo" class="alert alert-info d-none">
+                        <div id="productInfo" class="alert alert-info" style="display:none;">
                             <h6>Product Information:</h6>
-                            <div id="productDetails"></div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Model:</strong> <span id="productModel"></span></p>
+                                    <p><strong>Vendor:</strong> <span id="productVendor"></span></p>
+                                    <p><strong>Category:</strong> <span id="productCategory"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Current Department:</strong> <span id="currentDepartment"></span></p>
+                                    <p><strong>Current Worker:</strong> <span id="currentWorker"></span></p>
+                                    <p><strong>Status:</strong> <span id="productStatus"></span></p>
+                                </div>
+                            </div>
                         </div>
+
+                        <input type="hidden" asp-for="ProductId" id="productId" />
 
                         <div class="row">
                             <div class="col-md-6">
@@ -90,7 +107,11 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <i class="fas fa-check text-success"></i>
-                            Select the product to transfer
+                            Enter inventory code to find product
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success"></i>
+                            Verify product information
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success"></i>
@@ -104,10 +125,6 @@
                             <i class="fas fa-check text-success"></i>
                             Add transfer image for documentation
                         </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            Include notes for special instructions
-                        </li>
                     </ul>
                 </div>
             </div>
@@ -118,4 +135,85 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/routes.js"></script>
+    <script>
+        function searchProduct() {
+            const inventoryCode = $('#inventoryCodeInput').val();
+
+            if (!inventoryCode) {
+                showSearchError('Please enter an inventory code');
+                return;
+            }
+
+            showSpinner();
+            hideSearchError();
+
+            $.ajax({
+                url: '/api/products/search/inventory-code/' + inventoryCode,
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + '@HttpContext.Session.GetString("JwtToken")'
+                },
+                success: function(product) {
+                    hideSpinner();
+
+                    if (product) {
+                        displayProductInfo(product);
+                        $('#productId').val(product.id);
+                        $('#submitBtn').prop('disabled', false);
+                    } else {
+                        showSearchError('No product found with inventory code: ' + inventoryCode);
+                        hideProductInfo();
+                    }
+                },
+                error: function(xhr) {
+                    hideSpinner();
+
+                    if (xhr.status === 404) {
+                        showSearchError('No product found with inventory code: ' + inventoryCode);
+                    } else {
+                        showSearchError('Error searching for product. Please try again.');
+                    }
+
+                    hideProductInfo();
+                }
+            });
+        }
+
+        function displayProductInfo(product) {
+            $('#productModel').text(product.model);
+            $('#productVendor').text(product.vendor);
+            $('#productCategory').text(product.categoryName);
+            $('#currentDepartment').text(product.departmentName);
+            $('#currentWorker').text(product.worker || 'Not Assigned');
+
+            const statusBadge = product.isWorking
+                ? '<span class="badge bg-success">Working</span>'
+                : '<span class="badge bg-danger">Not Working</span>';
+            $('#productStatus').html(statusBadge);
+
+            $('#productInfo').show();
+        }
+
+        function hideProductInfo() {
+            $('#productInfo').hide();
+            $('#productId').val('');
+            $('#submitBtn').prop('disabled', true);
+        }
+
+        function showSearchError(message) {
+            $('#searchError').text(message).show();
+        }
+
+        function hideSearchError() {
+            $('#searchError').hide();
+        }
+
+        // Allow Enter key to search
+        $('#inventoryCodeInput').keypress(function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                searchProduct();
+            }
+        });
+    </script>
 }

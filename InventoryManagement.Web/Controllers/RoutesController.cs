@@ -75,7 +75,7 @@ namespace InventoryManagement.Web.Controllers
             var routes = await _apiService.GetAsync<List<RouteViewModel>>($"api/inventoryroutes/product/{productId}");
 
             ViewBag.ProductId = productId;
-            return View(routes ?? new List<RouteViewModel>());
+            return View(routes ?? []);
         }
 
         public async Task<IActionResult> Details(int id)

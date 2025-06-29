@@ -42,6 +42,18 @@ namespace ProductService.API.Controllers
         }
 
 
+        [HttpGet("search")]
+        [Permission(AllPermissions.ProductView)]
+        public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)
+        {
+            var product = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
+            if (product == null)
+                return NotFound();
+            return Ok(product);
+        }
+
+
+
         [HttpPost]
         [Consumes("multipart/form-data")]
         [Permission(AllPermissions.ProductCreate)]
