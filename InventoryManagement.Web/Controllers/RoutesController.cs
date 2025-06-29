@@ -26,7 +26,7 @@ namespace InventoryManagement.Web.Controllers
                 queryString+=$"&isCompleted={isCompleted.Value}";
             }
 
-            var result = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>($"api/routes{queryString}");
+            var result = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>($"api/inventoryroutes{queryString}");
             ViewBag.CurrentFilter = isCompleted;
             ViewBag.PageNumber = pageNumber ?? 1;
             ViewBag.PageSize = pageSize ?? 20;

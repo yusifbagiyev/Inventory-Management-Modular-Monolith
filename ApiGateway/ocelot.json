@@ -61,7 +61,7 @@
       "UpstreamHttpMethod": ["GET"]
     },
     {
-      "DownstreamPathTemplate": "/api/routes{everything}",
+      "DownstreamPathTemplate": "/api/inventoryroutes{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -69,7 +69,7 @@
           "Port": 5002
         }
       ],
-      "UpstreamPathTemplate": "/api/routes/{everything}",
+      "UpstreamPathTemplate": "/api/inventoryroutes/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer",
