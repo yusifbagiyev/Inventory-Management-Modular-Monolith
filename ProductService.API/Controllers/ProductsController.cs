@@ -42,7 +42,7 @@ namespace ProductService.API.Controllers
         }
 
 
-        [HttpGet("search")]
+        [HttpGet("search/inventory-code/{inventoryCode}")]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)
         {

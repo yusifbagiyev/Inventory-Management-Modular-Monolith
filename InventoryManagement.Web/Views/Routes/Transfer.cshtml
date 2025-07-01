@@ -19,78 +19,96 @@
                     Transfer Information
                 </div>
                 <div class="card-body">
-                    <form asp-action="Transfer" method="post" enctype="multipart/form-data">
+                    <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
                         <div class="mb-3">
-                            <label class="form-label">Inventory Code</label>
+                            <label class="form-label">Inventory Code <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="number" id="inventoryCodeInput" class="form-control"
-                                       placeholder="Enter inventory code" min="1" max="9999" />
-                                <button type="button" class="btn btn-primary" onclick="searchProduct()">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
+                                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                                <input type="number" id="inventoryCodeInput" class="form-control form-control-lg"
+                                       placeholder="Enter inventory code" min="1" max="9999"
+                                       autocomplete="off" autofocus />
+                                <div class="input-group-append">
+                                    <span class="input-group-text" id="searchSpinner" style="display:none;">
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    </span>
+                                </div>
                             </div>
-                            <div id="searchError" class="text-danger mt-1" style="display:none;"></div>
+                            <div id="searchFeedback" class="mt-2"></div>
                         </div>
 
                         <div id="productInfo" class="alert alert-info" style="display:none;">
-                            <h6>Product Information:</h6>
+                            <h6 class="alert-heading"><i class="fas fa-box"></i> Product Information</h6>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <p><strong>Model:</strong> <span id="productModel"></span></p>
-                                    <p><strong>Vendor:</strong> <span id="productVendor"></span></p>
-                                    <p><strong>Category:</strong> <span id="productCategory"></span></p>
+                                    <p class="mb-1"><strong>Model:</strong> <span id="productModel"></span></p>
+                                    <p class="mb-1"><strong>Vendor:</strong> <span id="productVendor"></span></p>
                                 </div>
                                 <div class="col-md-6">
-                                    <p><strong>Current Department:</strong> <span id="currentDepartment"></span></p>
-                                    <p><strong>Current Worker:</strong> <span id="currentWorker"></span></p>
-                                    <p><strong>Status:</strong> <span id="productStatus"></span></p>
+                                    <p class="mb-1"><strong>Category:</strong> <span id="productCategory"></span></p>
+                                    <p class="mb-1"><strong>Current Department:</strong> <span id="currentDepartment"></span></p>
                                 </div>
                             </div>
+                        </div>
+
+                        <div id="errorInfo" class="alert alert-danger" style="display:none;">
+                            <i class="fas fa-exclamation-circle"></i> <span id="errorMessage"></span>
                         </div>
 
                         <input type="hidden" asp-for="ProductId" id="productId" />
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="ToDepartmentId" class="form-label"></label>
-                                    <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select">
-                                        <option value="">-- Select Department --</option>
-                                    </select>
-                                    <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+                        <div id="transferFields" style="display:none;">
+                            <hr class="my-4" />
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="ToDepartmentId" class="form-label">
+                                            <i class="fas fa-building"></i> To Department <span class="text-danger">*</span>
+                                        </label>
+                                        <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select">
+                                            <option value="">-- Select Department --</option>
+                                        </select>
+                                        <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="ToWorker" class="form-label">
+                                            <i class="fas fa-user"></i> To Worker
+                                        </label>
+                                        <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name (optional)" />
+                                        <span asp-validation-for="ToWorker" class="text-danger"></span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="ToWorker" class="form-label"></label>
-                                    <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name" />
-                                    <span asp-validation-for="ToWorker" class="text-danger"></span>
-                                </div>
+
+                            <div class="mb-3">
+                                <label asp-for="ImageFile" class="form-label">
+                                    <i class="fas fa-camera"></i> Transfer Image (Optional)
+                                </label>
+                                <input asp-for="ImageFile" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview')" />
+                                <span asp-validation-for="ImageFile" class="text-danger"></span>
+                                <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
                             </div>
-                        </div>
 
-                        <div class="mb-3">
-                            <label asp-for="ImageFile" class="form-label">Transfer Image (Optional)</label>
-                            <input asp-for="ImageFile" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview')" />
-                            <span asp-validation-for="ImageFile" class="text-danger"></span>
-                            <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
-                        </div>
+                            <div class="mb-3">
+                                <label asp-for="Notes" class="form-label">
+                                    <i class="fas fa-sticky-note"></i> Notes
+                                </label>
+                                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
+                                <span asp-validation-for="Notes" class="text-danger"></span>
+                            </div>
 
-                        <div class="mb-3">
-                            <label asp-for="Notes" class="form-label"></label>
-                            <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
-                            <span asp-validation-for="Notes" class="text-danger"></span>
-                        </div>
-
-                        <div class="d-flex justify-content-between">
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to List
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-exchange-alt"></i> Transfer Product
-                            </button>
+                            <div class="d-flex justify-content-between">
+                                <a asp-action="Index" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to List
+                                </a>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-exchange-alt"></i> Transfer Product
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -107,11 +125,11 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <i class="fas fa-check text-success"></i>
-                            Enter inventory code to find product
+                            Type inventory code to auto-search
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success"></i>
-                            Verify product information
+                            System will verify product exists
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-success"></i>
@@ -126,6 +144,11 @@
                             Add transfer image for documentation
                         </li>
                     </ul>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> Transfer cannot proceed without a valid inventory code.
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,91 +157,193 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/js/routes.js"></script>
     <script>
-        function searchProduct() {
-            const inventoryCode = $('#inventoryCodeInput').val();
+        let searchTimeout;
+        let lastSearchedCode = '';
 
-            if (!inventoryCode) {
-                showSearchError('Please enter an inventory code');
-                return;
-            }
+        $(document).ready(function() {
+            // Focus on inventory code input
+            $('#inventoryCodeInput').focus();
 
-            showSpinner();
-            hideSearchError();
+            // Auto-search on input
+            $('#inventoryCodeInput').on('input', function() {
+                const inventoryCode = $(this).val();
 
+                // Clear any existing timeout
+                clearTimeout(searchTimeout);
+
+                // Reset if empty
+                if (!inventoryCode) {
+                    resetForm();
+                    return;
+                }
+
+                // Validate inventory code range
+                if (inventoryCode < 1 || inventoryCode > 9999) {
+                    showError('Inventory code must be between 1 and 9999');
+                    hideProductInfo();
+                    hideTransferFields();
+                    return;
+                }
+
+                // Show searching indicator
+                showSearching();
+
+                // Set timeout for auto-search (1 second delay)
+                searchTimeout = setTimeout(() => {
+                    if (inventoryCode !== lastSearchedCode) {
+                        searchProduct(inventoryCode);
+                        lastSearchedCode = inventoryCode;
+                    }
+                }, 1000);
+            });
+
+            // Prevent form submission if no valid product
+            $('#transferForm').on('submit', function(e) {
+                const productId = $('#productId').val();
+                if (!productId) {
+                    e.preventDefault();
+                    showError('Please enter a valid inventory code first');
+                    $('#inventoryCodeInput').focus();
+                    return false;
+                }
+            });
+        });
+
+        function searchProduct(inventoryCode) {
             $.ajax({
-                url: '/api/products/search/inventory-code/' + inventoryCode,
+                url: '@Configuration["ApiGateway:BaseUrl"]' + '/api/products/search/inventory-code/' + inventoryCode,
                 type: 'GET',
                 headers: {
-                    'Authorization': 'Bearer ' + '@ViewBag.JwtToken'
+                       'Authorization': 'Bearer @ViewBag.JwtToken'
                 },
                 success: function(product) {
-                    hideSpinner();
+                    hideSearching();
 
                     if (product) {
                         displayProductInfo(product);
                         $('#productId').val(product.id);
-                        $('#submitBtn').prop('disabled', false);
+                        showTransferFields();
+                        hideError();
                     } else {
-                        showSearchError('No product found with inventory code: ' + inventoryCode);
+                        showError('No product found with inventory code: ' + inventoryCode);
                         hideProductInfo();
+                        hideTransferFields();
                     }
                 },
                 error: function(xhr) {
-                    hideSpinner();
+                    hideSearching();
 
                     if (xhr.status === 404) {
-                    showSearchError('No product found with inventory code: ' + inventoryCode);
+                        showError('Wrong inventory code: ' + inventoryCode + ' - Product not found');
                     } else if (xhr.status === 401) {
-                    showSearchError('Session expired. Please login again.');
-                    setTimeout(() => {
-                    window.location.href = '/Account/Login?returnUrl=' + window.location.pathname;
-                    }, 2000);
+                        showError('Session expired. Redirecting to login...');
+                        setTimeout(() => {
+                            window.location.href = '/Account/Login?returnUrl=' + window.location.pathname;
+                        }, 2000);
                     } else {
-                    showSearchError('Error searching for product. Please try again.');
-                }
+                        showError('Error searching for product. Please try again.');
+                    }
 
-                hideProductInfo();
+                    hideProductInfo();
+                    hideTransferFields();
                 }
             });
         }
 
         function displayProductInfo(product) {
-            $('#productModel').text(product.model);
-            $('#productVendor').text(product.vendor);
-            $('#productCategory').text(product.categoryName);
-            $('#currentDepartment').text(product.departmentName);
-            $('#currentWorker').text(product.worker || 'Not Assigned');
+            $('#productModel').text(product.model || 'N/A');
+            $('#productVendor').text(product.vendor || 'N/A');
+            $('#productCategory').text(product.categoryName || 'N/A');
+            $('#currentDepartment').text(product.departmentName || 'N/A');
 
-            const statusBadge = product.isWorking
-                ? '<span class="badge bg-success">Working</span>'
-                : '<span class="badge bg-danger">Not Working</span>';
-            $('#productStatus').html(statusBadge);
+            $('#productInfo').slideDown();
+            $('#searchFeedback').html('<span class="text-success"><i class="fas fa-check-circle"></i> Product found!</span>');
+        }
 
-            $('#productInfo').show();
+        function showTransferFields() {
+            $('#transferFields').slideDown();
+            $('#submitBtn').prop('disabled', false);
+        }
+
+        function hideTransferFields() {
+            $('#transferFields').slideUp();
+            $('#submitBtn').prop('disabled', true);
+            $('#productId').val('');
         }
 
         function hideProductInfo() {
-            $('#productInfo').hide();
-            $('#productId').val('');
-            $('#submitBtn').prop('disabled', true);
+            $('#productInfo').slideUp();
         }
 
-        function showSearchError(message) {
-            $('#searchError').text(message).show();
+        function showError(message) {
+            $('#errorMessage').text(message);
+            $('#errorInfo').slideDown();
+            $('#searchFeedback').html('<span class="text-danger"><i class="fas fa-times-circle"></i> ' + message + '</span>');
         }
 
-        function hideSearchError() {
-            $('#searchError').hide();
+        function hideError() {
+            $('#errorInfo').slideUp();
+            $('#searchFeedback').empty();
         }
 
-        // Allow Enter key to search
-        $('#inventoryCodeInput').keypress(function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                searchProduct();
+        function showSearching() {
+            $('#searchSpinner').show();
+            $('#searchFeedback').html('<span class="text-info"><i class="fas fa-search"></i> Searching...</span>');
+        }
+
+        function hideSearching() {
+            $('#searchSpinner').hide();
+        }
+
+        function resetForm() {
+            hideProductInfo();
+            hideTransferFields();
+            hideError();
+            $('#searchFeedback').empty();
+            lastSearchedCode = '';
+        }
+
+        function previewImage(input, previewId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#' + previewId).attr('src', e.target.result).show();
+                };
+                reader.readAsDataURL(input.files[0]);
             }
-        });
+        }
     </script>
 }
+
+<style>
+    #inventoryCodeInput {
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+
+    #searchFeedback {
+        font-size: 0.9rem;
+    }
+
+    .alert-heading {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    #transferFields {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
