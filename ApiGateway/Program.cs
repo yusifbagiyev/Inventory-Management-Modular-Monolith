@@ -9,6 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 //Add Ocelot configuration
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebApp",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5051", "https://localhost:7171") // Add your web app URLs
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials(); // Important for authentication
+        });
+});
+
 //Add JWT Authentication 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer("Bearer",options =>
@@ -30,6 +42,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddOcelot();
 
 var app = builder.Build();
+app.UseCors("AllowWebApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
