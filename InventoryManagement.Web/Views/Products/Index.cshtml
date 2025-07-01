@@ -47,7 +47,8 @@
                                         @if (!string.IsNullOrEmpty(product.ImageUrl))
                                         {
                                             <img src="@product.FullImageUrl" class="img-thumbnail"
-                                                 style="width: 60px; height: 60px; object-fit: cover;"
+                                                 style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
+                                                 onclick="showImageModal('@product.FullImageUrl','@product.Model')"
                                                  alt="@product.CategoryName">
                                         }
                                         else

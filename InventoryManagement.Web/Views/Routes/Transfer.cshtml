@@ -151,7 +151,7 @@
                 url: '/api/products/search/inventory-code/' + inventoryCode,
                 type: 'GET',
                 headers: {
-                    'Authorization': 'Bearer ' + '@HttpContext.Session.GetString("JwtToken")'
+                    'Authorization': 'Bearer ' + '@ViewBag.JwtToken'
                 },
                 success: function(product) {
                     hideSpinner();
@@ -169,12 +169,17 @@
                     hideSpinner();
 
                     if (xhr.status === 404) {
-                        showSearchError('No product found with inventory code: ' + inventoryCode);
+                    showSearchError('No product found with inventory code: ' + inventoryCode);
+                    } else if (xhr.status === 401) {
+                    showSearchError('Session expired. Please login again.');
+                    setTimeout(() => {
+                    window.location.href = '/Account/Login?returnUrl=' + window.location.pathname;
+                    }, 2000);
                     } else {
-                        showSearchError('Error searching for product. Please try again.');
-                    }
+                    showSearchError('Error searching for product. Please try again.');
+                }
 
-                    hideProductInfo();
+                hideProductInfo();
                 }
             });
         }
