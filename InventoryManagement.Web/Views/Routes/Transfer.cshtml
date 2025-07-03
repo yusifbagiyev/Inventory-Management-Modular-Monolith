@@ -38,7 +38,7 @@
                             <div id="searchFeedback" class="mt-2"></div>
                         </div>
 
-                        <div id="productInfo" class="alert alert-info" style="display:none;">
+                        <div id="productInfo" class="alert alert-info alert-permanent" style="display:none;">
                             <h6 class="alert-heading"><i class="fas fa-box"></i> Product Information</h6>
                             <div class="row">
                                 <div class="col-md-6">
@@ -159,7 +159,7 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         let searchTimeout;
-        let lastSearchedCode = '';
+        let lastSearchedCode = null;
 
         $(document).ready(function() {
             // Focus on inventory code input
@@ -189,13 +189,11 @@
                 // Show searching indicator
                 showSearching();
 
-                // Set timeout for auto-search (1 second delay)
+
+                // Set timeout for auto-search (500ms delay for better UX)
                 searchTimeout = setTimeout(() => {
-                    if (inventoryCode !== lastSearchedCode) {
-                        searchProduct(inventoryCode);
-                        lastSearchedCode = inventoryCode;
-                    }
-                }, 1000);
+					searchProduct(inventoryCode)
+                }, 500);
             });
 
             // Prevent form submission if no valid product
@@ -221,11 +219,13 @@
                     hideSearching();
 
                     if (product) {
+						currentProductId=product.id;
                         displayProductInfo(product);
                         $('#productId').val(product.id);
                         showTransferFields();
                         hideError();
                     } else {
+                        currentProductId=null;
                         showError('No product found with inventory code: ' + inventoryCode);
                         hideProductInfo();
                         hideTransferFields();
@@ -233,6 +233,7 @@
                 },
                 error: function(xhr) {
                     hideSearching();
+                    currentProductId=null;
 
                     if (xhr.status === 404) {
                         showError('Wrong inventory code: ' + inventoryCode + ' - Product not found');
@@ -301,7 +302,8 @@
             hideTransferFields();
             hideError();
             $('#searchFeedback').empty();
-            lastSearchedCode = '';
+            currentProductId=null;
+            $('#productId').val('');
         }
 
         function previewImage(input, previewId) {

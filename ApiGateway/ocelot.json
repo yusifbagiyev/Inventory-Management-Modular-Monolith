@@ -94,7 +94,7 @@
         "UpstreamHttpMethod": ["GET"]
     },
     {
-      "DownstreamPathTemplate": "/api/inventoryroutes{everything}",
+      "DownstreamPathTemplate": "/api/inventoryroutes/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {

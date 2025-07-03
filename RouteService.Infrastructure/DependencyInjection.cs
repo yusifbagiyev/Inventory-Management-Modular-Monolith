@@ -18,6 +18,10 @@ namespace RouteService.Infrastructure
                 options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(RouteDbContext).Assembly.FullName)));
 
+
+            //Add HttpContextAccessor
+            services.AddHttpContextAccessor();
+
             // Repositories
             services.AddScoped<IInventoryRouteRepository, InventoryRouteRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();

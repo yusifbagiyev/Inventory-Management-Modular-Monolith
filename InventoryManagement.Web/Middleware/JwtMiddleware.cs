@@ -28,36 +28,28 @@ namespace InventoryManagement.Web.Middleware
                     var refreshToken = context.Session.GetString("RefreshToken");
 
                     // If no tokens in session, user might have logged in with saved password
-                    if ((string.IsNullOrEmpty(token)&& string.IsNullOrEmpty(refreshToken)))
+                    if (string.IsNullOrEmpty(token)&& string.IsNullOrEmpty(refreshToken))
                     {
                         _logger.LogInformation("Authenticated user missing JWT tokens, redirecting to login");
-
-                        // Sign out and redirect to login
-                        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                        context.Session.Clear();
-                         
-                        if(!context.Request.Path.StartsWithSegments("/Account/Login"))
-                        {
-                            context.Response.Redirect($"/Account/Login?returnUrl={context.Request.Path}");
-                            return;
-                        }
+                        await SignOutAndRedirect(context);
+                        return;
                     }
 
-                    else
+                    else if(!string.IsNullOrEmpty(token))
                     {
-                        //Check if token is expired
                         var handler = new JwtSecurityTokenHandler();
                         if (handler.CanReadToken(token))
                         {
                             var jwtToken = handler.ReadJwtToken(token);
 
-                            if (jwtToken.ValidTo < DateTime.UtcNow)
+                            // Refresh token if it expires within 30 minutes
+                            if (jwtToken.ValidTo < DateTime.UtcNow.AddMinutes(30))
                             {
-                                _logger.LogInformation("JWT token expired, attempting to refresh");
+                                _logger.LogInformation("JWT token expiring soon, attempting to refresh");
 
                                 try
                                 {
-                                    if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(refreshToken))
+                                    if (!string.IsNullOrEmpty(refreshToken))
                                     {
                                         var result = await authService.RefreshTokenAsync(token, refreshToken);
                                         if (result != null)
@@ -67,22 +59,14 @@ namespace InventoryManagement.Web.Middleware
                                             context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
                                             _logger.LogInformation("Token refreshed successfully");
                                         }
-                                        else
-                                        {
-                                            throw new Exception("Failed to refresh token");
-                                        }
                                     }
                                 }
                                 catch (Exception ex)
                                 {
                                     _logger.LogError(ex, "Token refresh failed");
-                                    // Sign out and redirect to login
-                                    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                                    context.Session.Clear();
-
-                                    if (!context.Request.Path.StartsWithSegments("/Account/Login"))
+                                    if (jwtToken.ValidTo < DateTime.UtcNow)
                                     {
-                                        context.Response.Redirect("/Account/Login");
+                                        await SignOutAndRedirect(context);
                                         return;
                                     }
                                 }
@@ -97,6 +81,15 @@ namespace InventoryManagement.Web.Middleware
             }
 
             await _next(context);
+        }
+        private async Task SignOutAndRedirect(HttpContext context)
+        {
+            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            context.Session.Clear();
+            if (!context.Request.Path.StartsWithSegments("/Account/Login"))
+            {
+                context.Response.Redirect($"/Account/Login?returnUrl={context.Request.Path}");
+            }
         }
     }
 }

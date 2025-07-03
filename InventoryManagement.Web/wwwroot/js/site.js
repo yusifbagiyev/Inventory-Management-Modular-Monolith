@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Auto-hide alerts after 5 seconds
     setTimeout(function () {
-        const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+        const alerts = document.querySelectorAll('.alert:not(.alert-permanent):not(#productInfo):not(#errorInfo)');
         alerts.forEach(function (alert) {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();

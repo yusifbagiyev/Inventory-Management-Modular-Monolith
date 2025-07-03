@@ -22,9 +22,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 //Add session
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.IdleTimeout = TimeSpan.FromHours(4);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true; // Make the session cookie essential
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 //Add HTTP clients
