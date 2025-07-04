@@ -1,0 +1,44 @@
+﻿<div id="notificationContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    <!-- Notifications will appear here -->
+</div>
+
+<script src="~/lib/signalr/signalr.min.js"></script>
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/notificationHub")
+        .build();
+
+    connection.on("ReceiveNotification", function (notification) {
+        showNotification(notification);
+    });
+
+    connection.start().catch(function (err) {
+        console.error(err.toString());
+    });
+
+    function showNotification(notification) {
+        const toast = `
+            <div class="toast show" role="alert">
+                <div class="toast-header">
+                    <strong class="me-auto">${notification.title}</strong>
+                    <small>${new Date(notification.createdAt).toLocaleTimeString()}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    ${notification.message}
+                </div>
+            </div>
+        `;
+
+        $('#notificationContainer').append(toast);
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            $('.toast').first().remove();
+        }, 5000);
+    }
+
+    function markNotificationAsRead(notificationId) {
+        connection.invoke("MarkAsRead", notificationId);
+    }
+</script>

@@ -1,4 +1,7 @@
-﻿using IdentityService.Domain.Constants;
+﻿using System.Security.Claims;
+using ApprovalService.Application.DTOs;
+using ApprovalService.Domain.Enums;
+using IdentityService.Domain.Constants;
 using IdentityService.Shared.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -15,10 +18,12 @@ namespace ProductService.API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;
+        private readonly IApprovalService _approvalService;
 
-        public ProductsController(IMediator mediator)
+        public ProductsController(IMediator mediator,IApprovalService approvalService)
         {
             _mediator = mediator;
+            _approvalService = approvalService;
         }
 
 
@@ -53,33 +58,103 @@ namespace ProductService.API.Controllers
         }
 
 
-
         [HttpPost]
         [Consumes("multipart/form-data")]
-        [Permission(AllPermissions.ProductCreate)]
         public async Task<ActionResult<ProductDto>> Create([FromForm] CreateProductDto dto)
         {
-            var product = await _mediator.Send(new CreateProduct.Command(dto));
-            return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            var userId=int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value??"0");
+            var userName = User.Identity?.Name ?? "Unknown";
+
+            //Check if user has direct permission
+            if (User.HasClaim("permission", AllPermissions.ProductCreateDirect))
+            {
+                var product = await _mediator.Send(new CreateProduct.Command(dto));
+                return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
+            }
+
+            //Check if user has request permission
+            else if (User.HasClaim("permission", AllPermissions.ProductCreate))
+            {
+                //Create approval request instead
+                var approvalRequest = new CreateApprovalRequestDto
+                {
+                    RequestType = RequestType.CreateProduct,
+                    EntityType = "Product",
+                    EntityId = null,
+                    ActionData = dto
+                };
+
+                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product creation request submitted for approval" });
+            }
+            return Forbid();
         }
 
 
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
-        [Permission(AllPermissions.ProductUpdate)]
-        public async Task<IActionResult> Update(int id, UpdateProductDto dto)
+        public async Task<IActionResult> Update(int id,[FromForm] UpdateProductDto dto)
         {
-            await _mediator.Send(new UpdateProduct.Command(id, dto));
-            return NoContent();
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userName = User.Identity?.Name ?? "Unknown";
+
+            if (User.HasClaim("permission", AllPermissions.ProductUpdateDirect))
+            {
+                await _mediator.Send(new UpdateProduct.Command(id, dto));
+                return NoContent();
+            }
+            else if (User.HasClaim("permission", AllPermissions.ProductUpdate))
+            {
+                var approvalRequest = new CreateApprovalRequestDto
+                {
+                    RequestType = RequestType.UpdateProduct,
+                    EntityType = "Product",
+                    EntityId = id,
+                    ActionData = new { ProductId = id, UpdateData = dto }
+                };
+
+                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product update request submitted for approval" });
+            }
+            return Forbid();
         }
 
 
         [HttpDelete("{id}")]
-        [Permission(AllPermissions.ProductDelete)]
         public async Task<IActionResult> Delete(int id)
         {
-            await _mediator.Send(new DeleteProduct.Command(id));
-            return NoContent();
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userName = User.Identity?.Name ?? "Unknown";
+
+            if (User.HasClaim("permission", AllPermissions.ProductDeleteDirect))
+            {
+                await _mediator.Send(new DeleteProduct.Command(id));
+                return NoContent();
+            }
+            else if (User.HasClaim("permission", AllPermissions.ProductDelete))
+            {
+                var approvalRequest = new CreateApprovalRequestDto
+                {
+                    RequestType = RequestType.DeleteProduct,
+                    EntityType = "Product",
+                    EntityId = id,
+                    ActionData = new { ProductId = id }
+                };
+
+                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product deletion request submitted for approval" });
+            }
+            return Forbid();
+        }
+
+
+        [HttpPost("approved")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Policy = "SystemOnly")]
+        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] CreateProductDto dto)
+        {
+            var product = await _mediator.Send(new CreateProduct.Command(dto));
+            return Ok(product);
         }
     }
 }
