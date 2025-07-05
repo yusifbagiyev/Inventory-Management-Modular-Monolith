@@ -1,0 +1,153 @@
+﻿@model ApprovalDashboardViewModel
+@{
+    ViewData["Title"] = "Approval Requests";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Approval Requests</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">Approvals</li>
+    </ol>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <i class="fas fa-check-circle me-1"></i>
+            Pending Approval Requests
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="approvalsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Requested By</th>
+                            <th>Details</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in Model.PendingRequests)
+                        {
+                            <tr>
+                                <td>@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                <td>
+                                    <span class="badge bg-info">@request.RequestType</span>
+                                </td>
+                                <td>@request.RequestedByName</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails(@request.Id)">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                </td>
+                                <td>
+                                    <span class="badge bg-warning">@request.Status</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-success" onclick="approveRequest(@request.Id)">
+                                            <i class="fas fa-check"></i> Approve
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" onclick="rejectRequest(@request.Id)">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsContent">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Rejection Reason</label>
+                    <textarea id="rejectionReason" class="form-control" rows="3" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">Reject</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentRequestId = null;
+
+        $(document).ready(function() {
+            $('#approvalsTable').DataTable({
+                order: [[0, 'desc']]
+            });
+        });
+
+        function viewDetails(requestId) {
+            $.get(`/Approvals/Details/${requestId}`, function(data) {
+                $('#detailsContent').html(data);
+                $('#detailsModal').modal('show');
+            });
+        }
+
+        function approveRequest(requestId) {
+            if (confirm('Are you sure you want to approve this request?')) {
+                $.post(`/Approvals/Approve/${requestId}`, function() {
+                    showToast('Request approved successfully', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }).fail(function() {
+                    showToast('Failed to approve request', 'error');
+                });
+            }
+        }
+
+        function rejectRequest(requestId) {
+            currentRequestId = requestId;
+            $('#rejectModal').modal('show');
+        }
+
+        function confirmReject() {
+            const reason = $('#rejectionReason').val();
+            if (!reason) {
+                showToast('Please provide a rejection reason', 'warning');
+                return;
+            }
+
+            $.post(`/Approvals/Reject/${currentRequestId}`, { reason: reason }, function() {
+                $('#rejectModal').modal('hide');
+                showToast('Request rejected', 'success');
+                setTimeout(() => location.reload(), 1500);
+            }).fail(function() {
+                showToast('Failed to reject request', 'error');
+            });
+        }
+    </script>
+}

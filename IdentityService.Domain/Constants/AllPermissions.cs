@@ -6,20 +6,27 @@
         public const string RouteView = "route.view";
         public const string RouteCreate = "route.create";
         public const string RouteUpdate = "route.update";
+        public const string RouteUpdateDirect = "route.update.direct";
         public const string RouteDelete = "route.delete";
+        public const string RouteDeleteDirect = "route.delete.direct";
         public const string RouteComplete = "route.complete";
         public const string RouteBatchDelete = "route.batch_delete";
 
         // Product Permissions
         public const string ProductView = "product.view";
         public const string ProductCreate = "product.create";
+        public const string ProductCreateDirect = "product.create.direct";
         public const string ProductUpdate = "product.update";
+        public const string ProductUpdateDirect = "product.update.direct";
         public const string ProductDelete = "product.delete";
+        public const string ProductDeleteDirect = "product.delete.direct";
         public const string ProductTransfer = "product.transfer";
+        public const string ProductTransferDirect = "product.transfer.direct";
 
         // Admin Permissions
         public const string UserManage = "user.manage";
         public const string RoleManage = "role.manage";
         public const string SystemConfig = "system.config";
+        public const string ApprovalManage = "approval.manage";
     }
 }
