@@ -10,9 +10,59 @@
         <li class="breadcrumb-item active">Approvals</li>
     </ol>
 
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-warning text-white mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase mb-1">Pending</div>
+                            <div class="h5 mb-0">@Model.TotalPending</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-success text-white mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase mb-1">Approved Today</div>
+                            <div class="h5 mb-0">@Model.TotalApproved</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card bg-danger text-white mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="text-uppercase mb-1">Rejected Today</div>
+                            <div class="h5 mb-0">@Model.TotalRejected</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests Table -->
     <div class="card mb-4 shadow">
         <div class="card-header">
-            <i class="fas fa-check-circle me-1"></i>
+            <i class="fas fa-clock me-1"></i>
             Pending Approval Requests
         </div>
         <div class="card-body">
@@ -22,9 +72,9 @@
                         <tr>
                             <th>Date</th>
                             <th>Type</th>
+                            <th>Entity</th>
                             <th>Requested By</th>
-                            <th>Details</th>
-                            <th>Status</th>
+                            <th>Summary</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -32,25 +82,32 @@
                         @foreach (var request in Model.PendingRequests)
                         {
                             <tr>
-                                <td>@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                <td data-order="@request.CreatedAt.Ticks">
+                                    @request.CreatedAt.ToString("MM/dd/yyyy HH:mm")
+                                </td>
                                 <td>
-                                    <span class="badge bg-info">@request.RequestType</span>
+                                    <span class="badge bg-info">
+                                        @GetRequestTypeDisplay(request.RequestType)
+                                    </span>
+                                </td>
+                                <td>
+                                    @request.EntityType
+                                    @if (request.EntityId.HasValue)
+                                    {
+                                        <span class="badge bg-secondary">#@request.EntityId</span>
+                                    }
                                 </td>
                                 <td>@request.RequestedByName</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-info" onclick="viewDetails(@request.Id)">
-                                        <i class="fas fa-eye"></i> View
-                                    </button>
-                                </td>
-                                <td>
-                                    <span class="badge bg-warning">@request.Status</span>
-                                </td>
+                                <td>@GetRequestSummary(request)</td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-success" onclick="approveRequest(@request.Id)">
+                                        <button class="btn btn-sm btn-info" onclick="viewDetails(@request.Id)">
+                                            <i class="fas fa-eye"></i> Details
+                                        </button>
+                                        <button class="btn btn-sm btn-success" onclick="quickApprove(@request.Id)">
                                             <i class="fas fa-check"></i> Approve
                                         </button>
-                                        <button class="btn btn-sm btn-danger" onclick="rejectRequest(@request.Id)">
+                                        <button class="btn btn-sm btn-danger" onclick="showRejectModal(@request.Id)">
                                             <i class="fas fa-times"></i> Reject
                                         </button>
                                     </div>
@@ -64,7 +121,7 @@
     </div>
 </div>
 
-<!-- Approval Details Modal -->
+<!-- Details Modal -->
 <div class="modal fade" id="detailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -73,13 +130,26 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsContent">
-                <!-- Content loaded dynamically -->
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="modalApproveBtn" style="display:none;">
+                    <i class="fas fa-check"></i> Approve
+                </button>
+                <button type="button" class="btn btn-danger" id="modalRejectBtn" style="display:none;">
+                    <i class="fas fa-times"></i> Reject
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Rejection Modal -->
+<!-- Reject Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -89,13 +159,19 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Rejection Reason</label>
-                    <textarea id="rejectionReason" class="form-control" rows="3" required></textarea>
+                    <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                    <textarea id="rejectionReason" class="form-control" rows="3" required
+                              placeholder="Please provide a reason for rejection..."></textarea>
+                    <div class="invalid-feedback">
+                        Rejection reason is required.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="confirmReject()">Reject</button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                    <i class="fas fa-times"></i> Reject
+                </button>
             </div>
         </div>
     </div>
@@ -107,47 +183,121 @@
 
         $(document).ready(function() {
             $('#approvalsTable').DataTable({
-                order: [[0, 'desc']]
+                order: [[0, 'desc']],
+                pageLength: 25
             });
         });
 
         function viewDetails(requestId) {
+            currentRequestId = requestId;
+            $('#detailsContent').html('<div class="text-center"><div class="spinner-border" role="status"></div></div>');
+            $('#modalApproveBtn, #modalRejectBtn').hide();
+            $('#detailsModal').modal('show');
+
             $.get(`/Approvals/Details/${requestId}`, function(data) {
                 $('#detailsContent').html(data);
-                $('#detailsModal').modal('show');
+                $('#modalApproveBtn, #modalRejectBtn').show()
+                    .off('click')
+                    .on('click', function() {
+                        if ($(this).attr('id') === 'modalApproveBtn') {
+                            quickApprove(requestId);
+                        } else {
+                            showRejectModal(requestId);
+                        }
+                        $('#detailsModal').modal('hide');
+                    });
+            }).fail(function() {
+                $('#detailsContent').html('<div class="alert alert-danger">Failed to load details</div>');
             });
         }
 
-        function approveRequest(requestId) {
+        function quickApprove(requestId) {
             if (confirm('Are you sure you want to approve this request?')) {
-                $.post(`/Approvals/Approve/${requestId}`, function() {
-                    showToast('Request approved successfully', 'success');
-                    setTimeout(() => location.reload(), 1500);
-                }).fail(function() {
-                    showToast('Failed to approve request', 'error');
-                });
+                showLoader();
+
+                $.post(`/Approvals/Approve/${requestId}`)
+                    .done(function() {
+                        showToast('Request approved successfully', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    })
+                    .fail(function(xhr) {
+                        hideLoader();
+                        showToast('Failed to approve request: ' + (xhr.responseText || 'Unknown error'), 'error');
+                    });
             }
         }
 
-        function rejectRequest(requestId) {
+        function showRejectModal(requestId) {
             currentRequestId = requestId;
+            $('#rejectionReason').val('').removeClass('is-invalid');
             $('#rejectModal').modal('show');
         }
 
         function confirmReject() {
-            const reason = $('#rejectionReason').val();
+            const reason = $('#rejectionReason').val().trim();
+
             if (!reason) {
-                showToast('Please provide a rejection reason', 'warning');
+                $('#rejectionReason').addClass('is-invalid');
                 return;
             }
 
-            $.post(`/Approvals/Reject/${currentRequestId}`, { reason: reason }, function() {
-                $('#rejectModal').modal('hide');
-                showToast('Request rejected', 'success');
-                setTimeout(() => location.reload(), 1500);
-            }).fail(function() {
-                showToast('Failed to reject request', 'error');
-            });
+            showLoader();
+
+            $.post(`/Approvals/Reject/${currentRequestId}`, { reason: reason })
+                .done(function() {
+                    $('#rejectModal').modal('hide');
+                    showToast('Request rejected', 'info');
+                    setTimeout(() => location.reload(), 1000);
+                })
+                .fail(function(xhr) {
+                    hideLoader();
+                    showToast('Failed to reject request: ' + (xhr.responseText || 'Unknown error'), 'error');
+                });
+        }
+
+        function showLoader() {
+            $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
+        }
+
+        function hideLoader() {
+            $('.loader-overlay').remove();
         }
     </script>
+}
+
+@functions {
+    string GetRequestTypeDisplay(string requestType)
+    {
+        return requestType switch
+        {
+            "product.create" => "Create Product",
+            "product.update" => "Update Product",
+            "product.delete" => "Delete Product",
+            "product.transfer" => "Transfer Product",
+            "route.update" => "Update Route",
+            "route.delete" => "Delete Route",
+            _ => requestType
+        };
+    }
+
+    string GetRequestSummary(ApprovalRequestDto request)
+    {
+        // Parse action data to create summary
+        try
+        {
+            dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(request.ActionData);
+            return request.RequestType switch
+            {
+                "product.create" => $"New product: {data.Model} ({data.InventoryCode})",
+                "product.update" => $"Update product #{request.EntityId}",
+                "product.delete" => $"Delete product #{request.EntityId}",
+                "product.transfer" => $"Transfer product #{data.ProductId} to {data.ToDepartmentName}",
+                _ => "View details for more information"
+            };
+        }
+        catch
+        {
+            return "View details for more information";
+        }
+    }
 }

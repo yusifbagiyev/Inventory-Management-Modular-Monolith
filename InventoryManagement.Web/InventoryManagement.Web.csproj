@@ -14,4 +14,8 @@
     <PackageReference Include="Refit" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\NotificationService.Application\NotificationService.Application.csproj" />
+  </ItemGroup>
+
 </Project>

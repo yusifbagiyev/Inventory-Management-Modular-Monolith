@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Events;
 using RabbitMQ.Client;
@@ -15,10 +17,12 @@ namespace NotificationService.Infrastructure.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IConnection _connection;
         private readonly IModel _channel;
+        private readonly ILogger<RabbitMQConsumer> _logger;
 
-        public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration)
+        public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration,ILogger<RabbitMQConsumer> logger)
         {
             _serviceProvider = serviceProvider;
+            _logger = logger;
 
             var factory = new ConnectionFactory
             {
@@ -82,7 +86,7 @@ namespace NotificationService.Infrastructure.Services
                 }
                 catch (Exception ex)
                 {
-                    // Log error
+                    _logger.LogError(ex, "Error processing notification message");
                     _channel.BasicNack(ea.DeliveryTag, false, true);
                 }
             };

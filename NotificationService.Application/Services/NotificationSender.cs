@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNet.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
+using NotificationService.Application.Interfaces;
 using NotificationService.Domain.Entities;
+using NotificationService.Domain.Repositories;
 
 namespace NotificationService.Application.Services
 {

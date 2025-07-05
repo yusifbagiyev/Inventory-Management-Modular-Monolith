@@ -1,44 +1,200 @@
-﻿<div id="notificationContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;">
-    <!-- Notifications will appear here -->
-</div>
+﻿@if (User.Identity?.IsAuthenticated ?? false)
+{
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script>
+        let notificationConnection = null;
 
-<script src="~/lib/signalr/signalr.min.js"></script>
-<script>
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl("/notificationHub")
-        .build();
+        $(document).ready(function() {
+            initializeNotifications();
+            loadNotificationCount();
+            loadRecentNotifications();
 
-    connection.on("ReceiveNotification", function (notification) {
-        showNotification(notification);
-    });
+            if ('@User.IsInRole("Admin")' === 'True') {
+                loadPendingApprovalsCount();
+            }
+        });
 
-    connection.start().catch(function (err) {
-        console.error(err.toString());
-    });
+        function initializeNotifications() {
+            notificationConnection = new signalR.HubConnectionBuilder()
+                .withUrl("/notificationHub", {
+                    accessTokenFactory: () => {
+                        return '@Context.Session.GetString("JwtToken")';
+                    }
+                })
+                .withAutomaticReconnect()
+                .build();
 
-    function showNotification(notification) {
-        const toast = `
-            <div class="toast show" role="alert">
-                <div class="toast-header">
-                    <strong class="me-auto">${notification.title}</strong>
-                    <small>${new Date(notification.createdAt).toLocaleTimeString()}</small>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            notificationConnection.on("ReceiveNotification", function (notification) {
+                showRealtimeNotification(notification);
+                incrementNotificationCount();
+                addNotificationToDropdown(notification);
+            });
+
+            notificationConnection.on("NotificationRead", function (notificationId) {
+                $(`#notification-${notificationId}`).removeClass('unread');
+            });
+
+            notificationConnection.start().catch(function (err) {
+                console.error('SignalR Connection Error:', err.toString());
+            });
+        }
+
+        function showRealtimeNotification(notification) {
+            const toastHtml = `
+                <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="5000">
+                    <div class="toast-header">
+                        <i class="fas fa-bell text-primary me-2"></i>
+                        <strong class="me-auto">${notification.title}</strong>
+                        <small>just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${notification.message}
+                        ${notification.data && notification.data.requestId ?
+                            `<div class="mt-2">
+                                <a href="/Approvals/Details/${notification.data.requestId}" class="btn btn-sm btn-primary">
+                                    View Details
+                                </a>
+                            </div>` : ''}
+                    </div>
                 </div>
-                <div class="toast-body">
-                    ${notification.message}
-                </div>
-            </div>
-        `;
+            `;
 
-        $('#notificationContainer').append(toast);
+            $('#toastContainer').append(toastHtml);
+            const toastElement = $('#toastContainer .toast').last()[0];
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+        }
 
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            $('.toast').first().remove();
-        }, 5000);
-    }
+        function loadNotificationCount() {
+            $.get('/api/notifications/unread-count', function(count) {
+                updateNotificationBadge(count);
+            });
+        }
 
-    function markNotificationAsRead(notificationId) {
-        connection.invoke("MarkAsRead", notificationId);
-    }
-</script>
+        function updateNotificationBadge(count) {
+            const badge = $('#notificationCount');
+            if (count > 0) {
+                badge.text(count).show();
+            } else {
+                badge.hide();
+            }
+        }
+
+        function incrementNotificationCount() {
+            const badge = $('#notificationCount');
+            const currentCount = parseInt(badge.text()) || 0;
+            badge.text(currentCount + 1).show();
+        }
+
+        function loadRecentNotifications() {
+            $.get('/api/notifications?unreadOnly=false', function(notifications) {
+                const listHtml = notifications.slice(0, 5).map(n => createNotificationItem(n)).join('');
+                $('#notificationList').html(listHtml || '<div class="text-center p-3 text-muted">No notifications</div>');
+            });
+        }
+
+        function createNotificationItem(notification) {
+            const timeAgo = getTimeAgo(notification.createdAt);
+            const unreadClass = notification.isRead ? '' : 'unread';
+
+            return `
+                <a href="#" class="dropdown-item notification-item ${unreadClass}"
+                   id="notification-${notification.id}"
+                   onclick="handleNotificationClick(${notification.id}, '${notification.type}', '${notification.data}')">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            ${getNotificationIcon(notification.type)}
+                        </div>
+                        <div class="flex-grow-1 ms-2">
+                            <h6 class="mb-1">${notification.title}</h6>
+                            <p class="mb-1 text-muted small">${notification.message}</p>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+
+        function addNotificationToDropdown(notification) {
+            const item = createNotificationItem({
+                ...notification,
+                isRead: false,
+                createdAt: new Date().toISOString()
+            });
+
+            $('#notificationList').prepend(item);
+
+            // Keep only 5 items in dropdown
+            $('#notificationList .notification-item').slice(5).remove();
+        }
+
+        function handleNotificationClick(notificationId, type, data) {
+            event.preventDefault();
+
+            // Mark as read
+            markNotificationAsRead(notificationId);
+
+            // Navigate based on type
+            if (type === 'approval_request' && data) {
+                const parsedData = JSON.parse(data);
+                window.location.href = `/Approvals/Details/${parsedData.RequestId}`;
+            } else if (type === 'approval_processed' && data) {
+                const parsedData = JSON.parse(data);
+                window.location.href = `/MyRequests/Details/${parsedData.RequestId}`;
+            }
+        }
+
+        function markNotificationAsRead(notificationId) {
+            $.post('/api/notifications/mark-as-read', { notificationId: notificationId }, function() {
+                $(`#notification-${notificationId}`).removeClass('unread');
+                const badge = $('#notificationCount');
+                const currentCount = parseInt(badge.text()) || 0;
+                if (currentCount > 0) {
+                    updateNotificationBadge(currentCount - 1);
+                }
+            });
+
+            if (notificationConnection && notificationConnection.state === signalR.HubConnectionState.Connected) {
+                notificationConnection.invoke("MarkAsRead", notificationId);
+            }
+        }
+
+        function getNotificationIcon(type) {
+            switch(type) {
+                case 'approval_request':
+                    return '<i class="fas fa-clock text-warning fa-2x"></i>';
+                case 'approval_processed':
+                    return '<i class="fas fa-check-circle text-success fa-2x"></i>';
+                case 'approval_rejected':
+                    return '<i class="fas fa-times-circle text-danger fa-2x"></i>';
+                default:
+                    return '<i class="fas fa-info-circle text-info fa-2x"></i>';
+            }
+        }
+
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function loadPendingApprovalsCount() {
+            $.get('/api/approvalrequests/pending-count', function(count) {
+                if (count > 0) {
+                    $('#pendingApprovalsCount').text(count).show();
+                } else {
+                    $('#pendingApprovalsCount').hide();
+                }
+            });
+        }
+    </script>
+}

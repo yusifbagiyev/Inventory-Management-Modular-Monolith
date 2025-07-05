@@ -29,6 +29,9 @@ namespace ProductService.Infrastructure
             services.AddScoped<IImageService, ImageService>();
             services.AddScoped<ITransactionService, TransactionService>();
 
+            services.AddHttpClient<IApprovalService, ApprovalServiceClient>();
+            services.AddHttpContextAccessor();
+
             // Add RabbitMQ Consumer as hosted service
             services.AddSingleton<RabbitMQConsumer>();
             services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());

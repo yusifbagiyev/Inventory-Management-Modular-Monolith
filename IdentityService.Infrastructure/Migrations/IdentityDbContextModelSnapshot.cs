@@ -65,29 +65,29 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             Id = 3,
                             Category = "Route",
-                            Description = "Update routes",
+                            Description = "Update routes (requires approval)",
                             Name = "route.update"
                         },
                         new
                         {
                             Id = 4,
                             Category = "Route",
-                            Description = "Delete routes",
-                            Name = "route.delete"
+                            Description = "Update routes directly",
+                            Name = "route.update.direct"
                         },
                         new
                         {
                             Id = 5,
                             Category = "Route",
-                            Description = "Complete routes",
-                            Name = "route.complete"
+                            Description = "Delete routes (requires approval)",
+                            Name = "route.delete"
                         },
                         new
                         {
                             Id = 6,
                             Category = "Route",
-                            Description = "Batch delete routes",
-                            Name = "route.batch_delete"
+                            Description = "Delete routes directly",
+                            Name = "route.delete.direct"
                         },
                         new
                         {
@@ -100,50 +100,78 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             Id = 8,
                             Category = "Product",
-                            Description = "Create products",
+                            Description = "Create products (requires approval)",
                             Name = "product.create"
                         },
                         new
                         {
                             Id = 9,
                             Category = "Product",
-                            Description = "Update products",
-                            Name = "product.update"
+                            Description = "Create products directly",
+                            Name = "product.create.direct"
                         },
                         new
                         {
                             Id = 10,
                             Category = "Product",
-                            Description = "Delete products",
-                            Name = "product.delete"
+                            Description = "Update products (requires approval)",
+                            Name = "product.update"
                         },
                         new
                         {
                             Id = 11,
                             Category = "Product",
-                            Description = "Transfer products",
-                            Name = "product.transfer"
+                            Description = "Update products directly",
+                            Name = "product.update.direct"
                         },
                         new
                         {
                             Id = 12,
+                            Category = "Product",
+                            Description = "Delete products (requires approval)",
+                            Name = "product.delete"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Category = "Product",
+                            Description = "Delete products directly",
+                            Name = "product.delete.direct"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Category = "Product",
+                            Description = "Transfer products (requires approval)",
+                            Name = "product.transfer"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Category = "Product",
+                            Description = "Transfer products directly",
+                            Name = "product.transfer.direct"
+                        },
+                        new
+                        {
+                            Id = 16,
                             Category = "Admin",
                             Description = "Manage users",
                             Name = "user.manage"
                         },
                         new
                         {
-                            Id = 13,
+                            Id = 17,
                             Category = "Admin",
                             Description = "Manage roles",
                             Name = "role.manage"
                         },
                         new
                         {
-                            Id = 14,
+                            Id = 18,
                             Category = "Admin",
-                            Description = "System configuration",
-                            Name = "system.config"
+                            Description = "Manage approvals",
+                            Name = "approval.manage"
                         });
                 });
 
@@ -223,30 +251,23 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            Description = "System Administrator",
+                            Description = "",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
                             Id = 2,
-                            Description = "Department Manager",
+                            Description = "",
                             Name = "Manager",
                             NormalizedName = "MANAGER"
                         },
                         new
                         {
                             Id = 3,
-                            Description = "Regular User",
+                            Description = "",
                             Name = "User",
                             NormalizedName = "USER"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Description = "Read-only Access",
-                            Name = "Viewer",
-                            NormalizedName = "VIEWER"
                         });
                 });
 
@@ -337,6 +358,26 @@ namespace IdentityService.Infrastructure.Migrations
                         },
                         new
                         {
+                            RoleId = 1,
+                            PermissionId = 15
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 16
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 17
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 18
+                        },
+                        new
+                        {
                             RoleId = 2,
                             PermissionId = 1
                         },
@@ -353,17 +394,7 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 4
-                        },
-                        new
-                        {
-                            RoleId = 2,
                             PermissionId = 5
-                        },
-                        new
-                        {
-                            RoleId = 2,
-                            PermissionId = 6
                         },
                         new
                         {
@@ -378,17 +409,17 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 9
-                        },
-                        new
-                        {
-                            RoleId = 2,
                             PermissionId = 10
                         },
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 11
+                            PermissionId = 12
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 14
                         },
                         new
                         {
@@ -398,36 +429,6 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 3,
-                            PermissionId = 2
-                        },
-                        new
-                        {
-                            RoleId = 3,
-                            PermissionId = 3
-                        },
-                        new
-                        {
-                            RoleId = 3,
-                            PermissionId = 5
-                        },
-                        new
-                        {
-                            RoleId = 3,
-                            PermissionId = 7
-                        },
-                        new
-                        {
-                            RoleId = 3,
-                            PermissionId = 11
-                        },
-                        new
-                        {
-                            RoleId = 4,
-                            PermissionId = 1
-                        },
-                        new
-                        {
-                            RoleId = 4,
                             PermissionId = 7
                         });
                 });

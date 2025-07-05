@@ -1,6 +1,9 @@
 ﻿using System.Text.Json;
 using ApprovalService.Application.DTOs;
+using ApprovalService.Application.Events;
+using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Entities;
+using ApprovalService.Domain.Repositories;
 using AutoMapper;
 using MediatR;
 
@@ -33,7 +36,7 @@ namespace ApprovalService.Application.Features.Commands
             {
                 var actionDataJson = JsonSerializer.Serialize(request.Dto.ActionData);
 
-                var approvalRequst = new ApprovalRequest(
+                var approvalRequest = new ApprovalRequest(
                     request.Dto.RequestType,
                     request.Dto.EntityType,
                     request.Dto.EntityId,
@@ -41,7 +44,7 @@ namespace ApprovalService.Application.Features.Commands
                     request.UserId,
                     request.UserName);
 
-                await _repository.AddAsync(approvalRequst, cancellationToken);
+                await _repository.AddAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Publish event for notification
@@ -56,7 +59,7 @@ namespace ApprovalService.Application.Features.Commands
 
                 await _messagePublisher.PublishAsync(evt, "approval.request.created", cancellationToken);
 
-                return _mapper.Map<ApprovalRequestDto>(approvalRequst);
+                return _mapper.Map<ApprovalRequestDto>(approvalRequest);
             }
         }
     }

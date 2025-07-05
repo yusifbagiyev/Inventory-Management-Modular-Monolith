@@ -48,6 +48,31 @@
                         <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
                             @if (User.Identity?.IsAuthenticated ?? false)
                             {
+                                <!-- Notification Bell -->
+                                <li class="nav-item dropdown me-3">
+                                    <a class="nav-link position-relative" href="#" id="notificationDropdown"
+                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-bell"></i>
+                                        <span class="notification-badge" id="notificationCount" style="display:none;">0</span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end notification-dropdown"
+                                         aria-labelledby="notificationDropdown">
+                                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                                            <span>Notifications</span>
+                                            <a href="/Notifications" class="text-decoration-none small">View All</a>
+                                        </div>
+                                        <div class="dropdown-divider"></div>
+                                        <div id="notificationList" class="notification-list">
+                                            <div class="text-center p-3">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+
+                                <!-- User Dropdown -->
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
                                        role="button" data-bs-toggle="dropdown">
@@ -59,11 +84,15 @@
                                                 <i class="fas fa-user"></i> Profile
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item" href="/Account/Settings">
-                                                <i class="fas fa-cog"></i> Settings
-                                            </a>
-                                        </li>
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="/Approvals">
+                                                    <i class="fas fa-check-circle"></i> Approvals
+                                                    <span class="badge bg-warning ms-2" id="pendingApprovalsCount"></span>
+                                                </a>
+                                            </li>
+                                        }
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <form method="post" action="/Account/Logout">
@@ -101,6 +130,9 @@
             </div>
         </div>
     </div>
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    </div>
+    @await Html.PartialAsync("_NotificationScripts")
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

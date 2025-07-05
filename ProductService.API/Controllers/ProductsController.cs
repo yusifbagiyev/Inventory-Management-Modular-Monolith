@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using ApprovalService.Application.DTOs;
 using ApprovalService.Domain.Enums;
 using IdentityService.Domain.Constants;
 using IdentityService.Shared.Authorization;
@@ -9,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
+using ProductService.Application.Interfaces;
 
 namespace ProductService.API.Controllers
 {

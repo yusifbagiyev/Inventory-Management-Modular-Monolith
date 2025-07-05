@@ -1,6 +1,8 @@
-﻿using ApprovalService.Application.Interfaces;
+﻿using ApprovalService.Application.Events;
+using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Enums;
+using ApprovalService.Domain.Repositories;
 using MediatR;
 
 namespace ApprovalService.Application.Features.Commands

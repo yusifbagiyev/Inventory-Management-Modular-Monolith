@@ -236,10 +236,9 @@ namespace IdentityService.Infrastructure.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Description", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { 1, null, "System Administrator", "Admin", "ADMIN" },
-                    { 2, null, "Department Manager", "Manager", "MANAGER" },
-                    { 3, null, "Regular User", "User", "USER" },
-                    { 4, null, "Read-only Access", "Viewer", "VIEWER" }
+                    { 1, null, "", "Admin", "ADMIN" },
+                    { 2, null, "", "Manager", "MANAGER" },
+                    { 3, null, "", "User", "USER" }
                 });
 
             migrationBuilder.InsertData(
@@ -249,18 +248,22 @@ namespace IdentityService.Infrastructure.Migrations
                 {
                     { 1, "Route", "View routes", "route.view" },
                     { 2, "Route", "Create routes", "route.create" },
-                    { 3, "Route", "Update routes", "route.update" },
-                    { 4, "Route", "Delete routes", "route.delete" },
-                    { 5, "Route", "Complete routes", "route.complete" },
-                    { 6, "Route", "Batch delete routes", "route.batch_delete" },
+                    { 3, "Route", "Update routes (requires approval)", "route.update" },
+                    { 4, "Route", "Update routes directly", "route.update.direct" },
+                    { 5, "Route", "Delete routes (requires approval)", "route.delete" },
+                    { 6, "Route", "Delete routes directly", "route.delete.direct" },
                     { 7, "Product", "View products", "product.view" },
-                    { 8, "Product", "Create products", "product.create" },
-                    { 9, "Product", "Update products", "product.update" },
-                    { 10, "Product", "Delete products", "product.delete" },
-                    { 11, "Product", "Transfer products", "product.transfer" },
-                    { 12, "Admin", "Manage users", "user.manage" },
-                    { 13, "Admin", "Manage roles", "role.manage" },
-                    { 14, "Admin", "System configuration", "system.config" }
+                    { 8, "Product", "Create products (requires approval)", "product.create" },
+                    { 9, "Product", "Create products directly", "product.create.direct" },
+                    { 10, "Product", "Update products (requires approval)", "product.update" },
+                    { 11, "Product", "Update products directly", "product.update.direct" },
+                    { 12, "Product", "Delete products (requires approval)", "product.delete" },
+                    { 13, "Product", "Delete products directly", "product.delete.direct" },
+                    { 14, "Product", "Transfer products (requires approval)", "product.transfer" },
+                    { 15, "Product", "Transfer products directly", "product.transfer.direct" },
+                    { 16, "Admin", "Manage users", "user.manage" },
+                    { 17, "Admin", "Manage roles", "role.manage" },
+                    { 18, "Admin", "Manage approvals", "approval.manage" }
                 });
 
             migrationBuilder.InsertData(
@@ -282,25 +285,21 @@ namespace IdentityService.Infrastructure.Migrations
                     { 12, 1 },
                     { 13, 1 },
                     { 14, 1 },
+                    { 15, 1 },
+                    { 16, 1 },
+                    { 17, 1 },
+                    { 18, 1 },
                     { 1, 2 },
                     { 2, 2 },
                     { 3, 2 },
-                    { 4, 2 },
                     { 5, 2 },
-                    { 6, 2 },
                     { 7, 2 },
                     { 8, 2 },
-                    { 9, 2 },
                     { 10, 2 },
-                    { 11, 2 },
+                    { 12, 2 },
+                    { 14, 2 },
                     { 1, 3 },
-                    { 2, 3 },
-                    { 3, 3 },
-                    { 5, 3 },
-                    { 7, 3 },
-                    { 11, 3 },
-                    { 1, 4 },
-                    { 7, 4 }
+                    { 7, 3 }
                 });
 
             migrationBuilder.CreateIndex(

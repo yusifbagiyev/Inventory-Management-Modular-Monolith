@@ -52,6 +52,14 @@ namespace IdentityService.Infrastructure.Data
 
         private void SeedData(ModelBuilder builder)
         {
+            var roles = new[]
+            {
+                new Role { Id = 1, Name = "Admin", NormalizedName = "ADMIN" },
+                new Role { Id = 2, Name = "Manager", NormalizedName = "MANAGER" },
+                new Role { Id = 3, Name = "User", NormalizedName = "USER" }
+            };
+            builder.Entity<Role>().HasData(roles);
+
             // Seed Permissions (expanded)
             var permissions = new[]
             {

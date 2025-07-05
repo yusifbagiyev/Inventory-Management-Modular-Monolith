@@ -1,5 +1,6 @@
 ﻿using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Features.Commands;
+using ApprovalService.Application.Features.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

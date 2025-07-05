@@ -1,6 +1,7 @@
 using InventoryManagement.Web.Middleware;
 using InventoryManagement.Web.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using NotificationService.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IApiService,ApiService>();
 
+builder.Services.AddHttpClient<IApprovalService, ApprovalService>();
+builder.Services.AddSignalR();
 
 //Add memory cache
 builder.Services.AddMemoryCache();
@@ -59,6 +62,8 @@ app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.UseMiddleware<JwtMiddleware>();
 
