@@ -1,8 +1,8 @@
 ﻿using IdentityService.Application.DTOs;
 using IdentityService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace IdentityService.API.Controllers
 {
@@ -20,113 +20,299 @@ namespace IdentityService.API.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
-            var result = await _authService.LoginAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _authService.LoginAsync(dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("register-by-admin")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TokenDto>> RegisterByAdmin(RegisterDto dto)
         {
-            var result = await _authService.RegisterAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _authService.RegisterAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("refresh")]
         public async Task<ActionResult<TokenDto>> RefreshToken(RefreshTokenDto dto)
         {
-            var result = await _authService.RefreshTokenAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _authService.RefreshTokenAsync(dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [Authorize]
         [HttpGet("me")]
         public async Task<ActionResult<UserDto>> GetCurrentUser()
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var user = await _authService.GetUserAsync(userId);
-            return Ok(user);
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                if (userId == 0)
+                    return Unauthorized(new { message = "Invalid user token" });
+
+                var user = await _authService.GetUserAsync(userId);
+                if (user == null)
+                    return NotFound(new { message = "User not found" });
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
         {
-            var users = await _authService.GetAllUsersAsync();
-            return Ok(users);
+            try
+            {
+                var users = await _authService.GetAllUsersAsync();
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("users/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UserDto>> GetUser(int id)
         {
-            var user = await _authService.GetUserAsync(id);
-            if (user == null)
-                return NotFound();
-            return Ok(user);
+            try
+            {
+                var user = await _authService.GetUserAsync(id);
+                if (user == null)
+                    return NotFound(new { message = "User not found" });
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("users/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUser(int id, UpdateUserDto dto)
         {
-            if (id != dto.Id)
-                return BadRequest();
+            try
+            {
+                if (id != dto.Id)
+                    return BadRequest(new { message = "User ID mismatch" });
 
-            var result = await _authService.UpdateUserAsync(dto);
-            if (!result)
-                return BadRequest();
+                var result = await _authService.UpdateUserAsync(dto);
+                if (!result)
+                    return BadRequest(new { message = "Failed to update user" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("users/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var result = await _authService.DeleteUserAsync(id);
-            if (!result)
-                return BadRequest();
+            try
+            {
+                var result = await _authService.DeleteUserAsync(id);
+                if (!result)
+                    return BadRequest(new { message = "Failed to delete user" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("users/{id}/toggle-status")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleUserStatus(int id)
         {
-            var result = await _authService.ToggleUserStatusAsync(id);
-            if (!result)
-                return BadRequest();
+            try
+            {
+                var result = await _authService.ToggleUserStatusAsync(id);
+                if (!result)
+                    return BadRequest(new { message = "Failed to toggle user status" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("users/{id}/reset-password")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ResetPassword(int id, ResetPasswordDto dto)
         {
-            var result = await _authService.ResetPasswordAsync(id, dto.NewPassword);
-            if (!result)
-                return BadRequest();
+            try
+            {
+                var result = await _authService.ResetPasswordAsync(id, dto.NewPassword);
+                if (!result)
+                    return BadRequest(new { message = "Failed to reset password" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("roles")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<string>>> GetRoles()
         {
-            var roles = await _authService.GetAllRolesAsync();
-            return Ok(roles);
+            try
+            {
+                var roles = await _authService.GetAllRolesAsync();
+                return Ok(roles);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("permissions")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<object>>> GetPermissions()
         {
-            var permissions = await _authService.GetAllPermissionsAsync();
-            return Ok(permissions);
+            try
+            {
+                var permissions = await _authService.GetAllPermissionsAsync();
+                return Ok(permissions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("users/{id}/assign-role")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AssignRole(int id, AssignRoleDto dto)
+        {
+            try
+            {
+                var result = await _authService.AssignRoleAsync(id, dto.RoleName);
+                if (!result)
+                    return BadRequest(new { message = "Failed to assign role" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("users/{id}/remove-role")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RemoveRole(int id, RemoveRoleDto dto)
+        {
+            try
+            {
+                var result = await _authService.RemoveRoleAsync(id, dto.RoleName);
+                if (!result)
+                    return BadRequest(new { message = "Failed to remove role" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("users/{id}/check-permission")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<bool>> CheckPermission(int id, CheckPermissionDto dto)
+        {
+            try
+            {
+                var hasPermission = await _authService.HasPermissionAsync(id, dto.Permission);
+                return Ok(new { hasPermission });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout(LogoutDto dto)
+        {
+            try
+            {
+                await _authService.LogoutAsync(dto.RefreshToken);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                if (userId == 0)
+                    return Unauthorized(new { message = "Invalid user token" });
+
+                var result = await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
+                if (!result)
+                    return BadRequest(new { message = "Failed to change password" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
