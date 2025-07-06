@@ -1,0 +1,588 @@
+﻿@model List<string>
+
+@{
+    ViewData["Title"] = "Roles Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="page-title">
+                        <i class="fas fa-user-tag me-2"></i>
+                        Roles Management
+                    </h1>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                            <i class="fas fa-plus me-2"></i>
+                            Add New Role
+                        </button>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item">
+                                    <a asp-action="Index" asp-controller="UserManagement">User Management</a>
+                                </li>
+                                <li class="breadcrumb-item active">Roles</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-users-cog me-2"></i>
+                            System Roles
+                        </h4>
+                        <span class="badge bg-light text-primary">
+                            @Model.Count() Total Roles
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="row">
+                            @foreach (var role in Model)
+                            {
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card role-card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <h5 class="card-title">
+                                                    <i class="fas fa-shield-alt me-2 text-primary"></i>
+                                                    @role
+                                                </h5>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="viewRoleDetails('@role')">
+                                                                <i class="fas fa-eye me-2"></i>View Details
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="editRole('@role')">
+                                                                <i class="fas fa-edit me-2"></i>Edit Role
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="#" onclick="managePermissions('@role')">
+                                                                <i class="fas fa-key me-2"></i>Manage Permissions
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="#" onclick="deleteRole('@role')">
+                                                                <i class="fas fa-trash me-2"></i>Delete Role
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            <div class="role-info">
+                                                <div class="mb-2">
+                                                    <small class="text-muted">Description:</small>
+                                                    <p class="mb-1">@GetRoleDescription(role)</p>
+                                                </div>
+
+                                                <div class="d-flex justify-content-between text-sm">
+                                                    <span>
+                                                        <i class="fas fa-users me-1"></i>
+                                                        <span class="badge bg-info">@GetUsersCount(role)</span> Users
+                                                    </span>
+                                                    <span>
+                                                        <i class="fas fa-key me-1"></i>
+                                                        <span class="badge bg-success">@GetPermissionsCount(role)</span> Permissions
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer bg-light">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    Last updated: @DateTime.Now.ToString("MMM dd, yyyy")
+                                                </small>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" onclick="viewRoleDetails('@role')">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-success" onclick="editRole('@role')">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-tag fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No Roles Found</h4>
+                            <p class="text-muted">There are no roles configured in the system.</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                                <i class="fas fa-plus me-2"></i>
+                                Create First Role
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-user-tag fa-2x text-primary mb-2"></i>
+                    <h4 class="card-title">@Model.Count()</h4>
+                    <p class="card-text text-muted">Total Roles</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x text-success mb-2"></i>
+                    <h4 class="card-title">@GetTotalAssignedUsers()</h4>
+                    <p class="card-text text-muted">Assigned Users</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-key fa-2x text-warning mb-2"></i>
+                    <h4 class="card-title">@GetTotalPermissions()</h4>
+                    <p class="card-text text-muted">Total Permissions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="fas fa-shield-alt fa-2x text-info mb-2"></i>
+                    <h4 class="card-title">@GetActiveRoles()</h4>
+                    <p class="card-text text-muted">Active Roles</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a asp-action="Index" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-users me-2"></i>
+                                Back to Users
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a asp-action="Permissions" class="btn btn-outline-info w-100">
+                                <i class="fas fa-key me-2"></i>
+                                Manage Permissions
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-success w-100" onclick="bulkAssignRoles()">
+                                <i class="fas fa-users-cog me-2"></i>
+                                Bulk Assign
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-warning w-100" onclick="exportRoles()">
+                                <i class="fas fa-download me-2"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Role Modal -->
+<div class="modal fade" id="createRoleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Create New Role
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createRoleForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Role Name *</label>
+                                <input type="text" class="form-control" id="roleName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Role Priority</label>
+                                <select class="form-select" id="rolePriority">
+                                    <option value="1">High</option>
+                                    <option value="2">Medium</option>
+                                    <option value="3">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="roleDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Permissions</label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="read" id="perm_read">
+                                <label class="form-check-label" for="perm_read">Read Access</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="write" id="perm_write">
+                                <label class="form-check-label" for="perm_write">Write Access</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="delete" id="perm_delete">
+                                <label class="form-check-label" for="perm_delete">Delete Access</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="admin" id="perm_admin">
+                                <label class="form-check-label" for="perm_admin">Admin Access</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>
+                        Create Role
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Role Details Modal -->
+<div class="modal fade" id="roleDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-tag me-2"></i>
+                    Role Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="roleDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="editCurrentRole()">
+                    <i class="fas fa-edit me-2"></i>
+                    Edit Role
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+
+        // Create Role Form Submission
+        document.getElementById('createRoleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = {
+                name: document.getElementById('roleName').value,
+                description: document.getElementById('roleDescription').value,
+                priority: document.getElementById('rolePriority').value
+            };
+
+            // Show loading state
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+            submitBtn.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {
+                alert('Role created successfully!');
+                $('#createRoleModal').modal('hide');
+                location.reload();
+            }, 1000);
+        });
+
+        function viewRoleDetails(roleName) {
+            $('#roleDetailsContent').html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading role details...</p>
+                </div>
+            `);
+
+            $('#roleDetailsModal').modal('show');
+
+            // Mock data for demonstration
+            setTimeout(() => {
+                $('#roleDetailsContent').html(`
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Role Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Name:</strong></td><td>${roleName}</td></tr>
+                                <tr><td><strong>Description:</strong></td><td>${getRoleDescription(roleName)}</td></tr>
+                                <tr><td><strong>Priority:</strong></td><td>Medium</td></tr>
+                                <tr><td><strong>Status:</strong></td><td><span class="badge bg-success">Active</span></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Assignment Details</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Assigned Users:</strong></td><td>${getUsersCount(roleName)}</td></tr>
+                                <tr><td><strong>Permissions:</strong></td><td>${getPermissionsCount(roleName)}</td></tr>
+                                <tr><td><strong>Created Date:</strong></td><td>2024-01-01</td></tr>
+                                <tr><td><strong>Last Modified:</strong></td><td>2024-01-15</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Assigned Permissions</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-primary">Read Access</span>
+                                <span class="badge bg-success">Write Access</span>
+                                <span class="badge bg-warning">Modify Access</span>
+                                <span class="badge bg-info">View Reports</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }, 500);
+        }
+
+        function editRole(roleName) {
+            alert(`Edit role: ${roleName} - This would open an edit form`);
+        }
+
+        function deleteRole(roleName) {
+            if (confirm(`Are you sure you want to delete the role "${roleName}"?`)) {
+                alert(`Role ${roleName} deleted successfully!`);
+                location.reload();
+            }
+        }
+
+        function managePermissions(roleName) {
+            alert(`Manage permissions for role: ${roleName}`);
+        }
+
+        function bulkAssignRoles() {
+            alert('Bulk assign roles functionality would be implemented here');
+        }
+
+        function exportRoles() {
+            alert('Export roles functionality would be implemented here');
+        }
+
+        function editCurrentRole() {
+            $('#roleDetailsModal').modal('hide');
+            // Implement edit functionality
+        }
+
+        // Helper functions to simulate data
+        function getRoleDescription(role) {
+            const descriptions = {
+                'Admin': 'Full system access with all permissions',
+                'Manager': 'Management level access with limited admin rights',
+                'User': 'Basic user access with read permissions',
+                'Guest': 'Limited access for temporary users'
+            };
+            return descriptions[role] || 'Standard role with basic permissions';
+        }
+
+        function getUsersCount(role) {
+            const counts = { 'Admin': 3, 'Manager': 8, 'User': 25, 'Guest': 5 };
+            return counts[role] || Math.floor(Math.random() * 20) + 1;
+        }
+
+        function getPermissionsCount(role) {
+            const counts = { 'Admin': 15, 'Manager': 8, 'User': 5, 'Guest': 2 };
+            return counts[role] || Math.floor(Math.random() * 10) + 1;
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .role-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+            .role-card:hover {
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                transform: translateY(-2px);
+            }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .badge {
+            font-size: 0.75rem;
+        }
+
+        .dropdown-toggle::after {
+            display: none;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .modal-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .form-check {
+            margin-bottom: 0.5rem;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+    </style>
+}
+
+@functions {
+    private string GetRoleDescription(string role)
+    {
+        return role switch
+        {
+            "Admin" => "Full system access with all permissions",
+            "Manager" => "Management level access with limited admin rights",
+            "User" => "Basic user access with read permissions",
+            "Guest" => "Limited access for temporary users",
+            _ => "Standard role with basic permissions"
+        };
+    }
+
+    private int GetUsersCount(string role)
+    {
+        return role switch
+        {
+            "Admin" => 3,
+            "Manager" => 8,
+            "User" => 25,
+            "Guest" => 5,
+            _ => new Random().Next(1, 20)
+        };
+    }
+
+    private int GetPermissionsCount(string role)
+    {
+        return role switch
+        {
+            "Admin" => 15,
+            "Manager" => 8,
+            "User" => 5,
+            "Guest" => 2,
+            _ => new Random().Next(1, 10)
+        };
+    }
+
+    private int GetTotalAssignedUsers()
+    {
+        return Model.Sum(role => GetUsersCount(role));
+    }
+
+    private int GetTotalPermissions()
+    {
+        return 20; // Mock total permissions
+    }
+
+    private int GetActiveRoles()
+    {
+        return Model.Count; // All roles are considered active
+    }
+}

@@ -1,5 +1,336 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model List<PermissionViewModel>
+
 @{
+    ViewData["Title"] = "Permissions Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1 class="page-title">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Permissions Management
+                    </h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a asp-action="Index" asp-controller="UserManagement">User Management</a>
+                            </li>
+                            <li class="breadcrumb-item active">Permissions</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-key me-2"></i>
+                            System Permissions
+                        </h4>
+                        <span class="badge bg-light text-primary">
+                            @Model.Count() Total Permissions
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="permissionsTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>
+                                            <i class="fas fa-hashtag me-1"></i>
+                                            ID
+                                        </th>
+                                        <th>
+                                            <i class="fas fa-tag me-1"></i>
+                                            Permission Name
+                                        </th>
+                                        <th>
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Description
+                                        </th>
+                                        <th>
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Status
+                                        </th>
+                                        <th class="text-center">
+                                            <i class="fas fa-cogs me-1"></i>
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var permission in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-secondary">@permission.Id</span>
+                                            </td>
+                                            <td>
+                                                <strong>@permission.Name</strong>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted">@permission.Description</span>
+                                            </td>
+                                            <td>
+                                                @if (permission.IsAssigned)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>
+                                                        Assigned
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        Available
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-info"
+                                                            onclick="viewPermissionDetails(@permission.Id)"
+                                                            data-bs-toggle="tooltip"
+                                                            title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                                            onclick="editPermission(@permission.Id)"
+                                                            data-bs-toggle="tooltip"
+                                                            title="Edit Permission">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No Permissions Found</h4>
+                            <p class="text-muted">There are no permissions configured in the system.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a asp-action="Index" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-users me-2"></i>
+                                Back to Users
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a asp-action="Roles" class="btn btn-outline-success w-100">
+                                <i class="fas fa-user-tag me-2"></i>
+                                Manage Roles
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-info w-100" onclick="refreshPermissions()">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-warning w-100" onclick="exportPermissions()">
+                                <i class="fas fa-download me-2"></i>
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permission Details Modal -->
+<div class="modal fade" id="permissionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Permission Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="permissionDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTables
+            $('#permissionsTable').DataTable({
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'asc']],
+                columnDefs: [
+                    { orderable: false, targets: -1 }
+                ]
+            });
+
+            // Initialize tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+
+        function viewPermissionDetails(permissionId) {
+            // Show loading spinner
+            $('#permissionDetailsContent').html(`
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading permission details...</p>
+                </div>
+            `);
+
+            $('#permissionDetailsModal').modal('show');
+
+            // Mock data for demonstration
+            setTimeout(() => {
+                $('#permissionDetailsContent').html(`
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Permission Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>ID:</strong></td><td>${permissionId}</td></tr>
+                                <tr><td><strong>Name:</strong></td><td>Sample Permission</td></tr>
+                                <tr><td><strong>Description:</strong></td><td>This is a sample permission description</td></tr>
+                                <tr><td><strong>Status:</strong></td><td><span class="badge bg-success">Active</span></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Assignment Details</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Assigned Roles:</strong></td><td>3</td></tr>
+                                <tr><td><strong>Affected Users:</strong></td><td>15</td></tr>
+                                <tr><td><strong>Created Date:</strong></td><td>2024-01-01</td></tr>
+                                <tr><td><strong>Last Modified:</strong></td><td>2024-01-15</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                `);
+            }, 500);
+        }
+
+        function editPermission(permissionId) {
+            // Implement edit functionality
+            alert(`Edit permission ${permissionId} - This would open an edit form`);
+        }
+
+        function refreshPermissions() {
+            location.reload();
+        }
+
+        function exportPermissions() {
+            // Implement export functionality
+            alert('Export functionality would be implemented here');
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .page-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .table th {
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-group .btn {
+            margin: 0 2px;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+
+        .modal-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
 }
