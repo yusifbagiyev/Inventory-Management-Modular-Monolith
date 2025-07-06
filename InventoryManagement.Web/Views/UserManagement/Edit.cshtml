@@ -1,0 +1,304 @@
+﻿@model EditUserViewModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mt-4">Edit User</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">User Management</a></li>
+                <li class="breadcrumb-item active">Edit User</li>
+            </ol>
+        </div>
+        <div>
+            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Users
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-edit"></i> User Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input asp-for="Id" type="hidden" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Username" class="form-label">Username</label>
+                                    <input asp-for="Username" class="form-control" readonly />
+                                    <div class="form-text">Username cannot be changed.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input asp-for="Email" class="form-control" placeholder="Enter email address" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="FirstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="LastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check">
+                                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                        <label asp-for="IsActive" class="form-check-label">
+                                            Active User
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Inactive users cannot login to the system.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="@Url.Action("Index")" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-shield"></i> Role Management
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AssignRole" method="post" id="roleForm">
+                        @Html.AntiForgeryToken()
+                        <input name="id" value="@Model.Id" type="hidden" />
+
+                        <div class="mb-3">
+                            <label class="form-label">Current Roles</label>
+                            <div class="current-roles">
+                                @if (Model.CurrentRoles != null && Model.CurrentRoles.Any())
+                                {
+                                    @foreach (var role in Model.CurrentRoles)
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="badge bg-primary">@role</span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRole('@role')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No roles assigned</p>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Add Role</label>
+                            <div class="input-group">
+                                <select name="RoleName" class="form-select">
+                                    <option value="">Select a role</option>
+                                    @if (Model.AvailableRoles != null)
+                                    {
+                                        @foreach (var role in Model.AvailableRoles.Where(r => !Model.CurrentRoles.Contains(r.Value)))
+                                        {
+                                            <option value="@role.Value">@role.Text</option>
+                                        }
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" onclick="assignRole()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-key"></i> Password Management
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid">
+                        <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="btn btn-outline-warning">
+                            <i class="fas fa-key"></i> Reset Password
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Danger Zone
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteUser(@Model.Id, '@Model.Username')">
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Role Modal -->
+<div class="modal fade" id="removeRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove the role <strong id="roleToRemove"></strong> from this user?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="removeRoleForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <input name="id" value="@Model.Id" type="hidden" />
+                    <input name="RoleName" type="hidden" />
+                    <button type="submit" class="btn btn-danger">Remove Role</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-label {
+        font-weight: 600;
+        color: #5a5c69;
+    }
+
+    .card {
+        border: 0;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+
+    .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+
+    .form-select:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+
+    .current-roles {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .badge {
+        font-size: 0.875rem;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function assignRole() {
+            const roleSelect = document.querySelector('select[name="RoleName"]');
+            const selectedRole = roleSelect.value;
+
+            if (!selectedRole) {
+                alert('Please select a role to assign.');
+                return;
+            }
+
+            const form = document.getElementById('roleForm');
+            form.action = '@Url.Action("AssignRole", new { id = Model.Id })';
+            form.submit();
+        }
+
+        function removeRole(roleName) {
+            document.getElementById('roleToRemove').textContent = roleName;
+            document.querySelector('#removeRoleForm input[name="RoleName"]').value = roleName;
+            document.getElementById('removeRoleForm').action = '@Url.Action("RemoveRole", new { id = Model.Id })';
+
+            const modal = new bootstrap.Modal(document.getElementById('removeRoleModal'));
+            modal.show();
+        }
+
+        function deleteUser(userId, username) {
+            document.getElementById('deleteUsername').textContent = username;
+            document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + userId;
+
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+    </script>
+}
