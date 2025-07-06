@@ -52,7 +52,7 @@ namespace NotificationService.Infrastructure.Services
                     var message = Encoding.UTF8.GetString(body);
 
                     using var scope = _serviceProvider.CreateScope();
-                    var notificationSender = scope.ServiceProvider.GetRequiredService<NotificationSender>();
+                    var notificationSender = scope.ServiceProvider.GetRequiredService<INotificationSender>();
                     var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
                     if (ea.RoutingKey == "approval.request.created")

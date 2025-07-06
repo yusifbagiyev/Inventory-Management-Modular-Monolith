@@ -21,7 +21,7 @@
             Message= message;
             Data= data;
             IsRead = false;
-            CreatedAt = DateTime.Now;
+            CreatedAt = DateTime.UtcNow;
         }
         public void MarkAsRead()
         {

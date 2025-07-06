@@ -11,7 +11,7 @@ namespace NotificationService.Infrastructure.Services
         private readonly HttpClient _httpClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor? httpContextAccessor = null)
         {
             _httpClient = httpClient;
             _httpClient.BaseAddress = new Uri(configuration["Services:IdentityService"] ?? "http://localhost:5000");
@@ -20,12 +20,13 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task<IEnumerable<int>> GetUserIdsByRoleAsync(string role, CancellationToken cancellationToken = default)
         {
-            var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
+            var authHeader = _httpContextAccessor?.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
             if (!string.IsNullOrEmpty(authHeader))
             {
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authHeader.Replace("Bearer ", ""));
             }
+            // If no auth header, the request will likely fail unless the identity service allows anonymous access
 
             var response = await _httpClient.GetAsync($"/api/users/by-role/{role}", cancellationToken);
             if (response.IsSuccessStatusCode)
