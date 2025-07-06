@@ -1,0 +1,287 @@
+﻿@model EditUserViewModel
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mt-4">User Details</h1>
+            <ol class="breadcrumb mb-4">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">User Management</a></li>
+                <li class="breadcrumb-item active">User Details</li>
+            </ol>
+        </div>
+        <div>
+            <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-primary me-2">
+                <i class="fas fa-edit"></i> Edit User
+            </a>
+            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Users
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user"></i> User Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Username</label>
+                                <p class="form-control-plaintext">@Model.Username</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Email</label>
+                                <p class="form-control-plaintext">@Model.Email</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">First Name</label>
+                                <p class="form-control-plaintext">@Model.FirstName</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Last Name</label>
+                                <p class="form-control-plaintext">@Model.LastName</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Status</label>
+                                <div>
+                                    @if (Model.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Roles</label>
+                                <div>
+                                    @foreach (var role in Model.CurrentRoles)
+                                    {
+                                        <span class="badge bg-primary me-1">@role</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-bar"></i> Activity Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h5 mb-0">15</div>
+                                <small class="text-muted">Total Logins</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h5 mb-0">2 days ago</div>
+                                <small class="text-muted">Last Login</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="h5 mb-0">30 days</div>
+                                <small class="text-muted">Account Age</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cogs"></i> Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit User
+                        </a>
+                        <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="btn btn-outline-warning">
+                            <i class="fas fa-key"></i> Reset Password
+                        </a>
+                        <button type="button" class="btn btn-outline-info" onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
+                            @if (Model.IsActive)
+                            {
+                                <i class="fas fa-user-slash">
+                                Deactivate User
+                                </i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-user-check">
+                                    Activate User
+                                </i>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle"></i> Account Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted">User ID</label>
+                        <p class="form-control-plaintext">#@Model.Id</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Created</label>
+                        <p class="form-control-plaintext">Jan 15, 2024</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Last Modified</label>
+                        <p class="form-control-plaintext">Jan 20, 2024</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow mt-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Danger Zone
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteUser(@Model.Id, '@Model.Username')">
+                            <i class="fas fa-trash"></i> Delete User
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control-plaintext {
+        font-weight: 500;
+        color: #5a5c69;
+    }
+
+    .card {
+        border: 0;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+
+    .card-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+    .badge {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .h5 {
+        font-weight: 700;
+        color: #5a5c69;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function toggleUserStatus(userId, isActive) {
+            const action = isActive ? 'deactivate' : 'activate';
+            if (confirm(`Are you sure you want to ${action} this user?`)) {
+                fetch('@Url.Action("QuickToggleStatus")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ id: userId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error updating user status: ' + (data.message || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error updating user status');
+                });
+            }
+        }
+
+        function deleteUser(userId, username) {
+            document.getElementById('deleteUsername').textContent = username;
+            document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + userId;
+
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+    </script>
+}
