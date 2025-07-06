@@ -1,4 +1,4 @@
-﻿namespace InventoryManagement.Web.Services
+﻿namespace InventoryManagement.Web.Services.Interfaces
 {
     public interface IApiService
     {

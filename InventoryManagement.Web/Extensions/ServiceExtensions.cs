@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
 using InventoryManagement.Web.Services;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace InventoryManagement.Web.Extensions
@@ -12,10 +13,16 @@ namespace InventoryManagement.Web.Extensions
             // Add HTTP clients
             services.AddHttpClient<IApiService, ApiService>();
             services.AddHttpClient<IAuthService, AuthService>();
+            services.AddHttpClient<IApprovalService, ApprovalService>();
+            services.AddHttpClient<INotificationService, Services.NotificationService>();
+            services.AddHttpClient<IUserManagementService, UserManagementService>();
 
             // Add other services
             services.AddScoped<IApiService, ApiService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IApprovalService, ApprovalService>();
+            services.AddScoped<INotificationService, Services.NotificationService>();
+            services.AddScoped<IUserManagementService, UserManagementService>();
 
             return services;
         }
@@ -49,7 +56,15 @@ namespace InventoryManagement.Web.Extensions
             if (string.IsNullOrEmpty(str))
                 return str;
 
-            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.ToLower());
+            var words = str.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (words[i].Length > 0)
+                {
+                    words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
+                }
+            }
+            return string.Join(" ", words);
         }
     }
 }

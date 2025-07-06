@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
-using InventoryManagement.Web.Services;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -184,6 +184,30 @@ namespace InventoryManagement.Web.Controllers
             }
 
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _authService.RegisterAsync(model.Username, model.Email,
+                    model.Password, model.FirstName, model.LastName);
+
+                if (result != null)
+                {
+                    // Auto-login after registration
+                    return RedirectToAction("Dashboard", "Home");
+                }
+            }
+            return View(model);
         }
     }
 }

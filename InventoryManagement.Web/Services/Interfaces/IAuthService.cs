@@ -1,6 +1,6 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 
-namespace InventoryManagement.Web.Services
+namespace InventoryManagement.Web.Services.Interfaces
 {
     public interface IAuthService
     {

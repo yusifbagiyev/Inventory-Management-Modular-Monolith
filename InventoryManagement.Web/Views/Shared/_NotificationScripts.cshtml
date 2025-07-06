@@ -1,0 +1,106 @@
+﻿<!-- InventoryManagement.Web/Views/Shared/_NotificationScripts.cshtml -->
+@if (User.Identity?.IsAuthenticated ?? false)
+{
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <script>
+        let notificationConnection = null;
+
+        $(document).ready(function() {
+            initializeNotifications();
+            loadNotificationCount();
+            loadRecentNotifications();
+        });
+
+        function initializeNotifications() {
+            notificationConnection = new signalR.HubConnectionBuilder()
+                .withUrl("http://localhost:5000/notificationHub", {
+                    accessTokenFactory: () => {
+                        return '@Context.Session.GetString("JwtToken")';
+                    }
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            notificationConnection.on("ReceiveNotification", function (notification) {
+                showToast(notification.title + ': ' + notification.message, 'info');
+                incrementNotificationCount();
+                addNotificationToDropdown(notification);
+            });
+
+            notificationConnection.start().catch(function (err) {
+                console.error('SignalR Connection Error:', err.toString());
+            });
+        }
+
+        function loadNotificationCount() {
+            $.get('/Notifications/GetUnreadCount', function(count) {
+                updateNotificationBadge(count);
+            });
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = $('#notificationCount');
+            if (count > 0) {
+                badge.text(count).show();
+            } else {
+                badge.hide();
+            }
+        }
+
+        function incrementNotificationCount() {
+            const badge = $('#notificationCount');
+            const currentCount = parseInt(badge.text()) || 0;
+            badge.text(currentCount + 1).show();
+        }
+
+        function loadRecentNotifications() {
+            $.get('/Notifications/GetRecentNotifications', function(notifications) {
+                const listHtml = notifications.map(n => createNotificationItem(n)).join('');
+                $('#notificationList').html(listHtml || '<div class="text-center p-3 text-muted">No notifications</div>');
+            });
+        }
+
+        function createNotificationItem(notification) {
+            const timeAgo = getTimeAgo(notification.createdAt);
+            const unreadClass = notification.isRead ? '' : 'unread';
+
+            return `
+                <a href="#" class="dropdown-item notification-item ${unreadClass}"
+                   onclick="handleNotificationClick(${notification.id}, '${notification.type}', '${notification.data}')">
+                    <div class="d-flex">
+                        <div class="flex-grow-1 ms-2">
+                            <h6 class="mb-1">${notification.title}</h6>
+                            <p class="mb-1 text-muted small">${notification.message}</p>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+
+        function handleNotificationClick(notificationId, type, data) {
+            event.preventDefault();
+            markNotificationAsRead(notificationId);
+        }
+
+        function markNotificationAsRead(notificationId) {
+            $.post('/Notifications/MarkAsRead', { notificationId: notificationId }, function() {
+                updateNotificationBadge($('#notificationCount').text() - 1);
+            });
+        }
+
+        function getTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return minutes + 'm ago';
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return hours + 'h ago';
+            const days = Math.floor(hours / 24);
+            return days + 'd ago';
+        }
+    </script>
+}

@@ -1,0 +1,162 @@
+﻿@model List<UserListViewModel>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">User Management</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">Users</li>
+    </ol>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <div class="row">
+                <div class="col">
+                    <i class="fas fa-users me-1"></i>
+                    System Users
+                </div>
+                <div class="col text-end">
+                    <a asp-action="Create" class="btn btn-primary btn-sm">
+                        <i class="fas fa-user-plus"></i> Add New User
+                    </a>
+                    <a asp-action="Permissions" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-shield-alt"></i> Manage Permissions
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Login</th>
+                            <th style="width: 200px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr>
+                                <td>@user.Username</td>
+                                <td>@user.FullName</td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @foreach (var role in user.Roles)
+                                    {
+                                        <span class="badge bg-primary me-1">@role</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>@user.CreatedAt.ToString("MM/dd/yyyy")</td>
+                                <td>
+                                    @if (user.LastLoginAt.HasValue)
+                                    {
+                                        @user.LastLoginAt.Value.ToString("MM/dd/yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Never</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-action="Edit" asp-route-id="@user.Id"
+                                           class="btn btn-outline-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="ResetPassword" asp-route-id="@user.Id"
+                                           class="btn btn-outline-info" title="Reset Password">
+                                            <i class="fas fa-key"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="toggleUserStatus(@user.Id)"
+                                                title="@(user.IsActive ? "Deactivate" : "Activate")">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                onclick="deleteUser(@user.Id, '@user.Username')"
+                                                title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#usersTable').DataTable({
+                pageLength: 25,
+                order: [[5, 'desc']] // Sort by created date
+            });
+        });
+
+        function toggleUserStatus(userId) {
+            if (confirm('Are you sure you want to toggle this user\'s status?')) {
+                $.post('/Users/ToggleStatus/' + userId, function(result) {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        showToast('Failed to toggle user status', 'error');
+                    }
+                });
+            }
+        }
+
+        function deleteUser(id, username) {
+            $('#deleteUsername').text(username);
+            $('#deleteForm').attr('action', '/Users/Delete/' + id);
+            $('#deleteModal').modal('show');
+        }
+    </script>
+}

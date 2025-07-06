@@ -1,5 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
-using InventoryManagement.Web.Services;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Newtonsoft.Json;

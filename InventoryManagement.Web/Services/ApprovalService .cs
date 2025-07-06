@@ -1,5 +1,6 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services.Interfaces;
 using Newtonsoft.Json;
 using System.Text;
 

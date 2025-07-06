@@ -1,0 +1,31 @@
+﻿@model ApprovalRequestDto
+
+<div class="approval-details">
+    <div class="row">
+        <div class="col-md-6">
+            <h6>Request Information</h6>
+            <table class="table table-sm">
+                <tr>
+                    <th>Type:</th>
+                    <td>@Model.RequestType</td>
+                </tr>
+                <tr>
+                    <th>Entity:</th>
+                    <td>@Model.EntityType #@Model.EntityId</td>
+                </tr>
+                <tr>
+                    <th>Requested By:</th>
+                    <td>@Model.RequestedByName</td>
+                </tr>
+                <tr>
+                    <th>Date:</th>
+                    <td>@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                </tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h6>Action Data</h6>
+            <pre class="bg-light p-2">@Model.ActionData</pre>
+        </div>
+    </div>
+</div>

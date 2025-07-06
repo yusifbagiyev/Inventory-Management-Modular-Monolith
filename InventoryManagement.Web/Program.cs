@@ -1,5 +1,7 @@
+using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using InventoryManagement.Web.Services;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using NotificationService.Application.Services;
 
@@ -33,12 +35,8 @@ builder.Services.AddSession(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddCustomServices();
 
-// Add custom services
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IApiService,ApiService>();
-
-builder.Services.AddHttpClient<IApprovalService, ApprovalService>();
 builder.Services.AddSignalR();
 
 //Add memory cache

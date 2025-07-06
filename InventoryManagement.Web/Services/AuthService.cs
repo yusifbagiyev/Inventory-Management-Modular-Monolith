@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Services.Interfaces;
 using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Services
