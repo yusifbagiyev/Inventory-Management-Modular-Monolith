@@ -2,6 +2,7 @@
 using IdentityService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace IdentityService.API.Controllers
@@ -18,6 +19,7 @@ namespace IdentityService.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("LoginPolicy")]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
             try

@@ -13,6 +13,7 @@ namespace IdentityService.Infrastructure.Services
     public class AuthService : IAuthService
     {
         private readonly UserManager<User> _userManager;
+        private readonly RoleManager<Role> _roleManager;
         private readonly SignInManager<User> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly IdentityDbContext _context;
@@ -20,17 +21,21 @@ namespace IdentityService.Infrastructure.Services
 
         public AuthService(
             UserManager<User> userManager,
+            RoleManager<Role> roleManager,
             SignInManager<User> signInManager,
             ITokenService tokenService,
             IdentityDbContext context,
             IConfiguration configuration)
         {
             _userManager = userManager;
+            _roleManager = roleManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _context = context;
             _configuration = configuration;
         }
+
+        #region Authentication Methods
 
         public async Task<TokenDto> LoginAsync(LoginDto dto)
         {
@@ -38,12 +43,30 @@ namespace IdentityService.Infrastructure.Services
             if (user == null || !user.IsActive)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password,false);
+            // Check if account is locked
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                throw new UnauthorizedAccessException($"Account is locked until {lockoutEnd}");
+            }
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
+
             if (!result.Succeeded)
+            {
+                if (result.IsLockedOut)
+                {
+                    var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                    throw new UnauthorizedAccessException($"Account locked due to multiple failed attempts. Try again after {lockoutEnd}");
+                }
                 throw new UnauthorizedAccessException("Invalid credentials");
+            }
 
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
+
+            // Reset lockout on successful login
+            await _userManager.ResetAccessFailedCountAsync(user);
 
             // Revoke old refresh tokens
             await RevokeAllUserRefreshTokensAsync(user.Id);
@@ -75,21 +98,21 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
         {
-            //Validate the refresh token
+            // Validate the refresh token
             var refreshToken = await _tokenService.GetRefreshTokenAsync(dto.RefreshToken);
-            if(refreshToken == null || !refreshToken.IsActive)
+            if (refreshToken == null || !refreshToken.IsActive)
                 throw new UnauthorizedAccessException("Invalid refresh token");
 
-            //Get user from the refresh token
-            var user=refreshToken.User;
-            if(!user.IsActive)
+            // Get user from the refresh token
+            var user = refreshToken.User;
+            if (!user.IsActive)
                 throw new UnauthorizedAccessException("User is inactive");
 
-            //Get the principal from the expired token
+            // Get the principal from the expired token
             ClaimsPrincipal principal;
             try
             {
-                principal=_tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
+                principal = _tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
             }
             catch
             {
@@ -97,7 +120,7 @@ namespace IdentityService.Infrastructure.Services
             }
 
             // Verify the user from the access token matches the refresh token user
-            var userIdFromToken=principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userIdFromToken = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userIdFromToken != user.Id.ToString())
                 throw new UnauthorizedAccessException("Token mismatch");
 
@@ -109,15 +132,219 @@ namespace IdentityService.Infrastructure.Services
             await _tokenService.RevokeRefreshTokenAsync(dto.RefreshToken, newRefreshToken);
             await _tokenService.CreateRefreshTokenAsync(user.Id, newRefreshToken);
 
-            var userDto=await GetUserAsync(user.Id);
+            var userDto = await GetUserAsync(user.Id);
 
             return new TokenDto
             {
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "20")),
-                User = userDto
+                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
+                User = userDto!
             };
+        }
+
+        public async Task LogoutAsync(string refreshToken)
+        {
+            await _tokenService.RevokeRefreshTokenAsync(refreshToken);
+        }
+
+        #endregion
+
+        #region User Management Methods
+
+        public async Task<UserDto?> GetUserAsync(int userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return null;
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var permissions = await GetUserPermissionsAsync(userId, roles);
+
+            return new UserDto
+            {
+                Id = user.Id,
+                Username = user.UserName!,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Roles = roles.ToList(),
+                Permissions = permissions
+            };
+        }
+
+        public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+        {
+            var users = await _userManager.Users.ToListAsync();
+            var userDtos = new List<UserDto>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                var permissions = await GetUserPermissionsAsync(user.Id, roles);
+
+                userDtos.Add(new UserDto
+                {
+                    Id = user.Id,
+                    Username = user.UserName!,
+                    Email = user.Email!,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Roles = roles.ToList(),
+                    Permissions = permissions
+                });
+            }
+
+            return userDtos;
+        }
+
+        public async Task<bool> UpdateUserAsync(UpdateUserDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(dto.Id.ToString());
+            if (user == null)
+                return false;
+
+            user.UserName = dto.Username;
+            user.Email = dto.Email;
+            user.FirstName = dto.FirstName;
+            user.LastName = dto.LastName;
+
+            if (dto.IsActive.HasValue)
+                user.IsActive = dto.IsActive.Value;
+
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded;
+        }
+
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            // Soft delete by deactivating the user
+            user.IsActive = false;
+            var result = await _userManager.UpdateAsync(user);
+
+            // Also revoke all refresh tokens
+            await RevokeAllUserRefreshTokensAsync(userId);
+
+            return result.Succeeded;
+        }
+
+        public async Task<bool> ToggleUserStatusAsync(int userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            user.IsActive = !user.IsActive;
+            var result = await _userManager.UpdateAsync(user);
+
+            // If user is deactivated, revoke all refresh tokens
+            if (!user.IsActive)
+            {
+                await RevokeAllUserRefreshTokensAsync(userId);
+            }
+
+            return result.Succeeded;
+        }
+
+        #endregion
+
+        #region Password Management
+
+        public async Task<bool> ResetPasswordAsync(int userId, string newPassword)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+            // Revoke all refresh tokens after password reset
+            if (result.Succeeded)
+            {
+                await RevokeAllUserRefreshTokensAsync(userId);
+            }
+
+            return result.Succeeded;
+        }
+
+        public async Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+
+            // Revoke all refresh tokens after password change
+            if (result.Succeeded)
+            {
+                await RevokeAllUserRefreshTokensAsync(userId);
+            }
+
+            return result.Succeeded;
+        }
+
+        #endregion
+
+        #region Role Management
+
+        public async Task<IEnumerable<string>> GetAllRolesAsync()
+        {
+            var roles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
+            return roles;
+        }
+
+        public async Task<bool> AssignRoleAsync(int userId, string roleName)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            var roleExists = await _roleManager.RoleExistsAsync(roleName);
+            if (!roleExists)
+                return false;
+
+            // Check if user already has this role
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Contains(roleName))
+                return true; // Already has the role
+
+            var result = await _userManager.AddToRoleAsync(user, roleName);
+            return result.Succeeded;
+        }
+
+        public async Task<bool> RemoveRoleAsync(int userId, string roleName)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return false;
+
+            var result = await _userManager.RemoveFromRoleAsync(user, roleName);
+            return result.Succeeded;
+        }
+
+        #endregion
+
+        #region Permission Management
+
+        public async Task<IEnumerable<object>> GetAllPermissionsAsync()
+        {
+            var permissions = await _context.Permissions
+                .Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    p.Category,
+                    p.Description
+                })
+                .ToListAsync();
+
+            return permissions.Cast<object>();
         }
 
         public async Task<bool> HasPermissionAsync(int userId, string permission)
@@ -136,13 +363,30 @@ namespace IdentityService.Infrastructure.Services
             return hasPermission;
         }
 
-        public async Task<UserDto> GetUserAsync(int userId)
+        #endregion
+
+        #region Additional Utility Methods
+
+        public async Task<bool> UserExistsAsync(int userId)
         {
-            var user = await _userManager.FindByIdAsync(userId.ToString()) 
-                ?? throw new KeyNotFoundException($"User with ID {userId} not found");
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            return user != null;
+        }
+
+        public async Task<bool> UserExistsAsync(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            return user != null;
+        }
+
+        public async Task<UserDto?> GetUserByUsernameAsync(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null)
+                return null;
 
             var roles = await _userManager.GetRolesAsync(user);
-            var permissions = await GetUserPermissionsAsync(userId, roles);
+            var permissions = await GetUserPermissionsAsync(user.Id, roles);
 
             return new UserDto
             {
@@ -155,6 +399,31 @@ namespace IdentityService.Infrastructure.Services
                 Permissions = permissions
             };
         }
+
+        public async Task<UserDto?> GetUserByEmailAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return null;
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var permissions = await GetUserPermissionsAsync(user.Id, roles);
+
+            return new UserDto
+            {
+                Id = user.Id,
+                Username = user.UserName!,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Roles = roles.ToList(),
+                Permissions = permissions
+            };
+        }
+
+        #endregion
+
+        #region Private Helper Methods
 
         private async Task<TokenDto> GenerateTokenResponse(User user)
         {
@@ -170,8 +439,8 @@ namespace IdentityService.Infrastructure.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(60)), // From configuration
-                User = userDto
+                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
+                User = userDto!
             };
         }
 
@@ -189,18 +458,20 @@ namespace IdentityService.Infrastructure.Services
 
         private async Task RevokeAllUserRefreshTokensAsync(int userId)
         {
-            var activeTokens= await _context.RefreshTokens
+            var activeTokens = await _context.RefreshTokens
                 .Where(rt => rt.UserId == userId && !rt.IsRevoked)
                 .ToListAsync();
 
-            foreach(var token in activeTokens)
+            foreach (var token in activeTokens)
             {
                 token.IsRevoked = true;
                 token.RevokedAt = DateTime.UtcNow;
             }
 
-            if(activeTokens.Any())
+            if (activeTokens.Any())
                 await _context.SaveChangesAsync();
         }
+
+        #endregion
     }
 }
