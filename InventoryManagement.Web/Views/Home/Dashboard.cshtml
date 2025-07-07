@@ -5,218 +5,100 @@
 
 <div class="container-fluid px-4">
     <h1 class="mt-4">Dashboard</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item active">Dashboard</li>
-    </ol>
 
-    <!-- Stats Cards -->
     <div class="row">
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white mb-4 shadow">
+            <div class="card bg-primary text-white mb-4">
                 <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Total Products</div>
-                            <div class="h5 mb-0 font-weight-bold">@Model.TotalProducts</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small">Total Products</div>
+                            <div class="h2">@Model.TotalProducts</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-boxes fa-2x"></i>
-                        </div>
+                        <i class="fas fa-boxes fa-3x opacity-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link text-decoration-none" asp-controller="Products" asp-action="Index">
-                        View Details
-                    </a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                    <a class="small text-white stretched-link" href="/Products">View Details</a>
+                    <i class="fas fa-angle-right"></i>
                 </div>
             </div>
         </div>
 
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white mb-4 shadow">
+            <div class="card bg-success text-white mb-4">
                 <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Active Products</div>
-                            <div class="h5 mb-0 font-weight-bold">@Model.ActiveProducts</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-white-50 small">Active Routes</div>
+                            <div class="h2">@Model.TotalRoutes</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
+                        <i class="fas fa-route fa-3x opacity-50"></i>
                     </div>
                 </div>
                 <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link text-decoration-none" href="#">View Details</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white mb-4 shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Total Routes</div>
-                            <div class="h5 mb-0 font-weight-bold">@Model.TotalRoutes</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-route fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link text-decoration-none" asp-controller="Routes" asp-action="Index">
-                        View Details
-                    </a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-danger text-white mb-4 shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-uppercase mb-1">Pending Transfers</div>
-                            <div class="h5 mb-0 font-weight-bold">@Model.PendingTransfers</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link text-decoration-none" href="#">View Details</a>
-                    <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                    <a class="small text-white stretched-link" href="/Routes">View Details</a>
+                    <i class="fas fa-angle-right"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts Row -->
     <div class="row">
-        <div class="col-xl-6">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-chart-pie me-1"></i>
-                    Category Distribution
-                </div>
-                <div class="card-body">
-                    <canvas id="categoryChart" width="100%" height="40"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card mb-4 shadow">
+        <div class="col-xl-8">
+            <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-chart-bar me-1"></i>
-                    Department Statistics
+                    Products by Department
                 </div>
                 <div class="card-body">
-                    <canvas id="departmentChart" width="100%" height="40"></canvas>
+                    <canvas id="departmentChart" height="100"></canvas>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Department Stats Table -->
-    <div class="card mb-4 shadow">
-        <div class="card-header">
-            <i class="fas fa-table me-1"></i>
-            Department Overview
-        </div>
-        <div class="card-body">
-            <table class="table table-bordered table-hover" id="departmentTable">
-                <thead>
-                    <tr>
-                        <th>Department</th>
-                        <th>Product Count</th>
-                        <th>Active Workers</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var dept in Model.DepartmentStats)
-                    {
-                        <tr>
-                            <td>@dept.DepartmentName</td>
-                            <td>@dept.ProductCount</td>
-                            <td>@dept.ActiveWorkers</td>
-                            <td>
-                                <a href="#" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="col-xl-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-bell me-1"></i>
+                    Recent Activities
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        @foreach (var activity in Model.RecentActivities.Take(5))
+                        {
+                            <div class="timeline-item">
+                                <i class="fas @activity.Icon text-primary"></i>
+                                <div class="timeline-content">
+                                    <small class="text-muted">@activity.Timestamp.ToString("MMM dd, HH:mm")</small>
+                                    <p class="mb-0">@activity.Description</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Category Distribution Chart
-        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-        const categoryChart = new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.CategoryName))),
-                datasets: [{
-                    data: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Count))),
-                    backgroundColor: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Color))),
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    }
-                }
-            }
-        });
-
-        // Department Bar Chart
-        const departmentCtx = document.getElementById('departmentChart').getContext('2d');
-        const departmentChart = new Chart(departmentCtx, {
+        var ctx = document.getElementById('departmentChart').getContext('2d');
+        var chart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.DepartmentName))),
+                labels: [@Html.Raw(string.Join(",", Model.DepartmentStats.Select(d => $"'{d.DepartmentName}'")))],
                 datasets: [{
-                    label: 'Product Count',
-                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ProductCount))),
-                    backgroundColor: '#3B82F6',
-                }, {
-                    label: 'Active Workers',
-                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ActiveWorkers))),
-                    backgroundColor: '#10B981',
+                    label: 'Products',
+                    data: [@string.Join(",", Model.DepartmentStats.Select(d => d.ProductCount))],
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)'
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+                maintainAspectRatio: false
             }
-        });
-
-        // Initialize DataTable
-        $(document).ready(function() {
-            $('#departmentTable').DataTable({
-                pageLength: 5,
-                lengthChange: false,
-                searching: false,
-                info: false
-            });
         });
     </script>
 }
