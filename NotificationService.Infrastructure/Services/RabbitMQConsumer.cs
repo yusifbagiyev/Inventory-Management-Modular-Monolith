@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Events;
+using NotificationService.Infrastructure.Data;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -59,13 +60,19 @@ namespace NotificationService.Infrastructure.Services
                     {
                         var evt = JsonSerializer.Deserialize<ApprovalRequestCreatedEvent>(message);
 
-                        // Notify all admins
-                        await notificationSender.SendToRoleAsync(
-                            "Admin",
-                            "approval_request",
-                            "New Approval Request",
-                            $"{evt.RequestedByName} has submitted a {evt.RequestType} request",
-                            new { RequestId = evt.RequestId });
+                        // Get all admin users
+                        var adminUsers = await GetAdminUsersAsync();
+
+                        // Send notification to each admin
+                        foreach (var adminId in adminUsers)
+                        {
+                            await notificationSender.SendToUserAsync(
+                                adminId,
+                                "approval_request",
+                                "New Approval Request",
+                                $"{evt.RequestedByName} has submitted a {evt.RequestType} request",
+                                new { RequestId = evt.RequestId });
+                        }
                     }
                     else if (ea.RoutingKey == "approval.request.processed")
                     {
@@ -93,6 +100,16 @@ namespace NotificationService.Infrastructure.Services
 
             _channel.BasicConsume("notification-queue", false, consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+
+        private async Task<List<int>> GetAdminUsersAsync()
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+
+            // For now, return hardcoded admin IDs or implement proper user service call
+            // In production, this should query the identity service
+            return new List<int> { 1 }; // Assuming admin user ID is 1
         }
 
         public override void Dispose()

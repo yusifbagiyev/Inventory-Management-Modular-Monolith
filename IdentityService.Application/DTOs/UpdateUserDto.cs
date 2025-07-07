@@ -90,4 +90,15 @@ namespace IdentityService.Application.DTOs
         public string Description { get; init; } = string.Empty;
         public List<string> Permissions { get; init; } = new();
     }
+    public record GrantPermissionDto
+    {
+        [Required]
+        public string PermissionName { get; init; } = string.Empty;
+    }
+
+    public record RevokePermissionDto
+    {
+        [Required]
+        public string PermissionName { get; init; } = string.Empty;
+    }
 }

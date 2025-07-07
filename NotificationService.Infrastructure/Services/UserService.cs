@@ -20,19 +20,15 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task<IEnumerable<int>> GetUserIdsByRoleAsync(string role, CancellationToken cancellationToken = default)
         {
-            var authHeader = _httpContextAccessor?.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(authHeader))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", authHeader.Replace("Bearer ", ""));
-            }
-            // If no auth header, the request will likely fail unless the identity service allows anonymous access
+            // Use system token for internal service calls
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", "system-token-for-automated-actions");
 
-            var response = await _httpClient.GetAsync($"/api/users/by-role/{role}", cancellationToken);
+            var response = await _httpClient.GetAsync($"/api/auth/users/by-role/{role}", cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var userIds = await response.Content.ReadFromJsonAsync<List<int>>(cancellationToken: cancellationToken);
-                return userIds ?? new List<int>();
+                var users = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: cancellationToken);
+                return users?.Where(u => u.Roles.Contains(role)).Select(u => u.Id) ?? new List<int>();
             }
             return new List<int>();
         }

@@ -37,6 +37,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpPost("register-by-admin")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TokenDto>> RegisterByAdmin(RegisterDto dto)
@@ -51,6 +52,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPost("refresh")]
         public async Task<ActionResult<TokenDto>> RefreshToken(RefreshTokenDto dto)
@@ -69,6 +71,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [Authorize]
         [HttpGet("me")]
@@ -92,6 +95,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
@@ -106,6 +110,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpGet("users/{id}")]
         [Authorize(Roles = "Admin")]
@@ -123,6 +128,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPut("users/{id}")]
         [Authorize(Roles = "Admin")]
@@ -145,6 +151,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpDelete("users/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int id)
@@ -162,6 +169,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPost("users/{id}/toggle-status")]
         [Authorize(Roles = "Admin")]
@@ -181,6 +189,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpPost("users/{id}/reset-password")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ResetPassword(int id, ResetPasswordDto dto)
@@ -199,6 +208,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpGet("roles")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<string>>> GetRoles()
@@ -214,6 +224,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpGet("permissions")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<object>>> GetPermissions()
@@ -228,6 +239,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPost("users/{id}/assign-role")]
         [Authorize(Roles = "Admin")]
@@ -247,6 +259,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpPost("users/{id}/remove-role")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveRole(int id, RemoveRoleDto dto)
@@ -265,6 +278,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpPost("users/{id}/check-permission")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<bool>> CheckPermission(int id, CheckPermissionDto dto)
@@ -279,6 +293,7 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpPost("logout")]
         [Authorize]
@@ -295,6 +310,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
+
         [HttpPost("change-password")]
         [Authorize]
         public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
@@ -310,6 +326,75 @@ namespace IdentityService.API.Controllers
                     return BadRequest(new { message = "Failed to change password" });
 
                 return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+        [HttpPost("users/{id}/grant-permission")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GrantPermission(int id, [FromBody] GrantPermissionDto dto)
+        {
+            try
+            {
+                var grantedBy = User.Identity?.Name ?? "System";
+                var result = await _authService.GrantPermissionToUserAsync(id, dto.PermissionName, grantedBy);
+                if (!result)
+                    return BadRequest(new { message = "Failed to grant permission" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("users/{id}/revoke-permission")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RevokePermission(int id, [FromBody] RevokePermissionDto dto)
+        {
+            try
+            {
+                var result = await _authService.RevokePermissionFromUserAsync(id, dto.PermissionName);
+                if (!result)
+                    return BadRequest(new { message = "Failed to revoke permission" });
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("users/{id}/direct-permissions")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<PermissionDto>>> GetUserDirectPermissions(int id)
+        {
+            try
+            {
+                var permissions = await _authService.GetUserDirectPermissionsAsync(id);
+                return Ok(permissions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("users/by-role/{role}")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersByRole(string role)
+        {
+            try
+            {
+                var users = await _authService.GetAllUsersAsync();
+                var usersInRole = users.Where(u => u.Roles.Contains(role));
+                return Ok(usersInRole);
             }
             catch (Exception ex)
             {

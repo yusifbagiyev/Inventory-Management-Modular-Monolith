@@ -10,6 +10,7 @@ namespace IdentityService.Infrastructure.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<UserPermission> UserPermissions { get; set; }
 
         public IdentityDbContext(DbContextOptions<IdentityDbContext> options)
             : base(options)
@@ -33,6 +34,21 @@ namespace IdentityService.Infrastructure.Data
                     .WithMany(p => p.RolePermissions)
                     .HasForeignKey(rp => rp.PermissionId);
             });
+
+
+            builder.Entity<UserPermission>(entity =>
+            {
+                entity.HasKey(up => new { up.UserId, up.PermissionId });
+
+                entity.HasOne(up => up.User)
+                    .WithMany()
+                    .HasForeignKey(up => up.UserId);
+
+                entity.HasOne(up => up.Permission)
+                    .WithMany()
+                    .HasForeignKey(up => up.PermissionId);
+            });
+
 
             builder.Entity<RefreshToken>(entity =>
             {

@@ -14,7 +14,7 @@ namespace ProductService.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // Require authentication for all endpoints
+    [Authorize(Policy ="Admin")] // Require authentication for all endpoints
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;

@@ -29,7 +29,7 @@ namespace ApprovalService.Domain.Entities
             int requestedById,
             string requestedByName)
         {
-            RequestType = RequestType;
+            RequestType = requestType;
             EntityType = entityType;
             EntityId = entityId;
             ActionData = actionData;

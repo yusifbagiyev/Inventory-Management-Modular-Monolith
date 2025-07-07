@@ -23,8 +23,11 @@ namespace NotificationService.API.Controllers
         public async Task<ActionResult<IEnumerable<NotificationDto>>> GetMyNotifications([FromQuery] bool unreadOnly = false)
         {
             var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var notifications = await _repository.GetByUserIdAsync(userId, unreadOnly);
 
+            if (userId == 0)
+                return Ok(new List<NotificationDto>());
+
+            var notifications = await _repository.GetByUserIdAsync(userId, unreadOnly);
             return Ok(notifications.Select(n => new NotificationDto
             {
                 Id = n.Id,
@@ -37,6 +40,7 @@ namespace NotificationService.API.Controllers
                 ReadAt = n.ReadAt
             }));
         }
+
 
         [HttpGet("unread-count")]
         public async Task<ActionResult<int>> GetUnreadCount()

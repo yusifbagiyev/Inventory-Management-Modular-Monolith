@@ -95,7 +95,8 @@
                                         }
                                         <li><hr class="dropdown-divider"></li>
                                         <li>
-                                            <form method="post" action="/Account/Logout">
+                                            <form asp-controller="Account" asp-action="Logout" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <button type="submit" class="dropdown-item">
                                                     <i class="fas fa-sign-out-alt"></i> Logout
                                                 </button>

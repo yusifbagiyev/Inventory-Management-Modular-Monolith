@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using System;
+using Microsoft.AspNetCore.SignalR;
 using NotificationService.Application.Interfaces;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Repositories;
@@ -47,16 +48,14 @@ namespace NotificationService.Application.Services
         }
         public async Task SendToRoleAsync(string role, string type, string title, string message, object? data = null)
         {
-            // Get all users in role and send notifications
-            // This would require integration with Identity service
-            await _hubContext.Clients.Group($"role-{role}").SendAsync("ReceiveNotification", new
+            // Get users in role from identity service
+            var userService = _serviceProvider.GetRequiredService<IUserService>();
+            var userIds = await userService.GetUserIdsByRoleAsync(role);
+
+            foreach (var userId in userIds)
             {
-                Type = type,
-                Title = title,
-                Message = message,
-                CreatedAt = DateTime.UtcNow,
-                Data = data
-            });
+                await SendToUserAsync(userId, type, title, message, data);
+            }
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using ApprovalService.Application.DTOs;
@@ -6,6 +8,7 @@ using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 
 namespace ApprovalService.Infrastructure.Services
 {
@@ -42,16 +45,29 @@ namespace ApprovalService.Infrastructure.Services
                 return false;
             }
         }
-        
+
         private void AddAuthorizationHeader()
         {
-            //Use system token for executing approved actions
-            var systemToken = _configuration["SystemToken"];
-            if (!string.IsNullOrEmpty(systemToken))
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", systemToken);
-            }
+                Subject = new ClaimsIdentity(new[] {
+            new Claim(ClaimTypes.Role, "Admin")
+        }),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", tokenHandler.WriteToken(token));
         }
+
+
         private async Task<bool> ExecuteCreateProduct(string actionData,CancellationToken cancellationToken  = default)
         {
             var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);

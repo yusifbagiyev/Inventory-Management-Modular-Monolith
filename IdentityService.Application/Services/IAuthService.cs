@@ -29,6 +29,9 @@ namespace IdentityService.Application.Services
         // Permission management
         Task<IEnumerable<object>> GetAllPermissionsAsync();
         Task<bool> HasPermissionAsync(int userId, string permission);
+        Task<bool> GrantPermissionToUserAsync(int userId, string permissionName, string grantedBy);
+        Task<bool> RevokePermissionFromUserAsync(int userId, string permissionName);
+        Task<List<PermissionDto>> GetUserDirectPermissionsAsync(int userId);
 
         // Additional utility methods
         Task<bool> UserExistsAsync(int userId);

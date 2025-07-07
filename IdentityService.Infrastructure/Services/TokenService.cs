@@ -101,14 +101,19 @@ namespace IdentityService.Infrastructure.Services
 
         private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
         {
-            var permissions = await _dbContext.RolePermissions
+            var rolePermissions = await _dbContext.RolePermissions
                 .Include(rp => rp.Permission)
                 .Where(rp => roles.Contains(rp.Role.Name!))
                 .Select(rp => rp.Permission.Name)
-                .Distinct()
                 .ToListAsync();
 
-            return permissions;
+            var userPermissions = await _dbContext.UserPermissions
+                .Include(up => up.Permission)
+                .Where(up => up.UserId == userId)
+                .Select(up => up.Permission.Name)
+                .ToListAsync();
+
+            return rolePermissions.Union(userPermissions).Distinct().ToList();
         }
 
         public async Task<RefreshToken> CreateRefreshTokenAsync(int userId, string token)

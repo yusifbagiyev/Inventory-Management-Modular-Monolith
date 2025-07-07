@@ -1,4 +1,5 @@
 ﻿using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,13 +11,16 @@ namespace InventoryManagement.Web.Controllers
     {
         private readonly IUserManagementService _userManagementService;
         private readonly ILogger<UserManagementController> _logger;
+        private readonly IApiService _apiService;
 
         public UserManagementController(
             IUserManagementService userManagementService,
-            ILogger<UserManagementController> logger)
+            ILogger<UserManagementController> logger,
+            IApiService apiService)
         {
             _userManagementService = userManagementService;
             _logger = logger;
+            _apiService = apiService;
         }
 
         [HttpGet]
@@ -34,6 +38,7 @@ namespace InventoryManagement.Web.Controllers
                 return View(new List<UserListViewModel>());
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Create()
@@ -58,6 +63,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -103,6 +109,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -123,6 +130,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -169,6 +177,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -194,6 +203,7 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(int id)
@@ -218,6 +228,7 @@ namespace InventoryManagement.Web.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
 
         [HttpGet]
         public async Task<IActionResult> ResetPassword(int id)
@@ -246,6 +257,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -276,6 +288,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [HttpGet]
         public async Task<IActionResult> Permissions()
         {
@@ -292,6 +305,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         [HttpGet]
         public async Task<IActionResult> Roles()
         {
@@ -307,6 +321,7 @@ namespace InventoryManagement.Web.Controllers
                 return View(new List<string>());
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Details(int id)
@@ -329,6 +344,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         // AJAX endpoints for better UX
         [HttpGet]
         public async Task<JsonResult> GetUser(int id)
@@ -345,6 +361,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         [HttpPost]
         public async Task<JsonResult> QuickToggleStatus(int id)
         {
@@ -357,6 +374,65 @@ namespace InventoryManagement.Web.Controllers
             {
                 _logger.LogError(ex, "Error toggling user status via AJAX");
                 return Json(new { success = false, message = "Error updating user status." });
+            }
+        }
+
+
+        [HttpGet]
+        public async Task<JsonResult> GetUserDirectPermissions(int id)
+        {
+            try
+            {
+                var permissions = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/users/{id}/direct-permissions");
+                return Json(permissions ?? new List<PermissionViewModel>());
+            }
+            catch
+            {
+                return Json(new List<PermissionViewModel>());
+            }
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> GrantPermission(int id, [FromBody] GrantPermissionViewModel model)
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object, bool>($"/api/auth/users/{id}/grant-permission",
+                    new { permissionName = model.PermissionName });
+                return Json(new { success = result });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> RevokePermission(int id, [FromBody] RevokePermissionViewModel model)
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object, bool>($"/api/auth/users/{id}/revoke-permission",
+                    new { permissionName = model.PermissionName });
+                return Json(new { success = result });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> GetAllPermissions()
+        {
+            try
+            {
+                var permissions = await _apiService.GetAsync<List<PermissionViewModel>>("/api/auth/permissions");
+                return Json(permissions ?? new List<PermissionViewModel>());
+            }
+            catch
+            {
+                return Json(new List<PermissionViewModel>());
             }
         }
     }

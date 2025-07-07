@@ -155,8 +155,7 @@ namespace IdentityService.Infrastructure.Services
         public async Task<UserDto?> GetUserAsync(int userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return null;
+            if (user == null) return null;
 
             var roles = await _userManager.GetRolesAsync(user);
             var permissions = await GetUserPermissionsAsync(userId, roles);
@@ -168,6 +167,9 @@ namespace IdentityService.Infrastructure.Services
                 Email = user.Email!,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt,
                 Roles = roles.ToList(),
                 Permissions = permissions
             };
@@ -363,6 +365,82 @@ namespace IdentityService.Infrastructure.Services
             return hasPermission;
         }
 
+        public async Task<bool> GrantPermissionToUserAsync(int userId, string permissionName, string grantedBy)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null) return false;
+
+            var permission = await _context.Permissions
+                .FirstOrDefaultAsync(p => p.Name == permissionName);
+            if (permission == null) return false;
+
+            var existingPermission = await _context.UserPermissions
+                .FirstOrDefaultAsync(up => up.UserId == userId && up.PermissionId == permission.Id);
+
+            if (existingPermission != null) return true;
+
+            _context.UserPermissions.Add(new UserPermission
+            {
+                UserId = userId,
+                PermissionId = permission.Id,
+                GrantedAt = DateTime.UtcNow,
+                GrantedBy = grantedBy
+            });
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RevokePermissionFromUserAsync(int userId, string permissionName)
+        {
+            var permission = await _context.Permissions
+                .FirstOrDefaultAsync(p => p.Name == permissionName);
+            if (permission == null) return false;
+
+            var userPermission = await _context.UserPermissions
+                .FirstOrDefaultAsync(up => up.UserId == userId && up.PermissionId == permission.Id);
+
+            if (userPermission == null) return true;
+
+            _context.UserPermissions.Remove(userPermission);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<PermissionDto>> GetUserDirectPermissionsAsync(int userId)
+        {
+            var permissions = await _context.UserPermissions
+                .Include(up => up.Permission)
+                .Where(up => up.UserId == userId)
+                .Select(up => new PermissionDto
+                {
+                    Id = up.Permission.Id,
+                    Name = up.Permission.Name,
+                    Description = up.Permission.Description,
+                    Category = up.Permission.Category
+                })
+                .ToListAsync();
+
+            return permissions;
+        }
+
+        private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
+        {
+            var rolePermissions = await _context.RolePermissions
+                .Include(rp => rp.Permission)
+                .Where(rp => roles.Contains(rp.Role.Name!))
+                .Select(rp => rp.Permission.Name)
+                .ToListAsync();
+
+            var userPermissions = await _context.UserPermissions
+                .Include(up => up.Permission)
+                .Where(up => up.UserId == userId)
+                .Select(up => up.Permission.Name)
+                .ToListAsync();
+
+            return rolePermissions.Union(userPermissions).Distinct().ToList();
+        }
+
         #endregion
 
         #region Additional Utility Methods
@@ -446,14 +524,22 @@ namespace IdentityService.Infrastructure.Services
 
         private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
         {
-            var permissions = await _context.RolePermissions
+            // Get role permissions
+            var rolePermissions = await _context.RolePermissions
                 .Include(rp => rp.Permission)
                 .Where(rp => roles.Contains(rp.Role.Name!))
                 .Select(rp => rp.Permission.Name)
-                .Distinct()
                 .ToListAsync();
 
-            return permissions;
+            // Get user-specific permissions
+            var userPermissions = await _context.UserPermissions
+                .Include(up => up.Permission)
+                .Where(up => up.UserId == userId)
+                .Select(up => up.Permission.Name)
+                .ToListAsync();
+
+            // Combine and return unique permissions
+            return rolePermissions.Union(userPermissions).Distinct().ToList();
         }
 
         private async Task RevokeAllUserRefreshTokensAsync(int userId)
