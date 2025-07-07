@@ -522,26 +522,6 @@ namespace IdentityService.Infrastructure.Services
             };
         }
 
-        private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
-        {
-            // Get role permissions
-            var rolePermissions = await _context.RolePermissions
-                .Include(rp => rp.Permission)
-                .Where(rp => roles.Contains(rp.Role.Name!))
-                .Select(rp => rp.Permission.Name)
-                .ToListAsync();
-
-            // Get user-specific permissions
-            var userPermissions = await _context.UserPermissions
-                .Include(up => up.Permission)
-                .Where(up => up.UserId == userId)
-                .Select(up => up.Permission.Name)
-                .ToListAsync();
-
-            // Combine and return unique permissions
-            return rolePermissions.Union(userPermissions).Distinct().ToList();
-        }
-
         private async Task RevokeAllUserRefreshTokensAsync(int userId)
         {
             var activeTokens = await _context.RefreshTokens
