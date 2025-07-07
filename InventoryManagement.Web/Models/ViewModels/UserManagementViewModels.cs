@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    public class UserListViewModel
+    public record UserListViewModel
     {
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
@@ -15,7 +15,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public DateTime? LastLoginAt { get; set; }
     }
 
-    public class CreateUserViewModel
+    public record CreateUserViewModel
     {
         [Required]
         [StringLength(50, MinimumLength = 3)]
@@ -54,7 +54,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<SelectListItem> Roles { get; set; } = new List<SelectListItem>();
     }
 
-    public class EditUserViewModel
+    public record EditUserViewModel
     {
         public int Id { get; set; }
 
@@ -80,7 +80,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<SelectListItem> AvailableRoles { get; set; } = new List<SelectListItem>();
     }
 
-    public class ResetPasswordViewModel
+    public record ResetPasswordViewModel
     {
         public int UserId { get; set; }
         public string Username { get; set; } = string.Empty;
@@ -96,22 +96,23 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-    public class PermissionViewModel
+    public record PermissionViewModel
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public bool IsAssigned { get; set; }
     }
 
-    public class ManagePermissionsViewModel
+    public record ManagePermissionsViewModel
     {
         public int RoleId { get; set; }
         public string RoleName { get; set; } = string.Empty;
         public List<PermissionViewModel> Permissions { get; set; } = new List<PermissionViewModel>();
     }
 
-    public class UserDetailsViewModel
+    public record UserDetailsViewModel
     {
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
@@ -125,5 +126,15 @@ namespace InventoryManagement.Web.Models.ViewModels
         public DateTime? LastLoginAt { get; set; }
         public int LoginCount { get; set; }
         public string Notes { get; set; } = string.Empty;
+    }
+
+    public record GrantPermissionViewModel
+    {
+        public string PermissionName { get; set; } = string.Empty;
+    }
+
+    public record RevokePermissionViewModel
+    {
+        public string PermissionName { get; set; } = string.Empty;
     }
 }

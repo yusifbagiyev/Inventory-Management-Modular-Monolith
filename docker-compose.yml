@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: ***REMOVED***
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  api-gateway:
+    build: ./ApiGateway
+    ports:
+      - "5000:80"
+    depends_on:
+      - identity-service
+      - product-service
+      - route-service
+      - approval-service
+      - notification-service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
+  identity-service:
+    build: ./IdentityService.API
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=postgres;Password=***REMOVED***
+    depends_on:
+      - postgres
+
+  product-service:
+    build: ./ProductService.API
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=***REMOVED***
+      - RabbitMQ__HostName=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./images/products:/app/wwwroot/images/products
+
+  route-service:
+    build: ./RouteService.API
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=postgres;Password=***REMOVED***
+      - RabbitMQ__HostName=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./images/routes:/app/wwwroot/images/routes
+
+  approval-service:
+    build: ./ApprovalService.API
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=postgres;Password=***REMOVED***
+      - RabbitMQ__HostName=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  notification-service:
+    build: ./NotificationService.API
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=postgres;Password=***REMOVED***
+      - RabbitMQ__HostName=rabbitmq
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  web:
+    build: ./InventoryManagement.Web
+    ports:
+      - "5051:80"
+    depends_on:
+      - api-gateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ApiGateway__BaseUrl=http://api-gateway
+
+volumes:
+  postgres_data:

@@ -105,11 +105,11 @@ namespace NotificationService.Infrastructure.Services
         private async Task<List<int>> GetAdminUsersAsync()
         {
             using var scope = _serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-            // For now, return hardcoded admin IDs or implement proper user service call
-            // In production, this should query the identity service
-            return new List<int> { 1 }; // Assuming admin user ID is 1
+            // Get all users with Admin role
+            var adminUserIds = await userService.GetUserIdsByRoleAsync("Admin");
+            return adminUserIds.ToList();
         }
 
         public override void Dispose()

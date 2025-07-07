@@ -39,7 +39,6 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPost("register-by-admin")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TokenDto>> RegisterByAdmin(RegisterDto dto)
         {
             try

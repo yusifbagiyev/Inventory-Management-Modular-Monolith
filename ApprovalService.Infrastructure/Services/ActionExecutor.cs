@@ -68,15 +68,18 @@ namespace ApprovalService.Infrastructure.Services
         }
 
 
-        private async Task<bool> ExecuteCreateProduct(string actionData,CancellationToken cancellationToken  = default)
+        private async Task<bool> ExecuteCreateProduct(string actionData, CancellationToken cancellationToken = default)
         {
             var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);
-
-            var response=await _httpClient.PostAsync(
-                $"{_configuration["Services:ProductService"]}/api/products/approved",
-                new StringContent(actionData,Encoding.UTF8,"application/json"),
-                cancellationToken);
-            return response.IsSuccessStatusCode;
+            if (data?.ProductData != null)
+            {
+                var response = await _httpClient.PostAsync(
+                    $"{_configuration["Services:ProductService"]}/api/products/approved",
+                    new StringContent(JsonSerializer.Serialize(data.ProductData), Encoding.UTF8, "application/json"),
+                    cancellationToken);
+                return response.IsSuccessStatusCode;
+            }
+            return false;
         }
 
         private async Task<bool> ExecuteUpdateProduct(string actionData, CancellationToken cancellationToken)

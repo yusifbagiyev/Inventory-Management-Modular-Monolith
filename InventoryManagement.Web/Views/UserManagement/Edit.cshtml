@@ -259,10 +259,10 @@
             loadAvailablePermissions();
         });
 
-        function loadUserPermissions() {
+                function loadUserPermissions() {
             $.get('@Url.Action("GetUserDirectPermissions", "UserManagement", new { id = Model.Id })', function(data) {
                 var html = '';
-                if (data.length > 0) {
+                if (data && data.length > 0) {
                     data.forEach(function(permission) {
                         html += `
                             <div class="d-flex justify-content-between align-items-center mb-2">

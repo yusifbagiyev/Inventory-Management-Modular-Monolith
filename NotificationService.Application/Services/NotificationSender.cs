@@ -11,15 +11,18 @@ namespace NotificationService.Application.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly INotificationRepository _repository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserService _userService;
 
         public NotificationSender(
             IHubContext<NotificationHub> hubContext,
             INotificationRepository repository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserService userService)
         {
-            _hubContext= hubContext;
-            _repository= repository;
-            _unitOfWork= unitOfWork;
+            _hubContext = hubContext;
+            _repository = repository;
+            _unitOfWork = unitOfWork;
+            _userService = userService;
         }
 
         public async Task SendToUserAsync(int userId,string type,string title,string message,object? data = null)
@@ -49,8 +52,7 @@ namespace NotificationService.Application.Services
         public async Task SendToRoleAsync(string role, string type, string title, string message, object? data = null)
         {
             // Get users in role from identity service
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            var userIds = await userService.GetUserIdsByRoleAsync(role);
+            var userIds = await _userService.GetUserIdsByRoleAsync(role);
 
             foreach (var userId in userIds)
             {

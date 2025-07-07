@@ -1,4 +1,13 @@
-﻿{
+{
+  "profiles": {
+    "ApiGateway": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "http://localhost:5000"
+    }
+  },
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "iisSettings": {
     "windowsAuthentication": false,
@@ -7,15 +16,5 @@
       "applicationUrl": "http://localhost:50017",
       "sslPort": 44371
     }
-  },
-    "profiles": {
-        "ApiGateway": {
-            "commandName": "Project",
-            "launchBrowser": false,
-            "applicationUrl": "http://localhost:5000",
-            "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
-            }
-        }
-    }
+  }
 }

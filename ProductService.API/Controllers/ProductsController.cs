@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
 using ApprovalService.Domain.Enums;
 using IdentityService.Domain.Constants;
 using IdentityService.Shared.Authorization;
@@ -150,11 +151,42 @@ namespace ProductService.API.Controllers
 
         [HttpPost("approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
-        [Authorize(Policy = "SystemOnly")]
-        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] CreateProductDto dto)
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] object productData)
         {
+            var json = productData.ToString();
+            var dto = JsonSerializer.Deserialize<CreateProductDto>(json!);
+
+            if (dto == null)
+                return BadRequest("Invalid product data");
+
             var product = await _mediator.Send(new CreateProduct.Command(dto));
             return Ok(product);
+        }
+
+        [HttpPut("{id}/approved")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateApproved(int id, [FromBody] object updateData)
+        {
+            var json = updateData.ToString();
+            var dto = JsonSerializer.Deserialize<UpdateProductDto>(json!);
+
+            if (dto == null)
+                return BadRequest("Invalid update data");
+
+            await _mediator.Send(new UpdateProduct.Command(id, dto));
+            return NoContent();
+        }
+
+
+        [HttpDelete("{id}/approved")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteApproved(int id)
+        {
+            await _mediator.Send(new DeleteProduct.Command(id));
+            return NoContent();
         }
     }
 }

@@ -131,8 +131,8 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
-    dbContext.Database.Migrate();
-    dbContext.Database.EnsureCreated();
+    await dbContext.Database.MigrateAsync();
+    await dbContext.Database.EnsureCreatedAsync();
 }
 
 app.Run();
