@@ -11,25 +11,33 @@
             loadRecentNotifications();
         });
 
-        function initializeNotifications() {
+                function initializeNotifications() {
+            const token = '@Context.Session.GetString("JwtToken")';
+            if (!token) {
+                console.error('No JWT token available');
+                return;
+            }
+
             notificationConnection = new signalR.HubConnectionBuilder()
                 .withUrl("http://localhost:5000/notificationHub", {
-                    accessTokenFactory: () => {
-                        return '@Context.Session.GetString("JwtToken")';
-                    }
+                    accessTokenFactory: () => token
                 })
                 .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Information)
                 .build();
 
             notificationConnection.on("ReceiveNotification", function (notification) {
+                console.log('Received notification:', notification);
                 showToast(notification.title + ': ' + notification.message, 'info');
                 incrementNotificationCount();
-                addNotificationToDropdown(notification);
+                loadRecentNotifications(); // Reload the notification list
             });
 
-            notificationConnection.start().catch(function (err) {
-                console.error('SignalR Connection Error:', err.toString());
-            });
+            notificationConnection.start()
+                .then(() => console.log('SignalR connected'))
+                .catch(function (err) {
+                    console.error('SignalR Connection Error:', err.toString());
+                });
         }
 
         function loadNotificationCount() {
@@ -53,10 +61,22 @@
             badge.text(currentCount + 1).show();
         }
 
-        function loadRecentNotifications() {
-            $.get('/Notifications/GetRecentNotifications', function(notifications) {
-                const listHtml = notifications.map(n => createNotificationItem(n)).join('');
-                $('#notificationList').html(listHtml || '<div class="text-center p-3 text-muted">No notifications</div>');
+                function loadRecentNotifications() {
+            $.ajax({
+                url: '/Notifications/GetRecentNotifications',
+                type: 'GET',
+                success: function(notifications) {
+                    if (notifications && notifications.length > 0) {
+                        const listHtml = notifications.map(n => createNotificationItem(n)).join('');
+                        $('#notificationList').html(listHtml);
+                    } else {
+                        $('#notificationList').html('<div class="text-center p-3 text-muted">No notifications</div>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load notifications:', error);
+                    $('#notificationList').html('<div class="text-center p-3 text-danger">Failed to load notifications</div>');
+                }
             });
         }
 
