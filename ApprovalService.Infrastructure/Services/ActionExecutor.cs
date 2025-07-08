@@ -68,21 +68,18 @@ namespace ApprovalService.Infrastructure.Services
         }
 
 
-        private async Task ExecuteCreateProduct(ApprovalRequest request, CancellationToken cancellationToken)
+        private async Task<bool> ExecuteCreateProduct(string actionData, CancellationToken cancellationToken)
         {
-            var actionData = JsonSerializer.Deserialize<JsonElement>(request.ActionData);
-
-            // Make the request through the API Gateway, not directly to the service
-            var response = await _httpClient.PostAsync(
-                "/api/products/approved",
-                new StringContent(actionData.ToString(), Encoding.UTF8, "application/json"),
-                cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);
+            if (data != null)
             {
-                var error = await response.Content.ReadAsStringAsync(cancellationToken);
-                throw new InvalidOperationException($"Failed to create product: {error}");
+                var response = await _httpClient.PostAsync(
+                    $"{_configuration["Services:ProductService"]}/api/products/approved",
+                    new StringContent(JsonSerializer.Serialize(data.ProductData), Encoding.UTF8, "application/json"),
+                    cancellationToken);
+                return response.IsSuccessStatusCode;
             }
+            return false;
         }
 
         private async Task<bool> ExecuteUpdateProduct(string actionData, CancellationToken cancellationToken)

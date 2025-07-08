@@ -9,7 +9,7 @@ namespace NotificationService.Infrastructure.Services
     public class UserService : IUserService
     {
         private readonly HttpClient _httpClient;
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHttpContextAccessor? _httpContextAccessor;
 
         public UserService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor? httpContextAccessor = null)
         {
@@ -18,19 +18,64 @@ namespace NotificationService.Infrastructure.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<IEnumerable<int>> GetUserIdsByRoleAsync(string role, CancellationToken cancellationToken = default)
+        public async Task<List<UserDto>> GetUsersAsync(string? role = null)
         {
-            // Use system token for internal service calls
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", "system-token-for-automated-actions");
+            SetAuthorizationHeader();
+
+            var url = string.IsNullOrEmpty(role)
+                ? "/api/auth/users"
+                : $"/api/auth/users/by-role/{role}";
+
+            var response = await _httpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                var users = await response.Content.ReadFromJsonAsync<List<UserDto>>();
+                return users ?? new List<UserDto>();
+            }
+            return new List<UserDto>();
+        }
+
+        public async Task<UserDto?> GetUserAsync(int userId)
+        {
+            SetAuthorizationHeader();
+
+            var response = await _httpClient.GetAsync($"/api/auth/users/{userId}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<UserDto>();
+            }
+            return null;
+        }
+
+        public async Task<List<int>> GetUserIdsByRoleAsync(string role, CancellationToken cancellationToken = default)
+        {
+            SetAuthorizationHeader();
 
             var response = await _httpClient.GetAsync($"/api/auth/users/by-role/{role}", cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var users = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: cancellationToken);
-                return users?.Where(u => u.Roles.Contains(role)).Select(u => u.Id) ?? new List<int>();
+                var users = await response.Content.ReadFromJsonAsync<List<Application.Interfaces.UserDto>>(cancellationToken: cancellationToken);
+                return users?.Select(u => u.Id).ToList() ?? new List<int>();
             }
             return new List<int>();
+        }
+
+        private void SetAuthorizationHeader()
+        {
+            if (_httpContextAccessor?.HttpContext != null)
+            {
+                var token = _httpContextAccessor.HttpContext.Session.GetString("JwtToken");
+                if (!string.IsNullOrEmpty(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", token);
+                    return;
+                }
+            }
+
+            // Use system token for internal service calls
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", "system-token-for-automated-actions");
         }
     }
     public record UserDto
