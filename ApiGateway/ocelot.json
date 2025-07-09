@@ -147,7 +147,14 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/notifications/{everything}",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            },
+            "AddHeadersToRequest": {
+                "Authorization": "Bearer {token}"
+            }
         },
         {
             "DownstreamPathTemplate": "/notificationHub/negotiate",
@@ -159,7 +166,11 @@
                 }
             ],
             "UpstreamPathTemplate": "/notificationHub/negotiate",
-            "UpstreamHttpMethod": [ "POST" ]
+            "UpstreamHttpMethod": [ "POST" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            }
         },
         {
             "DownstreamPathTemplate": "/notificationHub",
@@ -183,7 +194,11 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/products/approved",
-            "UpstreamHttpMethod": [ "POST" ]
+            "UpstreamHttpMethod": [ "POST" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            }
         },
         {
             "DownstreamPathTemplate": "/api/products/{id}/approved",
@@ -195,7 +210,11 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/products/{id}/approved",
-            "UpstreamHttpMethod": [ "PUT", "DELETE" ]
+            "UpstreamHttpMethod": [ "PUT", "DELETE" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer",
+                "AllowedScopes": []
+            }
         }
     ],
     "GlobalConfiguration": {
