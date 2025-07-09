@@ -166,7 +166,7 @@
                 }
             ],
             "UpstreamPathTemplate": "/notificationHub/negotiate",
-            "UpstreamHttpMethod": [ "POST" ],
+            "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
@@ -182,7 +182,8 @@
                 }
             ],
             "UpstreamPathTemplate": "/notificationHub",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
+            "DangerousAcceptAnyServerCertificateValidator": true
         },
         {
             "DownstreamPathTemplate": "/api/products/approved",

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using ApprovalService.Shared.DTOs;
+using Microsoft.AspNetCore.Http;
 using ProductService.Application.DTOs;
 using ProductService.Application.Interfaces;
 using System.Net.Http.Headers;
@@ -35,6 +36,7 @@ namespace ProductService.Infrastructure.Services
             var responseContent = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<ApprovalRequestDto>(responseContent);
             return result ?? throw new InvalidOperationException("Failed to create approval request");
+
         }
     }
 }

@@ -7,6 +7,8 @@ using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Enums;
+using ApprovalService.Shared.DTOs;
+using ApprovalService.Shared.Enum;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -72,29 +74,47 @@ namespace ApprovalService.Infrastructure.Services
         {
             try
             {
-                var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);
-                if (data?.ProductData == null)
-                    return false;
-
-                // Convert JsonElement to a simple object without IFormFile
-                var productJson = data.ProductData.ToString();
-                var jsonDoc = JsonDocument.Parse(productJson);
+                var jsonDoc = JsonDocument.Parse(actionData);
                 var root = jsonDoc.RootElement;
 
-                // Create a simplified product object
+                // Check if it's wrapped in ActionData structure
+                JsonElement productElement;
+                if (root.TryGetProperty("ProductData", out var productDataProp))
+                {
+                    productElement = productDataProp;
+                }
+                else
+                {
+                    productElement = root;
+                }
+
+                // Create a properly formatted object for the API
                 var productData = new
                 {
-                    InventoryCode = root.TryGetProperty("inventoryCode", out var inv) ? inv.GetInt32() : 0,
-                    Model = root.TryGetProperty("model", out var model) ? model.GetString() : "",
-                    Vendor = root.TryGetProperty("vendor", out var vendor) ? vendor.GetString() : "",
-                    Worker = root.TryGetProperty("worker", out var worker) ? worker.GetString() : "",
-                    Description = root.TryGetProperty("description", out var desc) ? desc.GetString() : "",
-                    IsWorking = root.TryGetProperty("isWorking", out var working) ? working.GetBoolean() : true,
-                    IsActive = root.TryGetProperty("isActive", out var active) ? active.GetBoolean() : true,
-                    IsNewItem = root.TryGetProperty("isNewItem", out var newItem) ? newItem.GetBoolean() : true,
-                    CategoryId = root.TryGetProperty("categoryId", out var cat) ? cat.GetInt32() : 0,
-                    DepartmentId = root.TryGetProperty("departmentId", out var dept) ? dept.GetInt32() : 0
+                    inventoryCode = productElement.TryGetProperty("inventoryCode", out var inv)
+                        ? inv.GetInt32()
+                        : productElement.TryGetProperty("InventoryCode", out var invCap)
+                            ? invCap.GetInt32()
+                            : 0,
+                    model = GetStringProperty(productElement, "model", "Model"),
+                    vendor = GetStringProperty(productElement, "vendor", "Vendor"),
+                    worker = GetStringProperty(productElement, "worker", "Worker"),
+                    description = GetStringProperty(productElement, "description", "Description"),
+                    isWorking = GetBoolProperty(productElement, "isWorking", "IsWorking", true),
+                    isActive = GetBoolProperty(productElement, "isActive", "IsActive", true),
+                    isNewItem = GetBoolProperty(productElement, "isNewItem", "IsNewItem", true),
+                    categoryId = productElement.TryGetProperty("categoryId", out var cat)
+                        ? cat.GetInt32()
+                        : productElement.TryGetProperty("CategoryId", out var catCap)
+                            ? catCap.GetInt32()
+                            : 0,
+                    departmentId = productElement.TryGetProperty("departmentId", out var dept)
+                        ? dept.GetInt32()
+                        : productElement.TryGetProperty("DepartmentId", out var deptCap)
+                            ? deptCap.GetInt32()
+                            : 0
                 };
+
 
                 var json = JsonSerializer.Serialize(productData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -103,6 +123,12 @@ namespace ApprovalService.Infrastructure.Services
                     $"{_configuration["Services:ProductService"]}/api/products/approved",
                     content,
                     cancellationToken);
+
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                }
 
                 return response.IsSuccessStatusCode;
             }
@@ -160,5 +186,23 @@ namespace ApprovalService.Infrastructure.Services
             }
             return false;
         }
+        private string GetStringProperty(JsonElement element, string camelCase, string pascalCase)
+        {
+            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.String)
+                return prop.GetString() ?? "";
+            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.String)
+                return propPascal.GetString() ?? "";
+            return "";
+        }
+
+        private bool GetBoolProperty(JsonElement element, string camelCase, string pascalCase, bool defaultValue)
+        {
+            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)
+                return prop.GetBoolean();
+            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.True || propPascal.ValueKind == JsonValueKind.False)
+                return propPascal.GetBoolean();
+            return defaultValue;
+        }
+
     }
 }

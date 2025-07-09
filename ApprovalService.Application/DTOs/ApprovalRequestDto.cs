@@ -17,13 +17,6 @@
         public DateTime? ProcessedAt { get; set; }
         public DateTime? ExecutedAt { get; set; }
     }
-    public record CreateApprovalRequestDto
-    {
-        public string RequestType { get; set; } = string.Empty;
-        public string EntityType { get; set; } = string.Empty;
-        public int? EntityId { get; set; }
-        public object ActionData { get; set; } = null!;
-    }
     public record ApproveRequestDto
     {
         public int RequestId { get; set; }

@@ -127,3 +127,15 @@ function closeImageModal() {
 $(document).ready(function () {
     initializeImageZoom();
 });
+
+notificationConnection.onreconnecting((error) => {
+    console.log('SignalR Reconnecting:', error);
+});
+
+notificationConnection.onreconnected((connectionId) => {
+    console.log('SignalR Reconnected:', connectionId);
+});
+
+notificationConnection.onclose((error) => {
+    console.log('SignalR Connection closed:', error);
+});

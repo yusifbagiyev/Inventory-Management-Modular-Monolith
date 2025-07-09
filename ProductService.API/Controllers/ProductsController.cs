@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using ApprovalService.Domain.Enums;
+using ApprovalService.Shared.DTOs;
+using ApprovalService.Shared.Enum;
 using IdentityService.Domain.Constants;
 using IdentityService.Shared.Authorization;
 using MediatR;
@@ -84,7 +85,7 @@ namespace ProductService.API.Controllers
                     RequestType = RequestType.CreateProduct,
                     EntityType = "Product",
                     EntityId = null,
-                    ActionData = dto
+                    ActionData = new CreateProductActionData { ProductData = dto }
                 };
 
                 var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);

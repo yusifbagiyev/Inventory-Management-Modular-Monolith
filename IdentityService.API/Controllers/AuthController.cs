@@ -395,9 +395,9 @@ namespace IdentityService.API.Controllers
                 var usersInRole = users.Where(u => u.Roles.Contains(role));
                 return Ok(usersInRole);
             }
-            catch (Exception ex)
+            catch 
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest();
             }
         }
     }

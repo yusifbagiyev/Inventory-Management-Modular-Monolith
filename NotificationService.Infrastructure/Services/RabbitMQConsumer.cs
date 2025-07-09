@@ -72,7 +72,10 @@ namespace NotificationService.Infrastructure.Services
                     switch (routingKey)
                     {
                         case "approval.request.created":
-                            await HandleApprovalRequested(message);
+                            await HandleApprovalRequestCreated(message);
+                            break;
+                        case "approval.request.processed":
+                            await HandleApprovalRequestProcessed(message);
                             break;
                         case "approval.approved":
                             await HandleApprovalApproved(message);
@@ -107,26 +110,19 @@ namespace NotificationService.Infrastructure.Services
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async Task HandleApprovalRequested(string message)
+        private async Task HandleApprovalRequestCreated(string message)
         {
             try
             {
-                var eventJson = JsonDocument.Parse(message);
-                var root = eventJson.RootElement;
-
-                var approvalEvent = new
-                {
-                    RequestId = root.GetProperty("RequestId").GetInt32(),
-                    RequestType = root.GetProperty("RequestType").GetString(),
-                    RequestedById = root.GetProperty("RequestedById").GetInt32(),
-                    RequestedByName = root.GetProperty("RequestedByName").GetString(),
-                    CreatedAt = root.GetProperty("CreatedAt").GetDateTime()
-                };
+                var approvalEvent = JsonSerializer.Deserialize<ApprovalRequestCreatedEvent>(message);
+                if (approvalEvent == null) return;
 
                 _logger.LogInformation($"Processing approval request from {approvalEvent.RequestedByName}");
 
                 // Get all admin users
                 var adminUserIds = await GetUsersInRole("Admin");
+
+                _logger.LogInformation($"Found {adminUserIds.Count} admin users");
 
                 foreach (var adminId in adminUserIds)
                 {
@@ -144,6 +140,36 @@ namespace NotificationService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling approval requested event");
+            }
+        }
+
+        private async Task HandleApprovalRequestProcessed(string message)
+        {
+            try
+            {
+                var approvalEvent = JsonSerializer.Deserialize<ApprovalRequestProcessedEvent>(message);
+                if (approvalEvent == null) return;
+
+                _logger.LogInformation($"Processing approval response for user {approvalEvent.RequestedById}");
+
+                var title = approvalEvent.Status == "Approved" ? "Request Approved" : "Request Rejected";
+                var messageText = approvalEvent.Status == "Approved"
+                    ? $"Your {approvalEvent.RequestType} request has been approved by {approvalEvent.ProcessedByName}"
+                    : $"Your {approvalEvent.RequestType} request has been rejected. Reason: {approvalEvent.RejectionReason}";
+
+                var notification = new Notification(
+                    approvalEvent.RequestedById,
+                    "ApprovalResponse",
+                    title,
+                    messageText,
+                    JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.RequestId })
+                );
+
+                await SaveAndSendNotification(notification);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling approval processed event");
             }
         }
 

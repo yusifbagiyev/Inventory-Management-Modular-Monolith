@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ApprovalService.Shared\ApprovalService.Shared.csproj" />
     <ProjectReference Include="..\ProductService.Domain\ProductService.Domain.csproj" />
   </ItemGroup>
 
