@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -44,7 +45,7 @@ namespace NotificationService.Infrastructure.Services
             _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
 
             // Bind all event types we want to listen to
-            _channel.QueueBind(_queueName, "inventory-events", "approval.requested");
+            _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
             _channel.QueueBind(_queueName, "inventory-events", "approval.approved");
             _channel.QueueBind(_queueName, "inventory-events", "approval.rejected");
             _channel.QueueBind(_queueName, "inventory-events", "product.created");
@@ -70,7 +71,7 @@ namespace NotificationService.Infrastructure.Services
                     // Handle different event types based on routing key
                     switch (routingKey)
                     {
-                        case "approval.requested":
+                        case "approval.request.created":
                             await HandleApprovalRequested(message);
                             break;
                         case "approval.approved":
@@ -110,12 +111,21 @@ namespace NotificationService.Infrastructure.Services
         {
             try
             {
-                var approvalEvent = JsonSerializer.Deserialize<ApprovalRequestedEvent>(message);
-                if (approvalEvent == null) return;
+                var eventJson = JsonDocument.Parse(message);
+                var root = eventJson.RootElement;
+
+                var approvalEvent = new
+                {
+                    RequestId = root.GetProperty("RequestId").GetInt32(),
+                    RequestType = root.GetProperty("RequestType").GetString(),
+                    RequestedById = root.GetProperty("RequestedById").GetInt32(),
+                    RequestedByName = root.GetProperty("RequestedByName").GetString(),
+                    CreatedAt = root.GetProperty("CreatedAt").GetDateTime()
+                };
 
                 _logger.LogInformation($"Processing approval request from {approvalEvent.RequestedByName}");
 
-                // Get all admin users from identity service
+                // Get all admin users
                 var adminUserIds = await GetUsersInRole("Admin");
 
                 foreach (var adminId in adminUserIds)
@@ -125,7 +135,7 @@ namespace NotificationService.Infrastructure.Services
                         "ApprovalRequest",
                         "New Approval Request",
                         $"{approvalEvent.RequestedByName} requested approval for {approvalEvent.RequestType}",
-                        JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.ApprovalRequestId })
+                        JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.RequestId })
                     );
 
                     await SaveAndSendNotification(notification);
@@ -272,21 +282,23 @@ namespace NotificationService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var notificationSender = scope.ServiceProvider.GetRequiredService<INotificationSender>();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
 
             await repository.AddAsync(notification);
             await unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation($"Sending notification to user {notification.UserId}");
 
-            // Send notification with individual parameters
-            await notificationSender.SendToUserAsync(
-                notification.UserId,
+            // Send via SignalR directly using HubContext
+            await hubContext.Clients.Group($"user-{notification.UserId}").SendAsync("ReceiveNotification", new
+            {
+                notification.Id,
+                notification.Type,
                 notification.Title,
                 notification.Message,
-                notification.Type,
-                notification.Data != null ? JsonSerializer.Deserialize<object>(notification.Data) : null
-            );
+                notification.CreatedAt,
+                Data = notification.Data != null ? JsonSerializer.Deserialize<object>(notification.Data) : null
+            });
         }
 
         private async Task<List<int>> GetUsersInRole(string role)

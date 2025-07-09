@@ -20,11 +20,13 @@ namespace ProductService.API.Controllers
     {
         private readonly IMediator _mediator;
         private readonly IApprovalService _approvalService;
+        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IMediator mediator,IApprovalService approvalService)
+        public ProductsController(IMediator mediator,IApprovalService approvalService, ILogger<ProductsController> logger)
         {
             _mediator = mediator;
             _approvalService = approvalService;
+            _logger = logger;
         }
 
 
@@ -152,16 +154,33 @@ namespace ProductService.API.Controllers
         [HttpPost("approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] object productData)
+        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] JsonElement productData)
         {
-            var json = productData.ToString();
-            var dto = JsonSerializer.Deserialize<CreateProductDto>(json!);
+            try
+            {
+                // Create a DTO without the file
+                var dto = new CreateProductDto
+                {
+                    InventoryCode = productData.GetProperty("inventoryCode").GetInt32(),
+                    Model = productData.TryGetProperty("model", out var model) ? model.GetString() : "",
+                    Vendor = productData.TryGetProperty("vendor", out var vendor) ? vendor.GetString() : "",
+                    Worker = productData.TryGetProperty("worker", out var worker) ? worker.GetString() : "",
+                    Description = productData.TryGetProperty("description", out var desc) ? desc.GetString() : "",
+                    IsWorking = productData.TryGetProperty("isWorking", out var working) ? working.GetBoolean() : true,
+                    IsActive = productData.TryGetProperty("isActive", out var active) ? active.GetBoolean() : true,
+                    IsNewItem = productData.TryGetProperty("isNewItem", out var newItem) ? newItem.GetBoolean() : true,
+                    CategoryId = productData.GetProperty("categoryId").GetInt32(),
+                    DepartmentId = productData.GetProperty("departmentId").GetInt32()
+                };
 
-            if (dto == null)
-                return BadRequest("Invalid product data");
-
-            var product = await _mediator.Send(new CreateProduct.Command(dto));
-            return Ok(product);
+                var product = await _mediator.Send(new CreateProduct.Command(dto));
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating approved product");
+                return BadRequest($"Error: {ex.Message}");
+            }
         }
 
         [HttpPut("{id}/approved")]

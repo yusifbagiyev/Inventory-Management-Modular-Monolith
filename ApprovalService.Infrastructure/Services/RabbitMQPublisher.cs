@@ -22,7 +22,7 @@ namespace ApprovalService.Infrastructure.Services
 
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
-            _channel.ExchangeDeclare("notifications", ExchangeType.Topic, durable: true);
+            _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
         }
 
         public async Task PublishAsync<T>(T message, string routingKey, CancellationToken cancellationToken = default)
@@ -36,7 +36,7 @@ namespace ApprovalService.Infrastructure.Services
                 properties.Persistent = true;
 
                 _channel.BasicPublish(
-                    exchange: "notifications",
+                    exchange: "inventory-events",
                     routingKey: routingKey,
                     basicProperties: properties,
                     body: body);

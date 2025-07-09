@@ -147,11 +147,7 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/notifications/{everything}",
-            "UpstreamHttpMethod": [ "GET", "POST" ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer",
-                "AllowedScopes": []
-            }
+            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
         },
         {
             "DownstreamPathTemplate": "/notificationHub",

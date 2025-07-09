@@ -70,16 +70,46 @@ namespace ApprovalService.Infrastructure.Services
 
         private async Task<bool> ExecuteCreateProduct(string actionData, CancellationToken cancellationToken)
         {
-            var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);
-            if (data != null)
+            try
             {
+                var data = JsonSerializer.Deserialize<CreateProductActionData>(actionData);
+                if (data?.ProductData == null)
+                    return false;
+
+                // Convert JsonElement to a simple object without IFormFile
+                var productJson = data.ProductData.ToString();
+                var jsonDoc = JsonDocument.Parse(productJson);
+                var root = jsonDoc.RootElement;
+
+                // Create a simplified product object
+                var productData = new
+                {
+                    InventoryCode = root.TryGetProperty("inventoryCode", out var inv) ? inv.GetInt32() : 0,
+                    Model = root.TryGetProperty("model", out var model) ? model.GetString() : "",
+                    Vendor = root.TryGetProperty("vendor", out var vendor) ? vendor.GetString() : "",
+                    Worker = root.TryGetProperty("worker", out var worker) ? worker.GetString() : "",
+                    Description = root.TryGetProperty("description", out var desc) ? desc.GetString() : "",
+                    IsWorking = root.TryGetProperty("isWorking", out var working) ? working.GetBoolean() : true,
+                    IsActive = root.TryGetProperty("isActive", out var active) ? active.GetBoolean() : true,
+                    IsNewItem = root.TryGetProperty("isNewItem", out var newItem) ? newItem.GetBoolean() : true,
+                    CategoryId = root.TryGetProperty("categoryId", out var cat) ? cat.GetInt32() : 0,
+                    DepartmentId = root.TryGetProperty("departmentId", out var dept) ? dept.GetInt32() : 0
+                };
+
+                var json = JsonSerializer.Serialize(productData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
                 var response = await _httpClient.PostAsync(
                     $"{_configuration["Services:ProductService"]}/api/products/approved",
-                    new StringContent(JsonSerializer.Serialize(data.ProductData), Encoding.UTF8, "application/json"),
+                    content,
                     cancellationToken);
+
                 return response.IsSuccessStatusCode;
             }
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         private async Task<bool> ExecuteUpdateProduct(string actionData, CancellationToken cancellationToken)

@@ -49,24 +49,17 @@
                             @if (User.Identity?.IsAuthenticated ?? false)
                             {
                                 <!-- Notification Bell -->
-                                <li class="nav-item dropdown me-3">
-                                    <a class="nav-link position-relative" href="#" id="notificationDropdown"
-                                       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link position-relative" href="#" id="notificationIcon"
+                                       data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="fas fa-bell"></i>
-                                        <span class="notification-badge" id="notificationCount" style="display:none;">0</span>
+                                        <span id="notificationBadge" class="notification-badge" style="display:none;">0</span>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-end notification-dropdown"
-                                         aria-labelledby="notificationDropdown">
-                                        <div class="dropdown-header d-flex justify-content-between align-items-center">
-                                            <span>Notifications</span>
-                                            <a href="/Notifications" class="text-decoration-none small">View All</a>
-                                        </div>
-                                        <div class="dropdown-divider"></div>
-                                        <div id="notificationList" class="notification-list">
-                                            <div class="text-center p-3">
-                                                <div class="spinner-border spinner-border-sm" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
-                                                </div>
+                                         id="notificationDropdown" aria-labelledby="notificationIcon">
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm" role="status">
+                                                <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </div>
                                     </div>
@@ -133,6 +126,7 @@
     </div>
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
+    <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
     @await Html.PartialAsync("_NotificationScripts")
 
     <!-- jQuery -->
@@ -146,6 +140,24 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom JS -->
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <!-- Signal R-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+
+    <script src="~/js/notifications.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Store JWT token for SignalR
+            window.jwtToken = '@Context.Session.GetString("JwtToken")';
+
+            // Initialize notifications
+            initializeNotifications();
+
+            // Connect to SignalR only if we have a token
+            if (window.jwtToken) {
+                connectToNotificationHub();
+            }
+        });
+    </script>
 
     <script>
         $("#menu-toggle").click(function(e) {

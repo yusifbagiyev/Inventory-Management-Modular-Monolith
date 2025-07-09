@@ -67,12 +67,12 @@ namespace ApprovalService.Application.Features.Commands
                 var evt = new ApprovalRequestProcessedEvent
                 {
                     RequestId = approvalRequest.Id,
-                    RequestType=approvalRequest.RequestType,
-                    Status=approvalRequest.Status.ToString(),
-                    ProcessedById=request.UserId,
-                    ProcessedByName=request.UserName,
-                    RequestedById= approvalRequest.RequestedById,
-                    RejectionReason =approvalRequest.RejectionReason
+                    RequestType = approvalRequest.RequestType,
+                    Status = approvalRequest.Status == ApprovalStatus.Executed ? "Approved" : "Failed",
+                    ProcessedById = request.UserId,
+                    ProcessedByName = request.UserName,
+                    RequestedById = approvalRequest.RequestedById,
+                    RejectionReason = approvalRequest.Status == ApprovalStatus.Failed ? approvalRequest.RejectionReason : null
                 };
 
                 await _messagePublisher.PublishAsync(evt, "approval.request.processed", cancellationToken);
