@@ -1,18 +1,42 @@
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Repositories;
 using NotificationService.Infrastructure.Data;
 using NotificationService.Infrastructure.Repositories;
 using NotificationService.Infrastructure.Services;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Notification Service API", Version = "v1" });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
 builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
@@ -67,6 +91,11 @@ builder.Services.AddSingleton<RabbitMQConsumer>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
 
 var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseCors("AllowWebApp");
 app.UseAuthentication();

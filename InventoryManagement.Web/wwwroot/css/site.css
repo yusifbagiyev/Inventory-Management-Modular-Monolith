@@ -212,3 +212,39 @@ body {
     top: 50%;
     transform: translateY(-50%);
 }
+/* Add these notification styles */
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: translate(25%, -25%);
+}
+
+.notification-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+    .notification-item.unread {
+        background-color: #f8f9fa;
+        font-weight: 500;
+    }
+
+    .notification-item:hover {
+        background-color: #e9ecef;
+    }
+
+.notification-list {
+    max-height: 400px;
+    overflow-y: auto;
+    width: 350px;
+}

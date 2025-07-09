@@ -57,9 +57,16 @@
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-end notification-dropdown"
                                          id="notificationDropdown" aria-labelledby="notificationIcon">
-                                        <div class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm" role="status">
-                                                <span class="visually-hidden">Loading...</span>
+                                        <div class="dropdown-header d-flex justify-content-between align-items-center">
+                                            <span>Notifications</span>
+                                            <a href="/Notifications" class="text-decoration-none small">View All</a>
+                                        </div>
+                                        <div class="dropdown-divider"></div>
+                                        <div id="notificationList" class="notification-list">
+                                            <div class="text-center py-3">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -127,42 +134,181 @@
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
     <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
-    @await Html.PartialAsync("_NotificationScripts")
-
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Bootstrap Bundle JS -->
+    <!-- Other scripts AFTER jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Custom JS -->
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    <!-- Signal R-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
 
-    <script src="~/js/notifications.js"></script>
+    <!-- Your custom scripts -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Wrap notifications.js in document-ready -->
     <script>
         $(document).ready(function() {
-            // Store JWT token for SignalR
-            window.jwtToken = '@Context.Session.GetString("JwtToken")';
+                    let notificationConnection = null;
+        let notificationTimeout = null;
 
-            // Initialize notifications
+        $(document).ready(function () {
             initializeNotifications();
-
-            // Connect to SignalR only if we have a token
-            if (window.jwtToken) {
-                connectToNotificationHub();
-            }
+            setupNotificationHandlers();
+            loadNotificationCount();
         });
-    </script>
 
-    <script>
-        $("#menu-toggle").click(function(e) {
-            e.preventDefault();
-            $("#wrapper").toggleClass("toggled");
+        function setupNotificationHandlers() {
+            // Notification dropdown handler
+            $('#notificationIcon').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearTimeout(notificationTimeout);
+                loadRecentNotifications();
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('.notification-dropdown').length) {
+                    notificationTimeout = setTimeout(() => {
+                        $('#notificationDropdown').removeClass('show');
+                    }, 200);
+                }
+            });
+        }
+
+        function initializeNotifications() {
+            const token = $('#jwtToken').val();
+            if (!token) return;
+
+            notificationConnection = new signalR.HubConnectionBuilder()
+                .withUrl("http://localhost:5000/notificationHub", {
+                    accessTokenFactory: () => token,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
+                .withAutomaticReconnect()
+                .configureLogging(signalR.LogLevel.Warning)
+                .build();
+
+            notificationConnection.on("ReceiveNotification", (notification) => {
+                console.log('Notification received:', notification);
+                showToast(`${notification.title}: ${notification.message}`, 'info');
+                incrementNotificationCount();
+            });
+
+            notificationConnection.start()
+                .then(() => console.log('SignalR connected'))
+                .catch(err => console.error('SignalR connection error:', err));
+        }
+
+        function loadNotificationCount() {
+            $.get('/Notifications/GetUnreadCount')
+                .done(count => updateNotificationBadge(count))
+                .fail(err => console.error('Notification count error:', err));
+        }
+
+        function loadRecentNotifications() {
+            const $list = $('#notificationList');
+            $list.html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div></div>');
+
+            $.get('/Notifications/GetRecentNotifications')
+                .done(notifications => renderNotifications(notifications))
+                .fail(() => {
+                    $list.html('<div class="text-center py-3 text-danger">Error loading notifications</div>');
+                });
+        }
+
+        function renderNotifications(notifications) {
+            const $list = $('#notificationList');
+            $list.empty();
+
+            if (!notifications || notifications.length === 0) {
+                $list.html('<div class="text-center py-3 text-muted">No notifications</div>');
+                return;
+            }
+
+            notifications.forEach(notification => {
+                $list.append(createNotificationItem(notification));
+            });
+        }
+
+        function createNotificationItem(notification) {
+            const timeAgo = formatDate(notification.createdAt);
+            const unreadClass = notification.isRead ? '' : 'unread';
+
+            return $(`
+                <a href="#" class="dropdown-item notification-item ${unreadClass}"
+                   data-id="${notification.id}">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${notification.title}</h6>
+                            <p class="mb-0 small">${notification.message}</p>
+                            <small class="text-muted">${timeAgo}</small>
+                        </div>
+                    </div>
+                </a>
+            `).click(function (e) {
+                e.preventDefault();
+                markAsRead(notification.id, $(this));
+            });
+        }
+
+        function markAsRead(notificationId, $element) {
+            $.post('/Notifications/MarkAsRead', { notificationId })
+                .done(() => {
+                    $element.removeClass('unread');
+                    loadNotificationCount();
+                });
+        }
+
+        function updateNotificationBadge(count) {
+            const $badge = $('#notificationBadge');
+            count = parseInt(count) || 0;
+
+            if (count > 0) {
+                $badge.text(count > 9 ? '9+' : count).show();
+            } else {
+                $badge.hide();
+            }
+        }
+
+        function incrementNotificationCount() {
+            const $badge = $('#notificationBadge');
+            const current = parseInt($badge.text()) || 0;
+            updateNotificationBadge(current + 1);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+
+            if (diffSecs < 60) return 'just now';
+            if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
+            if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
+
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        // Toast notification function
+        function showToast(message, type = 'info') {
+            const toast = $(`
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `);
+
+            $('#toastContainer').append(toast);
+            new bootstrap.Toast(toast[0]).show();
+
+            setTimeout(() => toast.remove(), 5000);
+        }
         });
     </script>
 

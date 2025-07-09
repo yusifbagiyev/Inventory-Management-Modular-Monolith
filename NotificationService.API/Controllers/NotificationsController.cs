@@ -42,6 +42,34 @@ namespace NotificationService.API.Controllers
         }
 
 
+        [HttpGet("recent")]
+        public async Task<ActionResult<IEnumerable<NotificationDto>>> GetRecentNotifications()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            if (userId == 0)
+                return Ok(new List<NotificationDto>());
+
+            var notifications = await _repository.GetByUserIdAsync(userId, false);
+            var recent = notifications
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(5)
+                .Select(n => new NotificationDto
+                {
+                    Id = n.Id,
+                    Type = n.Type,
+                    Title = n.Title,
+                    Message = n.Message,
+                    Data = n.Data,
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt,
+                    ReadAt = n.ReadAt
+                });
+
+            return Ok(recent);
+        }
+
+
         [HttpGet("unread-count")]
         public async Task<ActionResult<int>> GetUnreadCount()
         {

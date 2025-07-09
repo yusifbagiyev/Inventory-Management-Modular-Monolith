@@ -57,7 +57,12 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> GetRecentNotifications()
         {
             var notifications = await _notificationService.GetNotificationsAsync(false);
-            return Json(notifications.Take(5));
+            var recent = notifications
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(5)
+                .ToList();
+
+            return Json(recent);
         }
     }
 }

@@ -5,13 +5,7 @@
     <script>
         let notificationConnection = null;
 
-        $(document).ready(function() {
-            initializeNotifications();
-            loadNotificationCount();
-            loadRecentNotifications();
-        });
-
-                function initializeNotifications() {
+        function initializeNotifications() {
             const token = '@Context.Session.GetString("JwtToken")';
             if (!token) {
                 console.error('No JWT token available');
@@ -30,7 +24,7 @@
                 console.log('Received notification:', notification);
                 showToast(notification.title + ': ' + notification.message, 'info');
                 incrementNotificationCount();
-                loadRecentNotifications(); // Reload the notification list
+                loadRecentNotifications();
             });
 
             notificationConnection.start()
@@ -43,11 +37,13 @@
         function loadNotificationCount() {
             $.get('/Notifications/GetUnreadCount', function(count) {
                 updateNotificationBadge(count);
+            }).fail(function(xhr, status, error) {
+                console.error('Failed to load notification count:', error);
             });
         }
 
         function updateNotificationBadge(count) {
-            const badge = $('#notificationCount');
+            const badge = $('#notificationBadge');
             if (count > 0) {
                 badge.text(count).show();
             } else {
@@ -56,26 +52,35 @@
         }
 
         function incrementNotificationCount() {
-            const badge = $('#notificationCount');
+            const badge = $('#notificationBadge');
             const currentCount = parseInt(badge.text()) || 0;
             badge.text(currentCount + 1).show();
         }
 
-                function loadRecentNotifications() {
+        function loadRecentNotifications() {
+            $('#notificationList').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm" role="status"></div></div>');
+
             $.ajax({
                 url: '/Notifications/GetRecentNotifications',
                 type: 'GET',
                 success: function(notifications) {
-                    if (notifications && notifications.length > 0) {
-                        const listHtml = notifications.map(n => createNotificationItem(n)).join('');
-                        $('#notificationList').html(listHtml);
+                    let html = '';
+
+                    if (!notifications || notifications.length === 0) {
+                        html = '<div class="dropdown-item text-center py-3 text-muted">No new notifications</div>';
                     } else {
-                        $('#notificationList').html('<div class="text-center p-3 text-muted">No notifications</div>');
+                        notifications.forEach(function(n) {
+                            html += createNotificationItem(n);
+                        });
+                        html += '<div class="dropdown-divider"></div>';
+                        html += '<a class="dropdown-item text-center" href="/Notifications">View All Notifications</a>';
                     }
+
+                    $('#notificationList').html(html);
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to load notifications:', error);
-                    $('#notificationList').html('<div class="text-center p-3 text-danger">Failed to load notifications</div>');
+                    $('#notificationList').html('<div class="dropdown-item text-center py-3 text-danger">Failed to load notifications</div>');
                 }
             });
         }
@@ -83,14 +88,16 @@
         function createNotificationItem(notification) {
             const timeAgo = getTimeAgo(notification.createdAt);
             const unreadClass = notification.isRead ? '' : 'unread';
+            const icon = getNotificationIcon(notification.type);
 
             return `
                 <a href="#" class="dropdown-item notification-item ${unreadClass}"
-                   onclick="handleNotificationClick(${notification.id}, '${notification.type}', '${notification.data}')">
-                    <div class="d-flex">
-                        <div class="flex-grow-1 ms-2">
-                            <h6 class="mb-1">${notification.title}</h6>
-                            <p class="mb-1 text-muted small">${notification.message}</p>
+                   onclick="handleNotificationClick(${notification.id}); return false;">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">${icon}</div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 small">${notification.title}</h6>
+                            <p class="mb-0 text-muted small">${notification.message}</p>
                             <small class="text-muted">${timeAgo}</small>
                         </div>
                     </div>
@@ -98,14 +105,27 @@
             `;
         }
 
-        function handleNotificationClick(notificationId, type, data) {
-            event.preventDefault();
+        function getNotificationIcon(type) {
+            switch(type) {
+                case 'ApprovalRequest':
+                    return '<i class="fas fa-clock text-warning"></i>';
+                case 'ApprovalResponse':
+                    return '<i class="fas fa-check-circle text-success"></i>';
+                case 'ProductUpdate':
+                    return '<i class="fas fa-box text-info"></i>';
+                default:
+                    return '<i class="fas fa-info-circle text-primary"></i>';
+            }
+        }
+
+        function handleNotificationClick(notificationId) {
             markNotificationAsRead(notificationId);
         }
 
         function markNotificationAsRead(notificationId) {
             $.post('/Notifications/MarkAsRead', { notificationId: notificationId }, function() {
-                updateNotificationBadge($('#notificationCount').text() - 1);
+                loadNotificationCount();
+                $(`a[onclick*="${notificationId}"]`).removeClass('unread');
             });
         }
 
@@ -122,5 +142,20 @@
             const days = Math.floor(hours / 24);
             return days + 'd ago';
         }
+
+        // Initialize when document is ready
+        $(document).ready(function() {
+            // Set up notification dropdown click handler
+            $('#notificationIcon').on('click', function(e) {
+                e.preventDefault();
+                loadRecentNotifications();
+            });
+
+            // Load initial count
+            loadNotificationCount();
+
+            // Initialize SignalR
+            initializeNotifications();
+        });
     </script>
 }
