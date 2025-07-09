@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -54,7 +55,7 @@ namespace NotificationService.Infrastructure.Services
             var response = await _httpClient.GetAsync($"/api/auth/users/by-role/{role}", cancellationToken);
             if (response.IsSuccessStatusCode)
             {
-                var users = await response.Content.ReadFromJsonAsync<List<Application.Interfaces.UserDto>>(cancellationToken: cancellationToken);
+                var users = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: cancellationToken);
                 return users?.Select(u => u.Id).ToList() ?? new List<int>();
             }
             return new List<int>();
@@ -64,25 +65,22 @@ namespace NotificationService.Infrastructure.Services
         {
             if (_httpContextAccessor?.HttpContext != null)
             {
-                var token = _httpContextAccessor.HttpContext.Session.GetString("JwtToken");
-                if (!string.IsNullOrEmpty(token))
+                byte[]? tokenBytes;
+                if (_httpContextAccessor.HttpContext.Session.TryGetValue("JwtToken", out tokenBytes))
                 {
-                    _httpClient.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", token);
-                    return;
+                    var token = System.Text.Encoding.UTF8.GetString(tokenBytes);
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        _httpClient.DefaultRequestHeaders.Authorization =
+                            new AuthenticationHeaderValue("Bearer", token);
+                        return;
+                    }
                 }
             }
 
-            // Use system token for internal service calls
+            // Fallback to system token
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", "system-token-for-automated-actions");
         }
-    }
-    public record UserDto
-    {
-        public int Id { get; set; }
-        public string Username { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new();
     }
 }
