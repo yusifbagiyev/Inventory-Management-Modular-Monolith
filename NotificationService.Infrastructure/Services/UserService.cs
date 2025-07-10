@@ -15,42 +15,48 @@ namespace NotificationService.Infrastructure.Services
     public class UserService : IUserService
     {
         private readonly HttpClient _httpClient;
-        private readonly IHttpContextAccessor? _httpContextAccessor;
         private readonly ILogger<UserService> _logger;
         private readonly IConfiguration _configuration;
 
         public UserService(
             HttpClient httpClient, 
             IConfiguration configuration, 
-            ILogger<UserService> logger,
-            IHttpContextAccessor? httpContextAccessor = null)
+            ILogger<UserService> logger)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri(configuration["Services:IdentityService"] ?? "http://localhost:5000");
-            _httpContextAccessor = httpContextAccessor;
+            _httpClient.BaseAddress = new Uri(configuration["Services:IdentityService"] ?? "http://localhost:5003");
             _logger = logger;
         }
 
         public async Task<List<UserDto>> GetUsersAsync(string? role = null)
         {
-            SetAuthorizationHeader();
+            SetSystemAuthorizationHeader();
 
             var url = string.IsNullOrEmpty(role)
                 ? "/api/auth/users"
                 : $"/api/auth/users/by-role/{role}";
 
+            _logger.LogInformation($"Fetching users from: {_httpClient.BaseAddress}{url}");
+
             var response = await _httpClient.GetAsync(url);
+
+            _logger.LogInformation($"Response status: {response.StatusCode}");
+
             if (response.IsSuccessStatusCode)
             {
                 var users = await response.Content.ReadFromJsonAsync<List<UserDto>>();
+                _logger.LogInformation($"Found {users?.Count ?? 0} users");
                 return users ?? new List<UserDto>();
             }
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError($"Failed to get users: {response.StatusCode} - {errorContent}");
             return new List<UserDto>();
         }
 
         public async Task<UserDto?> GetUserAsync(int userId)
         {
-            SetAuthorizationHeader();
+            SetSystemAuthorizationHeader();
 
             var response = await _httpClient.GetAsync($"/api/auth/users/{userId}");
             if (response.IsSuccessStatusCode)
@@ -64,19 +70,25 @@ namespace NotificationService.Infrastructure.Services
         {
             try
             {
-                // Use system token for background service calls
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", GenerateSystemToken());
+                SetSystemAuthorizationHeader();
 
-                var response = await _httpClient.GetAsync($"/api/auth/users/by-role/{role}", cancellationToken);
+                var url = $"/api/auth/users/by-role/{role}";
+                _logger.LogInformation($"Getting users for role {role} from: {_httpClient.BaseAddress}{url}");
+
+                var response = await _httpClient.GetAsync(url, cancellationToken);
+
+                _logger.LogInformation($"Response status: {response.StatusCode}");
 
                 if (response.IsSuccessStatusCode)
                 {
                     var users = await response.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: cancellationToken);
-                    return users?.Select(u => u.Id).ToList() ?? new List<int>();
+                    var userIds = users?.Select(u => u.Id).ToList() ?? new List<int>();
+                    _logger.LogInformation($"Found {userIds.Count} users with role {role}");
+                    return userIds;
                 }
 
-                _logger.LogWarning($"Failed to get users for role {role}: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError($"Failed to get users for role {role}: {response.StatusCode} - {errorContent}");
                 return new List<int>();
             }
             catch (Exception ex)
@@ -85,6 +97,15 @@ namespace NotificationService.Infrastructure.Services
                 return new List<int>();
             }
         }
+
+        private void SetSystemAuthorizationHeader()
+        {
+            // Generate a system token with Admin role
+            var token = GenerateSystemToken();
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            _logger.LogDebug("Set authorization header with system token");
+        }
+
         private string GenerateSystemToken()
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -93,9 +114,11 @@ namespace NotificationService.Infrastructure.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[] {
-                new Claim(ClaimTypes.Role, "System"),
-                new Claim(ClaimTypes.Name, "System")
-            }),
+                    new Claim(ClaimTypes.NameIdentifier, "0"), // System user ID
+                    new Claim(ClaimTypes.Name, "System"),
+                    new Claim(ClaimTypes.Role, "Admin"), // Give it Admin role to access user endpoints
+                    new Claim(ClaimTypes.Role, "System")
+                }),
                 Expires = DateTime.UtcNow.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
@@ -104,28 +127,6 @@ namespace NotificationService.Infrastructure.Services
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
-        }
-
-        private void SetAuthorizationHeader()
-        {
-            if (_httpContextAccessor?.HttpContext != null)
-            {
-                byte[]? tokenBytes;
-                if (_httpContextAccessor.HttpContext.Session.TryGetValue("JwtToken", out tokenBytes))
-                {
-                    var token = System.Text.Encoding.UTF8.GetString(tokenBytes);
-                    if (!string.IsNullOrEmpty(token))
-                    {
-                        _httpClient.DefaultRequestHeaders.Authorization =
-                            new AuthenticationHeaderValue("Bearer", token);
-                        return;
-                    }
-                }
-            }
-
-            // Fallback to system token
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", "system-token-for-automated-actions");
         }
     }
 }

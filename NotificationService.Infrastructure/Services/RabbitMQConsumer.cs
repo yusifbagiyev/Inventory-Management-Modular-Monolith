@@ -46,8 +46,7 @@ namespace NotificationService.Infrastructure.Services
 
             // Bind all event types we want to listen to
             _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
-            _channel.QueueBind(_queueName, "inventory-events", "approval.approved");
-            _channel.QueueBind(_queueName, "inventory-events", "approval.rejected");
+            _channel.QueueBind(_queueName, "inventory-events", "approval.request.processed");
             _channel.QueueBind(_queueName, "inventory-events", "product.created");
             _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
             _channel.QueueBind(_queueName, "inventory-events", "route.created");
@@ -56,6 +55,8 @@ namespace NotificationService.Infrastructure.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            _logger.LogInformation("RabbitMQ Consumer starting...");
+
             var consumer = new EventingBasicConsumer(_channel);
 
             consumer.Received += async (sender, ea) =>
@@ -66,7 +67,11 @@ namespace NotificationService.Infrastructure.Services
                     var message = Encoding.UTF8.GetString(body);
                     var routingKey = ea.RoutingKey;
 
-                    _logger.LogInformation($"Received message with routing key: {routingKey}");
+                    _logger.LogInformation($"=== RECEIVED MESSAGE ===");
+                    _logger.LogInformation($"RoutingKey: {routingKey}");
+                    _logger.LogInformation($"Message: {message}");
+                    _logger.LogInformation($"======================");
+
 
                     // Handle different event types based on routing key
                     switch (routingKey)
@@ -305,26 +310,39 @@ namespace NotificationService.Infrastructure.Services
 
         private async Task SaveAndSendNotification(Notification notification)
         {
-            using var scope = _serviceProvider.CreateScope();
-            var repository = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
-            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
-
-            await repository.AddAsync(notification);
-            await unitOfWork.SaveChangesAsync();
-
-            _logger.LogInformation($"Sending notification to user {notification.UserId}");
-
-            // Send via SignalR directly using HubContext
-            await hubContext.Clients.Group($"user-{notification.UserId}").SendAsync("ReceiveNotification", new
+            try
             {
-                notification.Id,
-                notification.Type,
-                notification.Title,
-                notification.Message,
-                notification.CreatedAt,
-                Data = notification.Data != null ? JsonSerializer.Deserialize<object>(notification.Data) : null
-            });
+                using var scope = _serviceProvider.CreateScope();
+                var repository = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+
+                await repository.AddAsync(notification);
+                await unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation($"Notification saved to database for user {notification.UserId}");
+
+                // Send via SignalR
+                var groupName = $"user-{notification.UserId}";
+                _logger.LogInformation($"Sending notification to SignalR group: {groupName}");
+
+                await hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", new
+                {
+                    notification.Id,
+                    notification.Type,
+                    notification.Title,
+                    notification.Message,
+                    notification.CreatedAt,
+                    Data = notification.Data != null ? JsonSerializer.Deserialize<object>(notification.Data) : null
+                });
+
+                _logger.LogInformation($"Notification sent via SignalR to user {notification.UserId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error saving/sending notification for user {notification.UserId}");
+                throw;
+            }
         }
 
         private async Task<List<int>> GetUsersInRole(string role)

@@ -1,4 +1,5 @@
 ﻿using ApprovalService.Application.DTOs;
+using ApprovalService.Application.Events;
 using ApprovalService.Application.Features.Commands;
 using ApprovalService.Application.Features.Queries;
 using ApprovalService.Shared.DTOs;

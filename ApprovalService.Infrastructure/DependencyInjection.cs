@@ -19,7 +19,11 @@ namespace ApprovalService.Infrastructure
             services.AddScoped<IApprovalRequestRepository, ApprovalRequestRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
-            services.AddHttpClient<IActionExecutor, ActionExecutor>();
+            services.AddHttpClient<IActionExecutor, ActionExecutor>()
+                    .ConfigureHttpClient(client =>
+                    {
+                        client.Timeout = TimeSpan.FromSeconds(30);
+                    });
 
             return services;
         }
