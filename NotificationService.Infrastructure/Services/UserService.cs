@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -26,32 +27,43 @@ namespace NotificationService.Infrastructure.Services
             _httpClient = httpClient;
             _httpClient.BaseAddress = new Uri(configuration["Services:IdentityService"] ?? "http://localhost:5003");
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<List<UserDto>> GetUsersAsync(string? role = null)
         {
-            SetSystemAuthorizationHeader();
-
-            var url = string.IsNullOrEmpty(role)
-                ? "/api/auth/users"
-                : $"/api/auth/users/by-role/{role}";
-
-            _logger.LogInformation($"Fetching users from: {_httpClient.BaseAddress}{url}");
-
-            var response = await _httpClient.GetAsync(url);
-
-            _logger.LogInformation($"Response status: {response.StatusCode}");
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var users = await response.Content.ReadFromJsonAsync<List<UserDto>>();
-                _logger.LogInformation($"Found {users?.Count ?? 0} users");
-                return users ?? new List<UserDto>();
-            }
+                SetSystemAuthorizationHeader();
 
-            var errorContent = await response.Content.ReadAsStringAsync();
-            _logger.LogError($"Failed to get users: {response.StatusCode} - {errorContent}");
-            return new List<UserDto>();
+                var url = string.IsNullOrEmpty(role)
+                    ? "/api/auth/users"
+                    : $"/api/auth/users/by-role/{Uri.EscapeDataString(role)}";
+
+                _logger.LogInformation($"Fetching users from: {_httpClient.BaseAddress}{url}");
+
+                var response = await _httpClient.GetAsync(url);
+                _logger.LogInformation($"Response status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var users = JsonSerializer.Deserialize<List<UserDto>>(content,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    _logger.LogInformation($"Found {users?.Count ?? 0} users");
+                    return users ?? new List<UserDto>();
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Failed to get users: {response.StatusCode} - {errorContent}");
+                return new List<UserDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting users for role: {role}");
+                return new List<UserDto>();
+            }
         }
 
         public async Task<UserDto?> GetUserAsync(int userId)

@@ -32,20 +32,29 @@ namespace ApprovalService.Infrastructure.Services
             var json = JsonSerializer.Serialize(message);
             var body = Encoding.UTF8.GetBytes(json);
 
-            _logger.LogInformation($"Publishing message to RabbitMQ: RoutingKey={routingKey}, Message={json}");
+            _logger.LogInformation($"Publishing message to RabbitMQ: RoutingKey={routingKey}");
+            _logger.LogDebug($"Message content: {json}");
 
             await Task.Run(() =>
             {
-                var properties = _channel.CreateBasicProperties();
-                properties.Persistent = true;
+                try
+                {
+                    var properties = _channel.CreateBasicProperties();
+                    properties.Persistent = true;
 
-                _channel.BasicPublish(
-                    exchange: "inventory-events",
-                    routingKey: routingKey,
-                    basicProperties: properties,
-                    body: body);
+                    _channel.BasicPublish(
+                        exchange: "inventory-events",
+                        routingKey: routingKey,
+                        basicProperties: properties,
+                        body: body);
 
-                _logger.LogInformation($"Message published successfully to {routingKey}");
+                    _logger.LogInformation($"Message published successfully to {routingKey}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to publish message to {routingKey}");
+                    throw;
+                }
             }, cancellationToken);
         }
 

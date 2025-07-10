@@ -157,35 +157,6 @@
             }
         },
         {
-            "DownstreamPathTemplate": "/notificationHub/negotiate",
-            "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 5005
-                }
-            ],
-            "UpstreamPathTemplate": "/notificationHub/negotiate",
-            "UpstreamHttpMethod": [ "GET", "POST", "OPTIONS" ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer",
-                "AllowedScopes": []
-            }
-        },
-        {
-            "DownstreamPathTemplate": "/notificationHub",
-            "DownstreamScheme": "ws",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 5005
-                }
-            ],
-            "UpstreamPathTemplate": "/notificationHub",
-            "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ],
-            "DangerousAcceptAnyServerCertificateValidator": true
-        },
-        {
             "DownstreamPathTemplate": "/api/products/approved",
             "DownstreamScheme": "http",
             "DownstreamHostAndPorts": [

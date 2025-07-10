@@ -139,3 +139,31 @@ notificationConnection.onreconnected((connectionId) => {
 notificationConnection.onclose((error) => {
     console.log('SignalR Connection closed:', error);
 });
+function loadRecentNotifications() {
+    $('#notificationList').html(`
+        <div class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `);
+
+    $.ajax({
+        url: '/Notifications/GetRecentNotifications',
+        type: 'GET',
+        headers: {
+            'Authorization': 'Bearer ' + $('#jwtToken').val()
+        },
+        success: function (notifications) {
+            renderNotifications(notifications);
+        },
+        error: function (xhr, status, error) {
+            console.error('Failed to load notifications:', error);
+            $('#notificationList').html(`
+                <div class="dropdown-item text-center py-3 text-danger">
+                    <i class="fas fa-exclamation-circle"></i> Failed to load notifications
+                </div>
+            `);
+        }
+    });
+}

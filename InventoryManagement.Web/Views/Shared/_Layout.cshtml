@@ -134,478 +134,449 @@
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
     <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
+
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- Other scripts AFTER jQuery -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
-
-    <!-- Your custom scripts -->
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    <!-- Wrap notifications.js in document-ready -->
-    @section Scripts {
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
-        <script>
-            let notificationConnection = null;
-            let reconnectAttempts = 0;
-            const maxReconnectAttempts = 5;
+    <script>
+        // Global notification variables
+        let notificationConnection = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
 
-            $(document).ready(function() {
-                // Only initialize if user is authenticated
-                if ($('#jwtToken').val()) {
-                    initializeNotifications();
-                    setupNotificationHandlers();
-                    loadNotificationCount();
+        $(document).ready(function() {
+            // Sidebar toggle
+            $('#menu-toggle').click(function(e) {
+                e.preventDefault();
+                $('#wrapper').toggleClass('toggled');
+            });
 
-                    // Check for pending approvals if admin
-                    @if (User.IsInRole("Admin"))
-                    {
-                            <text>loadPendingApprovalsCount();</text>
+            // Only initialize notifications if user is authenticated
+            if ($('#jwtToken').val()) {
+                initializeNotifications();
+                setupNotificationHandlers();
+                loadNotificationCount();
+
+                // Check for pending approvals if admin
+                @if (User.IsInRole("Admin"))
+                {
+                        <text>loadPendingApprovalsCount();</text>
+                }
+            }
+        });
+
+        function initializeNotifications() {
+            const token = $('#jwtToken').val();
+            if (!token) {
+                console.error('No JWT token available');
+                return;
+            }
+
+            console.log('Initializing SignalR connection...');
+
+            // Connect directly to NotificationService bypassing API Gateway for WebSocket
+            notificationConnection = new signalR.HubConnectionBuilder()
+                .withUrl("http://localhost:5005/notificationHub", {
+                    accessTokenFactory: () => token,
+                    transport: signalR.HttpTransportType.WebSockets |
+                              signalR.HttpTransportType.ServerSentEvents |
+                              signalR.HttpTransportType.LongPolling
+                })
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        if (retryContext.previousRetryCount >= maxReconnectAttempts) {
+                            return null; // Stop reconnecting
+                        }
+                        return Math.min(retryContext.previousRetryCount * 2000, 30000);
                     }
+                })
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
+
+            // Handle connection events
+            notificationConnection.onreconnecting((error) => {
+                console.warn('SignalR reconnecting...', error);
+            });
+
+            notificationConnection.onreconnected((connectionId) => {
+                console.log('SignalR reconnected:', connectionId);
+                reconnectAttempts = 0;
+                loadNotificationCount(); // Refresh count after reconnection
+            });
+
+            notificationConnection.onclose((error) => {
+                console.error('SignalR connection closed:', error);
+
+                // Try manual reconnection after delay
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(() => {
+                        console.log(`Attempting manual reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                        startConnection();
+                    }, 5000 * reconnectAttempts);
                 }
             });
 
-            function initializeNotifications() {
-                const token = $('#jwtToken').val();
-                if (!token) {
-                    console.error('No JWT token available');
-                    return;
-                }
+            // Handle incoming notifications
+            notificationConnection.on("ReceiveNotification", function(notification) {
+                console.log('Notification received:', notification);
 
-                console.log('Initializing SignalR connection...');
+                // Show toast notification
+                showToast(`${notification.title}: ${notification.message}`, getNotificationType(notification.type));
 
-                // Connect directly to NotificationService (bypassing API Gateway for WebSocket)
-                notificationConnection = new signalR.HubConnectionBuilder()
-                    .withUrl("http://localhost:5005/notificationHub", {
-                        accessTokenFactory: () => token,
-                        transport: signalR.HttpTransportType.WebSockets |
-                                  signalR.HttpTransportType.ServerSentEvents |
-                                  signalR.HttpTransportType.LongPolling,
-                        withCredentials: true
-                    })
-                    .withAutomaticReconnect({
-                        nextRetryDelayInMilliseconds: retryContext => {
-                            if (retryContext.previousRetryCount === maxReconnectAttempts) {
-                                return null; // Stop reconnecting
-                            }
-                            return Math.min(retryContext.previousRetryCount * 2000, 30000);
-                        }
-                    })
-                    .configureLogging(signalR.LogLevel.Information)
-                    .build();
+                // Update notification count
+                incrementNotificationCount();
 
-                // Handle incoming notifications
-                notificationConnection.on("ReceiveNotification", function(notification) {
-                    console.log('Notification received:', notification);
-
-                    // Show toast notification
-                    showToast(`${notification.title}: ${notification.message}`, getNotificationType(notification.type));
-
-                    // Update notification count
-                    incrementNotificationCount();
-
-                    // Refresh notification dropdown if open
-                    if ($('#notificationDropdown').hasClass('show')) {
-                        loadRecentNotifications();
-                    }
-
-                    // Play notification sound (optional)
-                    playNotificationSound();
-
-                    // If admin and approval request, update pending count
-                    @if (User.IsInRole("Admin"))
-                    {
-                            <text>
-                            if (notification.type === 'ApprovalRequest') {
-                                loadPendingApprovalsCount();
-                            }
-                            </text>
-                    }
-                });
-
-                // Connection event handlers
-                notificationConnection.onreconnecting((error) => {
-                    console.warn('SignalR reconnecting...', error);
-                    showConnectionStatus('warning', 'Reconnecting to notification service...');
-                });
-
-                notificationConnection.onreconnected((connectionId) => {
-                    console.log('SignalR reconnected:', connectionId);
-                    showConnectionStatus('success', 'Connected to notification service');
-                    reconnectAttempts = 0;
-                    loadNotificationCount(); // Refresh count after reconnection
-                });
-
-                notificationConnection.onclose((error) => {
-                    console.error('SignalR connection closed:', error);
-                    showConnectionStatus('danger', 'Disconnected from notification service');
-
-                    // Try manual reconnection after delay
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        reconnectAttempts++;
-                        setTimeout(() => {
-                            console.log(`Attempting manual reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
-                            startConnection();
-                        }, 5000 * reconnectAttempts);
-                    }
-                });
-
-                // Start the connection
-                startConnection();
-            }
-
-            function startConnection() {
-                if (notificationConnection) {
-                    notificationConnection.start()
-                        .then(() => {
-                            console.log('SignalR connected successfully');
-                            showConnectionStatus('success', 'Connected to notification service');
-                            reconnectAttempts = 0;
-                        })
-                        .catch(err => {
-                            console.error('SignalR connection error:', err);
-                            showConnectionStatus('danger', 'Failed to connect to notification service');
-                        });
-                }
-            }
-
-            function setupNotificationHandlers() {
-                // Notification bell click handler
-                $('#notificationIcon').on('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                // Refresh notification dropdown if open
+                if ($('#notificationDropdown').hasClass('show')) {
                     loadRecentNotifications();
-                });
-
-                // Close dropdown when clicking outside
-                $(document).on('click', function(e) {
-                    if (!$(e.target).closest('.notification-dropdown, #notificationIcon').length) {
-                        $('#notificationDropdown').removeClass('show');
-                    }
-                });
-
-                // Mark as read handler (delegated for dynamic content)
-                $(document).on('click', '.notification-item.unread', function(e) {
-                    e.preventDefault();
-                    const notificationId = $(this).data('id');
-                    markAsRead(notificationId);
-                });
-
-                // Mark all as read handler
-                $(document).on('click', '#markAllAsRead', function(e) {
-                    e.preventDefault();
-                    markAllAsRead();
-                });
-            }
-
-            function loadNotificationCount() {
-                $.ajax({
-                    url: '/Notifications/GetUnreadCount',
-                    type: 'GET',
-                    success: function(count) {
-                        updateNotificationBadge(count);
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Failed to load notification count:', error);
-                    }
-                });
-            }
-
-            function loadRecentNotifications() {
-                $('#notificationList').html(`
-                    <div class="text-center py-3">
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                `);
-
-                $.ajax({
-                    url: '/Notifications/GetRecentNotifications',
-                    type: 'GET',
-                    success: function(notifications) {
-                        renderNotifications(notifications);
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Failed to load notifications:', error);
-                        $('#notificationList').html(`
-                            <div class="dropdown-item text-center py-3 text-danger">
-                                <i class="fas fa-exclamation-circle"></i> Failed to load notifications
-                            </div>
-                        `);
-                    }
-                });
-            }
-
-            function renderNotifications(notifications) {
-                let html = '';
-
-                if (!notifications || notifications.length === 0) {
-                    html = `
-                        <div class="dropdown-item text-center py-3 text-muted">
-                            <i class="fas fa-bell-slash"></i> No new notifications
-                        </div>
-                    `;
-                } else {
-                    notifications.forEach(function(notification) {
-                        html += createNotificationItem(notification);
-                    });
-
-                    html += '<div class="dropdown-divider"></div>';
-                    html += `
-                        <div class="dropdown-footer d-flex justify-content-between">
-                            <a href="/Notifications" class="text-decoration-none small">View All</a>
-                            <a href="#" id="markAllAsRead" class="text-decoration-none small">Mark All as Read</a>
-                        </div>
-                    `;
                 }
 
-                $('#notificationList').html(html);
+                // Play notification sound (optional)
+                playNotificationSound();
+
+                // If admin and approval request, update pending count
+                @if (User.IsInRole("Admin"))
+                {
+                        <text>
+                        if (notification.type === 'ApprovalRequest') {
+                            loadPendingApprovalsCount();
+                        }
+                        </text>
+                }
+            });
+
+            // Handle connection confirmation
+            notificationConnection.on("Connected", function(data) {
+                console.log('Connection confirmed:', data);
+            });
+
+            // Start the connection
+            startConnection();
+        }
+
+        function startConnection() {
+            if (notificationConnection) {
+                notificationConnection.start()
+                    .then(() => {
+                        console.log('SignalR connected successfully');
+                        reconnectAttempts = 0;
+                    })
+                    .catch(err => {
+                        console.error('SignalR connection error:', err);
+                    });
             }
+        }
 
-            function createNotificationItem(notification) {
-                const timeAgo = formatTimeAgo(notification.createdAt);
-                const unreadClass = notification.isRead ? '' : 'unread';
-                const icon = getNotificationIcon(notification.type);
-                const typeColor = getNotificationTypeColor(notification.type);
+        function setupNotificationHandlers() {
+            // Notification bell click handler
+            $('#notificationIcon').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                loadRecentNotifications();
+            });
 
-                return `
-                    <a href="#" class="dropdown-item notification-item ${unreadClass}" data-id="${notification.id}">
-                        <div class="d-flex align-items-start">
-                            <div class="notification-icon me-3">
-                                <i class="${icon} ${typeColor}"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1 small font-weight-bold">${notification.title}</h6>
-                                <p class="mb-1 small text-muted">${notification.message}</p>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock"></i> ${timeAgo}
-                                </small>
-                            </div>
-                            ${!notification.isRead ? '<span class="notification-dot"></span>' : ''}
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.notification-dropdown, #notificationIcon').length) {
+                    $('#notificationDropdown').removeClass('show');
+                }
+            });
+
+            // Mark as read handler (delegated for dynamic content)
+            $(document).on('click', '.notification-item.unread', function(e) {
+                e.preventDefault();
+                const notificationId = $(this).data('id');
+                markAsRead(notificationId);
+            });
+
+            // Mark all as read handler
+            $(document).on('click', '#markAllAsRead', function(e) {
+                e.preventDefault();
+                markAllAsRead();
+            });
+        }
+
+        function loadNotificationCount() {
+            $.ajax({
+                url: '/Notifications/GetUnreadCount',
+                type: 'GET',
+                success: function(count) {
+                    updateNotificationBadge(count);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load notification count:', error);
+                }
+            });
+        }
+
+        function loadRecentNotifications() {
+            $('#notificationList').html(`
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+
+            $.ajax({
+                url: '/Notifications/GetRecentNotifications',
+                type: 'GET',
+                success: function(notifications) {
+                    renderNotifications(notifications);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load notifications:', error);
+                    $('#notificationList').html(`
+                        <div class="dropdown-item text-center py-3 text-danger">
+                            <i class="fas fa-exclamation-circle"></i> Failed to load notifications
                         </div>
-                    </a>
+                    `);
+                }
+            });
+        }
+
+        function renderNotifications(notifications) {
+            let html = '';
+
+            if (!notifications || notifications.length === 0) {
+                html = `
+                    <div class="dropdown-item text-center py-3 text-muted">
+                        <i class="fas fa-bell-slash"></i> No new notifications
+                    </div>
+                `;
+            } else {
+                notifications.forEach(function(notification) {
+                    html += createNotificationItem(notification);
+                });
+
+                html += '<div class="dropdown-divider"></div>';
+                html += `
+                    <div class="dropdown-footer d-flex justify-content-between">
+                        <a href="/Notifications" class="text-decoration-none small">View All</a>
+                        <a href="#" id="markAllAsRead" class="text-decoration-none small">Mark All as Read</a>
+                    </div>
                 `;
             }
 
-            function markAsRead(notificationId) {
-                $.ajax({
-                    url: '/Notifications/MarkAsRead',
-                    type: 'POST',
-                    data: { notificationId: notificationId },
-                    success: function() {
-                        // Update UI
-                        $(`.notification-item[data-id="${notificationId}"]`)
-                            .removeClass('unread')
-                            .find('.notification-dot').remove();
+            $('#notificationList').html(html);
+        }
 
-                        // Update count
-                        decrementNotificationCount();
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Failed to mark notification as read:', error);
-                    }
-                });
-            }
+        function createNotificationItem(notification) {
+            const timeAgo = formatTimeAgo(notification.createdAt);
+            const unreadClass = notification.isRead ? '' : 'unread';
+            const icon = getNotificationIcon(notification.type);
+            const typeColor = getNotificationTypeColor(notification.type);
 
-            function markAllAsRead() {
-                $.ajax({
-                    url: '/Notifications/MarkAllAsRead',
-                    type: 'POST',
-                    success: function() {
-                        $('.notification-item').removeClass('unread');
-                        $('.notification-dot').remove();
-                        updateNotificationBadge(0);
-                        showToast('All notifications marked as read', 'success');
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Failed to mark all as read:', error);
-                        showToast('Failed to mark notifications as read', 'error');
-                    }
-                });
-            }
+            return `
+                <a href="#" class="dropdown-item notification-item ${unreadClass}" data-id="${notification.id}">
+                    <div class="d-flex align-items-start">
+                        <div class="notification-icon me-3">
+                            <i class="${icon} ${typeColor}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 small font-weight-bold">${notification.title}</h6>
+                            <p class="mb-1 small text-muted">${notification.message}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> ${timeAgo}
+                            </small>
+                        </div>
+                        ${!notification.isRead ? '<span class="notification-dot"></span>' : ''}
+                    </div>
+                </a>
+            `;
+        }
 
-            function updateNotificationBadge(count) {
-                const $badge = $('#notificationBadge');
-                count = parseInt(count) || 0;
+        function markAsRead(notificationId) {
+            $.ajax({
+                url: '/Notifications/MarkAsRead',
+                type: 'POST',
+                data: { notificationId: notificationId },
+                success: function() {
+                    // Update UI
+                    $(`.notification-item[data-id="${notificationId}"]`)
+                        .removeClass('unread')
+                        .find('.notification-dot').remove();
 
-                if (count > 0) {
-                    $badge.text(count > 99 ? '99+' : count).show();
-                } else {
-                    $badge.hide();
+                    // Update count
+                    decrementNotificationCount();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to mark notification as read:', error);
                 }
-            }
+            });
+        }
 
-            function incrementNotificationCount() {
-                const $badge = $('#notificationBadge');
-                const current = parseInt($badge.text()) || 0;
-                updateNotificationBadge(current + 1);
-            }
-
-            function decrementNotificationCount() {
-                const $badge = $('#notificationBadge');
-                const current = parseInt($badge.text()) || 0;
-                if (current > 0) {
-                    updateNotificationBadge(current - 1);
+        function markAllAsRead() {
+            $.ajax({
+                url: '/Notifications/MarkAllAsRead',
+                type: 'POST',
+                success: function() {
+                    $('.notification-item').removeClass('unread');
+                    $('.notification-dot').remove();
+                    updateNotificationBadge(0);
+                    showToast('All notifications marked as read', 'success');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to mark all as read:', error);
+                    showToast('Failed to mark notifications as read', 'error');
                 }
-            }
+            });
+        }
 
-            @if (User.IsInRole("Admin"))
-            {
-                    <text>
-                    function loadPendingApprovalsCount() {
-                        $.ajax({
-                            url: '/api/approvalrequests?pageNumber=1&pageSize=1',
-                            type: 'GET',
-                            headers: {
-                                'Authorization': 'Bearer ' + $('#jwtToken').val()
-                            },
-                            success: function(data) {
-                                const count = data.totalCount || 0;
-                                updatePendingApprovalsCount(count);
-                            },
-                            error: function(xhr, status, error) {
-                                console.error('Failed to load pending approvals count:', error);
-                            }
-                        });
+        function updateNotificationBadge(count) {
+            const $badge = $('#notificationBadge');
+            count = parseInt(count) || 0;
+
+            if (count > 0) {
+                $badge.text(count > 99 ? '99+' : count).show();
+            } else {
+                $badge.hide();
+            }
+        }
+
+        function incrementNotificationCount() {
+            const $badge = $('#notificationBadge');
+            const current = parseInt($badge.text()) || 0;
+            updateNotificationBadge(current + 1);
+        }
+
+        function decrementNotificationCount() {
+            const $badge = $('#notificationBadge');
+            const current = parseInt($badge.text()) || 0;
+            if (current > 0) {
+                updateNotificationBadge(current - 1);
+            }
+        }
+
+        @if (User.IsInRole("Admin"))
+        {
+                <text>
+                function loadPendingApprovalsCount() {
+                    $.ajax({
+                        url: 'http://localhost:5000/api/approvalrequests?pageNumber=1&pageSize=1',
+                        type: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + $('#jwtToken').val()
+                        },
+                        success: function(data) {
+                            const count = data.totalCount || 0;
+                            updatePendingApprovalsCount(count);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Failed to load pending approvals count:', error);
+                        }
+                    });
+                }
+
+                function updatePendingApprovalsCount(count) {
+                    const $badge = $('#pendingApprovalsCount');
+                    if (count > 0) {
+                        $badge.text(count).show();
+                    } else {
+                        $badge.hide();
                     }
 
-                    function updatePendingApprovalsCount(count) {
-                        const $badge = $('#pendingApprovalsCount');
+                    // Also update sidebar badge if exists
+                    const $sidebarBadge = $('#sidebarPendingCount');
+                    if ($sidebarBadge.length) {
                         if (count > 0) {
-                            $badge.text(count).show();
+                            $sidebarBadge.text(count).show();
                         } else {
-                            $badge.hide();
-                        }
-
-                        // Also update sidebar badge if exists
-                        const $sidebarBadge = $('#sidebarPendingCount');
-                        if ($sidebarBadge.length) {
-                            if (count > 0) {
-                                $sidebarBadge.text(count).show();
-                            } else {
-                                $sidebarBadge.hide();
-                            }
+                            $sidebarBadge.hide();
                         }
                     }
-                    </text>
-            }
+                }
+                </text>
+        }
 
-            // Helper functions
-            function formatTimeAgo(dateString) {
-                const date = new Date(dateString);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffSecs = Math.floor(diffMs / 1000);
-                const diffMins = Math.floor(diffSecs / 60);
-                const diffHours = Math.floor(diffMins / 60);
-                const diffDays = Math.floor(diffHours / 24);
+        // Helper functions
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
 
-                if (diffSecs < 60) return 'just now';
-                if (diffMins < 60) return `${diffMins}m ago`;
-                if (diffHours < 24) return `${diffHours}h ago`;
-                if (diffDays < 30) return `${diffDays}d ago`;
+            if (diffSecs < 60) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 30) return `${diffDays}d ago`;
 
-                return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-                });
-            }
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+        }
 
-            function getNotificationIcon(type) {
-                const icons = {
-                    'ApprovalRequest': 'fas fa-clock',
-                    'ApprovalResponse': 'fas fa-check-circle',
-                    'ProductUpdate': 'fas fa-box',
-                    'RouteUpdate': 'fas fa-route',
-                    'System': 'fas fa-info-circle'
-                };
-                return icons[type] || 'fas fa-bell';
-            }
-
-            function getNotificationType(type) {
-                const types = {
-                    'ApprovalRequest': 'warning',
-                    'ApprovalResponse': 'success',
-                    'ProductUpdate': 'info',
-                    'RouteUpdate': 'info',
-                    'System': 'secondary'
-                };
-                return types[type] || 'info';
-            }
-
-            function getNotificationTypeColor(type) {
-                const colors = {
-                    'ApprovalRequest': 'text-warning',
-                    'ApprovalResponse': 'text-success',
-                    'ProductUpdate': 'text-info',
-                    'RouteUpdate': 'text-primary',
-                    'System': 'text-secondary'
-                };
-                return colors[type] || 'text-primary';
-            }
-
-            function showConnectionStatus(type, message) {
-                const alertClass = `alert-${type}`;
-                const icon = type === 'success' ? 'fa-check-circle' :
-                            type === 'warning' ? 'fa-exclamation-triangle' :
-                            'fa-times-circle';
-
-                const statusHtml = `
-                    <div class="alert ${alertClass} alert-dismissible fade show position-fixed"
-                         style="bottom: 20px; right: 20px; z-index: 9999; min-width: 300px;">
-                        <i class="fas ${icon}"></i> ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-
-                $('body').append(statusHtml);
-
-                // Auto-hide after 5 seconds
-                setTimeout(() => {
-                    $('.alert').fadeOut(() => {
-                        $('.alert').remove();
-                    });
-                }, 5000);
-            }
-
-            function playNotificationSound() {
-                // Optional: Add notification sound
-                // const audio = new Audio('/sounds/notification.mp3');
-                // audio.play().catch(e => console.log('Could not play notification sound'));
-            }
-
-            // Toast function (ensure it's global)
-            window.showToast = function(message, type = 'info') {
-                const toastHtml = `
-                    <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-                        <div class="d-flex">
-                            <div class="toast-body">${message}</div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                        </div>
-                    </div>
-                `;
-
-                const $container = $('#toastContainer');
-                $container.append(toastHtml);
-
-                const toastElement = $container.find('.toast').last()[0];
-                const toast = new bootstrap.Toast(toastElement, {
-                    delay: 5000
-                });
-                toast.show();
-
-                // Remove toast element after it's hidden
-                $(toastElement).on('hidden.bs.toast', function() {
-                    $(this).remove();
-                });
+        function getNotificationIcon(type) {
+            const icons = {
+                'ApprovalRequest': 'fas fa-clock',
+                'ApprovalResponse': 'fas fa-check-circle',
+                'ProductUpdate': 'fas fa-box',
+                'RouteUpdate': 'fas fa-route',
+                'System': 'fas fa-info-circle'
             };
-        </script>
-    }
+            return icons[type] || 'fas fa-bell';
+        }
+
+        function getNotificationType(type) {
+            const types = {
+                'ApprovalRequest': 'warning',
+                'ApprovalResponse': 'success',
+                'ProductUpdate': 'info',
+                'RouteUpdate': 'info',
+                'System': 'secondary'
+            };
+            return types[type] || 'info';
+        }
+
+        function getNotificationTypeColor(type) {
+            const colors = {
+                'ApprovalRequest': 'text-warning',
+                'ApprovalResponse': 'text-success',
+                'ProductUpdate': 'text-info',
+                'RouteUpdate': 'text-primary',
+                'System': 'text-secondary'
+            };
+            return colors[type] || 'text-primary';
+        }
+
+        // Global toast function
+        window.showToast = function(message, type = 'info') {
+            const toastHtml = `
+                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            const $container = $('#toastContainer');
+            $container.append(toastHtml);
+
+            const toastElement = $container.find('.toast').last()[0];
+            const toast = new bootstrap.Toast(toastElement, {
+                delay: 5000
+            });
+            toast.show();
+
+            // Remove toast element after it's hidden
+            $(toastElement).on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        };
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

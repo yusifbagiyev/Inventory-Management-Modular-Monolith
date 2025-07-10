@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ namespace NotificationService.Application.Services
         {
             var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var userName = Context.User?.Identity?.Name;
+            var roles = Context.User?.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
 
             _logger.LogInformation($"User connecting: ID={userId}, Name={userName}, ConnectionId={Context.ConnectionId}");
 
@@ -27,7 +29,18 @@ namespace NotificationService.Application.Services
             {
                 await _connectionManager.AddConnection(userId, Context.ConnectionId);
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
-                _logger.LogInformation($"User {userId} added to group user-{userId}");
+
+                // Add to role groups
+                foreach (var role in roles)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, $"role-{role}");
+                    _logger.LogInformation($"User {userId} added to role group: role-{role}");
+                }
+
+                _logger.LogInformation($"User {userId} connected successfully");
+
+                // Send connection confirmation
+                await Clients.Caller.SendAsync("Connected", new { userId, connectionId = Context.ConnectionId });
             }
             else
             {

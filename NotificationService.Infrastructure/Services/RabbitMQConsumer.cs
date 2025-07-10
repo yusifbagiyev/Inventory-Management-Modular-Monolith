@@ -125,17 +125,18 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogInformation($"Processing approval request from {approvalEvent.RequestedByName}");
 
                 // Get all admin users
-                var adminUserIds = await GetUsersInRole("Admin");
+                using var scope = _serviceProvider.CreateScope();
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var adminUsers = await userService.GetUsersAsync("Admin");
+                _logger.LogInformation($"Found {adminUsers.Count} admin users to notify");
 
-                _logger.LogInformation($"Found {adminUserIds.Count} admin users");
-
-                foreach (var adminId in adminUserIds)
+                foreach (var admin in adminUsers)
                 {
                     var notification = new Notification(
-                        adminId,
+                        admin.Id,
                         "ApprovalRequest",
                         "New Approval Request",
-                        $"{approvalEvent.RequestedByName} requested approval for {approvalEvent.RequestType}",
+                        $"{approvalEvent.RequestedByName} requested approval for {GetReadableRequestType(approvalEvent.RequestType)}",
                         JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.RequestId })
                     );
 
@@ -363,6 +364,17 @@ namespace NotificationService.Infrastructure.Services
             // Get all users (passing null or empty string for all users)
             var users = await userService.GetUsersAsync(null);
             return users.Select(u => u.Id).ToList();
+        }
+        private string GetReadableRequestType(string requestType)
+        {
+            return requestType switch
+            {
+                "product.create" => "Product Creation",
+                "product.update" => "Product Update",
+                "product.delete" => "Product Deletion",
+                "product.transfer" => "Product Transfer",
+                _ => requestType
+            };
         }
 
         public override void Dispose()
