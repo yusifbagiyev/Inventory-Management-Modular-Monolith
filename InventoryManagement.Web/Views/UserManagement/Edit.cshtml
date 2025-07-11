@@ -32,12 +32,13 @@
                     <form asp-action="Edit" method="post">
                         @Html.AntiForgeryToken()
                         <input asp-for="Id" type="hidden" />
+                        <input asp-for="Username" type="hidden" />
 
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label asp-for="Username" class="form-label">Username</label>
-                                    <input asp-for="Username" class="form-control" readonly />
+                                    <label class="form-label">Username</label>
+                                    <input value="@Model.Username" class="form-control" readonly disabled />
                                     <div class="form-text">Username cannot be changed.</div>
                                 </div>
                             </div>
@@ -80,6 +81,25 @@
                                     <div class="form-text">Inactive users cannot login to the system.</div>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label">Roles</label>
+                                    <div class="role-selection">
+                                        @foreach (var role in Model.AvailableRoles)
+                                        {
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input"
+                                                       name="SelectedRoles" value="@role.Value"
+                                                       id="role_@role.Value"
+                                                       @(Model.CurrentRoles.Contains(role.Value) ? "checked" : "") />
+                                                <label class="form-check-label" for="role_@role.Value">
+                                                    @role.Text
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -99,17 +119,6 @@
             <div class="card shadow">
                 <div class="card-header">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-shield"></i> Role Management
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <!-- Existing role management code -->
-                </div>
-            </div>
-
-            <div class="card shadow mt-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-key"></i> Direct Permissions
                     </h6>
                 </div>
@@ -122,24 +131,23 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Grant Permission</label>
-                        <div class="input-group">
-                            <select id="permissionSelect" class="form-select">
-                                <option value="">Select a permission</option>
-                            </select>
-                            <button type="button" class="btn btn-outline-success" onclick="grantPermission()">
-                                <i class="fas fa-plus"></i>
+                        <label class="form-label">Manage Permissions</label>
+                        <select id="permissionSelect" class="form-select mb-2">
+                            <option value="">Select a permission</option>
+                        </select>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-sm btn-success" onclick="grantPermission()">
+                                Grant Permission
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
             <div class="card shadow mt-4">
                 <div class="card-header">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-key"></i> Password Management
+                        <i class="fas fa-lock"></i> Password Management
                     </h6>
                 </div>
                 <div class="card-body">
@@ -150,107 +158,9 @@
                     </div>
                 </div>
             </div>
-
-            <div class="card shadow mt-4">
-                <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-danger">
-                        <i class="fas fa-exclamation-triangle"></i> Danger Zone
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>
-                    <div class="d-grid">
-                        <button type="button" class="btn btn-outline-danger" onclick="deleteUser(@Model.Id, '@Model.Username')">
-                            <i class="fas fa-trash"></i> Delete User
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-<!-- Remove Role Modal -->
-<div class="modal fade" id="removeRoleModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Remove Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to remove the role <strong id="roleToRemove"></strong> from this user?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="removeRoleForm" method="post" style="display: inline;">
-                    @Html.AntiForgeryToken()
-                    <input name="id" value="@Model.Id" type="hidden" />
-                    <input name="RoleName" type="hidden" />
-                    <button type="submit" class="btn btn-danger">Remove Role</button>
-                </form>
-            </div>
         </div>
     </div>
 </div>
-
-<!-- Delete User Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" style="display: inline;">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .form-label {
-        font-weight: 600;
-        color: #5a5c69;
-    }
-
-    .card {
-        border: 0;
-        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-    }
-
-    .card-header {
-        background-color: #f8f9fc;
-        border-bottom: 1px solid #e3e6f0;
-    }
-
-    .form-control:focus {
-        border-color: #4e73df;
-        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
-    }
-
-    .form-select:focus {
-        border-color: #4e73df;
-        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
-    }
-
-    .current-roles {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .badge {
-        font-size: 0.875rem;
-    }
-</style>
 
 @section Scripts {
     <script>
@@ -259,14 +169,17 @@
             loadAvailablePermissions();
         });
 
-                function loadUserPermissions() {
+        function loadUserPermissions() {
             $.get('@Url.Action("GetUserDirectPermissions", "UserManagement", new { id = Model.Id })', function(data) {
                 var html = '';
                 if (data && data.length > 0) {
                     data.forEach(function(permission) {
                         html += `
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-info">${permission.name}</span>
+                            <div class="permission-item d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                <div>
+                                    <span class="fw-bold">${permission.name}</span>
+                                    <small class="d-block text-muted">${permission.description}</small>
+                                </div>
                                 <button type="button" class="btn btn-sm btn-outline-danger"
                                         onclick="revokePermission('${permission.name}')">
                                     <i class="fas fa-times"></i>
@@ -275,7 +188,7 @@
                         `;
                     });
                 } else {
-                    html = '<p class="text-muted">No direct permissions assigned</p>';
+                    html = '<p class="text-muted text-center">No direct permissions assigned</p>';
                 }
                 $('#userPermissions').html(html);
             });
@@ -286,8 +199,23 @@
                 var select = $('#permissionSelect');
                 select.empty();
                 select.append('<option value="">Select a permission</option>');
+
+                // Group permissions by category
+                var grouped = {};
                 data.forEach(function(permission) {
-                    select.append(`<option value="${permission.name}">${permission.name}</option>`);
+                    if (!grouped[permission.category]) {
+                        grouped[permission.category] = [];
+                    }
+                    grouped[permission.category].push(permission);
+                });
+
+                // Add options grouped by category
+                Object.keys(grouped).forEach(function(category) {
+                    var optgroup = $('<optgroup>', { label: category });
+                    grouped[category].forEach(function(permission) {
+                        optgroup.append(`<option value="${permission.name}">${permission.name} - ${permission.description}</option>`);
+                    });
+                    select.append(optgroup);
                 });
             });
         }
@@ -295,7 +223,7 @@
         function grantPermission() {
             var permissionName = $('#permissionSelect').val();
             if (!permissionName) {
-                alert('Please select a permission');
+                showToast('Please select a permission', 'warning');
                 return;
             }
 
@@ -340,3 +268,21 @@
         }
     </script>
 }
+
+<style>
+    .role-selection {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 0.5rem;
+    }
+
+    .permission-item {
+        transition: all 0.2s;
+    }
+
+        .permission-item:hover {
+            background-color: #e9ecef !important;
+        }
+</style>

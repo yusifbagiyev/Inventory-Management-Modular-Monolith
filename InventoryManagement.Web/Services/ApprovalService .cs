@@ -9,13 +9,15 @@ namespace InventoryManagement.Web.Services
     public class ApprovalService : IApprovalService
     {
         private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public ApprovalService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+        public ApprovalService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("http://localhost:5004"); // Approval service URL
+            _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
             AddAuthorizationHeader();
         }
 
@@ -29,6 +31,7 @@ namespace InventoryManagement.Web.Services
             }
         }
 
+
         public async Task<List<ApprovalRequestDto>> GetPendingRequestsAsync()
         {
             var response = await _httpClient.GetAsync("/api/approvalrequests?pageNumber=1&pageSize=100");
@@ -36,27 +39,30 @@ namespace InventoryManagement.Web.Services
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var pagedResult = JsonConvert.DeserializeObject<PagedResultDto<ApprovalRequestDto>>(content);
-                return pagedResult?.Items.ToList() ?? new List<ApprovalRequestDto>();
+                return pagedResult?.Items.ToList() ?? [];
             }
-            return new List<ApprovalRequestDto>();
+            return [];
         }
 
-        public async Task<ApprovalRequestDto> GetRequestDetailsAsync(int id)
+
+        public async Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id)
         {
             var response = await _httpClient.GetAsync($"/api/approvalrequests/{id}");
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<ApprovalRequestDto>(content);
+                return JsonConvert.DeserializeObject<ApprovalRequestDto>(content) ?? new();
             }
             return null;
         }
+
 
         public async Task ApproveRequestAsync(int id)
         {
             var response = await _httpClient.PostAsync($"/api/approvalrequests/{id}/approve", null);
             response.EnsureSuccessStatusCode();
         }
+
 
         public async Task RejectRequestAsync(int id, string reason)
         {
@@ -68,6 +74,7 @@ namespace InventoryManagement.Web.Services
             response.EnsureSuccessStatusCode();
         }
 
+
         public async Task<ApprovalRequestDto> CreateApprovalRequestAsync(CreateApprovalRequestDto dto, int userId, string userName)
         {
             var content = new StringContent(
@@ -78,7 +85,35 @@ namespace InventoryManagement.Web.Services
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<ApprovalRequestDto>(responseContent);
+            return JsonConvert.DeserializeObject<ApprovalRequestDto>(responseContent) ?? new();
+        }
+
+
+        public async Task<ApprovalStatisticsDto> GetStatisticsAsync()
+        {
+            var today = DateTime.Today;
+
+            // Get all requests for statistics
+            var allRequests = await GetAllRequestsAsync();
+
+            return new ApprovalStatisticsDto
+            {
+                TotalPending = allRequests.Count(r => r.Status == "Pending"),
+                TotalApprovedToday = allRequests.Count(r => r.Status == "Executed" && r.ProcessedAt?.Date == today),
+                TotalRejectedToday = allRequests.Count(r => r.Status == "Rejected" && r.ProcessedAt?.Date == today)
+            };
+        }
+
+
+        private async Task<List<ApprovalRequestDto>> GetAllRequestsAsync()
+        {
+            var response = await _httpClient.GetAsync("/api/approvalrequests/all");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<List<ApprovalRequestDto>>(content) ?? [];
+            }
+            return [];
         }
     }
 }

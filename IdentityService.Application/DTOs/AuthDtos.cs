@@ -51,9 +51,9 @@ namespace IdentityService.Application.DTOs
         public bool IsActive { get; init; }
         public DateTime CreatedAt { get; init; }
         public DateTime? LastLoginAt { get; init; }
-        public List<string> Roles { get; init; } = new();
-        public List<string> Permissions { get; init; } = new();
-        public List<PermissionDto> DirectPermissions { get; init; } = new();
+        public List<string> Roles { get; init; } = [];
+        public List<string> Permissions { get; init; } = [];
+        public List<PermissionDto> DirectPermissions { get; init; } = [];
     }
 
     public record RefreshTokenDto

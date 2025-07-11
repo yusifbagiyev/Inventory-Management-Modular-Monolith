@@ -159,6 +159,7 @@ namespace IdentityService.Infrastructure.Services
 
             var roles = await _userManager.GetRolesAsync(user);
             var permissions = await GetUserPermissionsAsync(userId, roles);
+            var directPermissions = await GetUserDirectPermissionsAsync(userId);
 
             return new UserDto
             {
@@ -171,7 +172,8 @@ namespace IdentityService.Infrastructure.Services
                 CreatedAt = user.CreatedAt,
                 LastLoginAt = user.LastLoginAt,
                 Roles = roles.ToList(),
-                Permissions = permissions
+                Permissions = permissions,
+                DirectPermissions= directPermissions
             };
         }
 
@@ -192,6 +194,9 @@ namespace IdentityService.Infrastructure.Services
                     Email = user.Email!,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
+                    IsActive = user.IsActive,
+                    CreatedAt= user.CreatedAt,
+                    LastLoginAt= user.LastLoginAt,
                     Roles = roles.ToList(),
                     Permissions = permissions
                 });

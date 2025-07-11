@@ -3,10 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Interfaces;
-using ApprovalService.Domain.Entities;
-using ApprovalService.Domain.Enums;
 using ApprovalService.Shared.DTOs;
 using ApprovalService.Shared.Enum;
 using Microsoft.Extensions.Configuration;
@@ -91,11 +88,7 @@ namespace ApprovalService.Infrastructure.Services
                 // Create a properly formatted object for the API
                 var productData = new
                 {
-                    inventoryCode = productElement.TryGetProperty("inventoryCode", out var inv)
-                        ? inv.GetInt32()
-                        : productElement.TryGetProperty("InventoryCode", out var invCap)
-                            ? invCap.GetInt32()
-                            : 0,
+                    inventoryCode = GetIntProperty(productElement, "inventoryCode", "InventoryCode"),
                     model = GetStringProperty(productElement, "model", "Model"),
                     vendor = GetStringProperty(productElement, "vendor", "Vendor"),
                     worker = GetStringProperty(productElement, "worker", "Worker"),
@@ -103,18 +96,9 @@ namespace ApprovalService.Infrastructure.Services
                     isWorking = GetBoolProperty(productElement, "isWorking", "IsWorking", true),
                     isActive = GetBoolProperty(productElement, "isActive", "IsActive", true),
                     isNewItem = GetBoolProperty(productElement, "isNewItem", "IsNewItem", true),
-                    categoryId = productElement.TryGetProperty("categoryId", out var cat)
-                        ? cat.GetInt32()
-                        : productElement.TryGetProperty("CategoryId", out var catCap)
-                            ? catCap.GetInt32()
-                            : 0,
-                    departmentId = productElement.TryGetProperty("departmentId", out var dept)
-                        ? dept.GetInt32()
-                        : productElement.TryGetProperty("DepartmentId", out var deptCap)
-                            ? deptCap.GetInt32()
-                            : 0
+                    categoryId = GetIntProperty(productElement, "categoryId", "CategoryId"),
+                    departmentId = GetIntProperty(productElement, "departmentId", "DepartmentId")
                 };
-
 
                 var json = JsonSerializer.Serialize(productData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -123,7 +107,6 @@ namespace ApprovalService.Infrastructure.Services
                     $"{_configuration["Services:ProductService"]}/api/products/approved",
                     content,
                     cancellationToken);
-
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -203,6 +186,13 @@ namespace ApprovalService.Infrastructure.Services
                 return propPascal.GetBoolean();
             return defaultValue;
         }
-
+        private int GetIntProperty(JsonElement element, string camelCase, string pascalCase)
+        {
+            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.Number)
+                return prop.GetInt32();
+            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.Number)
+                return propPascal.GetInt32();
+            return 0;
+        }
     }
 }

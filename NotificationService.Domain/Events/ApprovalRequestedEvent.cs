@@ -1,4 +1,4 @@
-﻿namespace NotificationService.Application.DTOs
+﻿namespace NotificationService.Domain.Events
 {
     public record ApprovalRequestedEvent
     {
@@ -27,32 +27,5 @@
         public string RejectedByName { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
         public DateTime RejectedAt { get; set; }
-    }
-
-    public record ProductCreatedEvent
-    {
-        public int ProductId { get; set; }
-        public int InventoryCode { get; set; }
-        public string Model { get; set; } = string.Empty;
-        public string DepartmentName { get; set; } = string.Empty;
-    }
-
-    public record ProductDeletedEvent
-    {
-        public int ProductId { get; set; }
-        public int InventoryCode { get; set; }
-        public string Model { get; set; } = string.Empty;
-    }
-
-    public record RouteCreatedEvent
-    {
-        public int RouteId { get; set; }
-        public string Model { get; set; } = string.Empty;
-        public string ToDepartmentName { get; set; } = string.Empty;
-    }
-
-    public record RouteCompletedEvent
-    {
-        public int RouteId { get; set; }
     }
 }

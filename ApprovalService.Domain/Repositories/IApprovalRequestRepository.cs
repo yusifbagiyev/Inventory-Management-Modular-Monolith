@@ -12,5 +12,6 @@ namespace ApprovalService.Domain.Repositories
         Task<IEnumerable<ApprovalRequest>> GetByStatusAsync(ApprovalStatus status, CancellationToken cancellationToken = default);
         Task<ApprovalRequest> AddAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
         Task UpdateAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ApprovalRequest>> GetAllAsync(CancellationToken cancellationToken = default);
     }
 }

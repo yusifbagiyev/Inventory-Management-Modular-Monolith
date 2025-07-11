@@ -81,7 +81,7 @@
                     <tbody>
                         @foreach (var request in Model.PendingRequests)
                         {
-                            <tr>
+                            <tr data-request-id="@request.Id">
                                 <td data-order="@request.CreatedAt.Ticks">
                                     @request.CreatedAt.ToString("MM/dd/yyyy HH:mm")
                                 </td>
@@ -98,7 +98,9 @@
                                     }
                                 </td>
                                 <td>@request.RequestedByName</td>
-                                <td>@GetRequestSummary(request)</td>
+                                <td class="request-summary" data-action-data="@request.ActionData">
+                                    <span class="text-muted">Loading...</span>
+                                </td>
                                 <td>
                                     <div class="btn-group" role="group">
                                         <button class="btn btn-sm btn-info" onclick="viewDetails(@request.Id)">
@@ -186,7 +188,58 @@
                 order: [[0, 'desc']],
                 pageLength: 25
             });
+
+            // Parse and display summaries
+            $('.request-summary').each(function() {
+                const $this = $(this);
+                const actionData = $this.data('action-data');
+                const requestType = $this.closest('tr').find('.badge').first().text().trim();
+
+                try {
+                    const summary = getRequestSummary(requestType, actionData);
+                    $this.html(summary);
+                } catch (e) {
+                    $this.html('<span class="text-danger">Error parsing data</span>');
+                }
+            });
         });
+
+                function getRequestSummary(requestType, actionData) {
+            try {
+                const data = typeof actionData === 'string' ? JSON.parse(actionData) : actionData;
+                const productData = data.ProductData || data;
+
+                switch(requestType) {
+                    case 'Create Product':
+                    case 'Creating Product':
+                        const code = productData.inventoryCode || productData.InventoryCode || 'N/A';
+                        const model = productData.model || productData.Model || 'N/A';
+                        const vendor = productData.vendor || productData.Vendor || 'N/A';
+                        const categoryId = productData.categoryId || productData.CategoryId || 'N/A';
+                        return `New product: ${model} by ${vendor} (Code: ${code}, Category: ${categoryId})`;
+
+                    case 'Update Product':
+                    case 'Updating Product':
+                        return `Update product #${data.ProductId || data.productId || 'N/A'}`;
+
+                    case 'Delete Product':
+                    case 'Deleting Product':
+                        return `Delete product #${data.ProductId || data.productId || 'N/A'}`;
+
+                    case 'Transfer Product':
+                    case 'Transferring Product':
+                        const productId = data.ProductId || data.productId || 'N/A';
+                        const toDept = data.ToDepartmentName || data.toDepartmentName || 'Department';
+                        return `Transfer product #${productId} to ${toDept}`;
+
+                    default:
+                        return 'View details for more information';
+                }
+            } catch (e) {
+                console.error('Error parsing action data:', e);
+                return 'Error parsing request data';
+            }
+        }
 
         function viewDetails(requestId) {
             currentRequestId = requestId;
@@ -216,13 +269,19 @@
                 showLoader();
 
                 $.post(`/Approvals/Approve/${requestId}`)
-                    .done(function() {
-                        showToast('Request approved successfully', 'success');
-                        setTimeout(() => location.reload(), 1000);
+                    .done(function(response) {
+                        hideLoader();
+                        if (response.success) {
+                            showToast('Request approved successfully', 'success');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('Failed to approve request: ' + response.message, 'error');
+                        }
                     })
                     .fail(function(xhr) {
                         hideLoader();
-                        showToast('Failed to approve request: ' + (xhr.responseText || 'Unknown error'), 'error');
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Unknown error';
+                        showToast('Failed to approve request: ' + errorMsg, 'error');
                     });
             }
         }
@@ -244,14 +303,20 @@
             showLoader();
 
             $.post(`/Approvals/Reject/${currentRequestId}`, { reason: reason })
-                .done(function() {
+                .done(function(response) {
+                    hideLoader();
                     $('#rejectModal').modal('hide');
-                    showToast('Request rejected', 'info');
-                    setTimeout(() => location.reload(), 1000);
+                    if (response.success) {
+                        showToast('Request rejected', 'info');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('Failed to reject request: ' + response.message, 'error');
+                    }
                 })
                 .fail(function(xhr) {
                     hideLoader();
-                    showToast('Failed to reject request: ' + (xhr.responseText || 'Unknown error'), 'error');
+                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Unknown error';
+                    showToast('Failed to reject request: ' + errorMsg, 'error');
                 });
         }
 
@@ -278,26 +343,5 @@
             "route.delete" => "Delete Route",
             _ => requestType
         };
-    }
-
-    string GetRequestSummary(ApprovalRequestDto request)
-    {
-        // Parse action data to create summary
-        try
-        {
-            dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(request.ActionData);
-            return request.RequestType switch
-            {
-                "product.create" => $"New product: {data.Model} ({data.InventoryCode})",
-                "product.update" => $"Update product #{request.EntityId}",
-                "product.delete" => $"Delete product #{request.EntityId}",
-                "product.transfer" => $"Transfer product #{data.ProductId} to {data.ToDepartmentName}",
-                _ => "View details for more information"
-            };
-        }
-        catch
-        {
-            return "View details for more information";
-        }
     }
 }

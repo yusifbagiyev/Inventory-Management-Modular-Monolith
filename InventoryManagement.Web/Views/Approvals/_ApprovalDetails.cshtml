@@ -7,11 +7,15 @@
             <table class="table table-sm">
                 <tr>
                     <th>Type:</th>
-                    <td>@Model.RequestType</td>
+                    <td>
+                        <span class="badge bg-info">
+                            @GetReadableRequestType(Model.RequestType)
+                        </span>
+                    </td>
                 </tr>
                 <tr>
                     <th>Entity:</th>
-                    <td>@Model.EntityType #@Model.EntityId</td>
+                    <td>@Model.EntityType @(Model.EntityId.HasValue ? $"#{Model.EntityId}" : "")</td>
                 </tr>
                 <tr>
                     <th>Requested By:</th>
@@ -21,11 +25,124 @@
                     <th>Date:</th>
                     <td>@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
                 </tr>
+                <tr>
+                    <th>Status:</th>
+                    <td>
+                        @if (Model.Status == "Pending")
+                        {
+                            <span class="badge bg-warning">Pending</span>
+                        }
+                        else if (Model.Status == "Executed" || Model.Status == "Approved")
+                        {
+                            <span class="badge bg-success">Approved</span>
+                        }
+                        else if (Model.Status == "Rejected")
+                        {
+                            <span class="badge bg-danger">Rejected</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">@Model.Status</span>
+                        }
+                    </td>
+                </tr>
             </table>
         </div>
         <div class="col-md-6">
-            <h6>Action Data</h6>
-            <pre class="bg-light p-2">@Model.ActionData</pre>
+            <h6>Request Details</h6>
+            <div class="bg-light p-3 rounded">
+                @{
+                    var details = ParseActionData(Model.RequestType, Model.ActionData);
+                }
+                @Html.Raw(details)
+            </div>
         </div>
     </div>
 </div>
+
+@functions {
+    string GetReadableRequestType(string requestType)
+    {
+        return requestType switch
+        {
+            "product.create" => "Creating Product",
+            "product.update" => "Updating Product",
+            "product.delete" => "Deleting Product",
+            "product.transfer" => "Transferring Product",
+            "route.update" => "Updating Route",
+            "route.delete" => "Deleting Route",
+            _ => requestType
+        };
+    }
+
+    string ParseActionData(string requestType, string actionData)
+    {
+        try
+        {
+            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(actionData);
+            
+            switch (requestType)
+            {
+                case "product.create":
+                    var productData = data.ProductData ?? data;
+                    return string.Format(
+                        "<strong>Inventory Code:</strong> {0}<br/>" +
+                        "<strong>Model:</strong> {1}<br/>" +
+                        "<strong>Vendor:</strong> {2}<br/>" +
+                        "<strong>Worker:</strong> {3}<br/>" +
+                        "<strong>Category ID:</strong> {4}<br/>" +
+                        "<strong>Department ID:</strong> {5}<br/>" +
+                        "<strong>Description:</strong> {6}",
+                        productData.inventoryCode ?? productData.InventoryCode,
+                        productData.model ?? productData.Model ?? "N/A",
+                        productData.vendor ?? productData.Vendor ?? "N/A",
+                        productData.worker ?? productData.Worker ?? "N/A",
+                        productData.categoryId ?? productData.CategoryId,
+                        productData.departmentId ?? productData.DepartmentId,
+                        productData.description ?? productData.Description ?? "N/A"
+                    );
+                
+                case "product.update":
+                    var updateData = Newtonsoft.Json.JsonConvert.SerializeObject(
+                        data.UpdateData ?? data.updateData, 
+                        Newtonsoft.Json.Formatting.Indented
+                    );
+                    return string.Format(
+                        "<strong>Product ID:</strong> {0}<br/>" +
+                        "<strong>Update Details:</strong> <pre class='mb-0'>{1}</pre>",
+                        data.ProductId ?? data.productId,
+                        updateData
+                    );
+                
+                case "product.delete":
+                    return string.Format(
+                        "<strong>Product ID:</strong> {0}",
+                        data.ProductId ?? data.productId
+                    );
+                
+                case "product.transfer":
+                    var toDept = data.ToDepartmentName ?? data.toDepartmentName;
+                    if (toDept == null) 
+                    {
+                        toDept = $"ID: {data.ToDepartmentId ?? data.toDepartmentId}";
+                    }
+                    return string.Format(
+                        "<strong>Product ID:</strong> {0}<br/>" +
+                        "<strong>To Department:</strong> {1}",
+                        data.ProductId ?? data.productId,
+                        toDept
+                    );
+                
+                default:
+                    return string.Format(
+                        "<pre class='mb-0'>{0}</pre>",
+                        Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented)
+                    );
+            }
+        }
+        catch
+        {
+            return string.Format("<pre class='mb-0'>{0}</pre>", actionData);
+        }
+    }
+}

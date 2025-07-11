@@ -1,5 +1,4 @@
 ﻿using ApprovalService.Application.DTOs;
-using ApprovalService.Application.Events;
 using ApprovalService.Application.Features.Commands;
 using ApprovalService.Application.Features.Queries;
 using ApprovalService.Shared.DTOs;
@@ -30,6 +29,7 @@ namespace ApprovalService.API.Controllers
             return Ok(result);
         }
 
+
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<PagedResultDto<ApprovalRequestDto>>> GetPending(
@@ -40,6 +40,7 @@ namespace ApprovalService.API.Controllers
             return Ok(result);
         }
 
+
         [HttpGet("my-requests")]
         public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetMyRequests()
         {
@@ -47,6 +48,7 @@ namespace ApprovalService.API.Controllers
             var result = await _mediator.Send(new GetUserRequests.Query(userId));
             return Ok(result);
         }
+
 
         [HttpPost("{id}/approve")]
         [Authorize(Roles = "Admin")]
@@ -59,6 +61,7 @@ namespace ApprovalService.API.Controllers
             return NoContent();
         }
 
+
         [HttpPost("{id}/reject")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Reject(int id, RejectRequestDto dto)
@@ -68,6 +71,15 @@ namespace ApprovalService.API.Controllers
 
             await _mediator.Send(new RejectRequest.Command(id, userId, userName, dto.Reason));
             return NoContent();
+        }
+
+
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetAllRequests()
+        {
+            var result = await _mediator.Send(new GetAllRequests.Query());
+            return Ok(result);
         }
     }
 }

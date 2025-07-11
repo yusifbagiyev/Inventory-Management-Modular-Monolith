@@ -11,7 +11,6 @@ using NotificationService.Application.Services;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Events;
 using NotificationService.Domain.Repositories;
-using NotificationService.Infrastructure.Data;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -34,7 +33,8 @@ namespace NotificationService.Infrastructure.Services
             {
                 HostName = configuration["RabbitMQ:HostName"] ?? "localhost",
                 UserName = configuration["RabbitMQ:UserName"] ?? "guest",
-                Password = configuration["RabbitMQ:Password"] ?? "guest"
+                Password = configuration["RabbitMQ:Password"] ?? "guest",
+                DispatchConsumersAsync = true
             };
 
             _connection = factory.CreateConnection();
@@ -51,13 +51,15 @@ namespace NotificationService.Infrastructure.Services
             _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
             _channel.QueueBind(_queueName, "inventory-events", "route.created");
             _channel.QueueBind(_queueName, "inventory-events", "route.completed");
+
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("RabbitMQ Consumer starting...");
 
-            var consumer = new EventingBasicConsumer(_channel);
+            var consumer = new AsyncEventingBasicConsumer(_channel);
 
             consumer.Received += async (sender, ea) =>
             {
@@ -72,35 +74,8 @@ namespace NotificationService.Infrastructure.Services
                     _logger.LogInformation($"Message: {message}");
                     _logger.LogInformation($"======================");
 
-
                     // Handle different event types based on routing key
-                    switch (routingKey)
-                    {
-                        case "approval.request.created":
-                            await HandleApprovalRequestCreated(message);
-                            break;
-                        case "approval.request.processed":
-                            await HandleApprovalRequestProcessed(message);
-                            break;
-                        case "approval.approved":
-                            await HandleApprovalApproved(message);
-                            break;
-                        case "approval.rejected":
-                            await HandleApprovalRejected(message);
-                            break;
-                        case "product.created":
-                            await HandleProductCreated(message);
-                            break;
-                        case "product.deleted":
-                            await HandleProductDeleted(message);
-                            break;
-                        case "route.created":
-                            await HandleRouteCreated(message);
-                            break;
-                        case "route.completed":
-                            await HandleRouteCompleted(message);
-                            break;
-                    }
+                    await ProcessMessage(routingKey, message);
 
                     _channel.BasicAck(ea.DeliveryTag, false);
                 }
@@ -112,7 +87,40 @@ namespace NotificationService.Infrastructure.Services
             };
 
             _channel.BasicConsume(_queueName, false, consumer);
-            await Task.Delay(Timeout.Infinite, stoppingToken);
+
+            // Keep the service running
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(1000, stoppingToken);
+            }
+        }
+
+        private async Task ProcessMessage(string routingKey, string message)
+        {
+            switch (routingKey)
+            {
+                case "approval.request.created":
+                    await HandleApprovalRequestCreated(message);
+                    break;
+                case "approval.request.processed":
+                    await HandleApprovalRequestProcessed(message);
+                    break;
+                case "product.created":
+                    await HandleProductCreated(message);
+                    break;
+                case "product.deleted":
+                    await HandleProductDeleted(message);
+                    break;
+                case "route.created":
+                    await HandleRouteCreated(message);
+                    break;
+                case "route.completed":
+                    await HandleRouteCompleted(message);
+                    break;
+                default:
+                    _logger.LogWarning($"Unknown routing key: {routingKey}");
+                    break;
+            }
         }
 
         private async Task HandleApprovalRequestCreated(string message)
@@ -130,14 +138,22 @@ namespace NotificationService.Infrastructure.Services
                 var adminUsers = await userService.GetUsersAsync("Admin");
                 _logger.LogInformation($"Found {adminUsers.Count} admin users to notify");
 
+                var readableType = GetReadableRequestType(approvalEvent.RequestType);
+                var actionDescription = GetActionDescription(approvalEvent.RequestType);
+
                 foreach (var admin in adminUsers)
                 {
                     var notification = new Notification(
                         admin.Id,
                         "ApprovalRequest",
-                        "New Approval Request",
-                        $"{approvalEvent.RequestedByName} requested approval for {GetReadableRequestType(approvalEvent.RequestType)}",
-                        JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.RequestId })
+                        $"New {readableType} Request",
+                        $"{approvalEvent.RequestedByName} has requested to {actionDescription}. Request #{approvalEvent.RequestId} needs your approval.",
+                        JsonSerializer.Serialize(new
+                        {
+                            approvalRequestId = approvalEvent.RequestId,
+                            requestType = approvalEvent.RequestType,
+                            requestedBy = approvalEvent.RequestedByName
+                        })
                     );
 
                     await SaveAndSendNotification(notification);
@@ -158,17 +174,52 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogInformation($"Processing approval response for user {approvalEvent.RequestedById}");
 
-                var title = approvalEvent.Status == "Approved" ? "Request Approved" : "Request Rejected";
-                var messageText = approvalEvent.Status == "Approved"
-                    ? $"Your {approvalEvent.RequestType} request has been approved by {approvalEvent.ProcessedByName}"
-                    : $"Your {approvalEvent.RequestType} request has been rejected. Reason: {approvalEvent.RejectionReason}";
+                var readableType = GetReadableRequestType(approvalEvent.RequestType);
+                var actionDescription = GetActionDescription(approvalEvent.RequestType);
+
+                string title;
+                string messageText;
+
+                if (approvalEvent.Status == "Approved" || approvalEvent.Status == "Executed")
+                {
+                    title = "Request Approved ✓";
+                    messageText = $"Your request to {actionDescription} (Request #{approvalEvent.RequestId}) has been approved by {approvalEvent.ProcessedByName}.";
+                }
+                else if (approvalEvent.Status == "Rejected")
+                {
+                    title = "Request Rejected ✗";
+                    messageText = $"Your request to {actionDescription} (Request #{approvalEvent.RequestId}) has been rejected by {approvalEvent.ProcessedByName}.";
+                    if (!string.IsNullOrEmpty(approvalEvent.RejectionReason))
+                    {
+                        messageText += $" Reason: {approvalEvent.RejectionReason}";
+                    }
+                }
+                else if (approvalEvent.Status == "Failed")
+                {
+                    title = "Request Failed ⚠";
+                    messageText = $"Your request to {actionDescription} (Request #{approvalEvent.RequestId}) was approved but failed to execute.";
+                    if (!string.IsNullOrEmpty(approvalEvent.RejectionReason))
+                    {
+                        messageText += $" Error: {approvalEvent.RejectionReason}";
+                    }
+                }
+                else
+                {
+                    title = "Request Updated";
+                    messageText = $"Your {readableType} request (#{approvalEvent.RequestId}) status has been updated to: {approvalEvent.Status}";
+                }
 
                 var notification = new Notification(
                     approvalEvent.RequestedById,
                     "ApprovalResponse",
                     title,
                     messageText,
-                    JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.RequestId })
+                    JsonSerializer.Serialize(new
+                    {
+                        approvalRequestId = approvalEvent.RequestId,
+                        status = approvalEvent.Status,
+                        processedBy = approvalEvent.ProcessedByName
+                    })
                 );
 
                 await SaveAndSendNotification(notification);
@@ -176,55 +227,6 @@ namespace NotificationService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling approval processed event");
-            }
-        }
-
-        private async Task HandleApprovalApproved(string message)
-        {
-            try
-            {
-                var approvalEvent = JsonSerializer.Deserialize<ApprovalApprovedEvent>(message);
-                if (approvalEvent == null) return;
-
-                _logger.LogInformation($"Processing approval approved for user {approvalEvent.RequestedById}");
-
-                // Notify the requester
-                var notification = new Notification(
-                    approvalEvent.RequestedById,
-                    "ApprovalResponse",
-                    "Request Approved",
-                    $"Your {approvalEvent.RequestType} request has been approved by {approvalEvent.ApprovedByName}",
-                    JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.ApprovalRequestId })
-                );
-
-                await SaveAndSendNotification(notification);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling approval approved event");
-            }
-        }
-
-        private async Task HandleApprovalRejected(string message)
-        {
-            try
-            {
-                var approvalEvent = JsonSerializer.Deserialize<ApprovalRejectedEvent>(message);
-                if (approvalEvent == null) return;
-
-                var notification = new Notification(
-                    approvalEvent.RequestedById,
-                    "ApprovalResponse",
-                    "Request Rejected",
-                    $"Your {approvalEvent.RequestType} request has been rejected. Reason: {approvalEvent.Reason}",
-                    JsonSerializer.Serialize(new { approvalRequestId = approvalEvent.ApprovalRequestId })
-                );
-
-                await SaveAndSendNotification(notification);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling approval rejected event");
             }
         }
 
@@ -237,17 +239,22 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogInformation($"Product created: {productEvent.Model} ({productEvent.InventoryCode})");
 
-                // Notify all users about new product
-                var allUserIds = await GetAllUserIds();
+                // Notify department users about new product
+                var departmentUsers = await GetUsersInDepartment(productEvent.DepartmentId);
 
-                foreach (var userId in allUserIds)
+                foreach (var userId in departmentUsers)
                 {
                     var notification = new Notification(
                         userId,
                         "ProductUpdate",
                         "New Product Added",
-                        $"Product {productEvent.Model} ({productEvent.InventoryCode}) has been added to {productEvent.DepartmentName}",
-                        JsonSerializer.Serialize(new { productId = productEvent.ProductId })
+                        $"Product {productEvent.Model} by {productEvent.Vendor} (Code: {productEvent.InventoryCode}) has been added to {productEvent.DepartmentName}",
+                        JsonSerializer.Serialize(new
+                        {
+                            productId = productEvent.ProductId,
+                            inventoryCode = productEvent.InventoryCode,
+                            model = productEvent.Model
+                        })
                     );
 
                     await SaveAndSendNotification(notification);
@@ -268,8 +275,25 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogInformation($"Product deleted: {productEvent.Model} ({productEvent.InventoryCode})");
 
-                // You can add notification logic here if needed
-                await Task.CompletedTask;
+                // Notify relevant users
+                var departmentUsers = await GetUsersInDepartment(productEvent.DepartmentId);
+
+                foreach (var userId in departmentUsers)
+                {
+                    var notification = new Notification(
+                        userId,
+                        "ProductUpdate",
+                        "Product Deleted",
+                        $"Product {productEvent.Model} (Code: {productEvent.InventoryCode}) has been deleted from {productEvent.DepartmentName}",
+                        JsonSerializer.Serialize(new
+                        {
+                            productId = productEvent.ProductId,
+                            inventoryCode = productEvent.InventoryCode
+                        })
+                    );
+
+                    await SaveAndSendNotification(notification);
+                }
             }
             catch (Exception ex)
             {
@@ -285,7 +309,26 @@ namespace NotificationService.Infrastructure.Services
                 if (routeEvent == null) return;
 
                 _logger.LogInformation($"Route created for product {routeEvent.Model} to {routeEvent.ToDepartmentName}");
-                await Task.CompletedTask;
+
+                // Notify destination department
+                var toDeptUsers = await GetUsersInDepartment(routeEvent.ToDepartmentId);
+
+                foreach (var userId in toDeptUsers)
+                {
+                    var notification = new Notification(
+                        userId,
+                        "RouteUpdate",
+                        "Incoming Product Transfer",
+                        $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) is being transferred to {routeEvent.ToDepartmentName}",
+                        JsonSerializer.Serialize(new
+                        {
+                            routeId = routeEvent.RouteId,
+                            productId = routeEvent.ProductId
+                        })
+                    );
+
+                    await SaveAndSendNotification(notification);
+                }
             }
             catch (Exception ex)
             {
@@ -301,7 +344,28 @@ namespace NotificationService.Infrastructure.Services
                 if (routeEvent == null) return;
 
                 _logger.LogInformation($"Route completed: {routeEvent.RouteId}");
-                await Task.CompletedTask;
+
+                // Notify relevant departments
+                var fromDeptUsers = await GetUsersInDepartment(routeEvent.FromDepartmentId);
+                var toDeptUsers = await GetUsersInDepartment(routeEvent.ToDepartmentId);
+                var allUsers = fromDeptUsers.Union(toDeptUsers).Distinct();
+
+                foreach (var userId in allUsers)
+                {
+                    var notification = new Notification(
+                        userId,
+                        "RouteUpdate",
+                        "Transfer Completed",
+                        $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) transfer to {routeEvent.ToDepartmentName} has been completed",
+                        JsonSerializer.Serialize(new
+                        {
+                            routeId = routeEvent.RouteId,
+                            productId = routeEvent.ProductId
+                        })
+                    );
+
+                    await SaveAndSendNotification(notification);
+                }
             }
             catch (Exception ex)
             {
@@ -327,14 +391,15 @@ namespace NotificationService.Infrastructure.Services
                 var groupName = $"user-{notification.UserId}";
                 _logger.LogInformation($"Sending notification to SignalR group: {groupName}");
 
-                await hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", new
+                await hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", new NotificationDto
                 {
-                    notification.Id,
-                    notification.Type,
-                    notification.Title,
-                    notification.Message,
-                    notification.CreatedAt,
-                    Data = notification.Data != null ? JsonSerializer.Deserialize<object>(notification.Data) : null
+                    Id = notification.Id,
+                    Type = notification.Type,
+                    Title = notification.Title,
+                    Message = notification.Message,
+                    CreatedAt = notification.CreatedAt,
+                    IsRead = notification.IsRead,
+                    Data = notification.Data
                 });
 
                 _logger.LogInformation($"Notification sent via SignalR to user {notification.UserId}");
@@ -351,9 +416,24 @@ namespace NotificationService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-            // Get users for the specific role
             var users = await userService.GetUsersAsync(role);
             return users.Select(u => u.Id).ToList();
+        }
+
+        private async Task<List<int>> GetUsersInDepartment(int departmentId)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+
+            // You might need to implement this method in UserService
+            // For now, return managers and admins
+            var managers = await userService.GetUsersAsync("Manager");
+            var admins = await userService.GetUsersAsync("Admin");
+
+            return managers.Select(u => u.Id)
+                .Union(admins.Select(u => u.Id))
+                .Distinct()
+                .ToList();
         }
 
         private async Task<List<int>> GetAllUserIds()
@@ -361,10 +441,10 @@ namespace NotificationService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-            // Get all users (passing null or empty string for all users)
             var users = await userService.GetUsersAsync(null);
             return users.Select(u => u.Id).ToList();
         }
+
         private string GetReadableRequestType(string requestType)
         {
             return requestType switch
@@ -373,7 +453,23 @@ namespace NotificationService.Infrastructure.Services
                 "product.update" => "Product Update",
                 "product.delete" => "Product Deletion",
                 "product.transfer" => "Product Transfer",
-                _ => requestType
+                "route.update" => "Route Update",
+                "route.delete" => "Route Deletion",
+                _ => requestType.Replace(".", " ").ToTitleCase()
+            };
+        }
+
+        private string GetActionDescription(string requestType)
+        {
+            return requestType switch
+            {
+                "product.create" => "create a new product",
+                "product.update" => "update product information",
+                "product.delete" => "delete a product",
+                "product.transfer" => "transfer a product to another department",
+                "route.update" => "update route information",
+                "route.delete" => "delete a route",
+                _ => requestType.Replace(".", " ")
             };
         }
 
@@ -382,6 +478,26 @@ namespace NotificationService.Infrastructure.Services
             _channel?.Close();
             _connection?.Close();
             base.Dispose();
+        }
+    }
+
+    // Extension method for title case
+    public static class StringExtensions
+    {
+        public static string ToTitleCase(this string str)
+        {
+            if (string.IsNullOrEmpty(str))
+                return str;
+
+            var words = str.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                if (words[i].Length > 0)
+                {
+                    words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
+                }
+            }
+            return string.Join(" ", words);
         }
     }
 }

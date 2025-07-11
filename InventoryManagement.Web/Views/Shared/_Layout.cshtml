@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@* InventoryManagement.Web/Views/Shared/_Layout.cshtml *@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -56,27 +57,29 @@
                                         <span id="notificationBadge" class="notification-badge" style="display:none;">0</span>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-end notification-dropdown"
-                                         id="notificationDropdown" aria-labelledby="notificationIcon">
+                                         id="notificationDropdown">
                                         <div class="dropdown-header d-flex justify-content-between align-items-center">
-                                            <span>Notifications</span>
-                                            <a href="/Notifications" class="text-decoration-none small">View All</a>
+                                            <h6 class="mb-0">Notifications</h6>
+                                            <a href="/Notifications" class="text-decoration-none small text-primary">View All</a>
                                         </div>
-                                        <div class="dropdown-divider"></div>
                                         <div id="notificationList" class="notification-list">
                                             <div class="text-center py-3">
-                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status">
                                                     <span class="visually-hidden">Loading...</span>
                                                 </div>
                                             </div>
                                         </div>
+                                        <div class="dropdown-footer">
+                                            <a href="#" id="markAllAsRead">Mark all as read</a>
+                                        </div>
                                     </div>
                                 </li>
 
-                                <!-- User Dropdown -->
-                                <li class="nav-item dropdown">
+                                <!-- User Dropdown (NO USER ICON - JUST TEXT) -->
+                                <li class="nav-item dropdown ms-3">
                                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
                                        role="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-user-circle"></i> @User.Identity.Name
+                                        @User.Identity.Name
                                     </a>
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         <li>
@@ -112,10 +115,24 @@
 
             <!-- Page Content -->
             <div class="container-fluid px-4">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
                 @if (TempData["Success"] != null)
                 {
                     <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
                         <i class="fas fa-check-circle"></i> @TempData["Success"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 }
@@ -131,8 +148,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
+
     <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
 
     <!-- Scripts -->
@@ -162,6 +182,7 @@
                 initializeNotifications();
                 setupNotificationHandlers();
                 loadNotificationCount();
+                loadRecentNotifications();
 
                 // Check for pending approvals if admin
                 @if (User.IsInRole("Admin"))
@@ -239,7 +260,7 @@
                 }
 
                 // Play notification sound (optional)
-                playNotificationSound();
+                // playNotificationSound();
 
                 // If admin and approval request, update pending count
                 @if (User.IsInRole("Admin"))
@@ -278,26 +299,11 @@
             // Notification bell click handler
             $('#notificationIcon').on('click', function(e) {
                 e.preventDefault();
-                e.stopPropagation();
                 loadRecentNotifications();
             });
 
-            // Close dropdown when clicking outside
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('.notification-dropdown, #notificationIcon').length) {
-                    $('#notificationDropdown').removeClass('show');
-                }
-            });
-
-            // Mark as read handler (delegated for dynamic content)
-            $(document).on('click', '.notification-item.unread', function(e) {
-                e.preventDefault();
-                const notificationId = $(this).data('id');
-                markAsRead(notificationId);
-            });
-
             // Mark all as read handler
-            $(document).on('click', '#markAllAsRead', function(e) {
+            $('#markAllAsRead').on('click', function(e) {
                 e.preventDefault();
                 markAllAsRead();
             });
@@ -319,7 +325,7 @@
         function loadRecentNotifications() {
             $('#notificationList').html(`
                 <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm" role="status">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
@@ -334,8 +340,9 @@
                 error: function(xhr, status, error) {
                     console.error('Failed to load notifications:', error);
                     $('#notificationList').html(`
-                        <div class="dropdown-item text-center py-3 text-danger">
-                            <i class="fas fa-exclamation-circle"></i> Failed to load notifications
+                        <div class="notification-empty">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p class="mb-0">Failed to load notifications</p>
                         </div>
                     `);
                 }
@@ -347,22 +354,15 @@
 
             if (!notifications || notifications.length === 0) {
                 html = `
-                    <div class="dropdown-item text-center py-3 text-muted">
-                        <i class="fas fa-bell-slash"></i> No new notifications
+                    <div class="notification-empty">
+                        <i class="fas fa-bell-slash"></i>
+                        <p class="mb-0">No new notifications</p>
                     </div>
                 `;
             } else {
                 notifications.forEach(function(notification) {
                     html += createNotificationItem(notification);
                 });
-
-                html += '<div class="dropdown-divider"></div>';
-                html += `
-                    <div class="dropdown-footer d-flex justify-content-between">
-                        <a href="/Notifications" class="text-decoration-none small">View All</a>
-                        <a href="#" id="markAllAsRead" class="text-decoration-none small">Mark All as Read</a>
-                    </div>
-                `;
             }
 
             $('#notificationList').html(html);
@@ -372,24 +372,25 @@
             const timeAgo = formatTimeAgo(notification.createdAt);
             const unreadClass = notification.isRead ? '' : 'unread';
             const icon = getNotificationIcon(notification.type);
-            const typeColor = getNotificationTypeColor(notification.type);
+            const iconColor = getNotificationIconColor(notification.type);
 
             return `
-                <a href="#" class="dropdown-item notification-item ${unreadClass}" data-id="${notification.id}">
+                <div class="notification-item ${unreadClass}" data-id="${notification.id}" onclick="markAsRead(${notification.id})">
                     <div class="d-flex align-items-start">
-                        <div class="notification-icon me-3">
-                            <i class="${icon} ${typeColor}"></i>
+                        <div class="notification-icon ${iconColor} me-3">
+                            <i class="${icon} text-white"></i>
                         </div>
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1 small font-weight-bold">${notification.title}</h6>
-                            <p class="mb-1 small text-muted">${notification.message}</p>
-                            <small class="text-muted">
-                                <i class="fas fa-clock"></i> ${timeAgo}
-                            </small>
+                        <div class="notification-content">
+                            <h6>${escapeHtml(notification.title)}</h6>
+                            <p>${escapeHtml(notification.message)}</p>
+                            <div class="notification-time">
+                                <i class="fas fa-clock me-1"></i>
+                                ${timeAgo}
+                                ${!notification.isRead ? '<span class="notification-dot ms-2"></span>' : ''}
+                            </div>
                         </div>
-                        ${!notification.isRead ? '<span class="notification-dot"></span>' : ''}
                     </div>
-                </a>
+                </div>
             `;
         }
 
@@ -398,14 +399,12 @@
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
                 data: { notificationId: notificationId },
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
                 success: function() {
-                    // Update UI
-                    $(`.notification-item[data-id="${notificationId}"]`)
-                        .removeClass('unread')
-                        .find('.notification-dot').remove();
-
-                    // Update count
-                    decrementNotificationCount();
+                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to mark notification as read:', error);
@@ -417,6 +416,9 @@
             $.ajax({
                 url: '/Notifications/MarkAllAsRead',
                 type: 'POST',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
                 success: function() {
                     $('.notification-item').removeClass('unread');
                     $('.notification-dot').remove();
@@ -540,15 +542,26 @@
             return types[type] || 'info';
         }
 
-        function getNotificationTypeColor(type) {
+        function getNotificationIconColor(type) {
             const colors = {
-                'ApprovalRequest': 'text-warning',
-                'ApprovalResponse': 'text-success',
-                'ProductUpdate': 'text-info',
-                'RouteUpdate': 'text-primary',
-                'System': 'text-secondary'
+                'ApprovalRequest': 'bg-warning',
+                'ApprovalResponse': 'bg-success',
+                'ProductUpdate': 'bg-info',
+                'RouteUpdate': 'bg-primary',
+                'System': 'bg-secondary'
             };
-            return colors[type] || 'text-primary';
+            return colors[type] || 'bg-primary';
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
 
         // Global toast function

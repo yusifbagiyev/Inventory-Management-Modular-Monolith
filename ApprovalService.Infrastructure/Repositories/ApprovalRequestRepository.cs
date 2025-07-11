@@ -20,6 +20,7 @@ namespace ApprovalService.Infrastructure.Repositories
             return await _context.ApprovalRequests.FindAsync(new object[] { id }, cancellationToken);
         }
 
+
         public async Task<IEnumerable<ApprovalRequest>> GetPendingAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
         {
             return await _context.ApprovalRequests
@@ -30,11 +31,13 @@ namespace ApprovalService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
         {
             return await _context.ApprovalRequests
                 .CountAsync(r => r.Status == ApprovalStatus.Pending, cancellationToken);
         }
+
 
         public async Task<IEnumerable<ApprovalRequest>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default)
         {
@@ -44,6 +47,7 @@ namespace ApprovalService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task<IEnumerable<ApprovalRequest>> GetByStatusAsync(ApprovalStatus status, CancellationToken cancellationToken = default)
         {
             return await _context.ApprovalRequests
@@ -52,16 +56,25 @@ namespace ApprovalService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task<ApprovalRequest> AddAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
         {
             await _context.ApprovalRequests.AddAsync(request, cancellationToken);
             return request;
         }
 
+
         public Task UpdateAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
         {
             _context.Entry(request).State = EntityState.Modified;
             return Task.CompletedTask;
+        }
+
+        public async Task<IEnumerable<ApprovalRequest>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.ApprovalRequests
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync(cancellationToken);
         }
     }
 }
