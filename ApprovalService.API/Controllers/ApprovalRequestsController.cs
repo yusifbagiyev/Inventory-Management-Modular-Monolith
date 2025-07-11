@@ -1,4 +1,5 @@
-﻿using ApprovalService.Application.DTOs;
+﻿using System.Security.Claims;
+using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Features.Commands;
 using ApprovalService.Application.Features.Queries;
 using ApprovalService.Shared.DTOs;
@@ -22,7 +23,7 @@ namespace ApprovalService.API.Controllers
         [HttpPost]
         public async Task<ActionResult<ApprovalRequestDto>> Create(CreateApprovalRequestDto dto)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var userName = User.Identity?.Name ?? "Unknown";
 
             var result = await _mediator.Send(new CreateApprovalRequest.Command(dto, userId, userName));
@@ -44,9 +45,18 @@ namespace ApprovalService.API.Controllers
         [HttpGet("my-requests")]
         public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetMyRequests()
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var result = await _mediator.Send(new GetUserRequests.Query(userId));
             return Ok(result);
+        }
+
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApprovalRequestDto>> GetRequestById(int Id)
+        {
+            var approvalRequest = await _mediator.Send(new GetRequestById.Query(Id));
+            if (approvalRequest == null) return NotFound();
+            return Ok(approvalRequest);
         }
 
 
@@ -54,7 +64,7 @@ namespace ApprovalService.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Approve(int id)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var userName = User.Identity?.Name ?? "Unknown";
 
             await _mediator.Send(new ApproveRequest.Command(id, userId, userName));
@@ -66,7 +76,7 @@ namespace ApprovalService.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Reject(int id, RejectRequestDto dto)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var userName = User.Identity?.Name ?? "Unknown";
 
             await _mediator.Send(new RejectRequest.Command(id, userId, userName, dto.Reason));
