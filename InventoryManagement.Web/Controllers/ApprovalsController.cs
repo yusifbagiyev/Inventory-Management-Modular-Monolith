@@ -50,6 +50,10 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var request = await _approvalService.GetRequestDetailsAsync(id);
+            if (request == null)
+            {
+                return NotFound();
+            }
             return PartialView("_ApprovalDetails", request);
         }
 
