@@ -290,40 +290,6 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> Permissions()
-        {
-            try
-            {
-                var permissions = await _userManagementService.GetAllPermissionsAsync();
-                return View(permissions);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving permissions");
-                TempData["ErrorMessage"] = "Error retrieving permissions. Please try again.";
-                return View(new List<PermissionViewModel>());
-            }
-        }
-
-
-        [HttpGet]
-        public async Task<IActionResult> Roles()
-        {
-            try
-            {
-                var roles = await _userManagementService.GetAllRolesAsync();
-                return View(roles);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving roles");
-                TempData["ErrorMessage"] = "Error retrieving roles. Please try again.";
-                return View(new List<string>());
-            }
-        }
-
-
-        [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
             try

@@ -238,7 +238,6 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-
         public async Task<List<string>> GetAllRolesAsync()
         {
             try
@@ -255,57 +254,6 @@ namespace InventoryManagement.Web.Services
                 _logger.LogError(ex, "Error getting all roles");
             }
             return new List<string> { "Admin", "Manager", "User" };
-        }
-
-
-        public async Task<List<PermissionViewModel>> GetAllPermissionsAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("api/auth/permissions");
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var permissions = JsonConvert.DeserializeObject<List<PermissionDto>>(content);
-
-                    return permissions?.Select(p => new PermissionViewModel
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Description = p.Description,
-                        Category = p.Category
-                    }).ToList() ?? new List<PermissionViewModel>();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all permissions");
-            }
-            return new List<PermissionViewModel>();
-        }
-
-
-        public async Task<ManagePermissionsViewModel> GetRolePermissionsAsync(int roleId)
-        {
-            // Implementation for getting role permissions
-            return new ManagePermissionsViewModel();
-        }
-
-        public async Task<bool> UpdateRolePermissionsAsync(int roleId, List<int> permissionIds)
-        {
-            try
-            {
-                var json = JsonConvert.SerializeObject(permissionIds);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PutAsync($"api/auth/roles/{roleId}/permissions", content);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating role permissions");
-                return false;
-            }
         }
     }
 }
