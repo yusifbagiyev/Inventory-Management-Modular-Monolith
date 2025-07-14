@@ -162,61 +162,87 @@
     </div>
 </div>
 
+<input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
+
 @section Scripts {
     <script>
         $(document).ready(function() {
-            loadUserPermissions();
-            loadAvailablePermissions();
+            // Load permissions after a short delay to ensure DOM is ready
+            setTimeout(function() {
+                loadUserPermissions();
+                loadAvailablePermissions();
+            }, 100);
         });
 
         function loadUserPermissions() {
-            $.get('@Url.Action("GetUserDirectPermissions", "UserManagement", new { id = Model.Id })', function(data) {
-                var html = '';
-                if (data && data.length > 0) {
-                    data.forEach(function(permission) {
-                        html += `
-                            <div class="permission-item d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                                <div>
-                                    <span class="fw-bold">${permission.name}</span>
-                                    <small class="d-block text-muted">${permission.description}</small>
+            $('#userPermissions').html('<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+
+            $.ajax({
+                url: '@Url.Action("GetUserDirectPermissions", "UserManagement", new { id = Model.Id })',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + $('#jwtToken').val()
+                },
+                success: function(data) {
+                    var html = '';
+                    if (data && data.length > 0) {
+                        data.forEach(function(permission) {
+                            html += `
+                                <div class="permission-item d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                    <div>
+                                        <span class="fw-bold">${permission.name}</span>
+                                        <small class="d-block text-muted">${permission.description}</small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            onclick="revokePermission('${permission.name}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                        onclick="revokePermission('${permission.name}')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        `;
-                    });
-                } else {
-                    html = '<p class="text-muted text-center">No direct permissions assigned</p>';
+                            `;
+                        });
+                    } else {
+                        html = '<p class="text-muted text-center">No direct permissions assigned</p>';
+                    }
+                    $('#userPermissions').html(html);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load permissions:', error);
+                    $('#userPermissions').html('<p class="text-danger text-center">Failed to load permissions</p>');
                 }
-                $('#userPermissions').html(html);
             });
         }
 
         function loadAvailablePermissions() {
-            $.get('@Url.Action("GetAllPermissions", "UserManagement")', function(data) {
-                var select = $('#permissionSelect');
-                select.empty();
-                select.append('<option value="">Select a permission</option>');
+            $.ajax({
+                url: '@Url.Action("GetAllPermissions", "UserManagement")',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + $('#jwtToken').val()
+                },
+                success: function(data) {
+                    var select = $('#permissionSelect');
+                    select.empty();
+                    select.append('<option value="">Select a permission</option>');
 
-                // Group permissions by category
-                var grouped = {};
-                data.forEach(function(permission) {
-                    if (!grouped[permission.category]) {
-                        grouped[permission.category] = [];
-                    }
-                    grouped[permission.category].push(permission);
-                });
-
-                // Add options grouped by category
-                Object.keys(grouped).forEach(function(category) {
-                    var optgroup = $('<optgroup>', { label: category });
-                    grouped[category].forEach(function(permission) {
-                        optgroup.append(`<option value="${permission.name}">${permission.name} - ${permission.description}</option>`);
+                    var grouped = {};
+                    data.forEach(function(permission) {
+                        if (!grouped[permission.category]) {
+                            grouped[permission.category] = [];
+                        }
+                        grouped[permission.category].push(permission);
                     });
-                    select.append(optgroup);
-                });
+
+                    Object.keys(grouped).forEach(function(category) {
+                        var optgroup = $('<optgroup>', { label: category });
+                        grouped[category].forEach(function(permission) {
+                            optgroup.append(`<option value="${permission.name}">${permission.name} - ${permission.description}</option>`);
+                        });
+                        select.append(optgroup);
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load available permissions:', error);
+                }
             });
         }
 

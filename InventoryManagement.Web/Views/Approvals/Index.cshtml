@@ -215,8 +215,8 @@
                         const code = productData.inventoryCode || productData.InventoryCode || 'N/A';
                         const model = productData.model || productData.Model || 'N/A';
                         const vendor = productData.vendor || productData.Vendor || 'N/A';
-                        const categoryId = productData.categoryId || productData.CategoryId || 'N/A';
-                        return `New product: ${model} by ${vendor} (Code: ${code}, Category: ${categoryId})`;
+                        const category = productData.categoryName || productData.CategoryName || `Category #${productData.categoryId || productData.CategoryId || 'N/A'}`;
+                        return `New product: ${model} by ${vendor} (Code: ${code}, Category: ${category})`;
 
                     case 'Update Product':
                     case 'Updating Product':

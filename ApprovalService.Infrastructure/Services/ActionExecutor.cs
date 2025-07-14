@@ -86,6 +86,9 @@ namespace ApprovalService.Infrastructure.Services
                 }
 
                 // Create a properly formatted object for the API
+                var categoryName = GetStringProperty(productElement, "categoryName", "CategoryName");
+                var departmentName = GetStringProperty(productElement, "departmentName", "DepartmentName");
+
                 var productData = new
                 {
                     inventoryCode = GetIntProperty(productElement, "inventoryCode", "InventoryCode"),
@@ -97,7 +100,9 @@ namespace ApprovalService.Infrastructure.Services
                     isActive = GetBoolProperty(productElement, "isActive", "IsActive", true),
                     isNewItem = GetBoolProperty(productElement, "isNewItem", "IsNewItem", true),
                     categoryId = GetIntProperty(productElement, "categoryId", "CategoryId"),
-                    departmentId = GetIntProperty(productElement, "departmentId", "DepartmentId")
+                    departmentId = GetIntProperty(productElement, "departmentId", "DepartmentId"),
+                    categoryName,
+                    departmentName
                 };
 
                 var json = JsonSerializer.Serialize(productData);

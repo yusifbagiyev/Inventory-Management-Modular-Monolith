@@ -85,6 +85,8 @@
             {
                 case "product.create":
                     var productData = data.ProductData ?? data;
+                    var categoryName = productData.categoryName ?? productData.CategoryName ?? $"Category #{productData.categoryId ?? productData.CategoryId}";
+                    var departmentName = productData.departmentName ?? productData.DepartmentName ?? $"Department #{productData.departmentId ?? productData.DepartmentId}";
                     return string.Format(
                         "<strong>Inventory Code:</strong> {0}<br/>" +
                         "<strong>Model:</strong> {1}<br/>" +
@@ -97,8 +99,8 @@
                         productData.model ?? productData.Model ?? "N/A",
                         productData.vendor ?? productData.Vendor ?? "N/A",
                         productData.worker ?? productData.Worker ?? "N/A",
-                        productData.categoryId ?? productData.CategoryId,
-                        productData.departmentId ?? productData.DepartmentId,
+                        categoryName,
+                        departmentName,
                         productData.description ?? productData.Description ?? "N/A"
                     );
                 
