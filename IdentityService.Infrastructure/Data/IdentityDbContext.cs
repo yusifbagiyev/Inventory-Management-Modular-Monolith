@@ -1,5 +1,6 @@
 ﻿using IdentityService.Domain.Constants;
 using IdentityService.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,7 +36,7 @@ namespace IdentityService.Infrastructure.Data
                     .HasForeignKey(rp => rp.PermissionId);
             });
 
-
+            // Fixed UserPermission configuration
             builder.Entity<UserPermission>(entity =>
             {
                 entity.HasKey(up => new { up.UserId, up.PermissionId });
@@ -49,7 +50,6 @@ namespace IdentityService.Infrastructure.Data
                     .HasForeignKey(up => up.PermissionId);
             });
 
-
             builder.Entity<RefreshToken>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -61,18 +61,42 @@ namespace IdentityService.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-
-            // Seed initial data
+            // Seed initial data with static values
             SeedData(builder);
         }
 
         private void SeedData(ModelBuilder builder)
         {
+            // Use static password hash to avoid dynamic values
+            var user = new User
+            {
+                Id = 1,
+                UserName = "yusifbv24",
+                FirstName = "Yusif",
+                LastName = "Bagiyev",
+                NormalizedUserName = "YUSIFBV24",
+                Email = "yusifbv24@gmail.com",
+                NormalizedEmail = "YUSIFBV24@GMAIL.COM",
+                EmailConfirmed = true,
+                SecurityStamp = "STATIC_SECURITY_STAMP_123",
+                ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
+                PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
+                LockoutEnabled = false,
+                AccessFailedCount = 0
+            };
+
+            builder.Entity<User>().HasData(user);
+
+            // Add user to Admin role
+            builder.Entity<IdentityUserRole<int>>().HasData(
+                new IdentityUserRole<int> { UserId = 1, RoleId = 1 }
+            );
+
             var roles = new[]
             {
-                new Role { Id = 1, Name = "Admin", NormalizedName = "ADMIN" },
-                new Role { Id = 2, Name = "Manager", NormalizedName = "MANAGER" },
-                new Role { Id = 3, Name = "User", NormalizedName = "USER" }
+                new Role { Id = 1, Name = "Admin", NormalizedName = "ADMIN", ConcurrencyStamp = "ADMIN_STAMP_123" },
+                new Role { Id = 2, Name = "Operator", NormalizedName = "OPERATOR", ConcurrencyStamp = "OPERATOR_STAMP_123" },
+                new Role { Id = 3, Name = "User", NormalizedName = "USER", ConcurrencyStamp = "USER_STAMP_123" }
             };
             builder.Entity<Role>().HasData(roles);
 
@@ -97,11 +121,6 @@ namespace IdentityService.Infrastructure.Data
                 new Permission { Id = 13, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
                 new Permission { Id = 14, Name = AllPermissions.ProductTransfer, Category = "Product", Description = "Transfer products (requires approval)" },
                 new Permission { Id = 15, Name = AllPermissions.ProductTransferDirect, Category = "Product", Description = "Transfer products directly" },
-        
-                // Admin permissions
-                new Permission { Id = 16, Name = AllPermissions.UserManage, Category = "Admin", Description = "Manage users" },
-                new Permission { Id = 17, Name = AllPermissions.RoleManage, Category = "Admin", Description = "Manage roles" },
-                new Permission { Id = 18, Name = AllPermissions.ApprovalManage, Category = "Admin", Description = "Manage approvals" }
             };
             builder.Entity<Permission>().HasData(permissions);
 
@@ -109,7 +128,7 @@ namespace IdentityService.Infrastructure.Data
             var rolePermissions = new List<RolePermission>();
 
             // Admin - All direct permissions
-            for (int i = 1; i <= 18; i++)
+            for (int i = 1; i <= 15; i++)
             {
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
@@ -136,6 +155,7 @@ namespace IdentityService.Infrastructure.Data
             });
 
             builder.Entity<RolePermission>().HasData(rolePermissions);
+
         }
     }
 }

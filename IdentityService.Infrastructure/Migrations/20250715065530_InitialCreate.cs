@@ -268,9 +268,9 @@ namespace IdentityService.Infrastructure.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Description", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { 1, null, "", "Admin", "ADMIN" },
-                    { 2, null, "", "Manager", "MANAGER" },
-                    { 3, null, "", "User", "USER" }
+                    { 1, "ADMIN_STAMP_123", "", "Admin", "ADMIN" },
+                    { 2, "OPERATOR_STAMP_123", "", "Operator", "OPERATOR" },
+                    { 3, "USER_STAMP_123", "", "User", "USER" }
                 });
 
             migrationBuilder.InsertData(
@@ -292,10 +292,7 @@ namespace IdentityService.Infrastructure.Migrations
                     { 12, "Product", "Delete products (requires approval)", "product.delete" },
                     { 13, "Product", "Delete products directly", "product.delete.direct" },
                     { 14, "Product", "Transfer products (requires approval)", "product.transfer" },
-                    { 15, "Product", "Transfer products directly", "product.transfer.direct" },
-                    { 16, "Admin", "Manage users", "user.manage" },
-                    { 17, "Admin", "Manage roles", "role.manage" },
-                    { 18, "Admin", "Manage approvals", "approval.manage" }
+                    { 15, "Product", "Transfer products directly", "product.transfer.direct" }
                 });
 
             migrationBuilder.InsertData(
@@ -318,9 +315,6 @@ namespace IdentityService.Infrastructure.Migrations
                     { 13, 1 },
                     { 14, 1 },
                     { 15, 1 },
-                    { 16, 1 },
-                    { 17, 1 },
-                    { 18, 1 },
                     { 1, 2 },
                     { 2, 2 },
                     { 3, 2 },

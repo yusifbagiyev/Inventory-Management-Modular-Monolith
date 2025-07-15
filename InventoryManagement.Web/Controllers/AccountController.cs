@@ -151,7 +151,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction("Login");
             }
 
-            var userData = JsonConvert.DeserializeObject<UserDto>(userDataJson);
+            var userData = JsonConvert.DeserializeObject<User>(userDataJson);
             return View(userData);
         }
 

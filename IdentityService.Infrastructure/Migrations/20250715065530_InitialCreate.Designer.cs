@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20250707124321_InitialCreate")]
+    [Migration("20250715065530_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -154,27 +154,6 @@ namespace IdentityService.Infrastructure.Migrations
                             Category = "Product",
                             Description = "Transfer products directly",
                             Name = "product.transfer.direct"
-                        },
-                        new
-                        {
-                            Id = 16,
-                            Category = "Admin",
-                            Description = "Manage users",
-                            Name = "user.manage"
-                        },
-                        new
-                        {
-                            Id = 17,
-                            Category = "Admin",
-                            Description = "Manage roles",
-                            Name = "role.manage"
-                        },
-                        new
-                        {
-                            Id = 18,
-                            Category = "Admin",
-                            Description = "Manage approvals",
-                            Name = "approval.manage"
                         });
                 });
 
@@ -254,6 +233,7 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
+                            ConcurrencyStamp = "ADMIN_STAMP_123",
                             Description = "",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
@@ -261,13 +241,15 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
+                            ConcurrencyStamp = "OPERATOR_STAMP_123",
                             Description = "",
-                            Name = "Manager",
-                            NormalizedName = "MANAGER"
+                            Name = "Operator",
+                            NormalizedName = "OPERATOR"
                         },
                         new
                         {
                             Id = 3,
+                            ConcurrencyStamp = "USER_STAMP_123",
                             Description = "",
                             Name = "User",
                             NormalizedName = "USER"
@@ -363,21 +345,6 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             RoleId = 1,
                             PermissionId = 15
-                        },
-                        new
-                        {
-                            RoleId = 1,
-                            PermissionId = 16
-                        },
-                        new
-                        {
-                            RoleId = 1,
-                            PermissionId = 17
-                        },
-                        new
-                        {
-                            RoleId = 1,
-                            PermissionId = 18
                         },
                         new
                         {

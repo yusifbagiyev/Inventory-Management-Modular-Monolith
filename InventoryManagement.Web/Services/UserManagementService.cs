@@ -145,6 +145,7 @@ namespace InventoryManagement.Web.Services
         {
             try
             {
+                // First, update the basic user information
                 var updateDto = new
                 {
                     model.Id,
@@ -160,31 +161,76 @@ namespace InventoryManagement.Web.Services
 
                 var response = await _httpClient.PutAsync($"api/auth/users/{model.Id}", content);
 
-                // Update roles separately if they've changed
-                if (response.IsSuccessStatusCode && model.SelectedRoles != null)
+                if (!response.IsSuccessStatusCode)
                 {
-                    // Remove all current roles
-                    foreach (var role in model.CurrentRoles)
-                    {
-                        await _httpClient.PostAsync($"api/auth/users/{model.Id}/remove-role",
-                            new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
-                            Encoding.UTF8, "application/json"));
-                    }
-
-                    // Add selected roles
-                    foreach (var role in model.SelectedRoles)
-                    {
-                        await _httpClient.PostAsync($"api/auth/users/{model.Id}/assign-role",
-                            new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
-                            Encoding.UTF8, "application/json"));
-                    }
+                    _logger.LogError("Failed to update user basic info. Status: {StatusCode}", response.StatusCode);
+                    return false;
                 }
 
-                return response.IsSuccessStatusCode;
+                // Now handle role updates with better error tracking
+                var roleUpdateSuccess = await UpdateUserRolesAsync(model.Id, model.CurrentRoles, model.SelectedRoles ?? new List<string>());
+
+                if (!roleUpdateSuccess)
+                {
+                    _logger.LogWarning("User info updated but role update failed for user {UserId}", model.Id);
+                    // You might want to return false here or handle it differently
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user");
+                _logger.LogError(ex, "Error updating user {UserId}", model.Id);
+                return false;
+            }
+        }
+
+        private async Task<bool> UpdateUserRolesAsync(int userId, List<string> currentRoles, List<string> selectedRoles)
+        {
+            try
+            {
+                // Find roles to remove (in current but not in selected)
+                var rolesToRemove = currentRoles.Except(selectedRoles).ToList();
+
+                // Find roles to add (in selected but not in current)
+                var rolesToAdd = selectedRoles.Except(currentRoles).ToList();
+
+                _logger.LogInformation("User {UserId}: Removing roles: {RolesToRemove}, Adding roles: {RolesToAdd}",
+                    userId, string.Join(", ", rolesToRemove), string.Join(", ", rolesToAdd));
+
+                // Remove roles that are no longer selected
+                foreach (var role in rolesToRemove)
+                {
+                    var removeResponse = await _httpClient.PostAsync($"api/auth/users/{userId}/remove-role",
+                        new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
+                        Encoding.UTF8, "application/json"));
+
+                    if (!removeResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogError("Failed to remove role {Role} from user {UserId}", role, userId);
+                        return false;
+                    }
+                }
+
+                // Add newly selected roles
+                foreach (var role in rolesToAdd)
+                {
+                    var addResponse = await _httpClient.PostAsync($"api/auth/users/{userId}/assign-role",
+                        new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
+                        Encoding.UTF8, "application/json"));
+
+                    if (!addResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogError("Failed to add role {Role} to user {UserId}", role, userId);
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating roles for user {UserId}", userId);
                 return false;
             }
         }

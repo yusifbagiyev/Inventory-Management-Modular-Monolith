@@ -84,19 +84,37 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label class="form-label">Roles</label>
-                                    <div class="role-selection">
+                                    <div class="role-selection border rounded p-3">
+                                        @{
+                                            // Add a hidden field to ensure we always send role data
+                                            <input type="hidden" name="RoleUpdateFlag" value="true" />
+                                        }
                                         @foreach (var role in Model.AvailableRoles)
                                         {
-                                            <div class="form-check">
-                                                <input type="checkbox" class="form-check-input"
-                                                       name="SelectedRoles" value="@role.Value"
+                                            <div class="form-check mb-2">
+                                                <input type="checkbox"
+                                                       class="form-check-input role-checkbox"
+                                                       name="SelectedRoles"
+                                                       value="@role.Value"
                                                        id="role_@role.Value"
                                                        @(Model.CurrentRoles.Contains(role.Value) ? "checked" : "") />
                                                 <label class="form-check-label" for="role_@role.Value">
                                                     @role.Text
+                                                    @if (Model.CurrentRoles.Contains(role.Value))
+                                                    {
+                                                        <small class="text-muted">(Current)</small>
+                                                    }
                                                 </label>
                                             </div>
                                         }
+                                        <!-- Hidden field to track original roles -->
+                                        @foreach (var role in Model.CurrentRoles)
+                                        {
+                                            <input type="hidden" name="CurrentRoles" value="@role" />
+                                        }
+                                    </div>
+                                    <div class="form-text">
+                                        Select one or more roles for this user. Changes will be applied immediately upon save.
                                     </div>
                                 </div>
                             </div>
@@ -119,27 +137,27 @@
             <div class="card shadow">
                 <div class="card-header">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-key"></i> Direct Permissions
+                        <i class="fas fa-shield-alt"></i> User Permissions
                     </h6>
                 </div>
                 <div class="card-body">
-                    <div id="userPermissions" class="mb-3">
+                    <div class="mb-3">
+                        <input type="text" id="permissionSearch" class="form-control form-control-sm"
+                               placeholder="Search permissions...">
+                    </div>
+
+                    <div id="permissionsContainer" style="max-height: 400px; overflow-y: auto;">
                         <div class="text-center">
                             <div class="spinner-border spinner-border-sm" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Manage Permissions</label>
-                        <select id="permissionSelect" class="form-select mb-2">
-                            <option value="">Select a permission</option>
-                        </select>
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-sm btn-success" onclick="grantPermission()">
-                                Grant Permission
-                            </button>
-                        </div>
+
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-sm btn-success w-100" onclick="savePermissions()">
+                            <i class="fas fa-save"></i> Save Permission Changes
+                        </button>
                     </div>
                 </div>
             </div>
@@ -166,149 +184,217 @@
 
 @section Scripts {
     <script>
+        let allPermissions = [];
+        let originalPermissions = {};
+
         $(document).ready(function() {
-            // Load permissions after a short delay to ensure DOM is ready
-            setTimeout(function() {
-                loadUserPermissions();
-                loadAvailablePermissions();
-            }, 100);
+            loadUserPermissionsStatus();
+                let originalRoles = [];
+
+            // Search functionality
+            $('#permissionSearch').on('keyup', function() {
+                const searchTerm = $(this).val().toLowerCase();
+                filterPermissions(searchTerm);
+            });
+
+                // Track original role state
+            $('.role-checkbox:checked').each(function() {
+            originalRoles.push($(this).val());
+        });
+            // Show changes in real-time
+        $('.role-checkbox').change(function() {
+            let currentRoles = [];
+            $('.role-checkbox:checked').each(function() {
+                currentRoles.push($(this).val());
+            });
+
+            // Show indicator if changes were made
+            let hasChanges = !arraysEqual(originalRoles.sort(), currentRoles.sort());
+            if (hasChanges) {
+                $('#roleChangeIndicator').show();
+            } else {
+                $('#roleChangeIndicator').hide();
+            }
         });
 
-        function loadUserPermissions() {
-            $('#userPermissions').html('<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+        function arraysEqual(a, b) {
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+        });
 
+        function loadUserPermissionsStatus() {
             $.ajax({
-                url: '@Url.Action("GetUserDirectPermissions", "UserManagement", new { id = Model.Id })',
+                url: '@Url.Action("GetUserPermissionsStatus", new { id = Model.Id })',
                 type: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + $('#jwtToken').val()
-                },
                 success: function(data) {
-                    var html = '';
-                    if (data && data.length > 0) {
-                        data.forEach(function(permission) {
-                            html += `
-                                <div class="permission-item d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
-                                    <div>
-                                        <span class="fw-bold">${permission.name}</span>
-                                        <small class="d-block text-muted">${permission.description}</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="revokePermission('${permission.name}')">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        html = '<p class="text-muted text-center">No direct permissions assigned</p>';
+                    if (data.error) {
+                        $('#permissionsContainer').html('<p class="text-danger">Failed to load permissions</p>');
+                        return;
                     }
-                    $('#userPermissions').html(html);
+
+                    allPermissions = data;
+                    // Store original state to track changes
+                    data.forEach(p => {
+                        originalPermissions[p.name] = p.isDirect;
+                    });
+
+                    renderPermissions(data);
                 },
-                error: function(xhr, status, error) {
-                    console.error('Failed to load permissions:', error);
-                    $('#userPermissions').html('<p class="text-danger text-center">Failed to load permissions</p>');
+                error: function() {
+                    $('#permissionsContainer').html('<p class="text-danger">Error loading permissions</p>');
                 }
             });
         }
 
-        function loadAvailablePermissions() {
-            $.ajax({
-                url: '@Url.Action("GetAllPermissions", "UserManagement")',
-                type: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + $('#jwtToken').val()
-                },
-                success: function(data) {
-                    var select = $('#permissionSelect');
-                    select.empty();
-                    select.append('<option value="">Select a permission</option>');
+        function renderPermissions(permissions) {
+            // Group permissions by category
+            const grouped = permissions.reduce((acc, perm) => {
+                if (!acc[perm.category]) acc[perm.category] = [];
+                acc[perm.category].push(perm);
+                return acc;
+            }, {});
 
-                    var grouped = {};
-                    data.forEach(function(permission) {
-                        if (!grouped[permission.category]) {
-                            grouped[permission.category] = [];
-                        }
-                        grouped[permission.category].push(permission);
-                    });
+            let html = '<div class="accordion" id="permissionsAccordion">';
 
-                    Object.keys(grouped).forEach(function(category) {
-                        var optgroup = $('<optgroup>', { label: category });
-                        grouped[category].forEach(function(permission) {
-                            optgroup.append(`<option value="${permission.name}">${permission.name} - ${permission.description}</option>`);
-                        });
-                        select.append(optgroup);
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error('Failed to load available permissions:', error);
-                }
+            Object.keys(grouped).forEach((category, index) => {
+                html += `
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading${index}">
+                            <button class="accordion-button ${index > 0 ? 'collapsed' : ''}" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                ${category}
+                            </button>
+                        </h2>
+                        <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}"
+                             data-bs-parent="#permissionsAccordion">
+                            <div class="accordion-body p-2">
+                `;
+
+                grouped[category].forEach(perm => {
+                    const isChecked = perm.isDirect || perm.isFromRole;
+                    const isDisabled = perm.isFromRole && !perm.isDirect;
+                    const statusText = perm.isFromRole ? `(from role: ${perm.roles.join(', ')})` : '';
+
+                    html += `
+                        <div class="permission-item form-check mb-2 p-2 ${isChecked ? 'bg-light' : ''}"
+                             data-permission="${perm.name}">
+                            <input class="form-check-input" type="checkbox"
+                                   id="perm_${perm.name}"
+                                   data-permission-name="${perm.name}"
+                                   ${isChecked ? 'checked' : ''}
+                                   ${isDisabled ? 'disabled' : ''}>
+                            <label class="form-check-label w-100" for="perm_${perm.name}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>${perm.name}</strong>
+                                        <small class="d-block text-muted">${perm.description}</small>
+                                        ${statusText ? `<small class="text-info">${statusText}</small>` : ''}
+                                    </div>
+                                    ${perm.isDirect ? '<span class="badge bg-primary">Direct</span>' : ''}
+                                </div>
+                            </label>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div></div>';
+            });
+
+            html += '</div>';
+            $('#permissionsContainer').html(html);
+        }
+
+        function filterPermissions(searchTerm) {
+            $('.permission-item').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.includes(searchTerm));
             });
         }
 
-        function grantPermission() {
-            var permissionName = $('#permissionSelect').val();
-            if (!permissionName) {
-                showToast('Please select a permission', 'warning');
+        function savePermissions() {
+            const changes = [];
+
+            // Check each permission for changes
+            $('input[data-permission-name]').each(function() {
+                const permName = $(this).data('permission-name');
+                const isChecked = $(this).is(':checked');
+                const wasOriginallyDirect = originalPermissions[permName] || false;
+
+                // Only process if not disabled (not from role) and state changed
+                if (!$(this).is(':disabled') && isChecked !== wasOriginallyDirect) {
+                    changes.push({
+                        permissionName: permName,
+                        action: isChecked ? 'grant' : 'revoke'
+                    });
+                }
+            });
+
+            if (changes.length === 0) {
+                showToast('No permission changes to save', 'info');
                 return;
             }
 
-            $.ajax({
-                url: '@Url.Action("GrantPermission", "UserManagement", new { id = Model.Id })',
-                type: 'POST',
-                data: JSON.stringify({ permissionName: permissionName }),
-                contentType: 'application/json',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function() {
-                    loadUserPermissions();
-                    $('#permissionSelect').val('');
-                    showToast('Permission granted successfully', 'success');
-                },
-                error: function() {
-                    showToast('Failed to grant permission', 'error');
-                }
-            });
-        }
+            // Process changes
+            let processed = 0;
+            const errors = [];
 
-        function revokePermission(permissionName) {
-            if (!confirm(`Revoke permission: ${permissionName}?`)) return;
+            changes.forEach(change => {
+                const url = change.action === 'grant'
+                    ? '@Url.Action("GrantPermission", new { id = Model.Id })'
+                    : '@Url.Action("RevokePermission", new { id = Model.Id })';
 
-            $.ajax({
-                url: '@Url.Action("RevokePermission", "UserManagement", new { id = Model.Id })',
-                type: 'POST',
-                data: JSON.stringify({ permissionName: permissionName }),
-                contentType: 'application/json',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function() {
-                    loadUserPermissions();
-                    showToast('Permission revoked successfully', 'success');
-                },
-                error: function() {
-                    showToast('Failed to revoke permission', 'error');
-                }
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: JSON.stringify({ permissionName: change.permissionName }),
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function() {
+                        processed++;
+                        if (processed === changes.length) {
+                            showToast(`Successfully updated ${changes.length} permission(s)`, 'success');
+                            loadUserPermissionsStatus(); // Reload to refresh the view
+                        }
+                    },
+                    error: function() {
+                        errors.push(change.permissionName);
+                        processed++;
+                        if (processed === changes.length) {
+                            if (errors.length > 0) {
+                                showToast(`Failed to update ${errors.length} permission(s)`, 'error');
+                            }
+                        }
+                    }
+                });
             });
         }
     </script>
 }
 
 <style>
-    .role-selection {
-        max-height: 200px;
-        overflow-y: auto;
-        border: 1px solid #dee2e6;
-        border-radius: 0.25rem;
-        padding: 0.5rem;
-    }
-
     .permission-item {
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
         transition: all 0.2s;
     }
 
         .permission-item:hover {
-            background-color: #e9ecef !important;
+            border-color: #dee2e6;
+            background-color: #f8f9fa !important;
+        }
+
+    .accordion-button:not(.collapsed) {
+        background-color: #e7f1ff;
+        color: #0c63e4;
+    }
+
+    .form-check-input:disabled {
+        opacity: 0.5;
+    }
+
+        .form-check-input:disabled ~ label {
+            opacity: 0.7;
         }
 </style>

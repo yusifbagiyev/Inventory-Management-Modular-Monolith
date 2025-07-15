@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -140,6 +141,13 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
+                    // Ensure SelectedRoles is not null (happens when no checkboxes are checked)
+                    model.SelectedRoles = model.SelectedRoles ?? new List<string>();
+
+                    // Log the state for debugging
+                    _logger.LogInformation("Updating user {UserId} with roles: {Roles}",
+                        model.Id, string.Join(", ", model.SelectedRoles));
+
                     var result = await _userManagementService.UpdateUserAsync(model);
                     if (result)
                     {
@@ -148,7 +156,7 @@ namespace InventoryManagement.Web.Controllers
                     }
                     else
                     {
-                        ModelState.AddModelError("", "Failed to update user. Please try again.");
+                        ModelState.AddModelError("", "Failed to update user. Please check the logs for details.");
                     }
                 }
                 catch (Exception ex)
@@ -158,20 +166,19 @@ namespace InventoryManagement.Web.Controllers
                 }
             }
 
-            // Reload available roles if validation fails
+            // If we got here, something failed, redisplay form
             try
             {
-                var roles = await _userManagementService.GetAllRolesAsync();
-                model.AvailableRoles = roles.Select(r => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
-                {
-                    Value = r,
-                    Text = r,
-                    Selected = model.CurrentRoles.Contains(r)
-                }).ToList();
+                // Reload the current state from the server to ensure data consistency
+                var currentUser = await _userManagementService.GetUserByIdAsync(model.Id);
+
+                // Preserve the attempted changes in the model for user feedback
+                model.CurrentRoles = currentUser.CurrentRoles;
+                model.AvailableRoles = currentUser.AvailableRoles;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reloading roles");
+                _logger.LogError(ex, "Error reloading user data");
             }
 
             return View(model);
@@ -340,6 +347,54 @@ namespace InventoryManagement.Web.Controllers
             {
                 _logger.LogError(ex, "Error toggling user status via AJAX");
                 return Json(new { success = false, message = "Error updating user status." });
+            }
+        }
+
+
+        [HttpGet]
+        public async Task<JsonResult> GetUserPermissionsStatus(int id)
+        {
+            try
+            {
+                // Get all available permissions
+                var allPermissions = await _apiService.GetAsync<List<PermissionViewModel>>("/api/auth/permissions")
+                    ?? [];
+
+                // Get user's direct permissions
+                var directPermissions = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/users/{id}/direct-permissions");
+
+                // Get user details to access their roles
+                var user = await _apiService.GetAsync<UserDto>($"/api/auth/users/{id}")
+                    ?? new UserDto { Id = id, Roles = [] };
+
+                // Get permissions from roles
+                var rolePermissions = new List<PermissionViewModel>();
+                foreach (var role in user.Roles)
+                {
+                    // You'll need to add an endpoint to get permissions by role
+                    var perms = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/roles/{role}/permissions");
+                    if (perms != null)
+                        rolePermissions.AddRange(perms);
+                }
+
+                // Mark which permissions are assigned and their source
+                var permissionStatus = allPermissions.Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    p.Description,
+                    p.Category,
+                    IsDirect = directPermissions?.Any(dp => dp.Name == p.Name) ?? false,
+                    IsFromRole = rolePermissions.Any(rp => rp.Name == p.Name),
+                    Roles = user.Roles.Where(r => rolePermissions.Any(rp => rp.Name == p.Name)).ToList()
+                }).ToList();
+
+                return Json(permissionStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user permissions status");
+                return Json(new { error = "Failed to load permissions" });
             }
         }
 

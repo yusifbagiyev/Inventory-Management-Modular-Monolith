@@ -22,11 +22,5 @@
         public const string ProductDeleteDirect = "product.delete.direct";
         public const string ProductTransfer = "product.transfer";
         public const string ProductTransferDirect = "product.transfer.direct";
-
-        // Admin Permissions
-        public const string UserManage = "user.manage";
-        public const string RoleManage = "role.manage";
-        public const string SystemConfig = "system.config";
-        public const string ApprovalManage = "approval.manage";
     }
 }
