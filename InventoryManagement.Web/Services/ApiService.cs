@@ -12,17 +12,20 @@ namespace InventoryManagement.Web.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
         private readonly IAuthService _authService;
+        private readonly ILogger<ApiService> _logger;
         public ApiService(
             HttpClient httpClient,
             IHttpContextAccessor httpContextAccessor,
             IConfiguration configuration,
-            IAuthService authService)
+            IAuthService authService,
+            ILogger<ApiService> logger)
         {
             _httpClient = httpClient;
             _httpContextAccessor = httpContextAccessor;
             _configuration = configuration;
             _authService = authService;
             _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
+            _logger = logger;
         }
         private void AddAuthorizationHeader()
         {
@@ -72,10 +75,15 @@ namespace InventoryManagement.Web.Services
                     return JsonConvert.DeserializeObject<T>(content);
                 }
 
+                // Log error response
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger?.LogError($"API request failed: {response.StatusCode} - {errorContent}");
+
                 return default;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger?.LogError(ex, $"Error calling API endpoint: {endpoint}");
                 return default;
             }
         }

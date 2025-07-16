@@ -40,6 +40,7 @@ namespace ProductService.API.Controllers
         }
 
 
+
         [HttpGet("{id}")]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<ProductDto>> GetById(int id)
@@ -51,6 +52,7 @@ namespace ProductService.API.Controllers
         }
 
 
+
         [HttpGet("search/inventory-code/{inventoryCode}")]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)
@@ -60,6 +62,7 @@ namespace ProductService.API.Controllers
                 return NotFound();
             return Ok(product);
         }
+
 
 
         [HttpPost]
@@ -79,13 +82,37 @@ namespace ProductService.API.Controllers
             //Check if user has request permission
             else if (User.HasClaim("permission", AllPermissions.ProductCreate))
             {
-                //Create approval request instead
+                // Create approval request with image data
+
+                var actionData=new Dictionary<string, object>
+                {
+                    ["inventoryCode"]=dto.InventoryCode,
+                    ["model"] = dto.Model ?? "",
+                    ["vendor"] = dto.Vendor ?? "",
+                    ["worker"] = dto.Worker ?? "",
+                    ["description"] = dto.Description ?? "",
+                    ["isWorking"] = dto.IsWorking,
+                    ["isActive"] = dto.IsActive,
+                    ["isNewItem"] = dto.IsNewItem,
+                    ["categoryId"] = dto.CategoryId,
+                    ["departmentId"] = dto.DepartmentId
+                };
+
+                //Add image data if present
+                if(dto.ImageFile != null && dto.ImageFile.Length > 0)
+                {
+                    using var ms=new MemoryStream();
+                    await dto.ImageFile.CopyToAsync(ms);
+                    actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
+                    actionData["imageFileName"] = dto.ImageFile.FileName;
+                }
+
                 var approvalRequest = new CreateApprovalRequestDto
                 {
                     RequestType = RequestType.CreateProduct,
                     EntityType = "Product",
                     EntityId = null,
-                    ActionData = new CreateProductActionData { ProductData = dto }
+                    ActionData = new CreateProductActionData { ProductData = actionData }
                 };
 
                 var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
@@ -98,6 +125,7 @@ namespace ProductService.API.Controllers
             }
             return Forbid();
         }
+
 
 
         [HttpPut("{id}")]
@@ -149,6 +177,26 @@ namespace ProductService.API.Controllers
         }
 
 
+
+        [HttpPost("approved/multipart")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ProductDto>> CreateApprovedMultipart([FromForm] CreateProductDto dto)
+        {
+            try
+            {
+                var product = await _mediator.Send(new CreateProduct.Command(dto));
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating approved product with multipart data");
+                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
+            }
+        }
+
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -189,6 +237,7 @@ namespace ProductService.API.Controllers
         }
 
 
+
         [HttpPost("approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Roles = "Admin")]
@@ -221,6 +270,8 @@ namespace ProductService.API.Controllers
             }
         }
 
+
+
         [HttpPut("{id}/approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Roles = "Admin")]
@@ -235,6 +286,7 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new UpdateProduct.Command(id, dto));
             return NoContent();
         }
+
 
 
         [HttpDelete("{id}/approved")]

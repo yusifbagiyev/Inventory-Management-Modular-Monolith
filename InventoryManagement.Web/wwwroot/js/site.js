@@ -167,3 +167,21 @@ function loadRecentNotifications() {
         }
     });
 }
+function showLoader() {
+    if (!$('.loader-overlay').length) {
+        $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
+    }
+}
+
+function hideLoader() {
+    $('.loader-overlay').remove();
+}
+// Update AJAX calls to show/hide loader
+$.ajaxSetup({
+    beforeSend: function () {
+        showLoader();
+    },
+    complete: function () {
+        hideLoader();
+    }
+});

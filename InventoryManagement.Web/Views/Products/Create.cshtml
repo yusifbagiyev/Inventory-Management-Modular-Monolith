@@ -158,6 +158,16 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+        function previewImage(input, targetId) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#' + targetId).attr('src', e.target.result).show();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         $('form').on('submit', function(e) {
             e.preventDefault();
 
@@ -171,9 +181,13 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    if (response.status === 'PendingApproval') {
+                    if (response && response.status === 'PendingApproval') {
                         // Show approval pending message
                         showToast('Your request has been submitted for approval. You will be notified once it is processed.', 'info');
+                        setTimeout(() => window.location.href = '/Products', 2000);
+                    } else if (response && response.approvalRequestId) {
+                        // Another format of approval response
+                        showToast(response.message || 'Your request has been submitted for approval.', 'info');
                         setTimeout(() => window.location.href = '/Products', 2000);
                     } else {
                         // Product was created directly
@@ -182,11 +196,29 @@
                     }
                 },
                 error: function(xhr) {
-                    if (xhr.status === 403) {
-                        showToast('You do not have permission to perform this action.', 'error');
-                    } else {
-                        showToast('An error occurred. Please try again.', 'error');
+                    var errorMessage = 'An error occurred. Please try again.';
+
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMessage = response.error;
+                            if (response.details) {
+                                errorMessage += '\n' + response.details;
+                            }
+                        } else if (response.errors) {
+                            // Handle validation errors
+                            errorMessage = Object.values(response.errors).flat().join('\n');
+                        }
+                    } catch (e) {
+                        // If response is not JSON, use status text
+                        if (xhr.status === 403) {
+                            errorMessage = 'You do not have permission to perform this action.';
+                        } else if (xhr.status === 400) {
+                            errorMessage = 'Invalid request. Please check your input.';
+                        }
                     }
+
+                    showToast(errorMessage, 'error');
                 }
             });
         });

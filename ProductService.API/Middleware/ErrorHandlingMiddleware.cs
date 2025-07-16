@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
+using FluentValidation;
+using ProductService.Application.DTOs;
 using ProductService.Domain.Exceptions;
 
 namespace ProductService.API.Middleware
@@ -31,21 +33,49 @@ namespace ProductService.API.Middleware
         private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             context.Response.ContentType = "application/json";
+            var response = new ErrorResponse();
 
-            context.Response.StatusCode = exception switch
+            switch (exception)
             {
-                NotFoundException => (int)HttpStatusCode.NotFound,
-                ArgumentException => (int)HttpStatusCode.BadRequest,
-                _ => (int)HttpStatusCode.InternalServerError
-            };
+                case ValidationException validationException:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response.Error="Validation Error";
+                    response.ValidationErrors = validationException.Errors
+                        .GroupBy(e=> e.PropertyName)
+                        .ToDictionary(g=>g.Key,g=>g.Select(e => e.ErrorMessage).ToArray());
+                    break;
 
-            var response = new
+                case NotFoundException notFoundException:
+                    context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    response.Error = notFoundException.Message;
+                    break;
+
+                case ArgumentException argumentException:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response.Error = argumentException.Message;
+                    break;
+
+                case UnauthorizedAccessException:
+                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    response.Error = "Unauthorized access";
+                    break;
+
+                default:
+                    context.Response.StatusCode=(int)HttpStatusCode.InternalServerError;
+                    response.Error = "An error occurred while processing your request";
+                    response.Details = exception.Message;
+
+                    //Log the full exception
+                    var logger=context.RequestServices.GetService<ILogger<ErrorHandlingMiddleware>>();
+                    logger?.LogError(exception, "Unhandled exception occurred");
+                    break;
+            }
+
+            var jsonResponse = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
-                context.Response.StatusCode,
-                exception.Message
-            };
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
 
-            var jsonResponse = JsonSerializer.Serialize(response);
             await context.Response.WriteAsync(jsonResponse);
         }
     }
