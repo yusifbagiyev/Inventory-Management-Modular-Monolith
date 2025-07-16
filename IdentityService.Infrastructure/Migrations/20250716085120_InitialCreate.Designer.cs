@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20250715065530_InitialCreate")]
+    [Migration("20250716085120_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -485,6 +485,28 @@ namespace IdentityService.Infrastructure.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
+                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "yusifbv24@gmail.com",
+                            EmailConfirmed = true,
+                            FirstName = "Yusif",
+                            IsActive = true,
+                            LastName = "Bagiyev",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "YUSIFBV24@GMAIL.COM",
+                            NormalizedUserName = "YUSIFBV24",
+                            PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "STATIC_SECURITY_STAMP_123",
+                            TwoFactorEnabled = false,
+                            UserName = "yusifbv24"
+                        });
                 });
 
             modelBuilder.Entity("IdentityService.Domain.Entities.UserPermission", b =>
@@ -596,6 +618,13 @@ namespace IdentityService.Infrastructure.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = 1,
+                            RoleId = 1
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>

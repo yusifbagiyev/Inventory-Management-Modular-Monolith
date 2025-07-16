@@ -89,7 +89,12 @@ namespace ProductService.API.Controllers
                 };
 
                 var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product creation request submitted for approval" });
+                return Accepted(new
+                {
+                    ApprovalRequestId = result.Id,
+                    Message = "Product creation request has been submitted for approval",
+                    Status = "PendingApproval"
+                });
             }
             return Forbid();
         }
@@ -109,12 +114,32 @@ namespace ProductService.API.Controllers
             }
             else if (User.HasClaim("permission", AllPermissions.ProductUpdate))
             {
+                // Get the existing product to include inventory code
+                var existingProduct=await _mediator.Send(new GetProductByIdQuery(id));
+                if (existingProduct == null)
+                    return NotFound();
+
+                //Create a comparison of changes
+                var changes=new Dictionary<string, object>();
+                if (dto.Model != existingProduct.Model) changes["Model"] = new { Old = existingProduct.Model, New = dto.Model };
+                if (dto.Vendor != existingProduct.Vendor) changes["Vendor"] = new { Old = existingProduct.Vendor, New = dto.Vendor };
+                if (dto.Worker != existingProduct.Worker) changes["Worker"] = new { Old = existingProduct.Worker, New = dto.Worker };
+                if (dto.Description != existingProduct.Description) changes["Description"] = new { Old = existingProduct.Description, New = dto.Description };
+                if (dto.CategoryId != existingProduct.CategoryId) changes["CategoryId"] = new { Old = existingProduct.CategoryId, New = dto.CategoryId };
+                if (dto.DepartmentId != existingProduct.DepartmentId) changes["DepartmentId"] = new { Old = existingProduct.DepartmentId, New = dto.DepartmentId };
+
                 var approvalRequest = new CreateApprovalRequestDto
                 {
                     RequestType = RequestType.UpdateProduct,
                     EntityType = "Product",
                     EntityId = id,
-                    ActionData = new { ProductId = id, UpdateData = dto }
+                    ActionData = new
+                    {
+                        ProductId = id,
+                        existingProduct.InventoryCode,
+                        UpdateData=dto,
+                        Changes=changes
+                    }
                 };
 
                 var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
@@ -137,12 +162,24 @@ namespace ProductService.API.Controllers
             }
             else if (User.HasClaim("permission", AllPermissions.ProductDelete))
             {
+                // Get product info for the approval request
+                var product = await _mediator.Send(new GetProductByIdQuery(id));
+                if (product == null)
+                    return NotFound();
+
                 var approvalRequest = new CreateApprovalRequestDto
                 {
                     RequestType = RequestType.DeleteProduct,
                     EntityType = "Product",
                     EntityId = id,
-                    ActionData = new { ProductId = id }
+                    ActionData = new
+                    {
+                        ProductId = id,
+                        product.InventoryCode,
+                        product.Model,
+                        product.Vendor,
+                        product.DepartmentName
+                    }
                 };
 
                 var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);

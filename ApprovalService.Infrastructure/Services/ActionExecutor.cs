@@ -37,7 +37,6 @@ namespace ApprovalService.Infrastructure.Services
                     RequestType.DeleteRoute => await ExecuteDeleteRoute(actionData, cancellationToken),
                     _ => false
                 };
-
             }
             catch
             {
@@ -65,7 +64,6 @@ namespace ApprovalService.Infrastructure.Services
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", tokenHandler.WriteToken(token));
         }
-
 
         private async Task<bool> ExecuteCreateProduct(string actionData, CancellationToken cancellationToken)
         {
@@ -128,29 +126,47 @@ namespace ApprovalService.Infrastructure.Services
 
         private async Task<bool> ExecuteUpdateProduct(string actionData, CancellationToken cancellationToken)
         {
-            var data = JsonSerializer.Deserialize<UpdateProductActionData>(actionData);
-            if (data != null)
+            try
             {
-                var response = await _httpClient.PutAsync(
-                $"{_configuration["Services:ProductService"]}/api/products/{data.ProductId}/approved",
-                new StringContent(JsonSerializer.Serialize(data.UpdateData), Encoding.UTF8, "application/json"),
-                cancellationToken);
+                var jsonDoc = JsonDocument.Parse(actionData);
+                var root = jsonDoc.RootElement;
+
+                //Extract ProductId and InventoryCode
+                var productId = root.GetProperty("ProductId").GetInt32();
+                
+                var content=new StringContent(actionData, Encoding.UTF8, "application/json");
+
+                var response=await _httpClient.PutAsync(
+                    $"{_configuration["Services:ProductService"]}/api/products/{productId}/approved",
+                    new StringContent(actionData, Encoding.UTF8, "application/json"), cancellationToken);
+
                 return response.IsSuccessStatusCode;
             }
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         private async Task<bool> ExecuteDeleteProduct(string actionData, CancellationToken cancellationToken)
         {
-            var data = JsonSerializer.Deserialize<DeleteProductActionData>(actionData);
-            if (data != null)
+            try
             {
-                var response = await _httpClient.DeleteAsync(
-                $"{_configuration["Services:ProductService"]}/api/products/{data.ProductId}/approved",
-                cancellationToken);
+                var jsonDoc=JsonDocument.Parse(actionData);
+                var root=jsonDoc.RootElement;
+
+                var productId=root.GetProperty("ProductId").GetInt32();
+
+                var response=await _httpClient.DeleteAsync(
+                    $"{_configuration["Services:ProductService"]}/api/products/{productId}/approved",
+                    cancellationToken);
+
                 return response.IsSuccessStatusCode;
             }
-            return false;
+            catch
+            {
+                return false;
+            }
         }
 
         private async Task<bool> ExecuteTransferProduct(string actionData, CancellationToken cancellationToken)
@@ -174,6 +190,7 @@ namespace ApprovalService.Infrastructure.Services
             }
             return false;
         }
+
         private string GetStringProperty(JsonElement element, string camelCase, string pascalCase)
         {
             if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.String)
@@ -182,7 +199,6 @@ namespace ApprovalService.Infrastructure.Services
                 return propPascal.GetString() ?? "";
             return "";
         }
-
         private bool GetBoolProperty(JsonElement element, string camelCase, string pascalCase, bool defaultValue)
         {
             if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)

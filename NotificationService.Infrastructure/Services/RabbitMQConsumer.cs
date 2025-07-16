@@ -288,7 +288,8 @@ namespace NotificationService.Infrastructure.Services
                         JsonSerializer.Serialize(new
                         {
                             productId = productEvent.ProductId,
-                            inventoryCode = productEvent.InventoryCode
+                            inventoryCode = productEvent.InventoryCode,
+                            departmentName=productEvent.DepartmentName
                         })
                     );
 

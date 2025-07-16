@@ -157,4 +157,38 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var formData = new FormData(form[0]);
+
+            $.ajax({
+                url: form.attr('action'),
+                type: form.attr('method'),
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.status === 'PendingApproval') {
+                        // Show approval pending message
+                        showToast('Your request has been submitted for approval. You will be notified once it is processed.', 'info');
+                        setTimeout(() => window.location.href = '/Products', 2000);
+                    } else {
+                        // Product was created directly
+                        showToast('Product created successfully!', 'success');
+                        setTimeout(() => window.location.href = '/Products', 1500);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 403) {
+                        showToast('You do not have permission to perform this action.', 'error');
+                    } else {
+                        showToast('An error occurred. Please try again.', 'error');
+                    }
+                }
+            });
+        });
+    </script>
 }

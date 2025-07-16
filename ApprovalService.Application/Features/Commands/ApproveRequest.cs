@@ -1,6 +1,5 @@
 ﻿using ApprovalService.Application.Events;
 using ApprovalService.Application.Interfaces;
-using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
 using MediatR;
@@ -36,7 +35,11 @@ namespace ApprovalService.Application.Features.Commands
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
                     ?? throw new InvalidOperationException($"Request {request.RequestId} not found");
 
+                if (approvalRequest.Status != ApprovalStatus.Pending)
+                    throw new InvalidOperationException($"Request is already {approvalRequest.Status}");
+
                 approvalRequest.Approve(request.UserId,request.UserName);
+                await _repository.UpdateAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 //Execute the action

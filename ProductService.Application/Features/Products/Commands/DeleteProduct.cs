@@ -40,8 +40,8 @@ namespace ProductService.Application.Features.Products.Commands
                     Model = product.Model,
                     Vendor = product.Vendor,
                     Worker = product.Worker,
-                    CategoryName = product.Category?.Name ?? "No Name",
-                    DepartmentId = product.DepartmentId,
+                    CategoryName = product.Category?.Name ?? "Unknown",
+                    DepartmentName=product.Department?.Name?? "Unknown",
                     IsWorking= product.IsWorking,
                     DeletedAt = DateTime.UtcNow
                 };
