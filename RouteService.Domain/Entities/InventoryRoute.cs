@@ -97,7 +97,7 @@ namespace RouteService.Domain.Entities
                 FromWorker = fromWorker,
                 ToWorker = "System",
                 Notes = reason,
-                IsCompleted = false,
+                IsCompleted = true,
                 CreatedAt = DateTime.UtcNow
             };
         }

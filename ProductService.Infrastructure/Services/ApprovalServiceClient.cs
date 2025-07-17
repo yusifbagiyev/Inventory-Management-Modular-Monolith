@@ -52,33 +52,21 @@ namespace ProductService.Infrastructure.Services
 
         private async Task EnrichProductDataWithNames(CreateProductActionData actionData)
         {
-            if (actionData.ProductData is CreateProductDto productDto)
+            if (actionData.ProductData is Dictionary<string, object> productData)
             {
                 try
                 {
+                    // Extract IDs from the dictionary
+                    var categoryId = (int)productData["categoryId"];
+                    var departmentId = (int)productData["departmentId"];
+
                     // Get category and department names
-                    var categoryName = await GetCategoryNameAsync(productDto.CategoryId);
-                    var departmentName = await GetDepartmentNameAsync(productDto.DepartmentId);
+                    var categoryName = await GetCategoryNameAsync(categoryId);
+                    var departmentName = await GetDepartmentNameAsync(departmentId);
 
-                    // Create enriched product data
-                    var enrichedData = new
-                    {
-                        productDto.InventoryCode,
-                        productDto.Model,
-                        productDto.Vendor,
-                        productDto.Worker,
-                        productDto.Description,
-                        productDto.IsWorking,
-                        productDto.IsActive,
-                        productDto.IsNewItem,
-                        productDto.CategoryId,
-                        productDto.DepartmentId,
-                        CategoryName = categoryName,
-                        DepartmentName = departmentName
-                    };
-
-                    // Replace the ProductData with enriched data
-                    actionData.ProductData = enrichedData;
+                    // Add the names to the existing dictionary
+                    productData["CategoryName"] = categoryName;
+                    productData["DepartmentName"] = departmentName;
                 }
                 catch (Exception ex)
                 {
