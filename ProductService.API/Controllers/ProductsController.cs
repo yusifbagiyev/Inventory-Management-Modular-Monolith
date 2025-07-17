@@ -79,11 +79,8 @@ namespace ProductService.API.Controllers
                 return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
             }
 
-            //Check if user has request permission
             else if (User.HasClaim("permission", AllPermissions.ProductCreate))
             {
-                // Create approval request with image data
-
                 var actionData=new Dictionary<string, object>
                 {
                     ["inventoryCode"]=dto.InventoryCode,
@@ -143,12 +140,32 @@ namespace ProductService.API.Controllers
             else if (User.HasClaim("permission", AllPermissions.ProductUpdate))
             {
                 // Get the existing product to include inventory code
-                var existingProduct=await _mediator.Send(new GetProductByIdQuery(id));
+                var existingProduct = await _mediator.Send(new GetProductByIdQuery(id));
                 if (existingProduct == null)
                     return NotFound();
 
-                //Create a comparison of changes
-                var changes=new Dictionary<string, object>();
+                // Create update data object
+                var updateData = new Dictionary<string, object>
+                {
+                    ["model"] = dto.Model ?? "",
+                    ["vendor"] = dto.Vendor ?? "",
+                    ["worker"] = dto.Worker ?? "",
+                    ["description"] = dto.Description ?? "",
+                    ["categoryId"] = dto.CategoryId,
+                    ["departmentId"] = dto.DepartmentId
+                };
+
+                // Add image data if present
+                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+                {
+                    using var ms = new MemoryStream();
+                    await dto.ImageFile.CopyToAsync(ms);
+                    updateData["imageData"] = Convert.ToBase64String(ms.ToArray());
+                    updateData["imageFileName"] = dto.ImageFile.FileName;
+                }
+
+                // Create a comparison of changes
+                var changes = new Dictionary<string, object>();
                 if (dto.Model != existingProduct.Model) changes["Model"] = new { Old = existingProduct.Model, New = dto.Model };
                 if (dto.Vendor != existingProduct.Vendor) changes["Vendor"] = new { Old = existingProduct.Vendor, New = dto.Vendor };
                 if (dto.Worker != existingProduct.Worker) changes["Worker"] = new { Old = existingProduct.Worker, New = dto.Worker };
@@ -165,8 +182,8 @@ namespace ProductService.API.Controllers
                     {
                         ProductId = id,
                         existingProduct.InventoryCode,
-                        UpdateData=dto,
-                        Changes=changes
+                        UpdateData = updateData,
+                        Changes = changes
                     }
                 };
 
@@ -192,6 +209,25 @@ namespace ProductService.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating approved product with multipart data");
+                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
+            }
+        }
+
+
+        [HttpPut("{id}/approved")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateApprovedMultipart(int id, [FromForm] UpdateProductDto dto)
+        {
+            try
+            {
+                await _mediator.Send(new UpdateProduct.Command(id, dto));
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating approved product with multipart data");
                 return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
             }
         }
