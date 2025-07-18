@@ -5,6 +5,7 @@
         // Route Permissions
         public const string RouteView = "route.view";
         public const string RouteCreate = "route.create";
+        public const string RouteCreateDirect = "route.create.direct";
         public const string RouteUpdate = "route.update";
         public const string RouteUpdateDirect = "route.update.direct";
         public const string RouteDelete = "route.delete";

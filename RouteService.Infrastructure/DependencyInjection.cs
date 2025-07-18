@@ -30,6 +30,7 @@ namespace RouteService.Infrastructure
             services.AddSingleton<RabbitMQConsumer>();
             services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
+            services.AddHttpClient<IApprovalService, ApprovalServiceClient>();
             services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
             services.AddScoped<IImageService, ImageService>();
 

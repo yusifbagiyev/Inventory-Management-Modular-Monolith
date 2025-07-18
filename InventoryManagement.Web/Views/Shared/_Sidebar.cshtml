@@ -39,6 +39,13 @@
                 <i class="fas fa-users me-2"></i>User Management
             </a>
         }
+        else
+        {
+            <a asp-controller="MyRequests" asp-action="Index"
+               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyRequests" ? "active" : "")">
+                <i class="fas fa-clock me-2"></i>My Requests
+            </a>
+        } 
 
         <a asp-controller="Notifications" asp-action="Index"
            class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notifications" ? "active" : "")">

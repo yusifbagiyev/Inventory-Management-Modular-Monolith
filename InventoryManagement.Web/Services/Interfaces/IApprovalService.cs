@@ -10,5 +10,7 @@ namespace InventoryManagement.Web.Services.Interfaces
         Task RejectRequestAsync(int id, string reason);
         Task<ApprovalRequestDto> CreateApprovalRequestAsync(CreateApprovalRequestDto dto, int userId, string userName);
         Task<ApprovalStatisticsDto> GetStatisticsAsync();
+        Task<List<ApprovalRequestDto>> GetMyRequestsAsync();
+        Task CancelRequestAsync(int id);
     }
 }

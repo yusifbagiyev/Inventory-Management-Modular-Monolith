@@ -91,5 +91,26 @@ namespace ApprovalService.API.Controllers
             var result = await _mediator.Send(new GetAllRequests.Query());
             return Ok(result);
         }
+
+
+        [HttpDelete("{id}/cancel")]
+        public async Task<IActionResult> CancelRequestIt(int id)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+            var request = await _mediator.Send(new GetRequestById.Query(id));
+            if (request == null)
+                return NotFound();
+
+            // Only allow cancellation by the requester and only if pending
+            if (request.RequestedById != userId)
+                return Forbid("You can only cancel your own requests");
+
+            if (request.Status != "Pending")
+                return BadRequest("Only pending requests can be cancelled");
+
+            await _mediator.Send(new CancelRequest.Command(id));
+            return NoContent();
+        }
     }
 }

@@ -43,6 +43,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Transfer(TransferViewModel model)
@@ -55,7 +56,17 @@ namespace InventoryManagement.Web.Controllers
 
                     if (result != null)
                     {
-                        TempData["Success"] = "Product transferred successfully!";
+                        var resultType=result.GetType();
+                        var statusProperty = resultType.GetProperty("Status");
+
+                        if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
+                        {
+                            TempData["Info"] = "Your transfer request has been submitted for approval. You will be notified once it's processed.";
+                        }
+                        else
+                        {
+                            TempData["Success"] = "Product transferred successfully!";
+                        }
                         return RedirectToAction(nameof(Index));
                     }
 
@@ -72,6 +83,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         public async Task<IActionResult> Timeline(int productId)
         {
             var routes = await _apiService.GetAsync<List<RouteViewModel>>($"api/inventoryroutes/product/{productId}");
@@ -79,6 +91,7 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.ProductId = productId;
             return View(routes ?? []);
         }
+
 
         public async Task<IActionResult> Details(int id)
         {
@@ -89,6 +102,7 @@ namespace InventoryManagement.Web.Controllers
 
             return View(route);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -116,6 +130,7 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -142,6 +157,7 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BatchDelete([FromBody] BatchDeleteDto dto)
@@ -158,6 +174,7 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new { success = false, message = "An error occurred" });
             }
         }
+
 
         private async Task LoadTransferDropdowns(TransferViewModel model)
         {

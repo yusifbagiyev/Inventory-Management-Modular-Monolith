@@ -1,0 +1,174 @@
+﻿@model MyRequestsViewModel
+@{
+    ViewData["Title"] = "My Approval Requests";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">My Approval Requests</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">My Requests</li>
+    </ol>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <i class="fas fa-list me-1"></i>
+            Your Approval Requests
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="myRequestsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Entity</th>
+                            <th>Status</th>
+                            <th>Processed By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in Model.Requests)
+                        {
+                            <tr>
+                                <td>@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        @GetRequestTypeDisplay(request.RequestType)
+                                    </span>
+                                </td>
+                                <td>
+                                    @request.EntityType
+                                    @if (request.EntityId.HasValue)
+                                    {
+                                        <span class="badge bg-secondary">#@request.EntityId</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (request.Status)
+                                    {
+                                        case "Pending":
+                                            <span class="badge bg-warning">Pending</span>
+                                            break;
+                                        case "Approved":
+                                        case "Executed":
+                                            <span class="badge bg-success">Approved</span>
+                                            break;
+                                        case "Rejected":
+                                            <span class="badge bg-danger">Rejected</span>
+                                            break;
+                                        case "Failed":
+                                            <span class="badge bg-danger">Failed</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@request.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(request.ApprovedByName))
+                                    {
+                                        @request.ApprovedByName
+                                        @if (request.ProcessedAt.HasValue)
+                                        {
+                                            <br />
+                                            <small class="text-muted">@request.ProcessedAt.Value.ToString("MM/dd HH:mm")</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="viewDetails(@request.Id)">
+                                        <i class="fas fa-eye"></i> Details
+                                    </button>
+                                    @if (request.Status == "Pending")
+                                    {
+                                        <button class="btn btn-sm btn-danger" onclick="cancelRequest(@request.Id)">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#myRequestsTable').DataTable({
+                order: [[0, 'desc']],
+                pageLength: 25
+            });
+        });
+
+        function viewDetails(requestId) {
+            $('#detailsContent').html('<div class="text-center"><div class="spinner-border" role="status"></div></div>');
+            $('#detailsModal').modal('show');
+
+            $.get(`/MyRequests/Details/${requestId}`, function(data) {
+                $('#detailsContent').html(data);
+            }).fail(function() {
+                $('#detailsContent').html('<div class="alert alert-danger">Failed to load details</div>');
+            });
+        }
+
+        function cancelRequest(requestId) {
+            if (confirm('Are you sure you want to cancel this request?')) {
+                $.post(`/MyRequests/Cancel/${requestId}`, function(response) {
+                    if (response.success) {
+                        showToast('Request cancelled successfully', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('Failed to cancel request: ' + response.message, 'error');
+                    }
+                }).fail(function() {
+                    showToast('Failed to cancel request', 'error');
+                });
+            }
+        }
+    </script>
+}
+
+@functions {
+    string GetRequestTypeDisplay(string requestType)
+    {
+        return requestType switch
+        {
+            "product.create" => "Create Product",
+            "product.update" => "Update Product",
+            "product.delete" => "Delete Product",
+            "product.transfer" => "Transfer Product",
+            "route.update" => "Update Route",
+            "route.delete" => "Delete Route",
+            _ => requestType
+        };
+    }
+}

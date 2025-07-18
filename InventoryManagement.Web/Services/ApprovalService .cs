@@ -115,5 +115,23 @@ namespace InventoryManagement.Web.Services
             }
             return [];
         }
+
+
+        public async Task<List<ApprovalRequestDto>> GetMyRequestsAsync()
+        {
+            var response = await _httpClient.GetAsync("/api/approvalrequests/my-requests");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<List<ApprovalRequestDto>>(content) ?? [];
+            }
+            return [];
+        }
+
+        public async Task CancelRequestAsync(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"/api/approvalrequests/{id}/cancel");
+            response.EnsureSuccessStatusCode();
+        }
     }
 }

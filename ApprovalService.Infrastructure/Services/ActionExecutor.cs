@@ -37,6 +37,7 @@ namespace ApprovalService.Infrastructure.Services
                     RequestType.UpdateProduct => await ExecuteUpdateProduct(actionData, cancellationToken),
                     RequestType.DeleteProduct => await ExecuteDeleteProduct(actionData, cancellationToken),
                     RequestType.TransferProduct => await ExecuteTransferProduct(actionData, cancellationToken),
+                    RequestType.UpdateRoute => await ExecuteUpdateRoute(actionData, cancellationToken),
                     RequestType.DeleteRoute => await ExecuteDeleteRoute(actionData, cancellationToken),
                     _ => false
                 };
@@ -338,6 +339,32 @@ namespace ApprovalService.Infrastructure.Services
             return response.IsSuccessStatusCode;
         }
 
+        private async Task<bool> ExecuteUpdateRoute(string actionData, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(actionData);
+                var root = jsonDoc.RootElement;
+
+                var routeId=root.GetProperty("RouteId").GetInt32();
+                var updateData=root.GetProperty("UpdateData");
+
+                var json= JsonSerializer.Serialize(updateData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PutAsync(
+                    $"{_configuration["Services:RouteService"]}/api/inventoryroutes/{routeId}/approved",
+                    content,
+                    cancellationToken);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing update route");
+                throw;
+            }
+        }
+
         private async Task<bool> ExecuteDeleteRoute(string actionData, CancellationToken cancellationToken)
         {
             var data = JsonSerializer.Deserialize<DeleteRouteActionData>(actionData);
@@ -359,6 +386,7 @@ namespace ApprovalService.Infrastructure.Services
                 return propPascal.GetString() ?? "";
             return "";
         }
+
         private bool GetBoolProperty(JsonElement element, string camelCase, string pascalCase, bool defaultValue)
         {
             if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)
@@ -367,6 +395,7 @@ namespace ApprovalService.Infrastructure.Services
                 return propPascal.GetBoolean();
             return defaultValue;
         }
+
         private int GetIntProperty(JsonElement element, string camelCase, string pascalCase)
         {
             if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.Number)

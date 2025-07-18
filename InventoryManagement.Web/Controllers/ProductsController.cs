@@ -22,6 +22,8 @@ namespace InventoryManagement.Web.Controllers
             return View(products ?? []);
         }
 
+
+
         public async Task<IActionResult> Details(int id)
         {
             var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
@@ -31,12 +33,16 @@ namespace InventoryManagement.Web.Controllers
             return View(product);
         }
 
+
+
         public async Task<IActionResult> Create()
         {
             var model = new ProductViewModel();
             await LoadDropdowns(model);
             return View(model);
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -65,7 +71,19 @@ namespace InventoryManagement.Web.Controllers
 
                 if (result != null)
                 {
-                    TempData["Success"] = "Product created successfully.";
+                    //Check if it is a dynamic object with Status property
+                    var resultType=result.GetType();
+                    var statusProperty = resultType.GetProperty("Status");
+
+                    if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
+                    {
+                        TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
+                    }
+                    else
+                    {
+                        TempData["Success"] = "Product created successfully.";
+                    }
+
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -74,6 +92,8 @@ namespace InventoryManagement.Web.Controllers
             await LoadDropdowns(productModel);
             return View(productModel);
         }
+
+
 
         public async Task<IActionResult> Edit(int id)
         {
@@ -84,6 +104,8 @@ namespace InventoryManagement.Web.Controllers
             await LoadDropdowns(product);
             return View(product);
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -99,7 +121,18 @@ namespace InventoryManagement.Web.Controllers
 
                     if (result)
                     {
-                        TempData["Success"] = "Product updated successfully.";
+                        var resultType = result.GetType();
+                        var statusProperty = resultType.GetProperty("Status");
+
+                        if(statusProperty!=null&& statusProperty.GetValue(result)?.ToString() == "PendingApproval")
+                        {
+                            TempData["Info"] = "Your product update request has been submitted for approval. You will be notified once it's processed.";
+                        }
+                        else
+                        {
+                            TempData["Success"] = "Product updated successfully.";
+                        }
+
                         return RedirectToAction(nameof(Index));
                     }
 
@@ -115,6 +148,8 @@ namespace InventoryManagement.Web.Controllers
             return View(productModel);
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -122,7 +157,12 @@ namespace InventoryManagement.Web.Controllers
             var result = await _apiService.DeleteAsync($"api/products/{id}");
             if (result)
             {
-                TempData["Success"] = "Product deleted successfully.";
+                var resultType = result.GetType();
+                var statusProperty = resultType.GetProperty("Status");
+                if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
+                {
+                    TempData["Info"] = "Your product deletion request has been submitted for approval. You will be notified once it's processed.";
+                }
             }
             else
             {
@@ -130,6 +170,7 @@ namespace InventoryManagement.Web.Controllers
             }
             return RedirectToAction(nameof(Index));
         }
+
 
         private async Task LoadDropdowns(ProductViewModel model)
         {

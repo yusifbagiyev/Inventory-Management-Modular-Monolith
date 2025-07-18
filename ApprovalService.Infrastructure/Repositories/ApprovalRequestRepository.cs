@@ -76,5 +76,11 @@ namespace ApprovalService.Infrastructure.Repositories
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
+
+        public Task DeleteAsync(ApprovalRequest request, CancellationToken cancellationToken = default)
+        {
+            _context.ApprovalRequests.Remove(request);
+            return Task.CompletedTask;
+        }
     }
 }
