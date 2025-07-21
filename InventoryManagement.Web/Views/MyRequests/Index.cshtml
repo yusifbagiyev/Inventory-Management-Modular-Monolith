@@ -10,6 +10,27 @@
         <li class="breadcrumb-item active">My Requests</li>
     </ol>
 
+    <!-- Add filter buttons -->
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
+                All <span class="badge bg-secondary">@Model.Requests.Count</span>
+            </button>
+            <button type="button" class="btn btn-outline-warning filter-btn" data-filter="pending">
+                Pending <span class="badge bg-warning">@Model.Requests.Count(r => r.Status == "Pending")</span>
+            </button>
+            <button type="button" class="btn btn-outline-success filter-btn" data-filter="approved">
+                Approved <span class="badge bg-success">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
+            </button>
+            <button type="button" class="btn btn-outline-danger filter-btn" data-filter="rejected">
+                Rejected <span class="badge bg-danger">@Model.Requests.Count(r => r.Status == "Rejected")</span>
+            </button>
+            <button type="button" class="btn btn-outline-secondary filter-btn" data-filter="failed">
+                Failed <span class="badge bg-secondary">@Model.Requests.Count(r => r.Status == "Failed")</span>
+            </button>
+        </div>
+    </div>
+
     <div class="card mb-4 shadow">
         <div class="card-header">
             <i class="fas fa-list me-1"></i>
@@ -31,7 +52,7 @@
                     <tbody>
                         @foreach (var request in Model.Requests)
                         {
-                            <tr>
+                            <tr data-status="@GetStatusFilter(request.Status)">
                                 <td>@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
                                 <td>
                                     <span class="badge bg-info">
@@ -57,9 +78,21 @@
                                             break;
                                         case "Rejected":
                                             <span class="badge bg-danger">Rejected</span>
+                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                            {
+                                                <br />
+                                
+                                                <small class="text-muted">@request.RejectionReason</small>
+                                            }
                                             break;
                                         case "Failed":
                                             <span class="badge bg-danger">Failed</span>
+                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                            {
+                                                <br />
+                                
+                                                <small class="text-muted">Reason: @request.RejectionReason</small>
+                                            }
                                             break;
                                         default:
                                             <span class="badge bg-secondary">@request.Status</span>
@@ -101,31 +134,30 @@
     </div>
 </div>
 
-<!-- Details Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Request Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
     <script>
         $(document).ready(function() {
             $('#myRequestsTable').DataTable({
                 order: [[0, 'desc']],
                 pageLength: 25
+            });
+
+            // Filter functionality
+            $('.filter-btn').click(function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+
+                var filter = $(this).data('filter');
+
+                if (filter === 'all') {
+                    $('tr[data-status]').show();
+                } else {
+                    $('tr[data-status]').hide();
+                    $(`tr[data-status="${filter}"]`).show();
+                }
+
+                // Refresh DataTable
+                $('#myRequestsTable').DataTable().draw();
             });
         });
 
@@ -158,6 +190,19 @@
 }
 
 @functions {
+    string GetStatusFilter(string status)
+    {
+        return status switch
+        {
+            "Pending" => "pending",
+            "Approved" => "approved",
+            "Executed" => "approved",
+            "Rejected" => "rejected",
+            "Failed" => "failed",
+            _ => "all"
+        };
+    }
+
     string GetRequestTypeDisplay(string requestType)
     {
         return requestType switch
@@ -172,3 +217,22 @@
         };
     }
 }
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

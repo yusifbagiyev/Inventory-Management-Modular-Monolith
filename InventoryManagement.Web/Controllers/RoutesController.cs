@@ -3,7 +3,6 @@ using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Controllers
@@ -52,11 +51,44 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
+                    // Get product details first to include in approval request
+                    var product = await _apiService.GetAsync<ProductDto>($"api/products/{model.ProductId}");
+                    var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+
+                    var fromDepartment = departments?.FirstOrDefault(d => d.Id == product?.DepartmentId);
+                    var toDepartment = departments?.FirstOrDefault(d => d.Id == model.ToDepartmentId);
+
+                    // Create a form collection with additional data
+                    var formCollection = HttpContext.Request.Form;
+                    var additionalData = new Dictionary<string, string>
+                    {
+                        ["inventoryCode"] = product?.InventoryCode.ToString() ?? "",
+                        ["fromDepartmentName"] = fromDepartment?.Name ?? "",
+                        ["fromDepartmentId"] = product?.DepartmentId.ToString() ?? "",
+                        ["toDepartmentName"] = toDepartment?.Name ?? "",
+                        ["productModel"] = product?.Model ?? "",
+                        ["productVendor"] = product?.Vendor ?? ""
+                    };
+
+                    // Add additional data to form
+                    var modifiedForm = new FormCollection(
+                        formCollection.ToDictionary(x => x.Key, x => x.Value),
+                        formCollection.Files
+                    );
+
+                    foreach (var item in additionalData)
+                    {
+                        modifiedForm = new FormCollection(
+                            modifiedForm.Union(new[] { new KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues>(item.Key, item.Value) }).ToDictionary(x => x.Key, x => x.Value),
+                            modifiedForm.Files
+                        );
+                    }
+
+                    var result = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", modifiedForm);
 
                     if (result != null)
                     {
-                        var resultType=result.GetType();
+                        var resultType = result.GetType();
                         var statusProperty = resultType.GetProperty("Status");
 
                         if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")

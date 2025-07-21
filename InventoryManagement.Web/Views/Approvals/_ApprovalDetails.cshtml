@@ -144,17 +144,38 @@
                     );
 
                 case "product.transfer":
-                    var toDept = data.ToDepartmentName ?? data.toDepartmentName;
-                    if (toDept == null)
-                    {
-                        toDept = $"ID: {data.ToDepartmentId ?? data.toDepartmentId}";
-                    }
-                    return string.Format(
+                    var productId = data.productId ?? data.ProductId;
+                    var inventorycode = data.inventoryCode ?? data.InventoryCode ?? "N/A";
+                    var fromDept = data.fromDepartmentName ?? data.FromDepartmentName ?? "N/A";
+                    var toDept = data.toDepartmentName ?? data.ToDepartmentName ?? $"Department #{data.toDepartmentId ?? data.ToDepartmentId}";
+                    var toWorker = data.toWorker ?? data.ToWorker ?? "Not specified";
+                    var notes = data.notes ?? data.Notes ?? "";
+
+                    var transferHtml = string.Format(
                         "<strong>Product ID:</strong> {0}<br/>" +
-                        "<strong>To Department:</strong> {1}",
-                        data.ProductId ?? data.productId,
-                        toDept
+                        "<strong>Inventory Code:</strong> {1}<br/>" +
+                        "<strong>From Department:</strong> {2}<br/>" +
+                        "<strong>To Department:</strong> {3}<br/>" +
+                        "<strong>To Worker:</strong> {4}",
+                        productId,
+                        inventorycode,
+                        fromDept,
+                        toDept, 
+                        toWorker
                     );
+
+                    if (!string.IsNullOrEmpty(notes))
+                    {
+                        transferHtml += $"<br/><strong>Notes:</strong> {notes}";
+                    }
+
+                    // Check for image
+                    if (data.image != null || data.imageData != null)
+                    {
+                        transferHtml += "<br/><strong>Image:</strong> Transfer image attached";
+                    }
+
+                    return transferHtml;
 
                 default:
                     return string.Format(

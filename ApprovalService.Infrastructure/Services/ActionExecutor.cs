@@ -332,11 +332,41 @@ namespace ApprovalService.Infrastructure.Services
 
         private async Task<bool> ExecuteTransferProduct(string actionData, CancellationToken cancellationToken)
         {
-            var response = await _httpClient.PostAsync(
-                $"{_configuration["Services:RouteService"]}/api/inventoryroutes/transfer/approved",
-                new StringContent(actionData, Encoding.UTF8, "application/json"),
-                cancellationToken);
-            return response.IsSuccessStatusCode;
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(actionData);
+                var root = jsonDoc.RootElement;
+
+                // Extract the data
+                var transferDto = new
+                {
+                    productId = root.GetProperty("productId").GetInt32(),
+                    toDepartmentId = root.GetProperty("toDepartmentId").GetInt32(),
+                    toWorker = root.TryGetProperty("toWorker", out var worker) ? worker.GetString() : null,
+                    notes = root.TryGetProperty("notes", out var notes) ? notes.GetString() : null
+                };
+
+                var json = JsonSerializer.Serialize(transferDto);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync(
+                    $"{_configuration["Services:RouteService"]}/api/inventoryroutes/transfer/approved",
+                    content,
+                    cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError($"Transfer failed: {response.StatusCode} - {responseContent}");
+                }
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing transfer product");
+                return false;
+            }
         }
 
         private async Task<bool> ExecuteUpdateRoute(string actionData, CancellationToken cancellationToken)

@@ -1,5 +1,4 @@
-﻿using InventoryManagement.Web.Models.DTOs;
-using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +19,7 @@ namespace InventoryManagement.Web.Controllers
             _logger = logger;
         }
 
+
         public async Task<IActionResult> Index()
         {
             try
@@ -38,6 +38,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         [HttpPost]
         public async Task<IActionResult> Cancel(int id)
         {
@@ -54,6 +55,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         public async Task<IActionResult> Details(int id)
         {
             var request = await _approvalService.GetRequestDetailsAsync(id);
@@ -61,7 +63,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 return NotFound();
             }
-            return PartialView("_RequestDetails", request);
+            return PartialView("~/Views/Approvals/_ApprovalDetails.cshtml", request);
         }
     }
 }
