@@ -1,9 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using ApprovalService.Shared.DTOs;
-using ApprovalService.Shared.Enum;
 using IdentityService.Domain.Constants;
-using IdentityService.Shared.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +8,9 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
+using SharedServices.Authorization;
+using SharedServices.DTOs;
+using SharedServices.Enum;
 
 namespace ProductService.API.Controllers
 {

@@ -23,7 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IdentityService.Domain\IdentityService.Domain.csproj" />
-    <ProjectReference Include="..\IdentityService.Shared\IdentityService.Shared.csproj" />
     <ProjectReference Include="..\RouteService.Application\RouteService.Application.csproj" />
     <ProjectReference Include="..\RouteService.Infrastructure\RouteService.Infrastructure.csproj" />
   </ItemGroup>

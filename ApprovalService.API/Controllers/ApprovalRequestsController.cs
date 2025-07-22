@@ -2,10 +2,10 @@
 using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Features.Commands;
 using ApprovalService.Application.Features.Queries;
-using ApprovalService.Shared.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SharedServices.DTOs;
 
 namespace ApprovalService.API.Controllers
 {

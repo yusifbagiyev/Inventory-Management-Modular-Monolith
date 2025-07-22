@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -51,6 +50,7 @@ namespace InventoryManagement.Web.Extensions
         {
             return user.Claims.Any(c => c.Type == "permission" && c.Value == permission);
         }
+
         public static string ToTitleCase(this string str)
         {
             if (string.IsNullOrEmpty(str))

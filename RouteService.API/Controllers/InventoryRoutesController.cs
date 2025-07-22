@@ -1,9 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using ApprovalService.Shared.DTOs;
-using ApprovalService.Shared.Enum;
 using IdentityService.Domain.Constants;
-using IdentityService.Shared.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +9,9 @@ using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
 using RouteService.Domain.Common;
+using SharedServices.Authorization;
+using SharedServices.DTOs;
+using SharedServices.Enum;
 
 namespace RouteService.API.Controllers
 {

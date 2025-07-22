@@ -1,5 +1,5 @@
-﻿using ApprovalService.Shared.DTOs;
-using ProductService.Application.DTOs;
+﻿using ProductService.Application.DTOs;
+using SharedServices.DTOs;
 
 namespace ProductService.Application.Interfaces
 {

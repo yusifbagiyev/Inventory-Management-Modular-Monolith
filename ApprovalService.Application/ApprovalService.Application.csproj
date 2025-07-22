@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ApprovalService.Domain\ApprovalService.Domain.csproj" />
-    <ProjectReference Include="..\ApprovalService.Shared\ApprovalService.Shared.csproj" />
+    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>

@@ -174,6 +174,11 @@ namespace InventoryManagement.Web.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
+                    // If TResponse is string, return the raw content
+                    if (typeof(TResponse) == typeof(string))
+                    {
+                        return (TResponse)(object)responseContent;
+                    }
                     return JsonConvert.DeserializeObject<TResponse>(responseContent);
                 }
 

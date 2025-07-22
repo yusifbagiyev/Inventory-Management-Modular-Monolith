@@ -1,4 +1,4 @@
-﻿namespace ApprovalService.Shared.Enum
+﻿namespace SharedServices.Enum
 {
     public static class RequestType
     {

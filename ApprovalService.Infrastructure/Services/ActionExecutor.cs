@@ -4,11 +4,11 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using ApprovalService.Application.Interfaces;
-using ApprovalService.Shared.DTOs;
-using ApprovalService.Shared.Enum;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using SharedServices.DTOs;
+using SharedServices.Enum;
 
 namespace ApprovalService.Infrastructure.Services
 {
@@ -337,21 +337,36 @@ namespace ApprovalService.Infrastructure.Services
                 var jsonDoc = JsonDocument.Parse(actionData);
                 var root = jsonDoc.RootElement;
 
-                // Extract the data
-                var transferDto = new
-                {
-                    productId = root.GetProperty("productId").GetInt32(),
-                    toDepartmentId = root.GetProperty("toDepartmentId").GetInt32(),
-                    toWorker = root.TryGetProperty("toWorker", out var worker) ? worker.GetString() : null,
-                    notes = root.TryGetProperty("notes", out var notes) ? notes.GetString() : null
-                };
+                // Create form content for multipart request
+                using var formContent = new MultipartFormDataContent();
 
-                var json = JsonSerializer.Serialize(transferDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // Add basic transfer data
+                formContent.Add(new StringContent(root.GetProperty("productId").GetInt32().ToString()), "productId");
+                formContent.Add(new StringContent(root.GetProperty("toDepartmentId").GetInt32().ToString()), "toDepartmentId");
+
+                if (root.TryGetProperty("toWorker", out var worker) && worker.ValueKind != JsonValueKind.Null)
+                {
+                    formContent.Add(new StringContent(worker.GetString() ?? ""), "toWorker");
+                }
+
+                if (root.TryGetProperty("notes", out var notes) && notes.ValueKind != JsonValueKind.Null)
+                {
+                    formContent.Add(new StringContent(notes.GetString() ?? ""), "notes");
+                }
+
+                // Check for image data
+                if (root.TryGetProperty("imageData", out var imageDataProp) &&
+                    root.TryGetProperty("imageFileName", out var fileNameProp))
+                {
+                    var imageData = Convert.FromBase64String(imageDataProp.GetString()!);
+                    var imageContent = new ByteArrayContent(imageData);
+                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                    formContent.Add(imageContent, "ImageFile", fileNameProp.GetString()!);
+                }
 
                 var response = await _httpClient.PostAsync(
                     $"{_configuration["Services:RouteService"]}/api/inventoryroutes/transfer/approved",
-                    content,
+                    formContent,
                     cancellationToken);
 
                 if (!response.IsSuccessStatusCode)

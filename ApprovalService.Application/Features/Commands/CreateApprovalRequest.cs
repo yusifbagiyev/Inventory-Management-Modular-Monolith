@@ -4,9 +4,9 @@ using ApprovalService.Application.Events;
 using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Repositories;
-using ApprovalService.Shared.DTOs;
 using AutoMapper;
 using MediatR;
+using SharedServices.DTOs;
 
 namespace ApprovalService.Application.Features.Commands
 {

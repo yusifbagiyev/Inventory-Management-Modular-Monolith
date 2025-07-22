@@ -1,6 +1,5 @@
 using System.Text;
 using IdentityService.Domain.Constants;
-using IdentityService.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +10,7 @@ using ProductService.Application;
 using ProductService.Application.Mappings;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Data;
+using SharedServices.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,8 +101,6 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductUpdate)));
     options.AddPolicy(AllPermissions.ProductDelete, policy =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductDelete)));
-    options.AddPolicy(AllPermissions.ProductTransfer, policy =>
-        policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductTransfer)));
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();

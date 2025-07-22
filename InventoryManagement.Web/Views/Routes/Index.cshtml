@@ -18,7 +18,7 @@
                     Route History
                 </div>
                 <div class="col text-end">
-                    @if (User.HasPermission("route.create"))
+                    @if (User.HasPermission("route.create")||User.HasPermission("route.create.direct"))
                     {
                         <a asp-action="Transfer" class="btn btn-primary btn-sm">
                             <i class="fas fa-exchange-alt"></i> New Transfer

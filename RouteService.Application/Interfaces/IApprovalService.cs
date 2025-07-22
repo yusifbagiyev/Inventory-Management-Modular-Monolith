@@ -1,5 +1,5 @@
-﻿using ApprovalService.Shared.DTOs;
-using RouteService.Application.DTOs;
+﻿using RouteService.Application.DTOs;
+using SharedServices.DTOs;
 
 namespace RouteService.Application.Interfaces
 {

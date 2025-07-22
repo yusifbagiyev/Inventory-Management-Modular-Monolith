@@ -15,8 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ApprovalService.Shared\ApprovalService.Shared.csproj" />
     <ProjectReference Include="..\RouteService.Domain\RouteService.Domain.csproj" />
+    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,11 +1,11 @@
 ﻿using IdentityService.Domain.Constants;
-using IdentityService.Shared.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Commands;
 using ProductService.Application.Features.Categories.Queries;
+using SharedServices.Authorization;
 
 namespace ProductService.API.Controllers
 {

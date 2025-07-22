@@ -1,4 +1,4 @@
-﻿namespace ApprovalService.Shared.DTOs
+﻿namespace SharedServices.DTOs
 {
     public record DeleteProductActionData
     {

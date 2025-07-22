@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    [Migration("20250716085120_InitialCreate")]
+    [Migration("20250721112541_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -68,92 +68,85 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             Id = 3,
                             Category = "Route",
+                            Description = "Create routes (requires approval)",
+                            Name = "route.create.direct"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Category = "Route",
                             Description = "Update routes (requires approval)",
                             Name = "route.update"
                         },
                         new
                         {
-                            Id = 4,
+                            Id = 5,
                             Category = "Route",
                             Description = "Update routes directly",
                             Name = "route.update.direct"
                         },
                         new
                         {
-                            Id = 5,
+                            Id = 6,
                             Category = "Route",
                             Description = "Delete routes (requires approval)",
                             Name = "route.delete"
                         },
                         new
                         {
-                            Id = 6,
+                            Id = 7,
                             Category = "Route",
                             Description = "Delete routes directly",
                             Name = "route.delete.direct"
                         },
                         new
                         {
-                            Id = 7,
+                            Id = 8,
                             Category = "Product",
                             Description = "View products",
                             Name = "product.view"
                         },
                         new
                         {
-                            Id = 8,
+                            Id = 9,
                             Category = "Product",
                             Description = "Create products (requires approval)",
                             Name = "product.create"
                         },
                         new
                         {
-                            Id = 9,
+                            Id = 10,
                             Category = "Product",
                             Description = "Create products directly",
                             Name = "product.create.direct"
                         },
                         new
                         {
-                            Id = 10,
+                            Id = 11,
                             Category = "Product",
                             Description = "Update products (requires approval)",
                             Name = "product.update"
                         },
                         new
                         {
-                            Id = 11,
+                            Id = 12,
                             Category = "Product",
                             Description = "Update products directly",
                             Name = "product.update.direct"
                         },
                         new
                         {
-                            Id = 12,
+                            Id = 13,
                             Category = "Product",
                             Description = "Delete products (requires approval)",
                             Name = "product.delete"
                         },
                         new
                         {
-                            Id = 13,
+                            Id = 14,
                             Category = "Product",
                             Description = "Delete products directly",
                             Name = "product.delete.direct"
-                        },
-                        new
-                        {
-                            Id = 14,
-                            Category = "Product",
-                            Description = "Transfer products (requires approval)",
-                            Name = "product.transfer"
-                        },
-                        new
-                        {
-                            Id = 15,
-                            Category = "Product",
-                            Description = "Transfer products directly",
-                            Name = "product.transfer.direct"
                         });
                 });
 
@@ -343,11 +336,6 @@ namespace IdentityService.Infrastructure.Migrations
                         },
                         new
                         {
-                            RoleId = 1,
-                            PermissionId = 15
-                        },
-                        new
-                        {
                             RoleId = 2,
                             PermissionId = 1
                         },
@@ -359,17 +347,12 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 3
+                            PermissionId = 4
                         },
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 5
-                        },
-                        new
-                        {
-                            RoleId = 2,
-                            PermissionId = 7
+                            PermissionId = 6
                         },
                         new
                         {
@@ -379,17 +362,17 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 10
+                            PermissionId = 9
                         },
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 12
+                            PermissionId = 11
                         },
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 14
+                            PermissionId = 13
                         },
                         new
                         {
@@ -399,7 +382,7 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 3,
-                            PermissionId = 7
+                            PermissionId = 8
                         });
                 });
 

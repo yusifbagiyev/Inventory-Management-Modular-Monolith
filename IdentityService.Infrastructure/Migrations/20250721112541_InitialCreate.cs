@@ -285,19 +285,18 @@ namespace IdentityService.Infrastructure.Migrations
                 {
                     { 1, "Route", "View routes", "route.view" },
                     { 2, "Route", "Create routes", "route.create" },
-                    { 3, "Route", "Update routes (requires approval)", "route.update" },
-                    { 4, "Route", "Update routes directly", "route.update.direct" },
-                    { 5, "Route", "Delete routes (requires approval)", "route.delete" },
-                    { 6, "Route", "Delete routes directly", "route.delete.direct" },
-                    { 7, "Product", "View products", "product.view" },
-                    { 8, "Product", "Create products (requires approval)", "product.create" },
-                    { 9, "Product", "Create products directly", "product.create.direct" },
-                    { 10, "Product", "Update products (requires approval)", "product.update" },
-                    { 11, "Product", "Update products directly", "product.update.direct" },
-                    { 12, "Product", "Delete products (requires approval)", "product.delete" },
-                    { 13, "Product", "Delete products directly", "product.delete.direct" },
-                    { 14, "Product", "Transfer products (requires approval)", "product.transfer" },
-                    { 15, "Product", "Transfer products directly", "product.transfer.direct" }
+                    { 3, "Route", "Create routes (requires approval)", "route.create.direct" },
+                    { 4, "Route", "Update routes (requires approval)", "route.update" },
+                    { 5, "Route", "Update routes directly", "route.update.direct" },
+                    { 6, "Route", "Delete routes (requires approval)", "route.delete" },
+                    { 7, "Route", "Delete routes directly", "route.delete.direct" },
+                    { 8, "Product", "View products", "product.view" },
+                    { 9, "Product", "Create products (requires approval)", "product.create" },
+                    { 10, "Product", "Create products directly", "product.create.direct" },
+                    { 11, "Product", "Update products (requires approval)", "product.update" },
+                    { 12, "Product", "Update products directly", "product.update.direct" },
+                    { 13, "Product", "Delete products (requires approval)", "product.delete" },
+                    { 14, "Product", "Delete products directly", "product.delete.direct" }
                 });
 
             migrationBuilder.InsertData(
@@ -324,18 +323,16 @@ namespace IdentityService.Infrastructure.Migrations
                     { 12, 1 },
                     { 13, 1 },
                     { 14, 1 },
-                    { 15, 1 },
                     { 1, 2 },
                     { 2, 2 },
-                    { 3, 2 },
-                    { 5, 2 },
-                    { 7, 2 },
+                    { 4, 2 },
+                    { 6, 2 },
                     { 8, 2 },
-                    { 10, 2 },
-                    { 12, 2 },
-                    { 14, 2 },
+                    { 9, 2 },
+                    { 11, 2 },
+                    { 13, 2 },
                     { 1, 3 },
-                    { 7, 3 }
+                    { 8, 3 }
                 });
 
             migrationBuilder.CreateIndex(

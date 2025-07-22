@@ -21,7 +21,5 @@
         public const string ProductUpdateDirect = "product.update.direct";
         public const string ProductDelete = "product.delete";
         public const string ProductDeleteDirect = "product.delete.direct";
-        public const string ProductTransfer = "product.transfer";
-        public const string ProductTransferDirect = "product.transfer.direct";
     }
 }

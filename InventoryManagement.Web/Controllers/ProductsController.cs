@@ -4,6 +4,7 @@ using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -64,23 +65,37 @@ namespace InventoryManagement.Web.Controllers
                     DepartmentId = productModel.DepartmentId
                 };
 
-                //Get the form collection
-                var form =HttpContext.Request.Form;
+                var form = HttpContext.Request.Form;
+                var json = await _apiService.PostFormAsync<string>("api/products", form, dto);
 
-                var result = await _apiService.PostFormAsync<CreateProductDto>("api/products", form,dto);
-
-                if (result != null)
+                if (!string.IsNullOrEmpty(json))
                 {
-                    //Check if it is a dynamic object with Status property
-                    var resultType=result.GetType();
-                    var statusProperty = resultType.GetProperty("Status");
+                    try
+                    {
+                        // Parse the JSON response
+                        var response = JsonConvert.DeserializeObject<dynamic>(json);
 
-                    if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
-                    {
-                        TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
+                        if (response?.status?.ToString() == "PendingApproval" ||
+                            response?.Status?.ToString() == "PendingApproval")
+                        {
+                            TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
+                        }
+                        else if (response?.approvalRequestId != null)
+                        {
+                            TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
+                        }
+                        else if (response?.id != null)
+                        {
+                            TempData["Success"] = "Product created successfully.";
+                        }
+                        else
+                        {
+                            TempData["Success"] = "Product created successfully.";
+                        }
                     }
-                    else
+                    catch
                     {
+                        // If it's not JSON, assume success
                         TempData["Success"] = "Product created successfully.";
                     }
 

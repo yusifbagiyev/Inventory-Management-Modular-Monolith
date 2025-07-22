@@ -1,14 +1,14 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using ApprovalService.Shared.DTOs;
-using ApprovalService.Shared.Enum;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Queries;
 using ProductService.Application.Features.Departments.Queries;
 using ProductService.Application.Interfaces;
+using SharedServices.DTOs;
+using SharedServices.Enum;
 
 namespace ProductService.Infrastructure.Services
 {

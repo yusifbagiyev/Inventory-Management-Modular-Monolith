@@ -246,59 +246,108 @@
             });
         }
 
-        function renderPermissions(permissions) {
-            // Group permissions by category
-            const grouped = permissions.reduce((acc, perm) => {
-                if (!acc[perm.category]) acc[perm.category] = [];
-                acc[perm.category].push(perm);
-                return acc;
-            }, {});
+                function renderPermissions(permissions) {
+            // Separate direct and available permissions
+            const directPermissions = permissions.filter(p => p.isDirect);
+            const availablePermissions = permissions.filter(p => !p.isDirect && !p.isFromRole);
+            const rolePermissions = permissions.filter(p => p.isFromRole && !p.isDirect);
 
-            let html = '<div class="accordion" id="permissionsAccordion">';
+            let html = '<div class="permissions-container">';
 
-            Object.keys(grouped).forEach((category, index) => {
+            // Current Direct Permissions Section
+            if (directPermissions.length > 0) {
                 html += `
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading${index}">
-                            <button class="accordion-button ${index > 0 ? 'collapsed' : ''}" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#collapse${index}">
-                                ${category}
-                            </button>
-                        </h2>
-                        <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}"
-                             data-bs-parent="#permissionsAccordion">
-                            <div class="accordion-body p-2">
+                    <div class="permissions-section mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-check-circle"></i> Current Direct Permissions
+                        </h6>
+                        <div class="row">
                 `;
 
-                grouped[category].forEach(perm => {
-                    const isChecked = perm.isDirect || perm.isFromRole;
-                    const isDisabled = perm.isFromRole && !perm.isDirect;
-                    const statusText = perm.isFromRole ? `(from role: ${perm.roles.join(', ')})` : '';
-
+                directPermissions.forEach(perm => {
                     html += `
-                        <div class="permission-item form-check mb-2 p-2 ${isChecked ? 'bg-light' : ''}"
-                             data-permission="${perm.name}">
-                            <input class="form-check-input" type="checkbox"
-                                   id="perm_${perm.name}"
-                                   data-permission-name="${perm.name}"
-                                   ${isChecked ? 'checked' : ''}
-                                   ${isDisabled ? 'disabled' : ''}>
-                            <label class="form-check-label w-100" for="perm_${perm.name}">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
+                        <div class="col-md-6 mb-2">
+                            <div class="permission-item current-permission p-2 border rounded bg-light">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="perm_${perm.name}"
+                                           data-permission-name="${perm.name}"
+                                           checked>
+                                    <label class="form-check-label" for="perm_${perm.name}">
                                         <strong>${perm.name}</strong>
                                         <small class="d-block text-muted">${perm.description}</small>
-                                        ${statusText ? `<small class="text-info">${statusText}</small>` : ''}
-                                    </div>
-                                    ${perm.isDirect ? '<span class="badge bg-primary">Direct</span>' : ''}
+                                    </label>
                                 </div>
-                            </label>
+                            </div>
                         </div>
                     `;
                 });
 
-                html += '</div></div></div>';
-            });
+                html += '</div></div>';
+            }
+
+            // Permissions from Roles Section
+            if (rolePermissions.length > 0) {
+                html += `
+                    <div class="permissions-section mb-4">
+                        <h6 class="text-info mb-3">
+                            <i class="fas fa-shield-alt"></i> Permissions from Roles (Read-only)
+                        </h6>
+                        <div class="row">
+                `;
+
+                rolePermissions.forEach(perm => {
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="permission-item role-permission p-2 border rounded bg-light opacity-75">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="perm_role_${perm.name}"
+                                           checked disabled>
+                                    <label class="form-check-label" for="perm_role_${perm.name}">
+                                        <strong>${perm.name}</strong>
+                                        <small class="d-block text-muted">${perm.description}</small>
+                                        <small class="text-info"><i class="fas fa-lock"></i> From: ${perm.roles.join(', ')}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            }
+
+            // Available Permissions to Add Section
+            if (availablePermissions.length > 0) {
+                html += `
+                    <div class="permissions-section">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-plus-circle"></i> Available Permissions to Add
+                        </h6>
+                        <div class="row">
+                `;
+
+                availablePermissions.forEach(perm => {
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="permission-item available-permission p-2 border rounded">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           id="perm_${perm.name}"
+                                           data-permission-name="${perm.name}">
+                                    <label class="form-check-label" for="perm_${perm.name}">
+                                        <strong>${perm.name}</strong>
+                                        <small class="d-block text-muted">${perm.description}</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            }
 
             html += '</div>';
             $('#permissionsContainer').html(html);
@@ -396,5 +445,37 @@
 
         .form-check-input:disabled ~ label {
             opacity: 0.7;
+        }
+
+    .permissions-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .permissions-section {
+        margin-bottom: 2rem;
+    }
+
+    .current-permission {
+        background-color: #e8f5e9 !important;
+        border-color: #4caf50 !important;
+    }
+
+    .role-permission {
+        background-color: #e3f2fd !important;
+        border-color: #2196f3 !important;
+    }
+
+    .available-permission:hover {
+        background-color: #f5f5f5;
+        cursor: pointer;
+    }
+
+    .permission-item {
+        transition: all 0.3s ease;
+    }
+
+        .permission-item.current-permission:hover {
+            box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
         }
 </style>

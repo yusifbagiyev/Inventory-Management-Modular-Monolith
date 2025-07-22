@@ -106,21 +106,20 @@ namespace IdentityService.Infrastructure.Data
                 // Route permissions
                 new Permission { Id = 1, Name = AllPermissions.RouteView, Category = "Route", Description = "View routes" },
                 new Permission { Id = 2, Name = AllPermissions.RouteCreate, Category = "Route", Description = "Create routes" },
-                new Permission { Id = 3, Name = AllPermissions.RouteUpdate, Category = "Route", Description = "Update routes (requires approval)" },
-                new Permission { Id = 4, Name = AllPermissions.RouteUpdateDirect, Category = "Route", Description = "Update routes directly" },
-                new Permission { Id = 5, Name = AllPermissions.RouteDelete, Category = "Route", Description = "Delete routes (requires approval)" },
-                new Permission { Id = 6, Name = AllPermissions.RouteDeleteDirect, Category = "Route", Description = "Delete routes directly" },
+                new Permission { Id = 3, Name = AllPermissions.RouteCreateDirect, Category = "Route", Description = "Create routes (requires approval)" },
+                new Permission { Id = 4, Name = AllPermissions.RouteUpdate, Category = "Route", Description = "Update routes (requires approval)" },
+                new Permission { Id = 5, Name = AllPermissions.RouteUpdateDirect, Category = "Route", Description = "Update routes directly" },
+                new Permission { Id = 6, Name = AllPermissions.RouteDelete, Category = "Route", Description = "Delete routes (requires approval)" },
+                new Permission { Id = 7, Name = AllPermissions.RouteDeleteDirect, Category = "Route", Description = "Delete routes directly" },
         
                 // Product permissions
-                new Permission { Id = 7, Name = AllPermissions.ProductView, Category = "Product", Description = "View products" },
-                new Permission { Id = 8, Name = AllPermissions.ProductCreate, Category = "Product", Description = "Create products (requires approval)" },
-                new Permission { Id = 9, Name = AllPermissions.ProductCreateDirect, Category = "Product", Description = "Create products directly" },
-                new Permission { Id = 10, Name = AllPermissions.ProductUpdate, Category = "Product", Description = "Update products (requires approval)" },
-                new Permission { Id = 11, Name = AllPermissions.ProductUpdateDirect, Category = "Product", Description = "Update products directly" },
-                new Permission { Id = 12, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
-                new Permission { Id = 13, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
-                new Permission { Id = 14, Name = AllPermissions.ProductTransfer, Category = "Product", Description = "Transfer products (requires approval)" },
-                new Permission { Id = 15, Name = AllPermissions.ProductTransferDirect, Category = "Product", Description = "Transfer products directly" },
+                new Permission { Id = 8, Name = AllPermissions.ProductView, Category = "Product", Description = "View products" },
+                new Permission { Id = 9, Name = AllPermissions.ProductCreate, Category = "Product", Description = "Create products (requires approval)" },
+                new Permission { Id = 10, Name = AllPermissions.ProductCreateDirect, Category = "Product", Description = "Create products directly" },
+                new Permission { Id = 11, Name = AllPermissions.ProductUpdate, Category = "Product", Description = "Update products (requires approval)" },
+                new Permission { Id = 12, Name = AllPermissions.ProductUpdateDirect, Category = "Product", Description = "Update products directly" },
+                new Permission { Id = 13, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
+                new Permission { Id = 14, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
             };
             builder.Entity<Permission>().HasData(permissions);
 
@@ -128,7 +127,7 @@ namespace IdentityService.Infrastructure.Data
             var rolePermissions = new List<RolePermission>();
 
             // Admin - All direct permissions
-            for (int i = 1; i <= 15; i++)
+            for (int i = 1; i <= 14; i++)
             {
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
@@ -138,20 +137,19 @@ namespace IdentityService.Infrastructure.Data
             {
                 new RolePermission { RoleId = 2, PermissionId = 1 }, // RouteView
                 new RolePermission { RoleId = 2, PermissionId = 2 }, // RouteCreate
-                new RolePermission { RoleId = 2, PermissionId = 3 }, // RouteUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 5 }, // RouteDelete (request)
-                new RolePermission { RoleId = 2, PermissionId = 7 }, // ProductView
-                new RolePermission { RoleId = 2, PermissionId = 8 }, // ProductCreate (request)
-                new RolePermission { RoleId = 2, PermissionId = 10 }, // ProductUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 12 }, // ProductDelete (request)
-                new RolePermission { RoleId = 2, PermissionId = 14 } // ProductTransfer (request)
+                new RolePermission { RoleId = 2, PermissionId = 4 }, // RouteUpdate (request)
+                new RolePermission { RoleId = 2, PermissionId = 6 }, // RouteDelete (request)
+                new RolePermission { RoleId = 2, PermissionId = 8 }, // ProductView
+                new RolePermission { RoleId = 2, PermissionId = 9 }, // ProductCreate (request)
+                new RolePermission { RoleId = 2, PermissionId = 11 }, // ProductUpdate (request)
+                new RolePermission { RoleId = 2, PermissionId = 13 }, // ProductDelete (request)
             });
 
             // User - View only
             rolePermissions.AddRange(new[]
             {
                 new RolePermission { RoleId = 3, PermissionId = 1 }, // RouteView
-                new RolePermission { RoleId = 3, PermissionId = 7 }  // ProductView
+                new RolePermission { RoleId = 3, PermissionId = 8 }  // ProductView
             });
 
             builder.Entity<RolePermission>().HasData(rolePermissions);
