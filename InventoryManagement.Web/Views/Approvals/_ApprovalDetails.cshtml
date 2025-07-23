@@ -75,8 +75,9 @@
         };
     }
 
-    string ParseActionData(string requestType, string actionData)
-    {
+    @functions {
+        string ParseActionData(string requestType, string actionData)
+        {
         try
         {
             var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(actionData);
@@ -192,5 +193,6 @@
         {
             return string.Format("<pre class='mb-0'>{0}</pre>", actionData);
         }
+    }
     }
 }

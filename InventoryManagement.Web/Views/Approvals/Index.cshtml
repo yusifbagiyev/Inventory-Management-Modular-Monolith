@@ -204,14 +204,14 @@
             });
         });
 
-                function getRequestSummary(requestType, actionData) {
+                        function getRequestSummary(requestType, actionData) {
             try {
                 const data = typeof actionData === 'string' ? JSON.parse(actionData) : actionData;
-                const productData = data.ProductData || data;
 
                 switch(requestType) {
                     case 'Create Product':
                     case 'Creating Product':
+                        const productData = data.ProductData || data;
                         const code = productData.inventoryCode || productData.InventoryCode || 'N/A';
                         const model = productData.model || productData.Model || 'N/A';
                         const vendor = productData.vendor || productData.Vendor || 'N/A';
@@ -228,9 +228,10 @@
 
                     case 'Transfer Product':
                     case 'Transferring Product':
-                        const productId = data.ProductId || data.productId || 'N/A';
-                        const toDept = data.ToDepartmentName || data.toDepartmentName || 'Department';
-                        return `Transfer product #${productId} to ${toDept}`;
+                        const inventoryCode = data.inventoryCode || data.InventoryCode || 'N/A';
+                        const toDeptName = data.toDepartmentName || data.ToDepartmentName || 'Unknown Department';
+                        const toWorker = data.toWorker || data.ToWorker || '';
+                        return `Transfer product (${inventoryCode}) to ${toDeptName}${toWorker ? ' - ' + toWorker : ''}`;
 
                     default:
                         return 'View details for more information';

@@ -345,33 +345,33 @@ namespace ApprovalService.Infrastructure.Services
                     ? pid.GetInt32() 
                     : root.GetProperty("ProductId").GetInt32();
 
-                formContent.Add(new StringContent(productId.ToString()), "productId");
+                formContent.Add(new StringContent(productId.ToString()), "ProductId");
 
                 // Get department ID
                 var toDepartmentId = root.TryGetProperty("toDepartmentId", out var deptId) 
                     ? deptId.GetInt32() 
                     : root.GetProperty("ToDepartmentId").GetInt32();
 
-                formContent.Add(new StringContent(toDepartmentId.ToString()), "toDepartmentId");
+                formContent.Add(new StringContent(toDepartmentId.ToString()), "ToDepartmentId");
 
 
                 // Add optional fields
                 if (root.TryGetProperty("toWorker", out var worker) && worker.ValueKind != JsonValueKind.Null)
                 {
-                    formContent.Add(new StringContent(worker.GetString() ?? ""), "toWorker");
+                    formContent.Add(new StringContent(worker.GetString() ?? ""), "ToWorker");
                 }
                 else if (root.TryGetProperty("ToWorker", out var workerPascal) && workerPascal.ValueKind != JsonValueKind.Null)
                 {
-                    formContent.Add(new StringContent(workerPascal.GetString() ?? ""), "toWorker");
+                    formContent.Add(new StringContent(workerPascal.GetString() ?? ""), "ToWorker");
                 }
 
                 if (root.TryGetProperty("notes", out var notes) && notes.ValueKind != JsonValueKind.Null)
                 {
-                    formContent.Add(new StringContent(notes.GetString() ?? ""), "notes");
+                    formContent.Add(new StringContent(notes.GetString() ?? ""), "Notes");
                 }
                 else if (root.TryGetProperty("Notes", out var notesPascal) && notesPascal.ValueKind != JsonValueKind.Null)
                 {
-                    formContent.Add(new StringContent(notesPascal.GetString() ?? ""), "notes");
+                    formContent.Add(new StringContent(notesPascal.GetString() ?? ""), "Notes");
                 }
 
                 // Check for image data in multiple possible formats

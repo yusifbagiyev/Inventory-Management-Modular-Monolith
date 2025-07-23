@@ -67,7 +67,7 @@ namespace InventoryManagement.Web.Controllers
                         ["productVendor"] = product?.Vendor ?? "",
                         ["fromDepartmentId"] = product?.DepartmentId ?? 0,
                         ["fromDepartmentName"] = fromDepartment?.Name ?? "",
-                        ["fromWorker"]=product?.Worker?? "",
+                        ["fromWorker"] = product?.Worker ?? "",
                         ["toDepartmentId"] = model.ToDepartmentId,
                         ["toDepartmentName"] = toDepartment?.Name ?? "",
                         ["toWorker"] = model.ToWorker ?? "",
@@ -75,18 +75,18 @@ namespace InventoryManagement.Web.Controllers
                     };
 
                     //Add image data if present
-                    if(HttpContext.Request.Form.Files.Count> 0)
+                    if (HttpContext.Request.Form.Files.Count > 0)
                     {
                         var imageFile = HttpContext.Request.Form.Files[0];
-                        using var ms=new MemoryStream();
+                        using var ms = new MemoryStream();
                         await imageFile.CopyToAsync(ms);
                         actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
                         actionData["imageFileName"] = imageFile.FileName;
                     }
 
-                    var result=await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
+                    var result = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
 
-                    if(result!= null)
+                    if (result != null)
                     {
                         var resultType = result.GetType();
                         var statusProperty = resultType.GetProperty("Status");
