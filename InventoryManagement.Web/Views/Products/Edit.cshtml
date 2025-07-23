@@ -177,4 +177,26 @@
             }
         }
     </script>
+    <script>
+                $('form').on('submit', function(e) {
+            e.preventDefault();
+
+            var form = $(this);
+            var formData = new FormData(form[0]);
+
+            $.ajax({
+                url: form.attr('action'),
+                type: form.attr('method'),
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    handleApprovalResponse(response, 'Product update', '/Products');
+                },
+                error: function(xhr) {
+                    // Error handling...
+                }
+            });
+        });
+    </script>
 }

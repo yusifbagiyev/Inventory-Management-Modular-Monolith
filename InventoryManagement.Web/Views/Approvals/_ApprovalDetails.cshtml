@@ -144,23 +144,28 @@
                     );
 
                 case "product.transfer":
-                    var productId = data.productId ?? data.ProductId;
+                    var productId = data.productId ?? data.ProductId ?? "N/A";
                     var inventorycode = data.inventoryCode ?? data.InventoryCode ?? "N/A";
+                    var productModel = data.productModel ?? data.ProductModel ?? "N/A";
+                    var productVendor = data.productVendor ?? data.ProductVendor ?? "N/A";
                     var fromDept = data.fromDepartmentName ?? data.FromDepartmentName ?? "N/A";
+                    var fromWorker = data.fromWorker ?? data.FromWorker ?? "Not assigned";
                     var toDept = data.toDepartmentName ?? data.ToDepartmentName ?? $"Department #{data.toDepartmentId ?? data.ToDepartmentId}";
                     var toWorker = data.toWorker ?? data.ToWorker ?? "Not specified";
                     var notes = data.notes ?? data.Notes ?? "";
 
                     var transferHtml = string.Format(
-                        "<strong>Product ID:</strong> {0}<br/>" +
-                        "<strong>Inventory Code:</strong> {1}<br/>" +
-                        "<strong>From Department:</strong> {2}<br/>" +
-                        "<strong>To Department:</strong> {3}<br/>" +
-                        "<strong>To Worker:</strong> {4}",
+                        "<strong>Product:</strong> {0} - {1} by {2}<br/>" +
+                        "<strong>Inventory Code:</strong> {3}<br/>" +
+                        "<strong>From:</strong> {4} (Worker: {5})<br/>" +
+                        "<strong>To:</strong> {6} (Worker: {7})",
                         productId,
+                        productModel,
+                        productVendor,
                         inventorycode,
                         fromDept,
-                        toDept, 
+                        fromWorker,
+                        toDept,
                         toWorker
                     );
 
@@ -169,8 +174,7 @@
                         transferHtml += $"<br/><strong>Notes:</strong> {notes}";
                     }
 
-                    // Check for image
-                    if (data.image != null || data.imageData != null)
+                    if (data.imageData != null || data.ImageData != null)
                     {
                         transferHtml += "<br/><strong>Image:</strong> Transfer image attached";
                     }

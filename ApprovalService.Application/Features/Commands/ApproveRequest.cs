@@ -30,19 +30,29 @@ namespace ApprovalService.Application.Features.Commands
                 _messagePublisher = messagePublisher;
             }
 
-            public async Task<bool> Handle(Command request,CancellationToken cancellationToken = default)
+            public async Task<bool> Handle(Command request, CancellationToken cancellationToken = default)
             {
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
                     ?? throw new InvalidOperationException($"Request {request.RequestId} not found");
 
-                if (approvalRequest.Status != ApprovalStatus.Pending)
-                    throw new InvalidOperationException($"Request is already {approvalRequest.Status}");
+                // Double-check the request is still pending
+                // This prevents race conditions where a user might cancel while admin is approving
+                var currentRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken);
+                if (currentRequest == null)
+                {
+                    throw new InvalidOperationException($"Request {request.RequestId} no longer exists");
+                }
 
-                approvalRequest.Approve(request.UserId,request.UserName);
+                if (currentRequest.Status != ApprovalStatus.Pending)
+                {
+                    throw new InvalidOperationException($"Request is no longer pending. Current status: {currentRequest.Status}");
+                }
+
+                approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                //Execute the action
+                // Execute the action
                 try
                 {
                     var executed = await _actionExecutor.ExecuteAsync(
@@ -61,12 +71,12 @@ namespace ApprovalService.Application.Features.Commands
                 }
                 catch (Exception ex)
                 {
-                    approvalRequest.MarkAsFailed(ex.Message);
+                    approvalRequest.MarkAsFailed($"Execution error: {ex.Message}");
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                //Notify requester
+                // Notify requester
                 var evt = new ApprovalRequestProcessedEvent
                 {
                     RequestId = approvalRequest.Id,

@@ -244,18 +244,13 @@ namespace RouteService.API.Controllers
 
         [HttpPost("transfer/approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
-        [Authorize(Roles ="Admin")]
-        public async Task<ActionResult<InventoryRouteDto>> TransferApproved([FromBody] JsonElement transferData)
+        [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<InventoryRouteDto>> TransferApprovedMultipart([FromForm] TransferInventoryDto dto)
         {
             try
             {
-                var dto = new TransferInventoryDto
-                {
-                    ProductId = transferData.GetProperty("productId").GetInt32(),
-                    ToDepartmentId = transferData.GetProperty("toDepartmentId").GetInt32(),
-                    ToWorker = transferData.TryGetProperty("toWorker", out var worker) ? worker.GetString() : null,
-                    Notes = transferData.TryGetProperty("notes", out var notes) ? notes.GetString() : null
-                };
+                _logger.LogInformation($"Executing approved transfer for product {dto.ProductId} to department {dto.ToDepartmentId}");
 
                 var result = await _mediator.Send(new TransferInventory.Command(dto));
                 return Ok(result);
@@ -263,7 +258,7 @@ namespace RouteService.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error executing approved transfer");
-                return BadRequest($"Error: {ex.Message}");
+                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
             }
         }
 

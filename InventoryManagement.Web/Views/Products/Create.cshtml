@@ -175,26 +175,50 @@
             var formData = new FormData(form[0]);
 
             $.ajax({
-                url: form.attr('action'),
-                type: form.attr('method'),
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response && response.status === 'PendingApproval') {
-                        // Show approval pending message
-                        showToast('Your request has been submitted for approval. You will be notified once it is processed.', 'info');
-                        setTimeout(() => window.location.href = '/Products', 2000);
-                    } else if (response && response.approvalRequestId) {
-                        // Another format of approval response
-                        showToast(response.message || 'Your request has been submitted for approval.', 'info');
+        url: form.attr('action'),
+        type: form.attr('method'),
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            console.log('Response:', response); // Debug log
+
+            // Handle string response (which is what's being returned)
+            if (typeof response === 'string') {
+                try {
+                    // Try to parse the string as JSON
+                    var jsonResponse = JSON.parse(response);
+
+                    if (jsonResponse.status === 'PendingApproval' ||
+                        jsonResponse.Status === 'PendingApproval' ||
+                        jsonResponse.approvalRequestId ||
+                        jsonResponse.ApprovalRequestId) {
+                        showToast('Your product creation request has been submitted for approval. You will be notified once it\'s processed.', 'info');
                         setTimeout(() => window.location.href = '/Products', 2000);
                     } else {
                         // Product was created directly
                         showToast('Product created successfully!', 'success');
                         setTimeout(() => window.location.href = '/Products', 1500);
                     }
-                },
+                } catch (e) {
+                    // If not JSON, assume success
+                    showToast('Product created successfully!', 'success');
+                    setTimeout(() => window.location.href = '/Products', 1500);
+                }
+            } else if (response && typeof response === 'object') {
+                // Handle object response
+                if (response.status === 'PendingApproval' ||
+                    response.Status === 'PendingApproval' ||
+                    response.approvalRequestId ||
+                    response.ApprovalRequestId) {
+                    showToast('Your product creation request has been submitted for approval. You will be notified once it\'s processed.', 'info');
+                    setTimeout(() => window.location.href = '/Products', 2000);
+                } else {
+                    showToast('Product created successfully!', 'success');
+                    setTimeout(() => window.location.href = '/Products', 1500);
+                }
+            }
+        },
                 error: function(xhr) {
                     var errorMessage = 'An error occurred. Please try again.';
 

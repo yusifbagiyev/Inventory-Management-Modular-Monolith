@@ -1,6 +1,7 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -58,35 +59,34 @@ namespace InventoryManagement.Web.Controllers
                     var fromDepartment = departments?.FirstOrDefault(d => d.Id == product?.DepartmentId);
                     var toDepartment = departments?.FirstOrDefault(d => d.Id == model.ToDepartmentId);
 
-                    // Create a form collection with additional data
-                    var formCollection = HttpContext.Request.Form;
-                    var additionalData = new Dictionary<string, string>
+                    var actionData = new Dictionary<string, object>
                     {
-                        ["inventoryCode"] = product?.InventoryCode.ToString() ?? "",
-                        ["fromDepartmentName"] = fromDepartment?.Name ?? "",
-                        ["fromDepartmentId"] = product?.DepartmentId.ToString() ?? "",
-                        ["toDepartmentName"] = toDepartment?.Name ?? "",
+                        ["productId"] = model.ProductId,
+                        ["inventoryCode"] = product?.InventoryCode ?? 0,
                         ["productModel"] = product?.Model ?? "",
-                        ["productVendor"] = product?.Vendor ?? ""
+                        ["productVendor"] = product?.Vendor ?? "",
+                        ["fromDepartmentId"] = product?.DepartmentId ?? 0,
+                        ["fromDepartmentName"] = fromDepartment?.Name ?? "",
+                        ["fromWorker"]=product?.Worker?? "",
+                        ["toDepartmentId"] = model.ToDepartmentId,
+                        ["toDepartmentName"] = toDepartment?.Name ?? "",
+                        ["toWorker"] = model.ToWorker ?? "",
+                        ["notes"] = model.Notes ?? ""
                     };
 
-                    // Add additional data to form
-                    var modifiedForm = new FormCollection(
-                        formCollection.ToDictionary(x => x.Key, x => x.Value),
-                        formCollection.Files
-                    );
-
-                    foreach (var item in additionalData)
+                    //Add image data if present
+                    if(HttpContext.Request.Form.Files.Count> 0)
                     {
-                        modifiedForm = new FormCollection(
-                            modifiedForm.Union(new[] { new KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues>(item.Key, item.Value) }).ToDictionary(x => x.Key, x => x.Value),
-                            modifiedForm.Files
-                        );
+                        var imageFile = HttpContext.Request.Form.Files[0];
+                        using var ms=new MemoryStream();
+                        await imageFile.CopyToAsync(ms);
+                        actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
+                        actionData["imageFileName"] = imageFile.FileName;
                     }
 
-                    var result = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", modifiedForm);
+                    var result=await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
 
-                    if (result != null)
+                    if(result!= null)
                     {
                         var resultType = result.GetType();
                         var statusProperty = resultType.GetProperty("Status");
@@ -101,7 +101,6 @@ namespace InventoryManagement.Web.Controllers
                         }
                         return RedirectToAction(nameof(Index));
                     }
-
                     ModelState.AddModelError("", "Failed to transfer product");
                 }
                 catch (Exception ex)

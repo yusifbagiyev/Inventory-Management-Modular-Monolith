@@ -340,29 +340,76 @@ namespace ApprovalService.Infrastructure.Services
                 // Create form content for multipart request
                 using var formContent = new MultipartFormDataContent();
 
-                // Add basic transfer data
-                formContent.Add(new StringContent(root.GetProperty("productId").GetInt32().ToString()), "productId");
-                formContent.Add(new StringContent(root.GetProperty("toDepartmentId").GetInt32().ToString()), "toDepartmentId");
+                // Get the productId to handle both camelCase and pascalCase
+                var productId = root.TryGetProperty("productId", out var pid) 
+                    ? pid.GetInt32() 
+                    : root.GetProperty("ProductId").GetInt32();
 
+                formContent.Add(new StringContent(productId.ToString()), "productId");
+
+                // Get department ID
+                var toDepartmentId = root.TryGetProperty("toDepartmentId", out var deptId) 
+                    ? deptId.GetInt32() 
+                    : root.GetProperty("ToDepartmentId").GetInt32();
+
+                formContent.Add(new StringContent(toDepartmentId.ToString()), "toDepartmentId");
+
+
+                // Add optional fields
                 if (root.TryGetProperty("toWorker", out var worker) && worker.ValueKind != JsonValueKind.Null)
                 {
                     formContent.Add(new StringContent(worker.GetString() ?? ""), "toWorker");
+                }
+                else if (root.TryGetProperty("ToWorker", out var workerPascal) && workerPascal.ValueKind != JsonValueKind.Null)
+                {
+                    formContent.Add(new StringContent(workerPascal.GetString() ?? ""), "toWorker");
                 }
 
                 if (root.TryGetProperty("notes", out var notes) && notes.ValueKind != JsonValueKind.Null)
                 {
                     formContent.Add(new StringContent(notes.GetString() ?? ""), "notes");
                 }
-
-                // Check for image data
-                if (root.TryGetProperty("imageData", out var imageDataProp) &&
-                    root.TryGetProperty("imageFileName", out var fileNameProp))
+                else if (root.TryGetProperty("Notes", out var notesPascal) && notesPascal.ValueKind != JsonValueKind.Null)
                 {
-                    var imageData = Convert.FromBase64String(imageDataProp.GetString()!);
+                    formContent.Add(new StringContent(notesPascal.GetString() ?? ""), "notes");
+                }
+
+                // Check for image data in multiple possible formats
+                byte[]? imageData = null;
+                string? imageFileName = null;
+
+                if(root.TryGetProperty("imageData", out var imageDataProp) &&
+                    imageDataProp.ValueKind == JsonValueKind.String)
+                {
+                    imageData = Convert.FromBase64String(imageDataProp.GetString()!);
+                }
+                else if (root.TryGetProperty("ImageData", out var imageDataProp2) &&
+                    imageDataProp2.ValueKind == JsonValueKind.String)
+                {
+                    imageData = Convert.FromBase64String(imageDataProp2.GetString()!);
+                }
+                else if (root.TryGetProperty("image", out var imageProp) && imageProp.ValueKind == JsonValueKind.String)
+                {
+                    imageData = Convert.FromBase64String(imageProp.GetString()!);
+                }
+
+                if (root.TryGetProperty("imageFileName", out var fileNameProp))
+                {
+                    imageFileName = fileNameProp.GetString();
+                }
+                else if (root.TryGetProperty("ImageFileName", out var fileNameProp2))
+                {
+                    imageFileName = fileNameProp2.GetString();
+                }
+
+                if (imageData != null && !string.IsNullOrEmpty(imageFileName))
+                {
                     var imageContent = new ByteArrayContent(imageData);
                     imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
-                    formContent.Add(imageContent, "ImageFile", fileNameProp.GetString()!);
+                    formContent.Add(imageContent, "ImageFile", imageFileName);
                 }
+
+                _logger.LogInformation($"Executing transfer for product {productId} to department {toDepartmentId}");
 
                 var response = await _httpClient.PostAsync(
                     $"{_configuration["Services:RouteService"]}/api/inventoryroutes/transfer/approved",

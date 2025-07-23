@@ -185,3 +185,46 @@ $.ajaxSetup({
         hideLoader();
     }
 });
+function handleApprovalResponse(response, entityType, successRedirect) {
+    // Debug logging
+    console.log('Response type:', typeof response);
+    console.log('Response:', response);
+
+    let isApprovalRequest = false;
+    let message = '';
+
+    // Handle different response formats
+    if (typeof response === 'string') {
+        try {
+            const parsed = JSON.parse(response);
+            response = parsed;
+        } catch (e) {
+            // If not JSON, assume direct success
+            showToast(`${entityType} created successfully!`, 'success');
+            setTimeout(() => window.location.href = successRedirect, 1500);
+            return;
+        }
+    }
+
+    // Check for approval indicators
+    if (response && typeof response === 'object') {
+        if (response.status === 'PendingApproval' ||
+            response.Status === 'PendingApproval' ||
+            response.approvalRequestId ||
+            response.ApprovalRequestId ||
+            response.message?.includes('approval') ||
+            response.Message?.includes('approval')) {
+            isApprovalRequest = true;
+            message = response.message || response.Message ||
+                `Your ${entityType.toLowerCase()} request has been submitted for approval. You will be notified once it's processed.`;
+        }
+    }
+
+    if (isApprovalRequest) {
+        showToast(message, 'info');
+    } else {
+        showToast(`${entityType} operation completed successfully!`, 'success');
+    }
+
+    setTimeout(() => window.location.href = successRedirect, 2000);
+}
