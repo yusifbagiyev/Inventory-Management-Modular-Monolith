@@ -63,6 +63,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
+                if (approvalRequest == null)
+                    return NotFound();
+
                 await _approvalService.ApproveRequestAsync(id);
                 return Json(new { success = true, message = "Request approved successfully" });
             }

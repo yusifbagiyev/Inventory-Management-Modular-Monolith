@@ -274,18 +274,6 @@ namespace RouteService.API.Controllers
             try
             {
                 _logger.LogInformation($"Executing approved transfer for product {dto.ProductId} to department {dto.ToDepartmentId}");
-                if (dto.ProductId <= 0)
-                {
-                    _logger.LogError("Invalid ProductId: {ProductId}", dto.ProductId);
-                    return BadRequest(new { error = "Invalid ProductId" });
-                }
-
-                if (dto.ToDepartmentId <= 0)
-                {
-                    _logger.LogError("Invalid ToDepartmentId: {ToDepartmentId}", dto.ToDepartmentId);
-                    return BadRequest(new { error = "Invalid ToDepartmentId" });
-                }
-
                 var result = await _mediator.Send(new TransferInventory.Command(dto));
                 return Ok(result);
             }

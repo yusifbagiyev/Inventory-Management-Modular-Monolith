@@ -35,17 +35,9 @@ namespace ApprovalService.Application.Features.Commands
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
                     ?? throw new InvalidOperationException($"Request {request.RequestId} not found");
 
-                // Double-check the request is still pending
-                // This prevents race conditions where a user might cancel while admin is approving
-                var currentRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken);
-                if (currentRequest == null)
+                if (approvalRequest.Status != ApprovalStatus.Pending)
                 {
-                    throw new InvalidOperationException($"Request {request.RequestId} no longer exists");
-                }
-
-                if (currentRequest.Status != ApprovalStatus.Pending)
-                {
-                    throw new InvalidOperationException($"Request is no longer pending. Current status: {currentRequest.Status}");
+                    throw new InvalidOperationException($"Request is no longer pending. Current status: {approvalRequest.Status}");
                 }
 
                 approvalRequest.Approve(request.UserId, request.UserName);
