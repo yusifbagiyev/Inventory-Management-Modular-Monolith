@@ -78,115 +78,137 @@
     @functions {
         string ParseActionData(string requestType, string actionData)
         {
-        try
-        {
-            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(actionData);
-
-            switch (requestType)
+            try
             {
-                case "product.create":
-                    var productData = data.ProductData ?? data;
-                    var categoryName = productData.categoryName ?? productData.CategoryName ?? $"Category #{productData.categoryId ?? productData.CategoryId}";
-                    var departmentName = productData.departmentName ?? productData.DepartmentName ?? $"Department #{productData.departmentId ?? productData.DepartmentId}";
-                    return string.Format(
-                        "<strong>Inventory Code:</strong> {0}<br/>" +
-                        "<strong>Model:</strong> {1}<br/>" +
-                        "<strong>Vendor:</strong> {2}<br/>" +
-                        "<strong>Worker:</strong> {3}<br/>" +
-                        "<strong>Category:</strong> {4}<br/>" +
-                        "<strong>Department:</strong> {5}<br/>" +
-                        "<strong>Description:</strong> {6}",
-                        productData.inventoryCode ?? productData.InventoryCode,
-                        productData.model ?? productData.Model ?? "N/A",
-                        productData.vendor ?? productData.Vendor ?? "N/A",
-                        productData.worker ?? productData.Worker ?? "N/A",
-                        categoryName,
-                        departmentName,
-                        productData.description ?? productData.Description ?? "N/A"
-                    );
+                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(actionData);
 
-                case "product.update":
-                    var inventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
-                    var changes = data.Changes;
-                    var changesHtml = $"<strong>Inventory Code:</strong> {inventoryCode}<br/><strong>Changes:</strong><br/>";
-
-                    if (changes != null)
-                    {
-                        foreach (var change in changes)
-                        {
-                            changesHtml += $"<strong>{change.Name}:</strong> {change.Value.Old} → {change.Value.New}<br/>";
-                        }
-                    }
-                    else
-                    {
-                        // Fallback to showing update data
-                        var updateData = Newtonsoft.Json.JsonConvert.SerializeObject(
-                            data.UpdateData ?? data.updateData,
-                            Newtonsoft.Json.Formatting.Indented
+                switch (requestType)
+                {
+                    case "product.create":
+                        var productData = data.ProductData ?? data;
+                        var categoryName = productData.categoryName ?? productData.CategoryName ?? $"Category #{productData.categoryId ?? productData.CategoryId}";
+                        var departmentName = productData.departmentName ?? productData.DepartmentName ?? $"Department #{productData.departmentId ?? productData.DepartmentId}";
+                        return string.Format(
+                            "<strong>Inventory Code:</strong> {0}<br/>" +
+                            "<strong>Model:</strong> {1}<br/>" +
+                            "<strong>Vendor:</strong> {2}<br/>" +
+                            "<strong>Worker:</strong> {3}<br/>" +
+                            "<strong>Category:</strong> {4}<br/>" +
+                            "<strong>Department:</strong> {5}<br/>" +
+                            "<strong>Description:</strong> {6}",
+                            productData.inventoryCode ?? productData.InventoryCode,
+                            productData.model ?? productData.Model ?? "N/A",
+                            productData.vendor ?? productData.Vendor ?? "N/A",
+                            productData.worker ?? productData.Worker ?? "N/A",
+                            categoryName,
+                            departmentName,
+                            productData.description ?? productData.Description ?? "N/A"
                         );
-                        changesHtml += $"<pre class='mb-0'>{updateData}</pre>";
-                    }
-                    return changesHtml;
 
-                case "product.delete":
-                    var deleteInventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
-                    var model = data.Model ?? data.model ?? "N/A";
-                    var vendor = data.Vendor ?? data.vendor ?? "N/A";
-                    var dept = data.DepartmentName ?? data.departmentName ?? "N/A";
-                    return string.Format(
-                        "<strong>Inventory Code:</strong> {0}<br/>" +
-                        "<strong>Model:</strong> {1}<br/>" +
-                        "<strong>Vendor:</strong> {2}<br/>" +
-                        "<strong>Department:</strong> {3}",
-                        deleteInventoryCode,
-                        model,
-                        vendor,
-                        dept
-                    );
+                    case "product.update":
+                        var inventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
+                        var changes = data.Changes;
+                        var changesHtml = $"<strong>Inventory Code:</strong> {inventoryCode}<br/><strong>Changes:</strong><br/>";
 
-                case "product.transfer":
-                    var productId = data.productId ?? data.ProductId ?? "N/A";
-                    var inventorycode = data.inventoryCode ?? data.InventoryCode ?? "N/A";
-                    var productModel = data.productModel ?? data.ProductModel ?? "N/A";
-                    var productVendor = data.productVendor ?? data.ProductVendor ?? "N/A";
-                    var fromDept = data.fromDepartmentName ?? data.FromDepartmentName ?? "N/A";
-                    var fromWorker = data.fromWorker ?? data.FromWorker ?? "Not assigned";
-                    var toDept = data.toDepartmentName ?? data.ToDepartmentName ?? $"Department #{data.toDepartmentId ?? data.ToDepartmentId}";
-                    var toWorker = data.toWorker ?? data.ToWorker ?? "Not specified";
-                    var notes = data.notes ?? data.Notes ?? "";
+                        if (changes != null)
+                        {
+                            foreach (var change in changes)
+                            {
+                                changesHtml += $"<strong>{change.Name}:</strong> {change.Value.Old} → {change.Value.New}<br/>";
+                            }
+                        }
+                        else
+                        {
+                            // Fallback to showing update data
+                            var updateData = Newtonsoft.Json.JsonConvert.SerializeObject(
+                                data.UpdateData ?? data.updateData,
+                                Newtonsoft.Json.Formatting.Indented
+                            );
+                            changesHtml += $"<pre class='mb-0'>{updateData}</pre>";
+                        }
+                        return changesHtml;
 
-                    var transferHtml = string.Format(
-                        "<strong>Product:</strong> {0} - {1} by {2}<br/>" +
-                        "<strong>Inventory Code:</strong> {3}<br/>" +
-                        "<strong>From:</strong> {4} (Worker: {5})<br/>" +
-                        "<strong>To:</strong> {6} (Worker: {7})",
-                        productId,
-                        productModel,
-                        productVendor,
-                        inventorycode,
-                        fromDept,
-                        fromWorker,
-                        toDept,
-                        toWorker
-                    );
+                    case "product.delete":
+                        var deleteInventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
+                        var model = data.Model ?? data.model ?? "N/A";
+                        var vendor = data.Vendor ?? data.vendor ?? "N/A";
+                        var dept = data.DepartmentName ?? data.departmentName ?? "N/A";
+                        return string.Format(
+                            "<strong>Inventory Code:</strong> {0}<br/>" +
+                            "<strong>Model:</strong> {1}<br/>" +
+                            "<strong>Vendor:</strong> {2}<br/>" +
+                            "<strong>Department:</strong> {3}",
+                            deleteInventoryCode,
+                            model,
+                            vendor,
+                            dept
+                        );
 
-                    if (!string.IsNullOrEmpty(notes))
-                    {
-                        transferHtml += $"<br/><strong>Notes:</strong> {notes}";
-                    }
+                    case "product.transfer":
+                        var productId = data.productId ?? data.ProductId ?? "N/A";
+                        var inventorycode = data.inventoryCode ?? data.InventoryCode ?? "N/A";
+                        var productModel = data.productModel ?? data.ProductModel ?? "N/A";
+                        var productVendor = data.productVendor ?? data.ProductVendor ?? "N/A";
+                        var fromDept = data.fromDepartmentName ?? data.FromDepartmentName ?? "N/A";
+                        var fromWorker = data.fromWorker ?? data.FromWorker ?? "Not assigned";
+                        var toDept = data.toDepartmentName ?? data.ToDepartmentName ?? $"Department #{data.toDepartmentId ?? data.ToDepartmentId}";
+                        var toWorker = data.toWorker ?? data.ToWorker ?? "Not specified";
 
-                    if (data.imageData != null || data.ImageData != null)
-                    {
-                        transferHtml += "<br/><strong>Image:</strong> Transfer image attached";
-                    }
+                        // Handle notes with explicit empty object check
+                        object notesObj = data.notes ?? data.Notes;
+                        string notesText = null!;
+    
+                        if (notesObj != null)
+                        {
+                            // Handle empty object case explicitly
+                            if (notesObj.ToString() == "{}")
+                            {
+                                notesText = null!;
+                            }
+                            // Handle string cases
+                            else if (notesObj is string str && !string.IsNullOrWhiteSpace(str))
+                            {
+                                notesText = str;
+                            }
+                            // Handle other non-string types
+                            else
+                            {
+                                notesText = notesObj.ToString()!;
+                            }
+                        }
 
-                    return transferHtml;
+                        var transferHtml = string.Format(
+                            "<strong>Product:</strong> {0} - {1} by {2}<br/>" +
+                            "<strong>Inventory Code:</strong> {3}<br/>" +
+                            "<strong>From:</strong> {4} (Worker: {5})<br/>" +
+                            "<strong>To:</strong> {6} (Worker: {7})",
+                            productId,
+                            productModel,
+                            productVendor,
+                            inventorycode,
+                            fromDept,
+                            fromWorker,
+                            toDept,
+                            toWorker
+                        );
+                        // Only add notes section if we have valid text
+                        if (!string.IsNullOrEmpty(notesText))
+                        {
+                            transferHtml += $"<br/><strong>Notes:</strong> {notesText}";
+                        }
 
-                default:
-                    return string.Format(
-                        "<pre class='mb-0'>{0}</pre>",
-                        Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented)
-                    );
+                        if (data.imageData != null || data.ImageData != null)
+                        {
+                            transferHtml += "<br/><strong>Image:</strong> Transfer image attached";
+                        }
+
+                        return transferHtml;
+
+                    default:
+                        return string.Format(
+                            "<pre class='mb-0'>{0}</pre>",
+                            Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented)
+                        );
             }
         }
         catch

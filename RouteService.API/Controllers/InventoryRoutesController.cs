@@ -48,10 +48,33 @@ namespace RouteService.API.Controllers
             }
             else if(User.HasClaim("permission", AllPermissions.RouteCreate))
             {
+                // Fetch product details first
+                var productServiceClient = HttpContext.RequestServices.GetRequiredService<IProductServiceClient>();
+                var product = productServiceClient.GetProductByIdAsync(dto.ProductId);
+                if (product == null)
+                    return NotFound("Product not found");
+
+                var toDepartment=await productServiceClient.GetDepartmentByIdAsync(dto.ToDepartmentId);
+                if(toDepartment == null)
+                    return NotFound("Target department not found");
+
+                var productInfo=await productServiceClient.GetProductByIdAsync(dto.ProductId);
+                if(productInfo == null)
+                    return NotFound("Product information not found");
+
+                var fromDepartment = await productServiceClient.GetDepartmentByIdAsync(productInfo.DepartmentId);
+
                 var actionData=new Dictionary<string, object>
                 {
                     ["productId"] = dto.ProductId,
+                    ["inventoryCode"] = productInfo?.InventoryCode ?? 0,
+                    ["productModel"] = productInfo?.Model ?? "",
+                    ["productVendor"] = productInfo?.Vendor ?? "",
+                    ["fromDepartmentId"] = productInfo?.DepartmentId ?? 0,
+                    ["fromDepartmentName"] = fromDepartment?.Name ?? "",
+                    ["fromWorker"] = productInfo?.Worker ?? "",
                     ["toDepartmentId"] = dto.ToDepartmentId,
+                    ["toDepartmentName"] = toDepartment.Name,
                     ["toWorker"] = dto.ToWorker ?? "",
                     ["notes"] = dto.Notes ?? ""
                 };

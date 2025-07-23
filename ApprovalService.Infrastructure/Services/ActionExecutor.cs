@@ -341,19 +341,18 @@ namespace ApprovalService.Infrastructure.Services
                 using var formContent = new MultipartFormDataContent();
 
                 // Get the productId to handle both camelCase and pascalCase
-                var productId = root.TryGetProperty("productId", out var pid) 
-                    ? pid.GetInt32() 
+                var productId = root.TryGetProperty("productId", out var pid)
+                    ? pid.GetInt32()
                     : root.GetProperty("ProductId").GetInt32();
 
                 formContent.Add(new StringContent(productId.ToString()), "ProductId");
 
                 // Get department ID
-                var toDepartmentId = root.TryGetProperty("toDepartmentId", out var deptId) 
-                    ? deptId.GetInt32() 
+                var toDepartmentId = root.TryGetProperty("toDepartmentId", out var deptId)
+                    ? deptId.GetInt32()
                     : root.GetProperty("ToDepartmentId").GetInt32();
 
                 formContent.Add(new StringContent(toDepartmentId.ToString()), "ToDepartmentId");
-
 
                 // Add optional fields
                 if (root.TryGetProperty("toWorker", out var worker) && worker.ValueKind != JsonValueKind.Null)
@@ -378,7 +377,7 @@ namespace ApprovalService.Infrastructure.Services
                 byte[]? imageData = null;
                 string? imageFileName = null;
 
-                if(root.TryGetProperty("imageData", out var imageDataProp) &&
+                if (root.TryGetProperty("imageData", out var imageDataProp) &&
                     imageDataProp.ValueKind == JsonValueKind.String)
                 {
                     imageData = Convert.FromBase64String(imageDataProp.GetString()!);
