@@ -15,7 +15,7 @@ namespace RouteService.Infrastructure.Services
         public ProductServiceClient(HttpClient httpClient, IConfiguration configuration,IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
-            _baseUrl = configuration["ProductService:BaseUrl"] ?? "http://localhost:5000";
+            _baseUrl = configuration["ProductService:BaseUrl"] ?? "http://localhost:5001";
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -28,7 +28,7 @@ namespace RouteService.Infrastructure.Services
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authHeader.Replace("Bearer ", ""));
             }
-        }
+        }   
         public async Task<ProductInfoDto?> GetProductByIdAsync(int productId, CancellationToken cancellationToken = default)
         {
             AddAuthorizationHeader();
