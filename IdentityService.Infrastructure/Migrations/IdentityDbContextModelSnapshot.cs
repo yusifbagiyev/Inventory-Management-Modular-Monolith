@@ -473,6 +473,26 @@ namespace IdentityService.Infrastructure.Migrations
                             AccessFailedCount = 0,
                             ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
                             CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "system@166logistics.com",
+                            EmailConfirmed = true,
+                            FirstName = "System",
+                            IsActive = true,
+                            LastName = "User",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "SYSTEM@166LOGISTICS.COM",
+                            NormalizedUserName = "SYSTEM",
+                            PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "STATIC_SECURITY_STAMP_123",
+                            TwoFactorEnabled = false,
+                            UserName = "system"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
+                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "yusifbv24@gmail.com",
                             EmailConfirmed = true,
                             FirstName = "Yusif",
@@ -603,6 +623,11 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             UserId = 1,
+                            RoleId = 1
+                        },
+                        new
+                        {
+                            UserId = 2,
                             RoleId = 1
                         });
                 });

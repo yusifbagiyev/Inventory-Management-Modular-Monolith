@@ -57,7 +57,7 @@ namespace ApprovalService.Infrastructure.Services
             {
                 Subject = new ClaimsIdentity(new[] {
                     new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "0"), // System user
+                    new Claim(ClaimTypes.NameIdentifier, "1"), // System user
                     new Claim(ClaimTypes.Name, "System")
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(5),

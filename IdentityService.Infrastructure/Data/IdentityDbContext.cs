@@ -68,28 +68,54 @@ namespace IdentityService.Infrastructure.Data
         private void SeedData(ModelBuilder builder)
         {
             // Use static password hash to avoid dynamic values
-            var user = new User
+            var users = new List<User>
             {
-                Id = 1,
-                UserName = "yusifbv24",
-                FirstName = "Yusif",
-                LastName = "Bagiyev",
-                NormalizedUserName = "YUSIFBV24",
-                Email = "yusifbv24@gmail.com",
-                NormalizedEmail = "YUSIFBV24@GMAIL.COM",
-                EmailConfirmed = true,
-                SecurityStamp = "STATIC_SECURITY_STAMP_123",
-                ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
-                PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
-                LockoutEnabled = false,
-                AccessFailedCount = 0
+                new() 
+                {
+                    Id=1,
+                    UserName = "system",
+                    FirstName = "System",
+                    LastName = "User",
+                    NormalizedUserName = "SYSTEM",
+                    Email = "system@166logistics.com",
+                    NormalizedEmail="SYSTEM@166LOGISTICS.COM",
+                    SecurityStamp = "STATIC_SECURITY_STAMP_123",
+                    ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
+                    PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
+                    LockoutEnabled = false,
+                    EmailConfirmed = true,
+                    AccessFailedCount = 0
+                },
+                new() 
+                {
+                    Id = 2,
+                    UserName = "yusifbv24",
+                    FirstName = "Yusif",
+                    LastName = "Bagiyev",
+                    NormalizedUserName = "YUSIFBV24",
+                    Email = "yusifbv24@gmail.com",
+                    NormalizedEmail = "YUSIFBV24@GMAIL.COM",
+                    SecurityStamp = "STATIC_SECURITY_STAMP_123",
+                    ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
+                    PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
+                    LockoutEnabled = false,
+                    EmailConfirmed = true,
+                    AccessFailedCount = 0
+                }
             };
 
-            builder.Entity<User>().HasData(user);
+            builder.Entity<User>().HasData(users);
 
             // Add user to Admin role
             builder.Entity<IdentityUserRole<int>>().HasData(
-                new IdentityUserRole<int> { UserId = 1, RoleId = 1 }
+                new IdentityUserRole<int> 
+                { 
+                    UserId = 1, RoleId = 1 ,
+                },
+                new IdentityUserRole<int> 
+                { 
+                    UserId = 2, RoleId = 1
+                }
             );
 
             var roles = new[]
