@@ -1,12 +1,12 @@
 ﻿using System.Security.Claims;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Services;
-using IdentityService.Domain.Constants;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using SharedServices.Identity;
 
 namespace IdentityService.Infrastructure.Services
 {
@@ -230,8 +230,7 @@ namespace IdentityService.Infrastructure.Services
                 return false;
 
             // Soft delete by deactivating the user
-            user.IsActive = false;
-            var result = await _userManager.UpdateAsync(user);
+            var result = await _userManager.DeleteAsync(user);
 
             // Also revoke all refresh tokens
             await RevokeAllUserRefreshTokensAsync(userId);

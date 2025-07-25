@@ -16,13 +16,19 @@ namespace SharedServices.Authorization
             AuthorizationHandlerContext context, 
             PermissionRequirement requirement)
         {
-            var hasPermission=context.User.Claims
-                .Any(c => c.Type == "permission" && c.Value == requirement.Permission);
+            // Allow system user with Admin role to bypass permission checks
+            if (context.User.IsInRole("Admin"))
+            {
+                context.Succeed(requirement);
+                return Task.CompletedTask;
+            }
 
-            if (hasPermission)
+            // Regular permission check for other users
+            if (context.User.HasClaim("permission", requirement.Permission))
             {
                 context.Succeed(requirement);
             }
+
             return Task.CompletedTask;
         }
     }

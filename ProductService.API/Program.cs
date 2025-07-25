@@ -1,5 +1,4 @@
 using System.Text;
-using IdentityService.Domain.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +10,7 @@ using ProductService.Application.Mappings;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Data;
 using SharedServices.Authorization;
+using SharedServices.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 

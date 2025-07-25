@@ -1,4 +1,4 @@
-﻿namespace IdentityService.Domain.Constants
+﻿namespace SharedServices.Identity
 {
     public static class AllPermissions
     {

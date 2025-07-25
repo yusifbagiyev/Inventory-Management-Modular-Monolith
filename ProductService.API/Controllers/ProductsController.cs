@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using IdentityService.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +10,7 @@ using ProductService.Application.Interfaces;
 using SharedServices.Authorization;
 using SharedServices.DTOs;
 using SharedServices.Enum;
+using SharedServices.Identity;
 
 namespace ProductService.API.Controllers
 {

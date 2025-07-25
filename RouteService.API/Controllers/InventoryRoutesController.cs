@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using IdentityService.Domain.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +11,7 @@ using RouteService.Domain.Common;
 using SharedServices.Authorization;
 using SharedServices.DTOs;
 using SharedServices.Enum;
+using SharedServices.Identity;
 
 namespace RouteService.API.Controllers
 {

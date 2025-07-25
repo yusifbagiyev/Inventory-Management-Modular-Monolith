@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddingSystemUser : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -276,11 +276,7 @@ namespace IdentityService.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "FirstName", "IsActive", "LastLoginAt", "LastName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "UserName" },
-                values: new object[,]
-                {
-                    { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "system@166logistics.com", true, "System", true, null, "User", false, null, "SYSTEM@166LOGISTICS.COM", "SYSTEM", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "system" },
-                    { 2, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" }
-                });
+                values: new object[] { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" });
 
             migrationBuilder.InsertData(
                 table: "Permissions",
@@ -306,11 +302,7 @@ namespace IdentityService.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
                 columns: new[] { "RoleId", "UserId" },
-                values: new object[,]
-                {
-                    { 1, 1 },
-                    { 1, 2 }
-                });
+                values: new object[] { 1, 1 });
 
             migrationBuilder.InsertData(
                 table: "RolePermissions",

@@ -55,11 +55,11 @@ namespace ApprovalService.Infrastructure.Services
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new[] {
+                Subject = new ClaimsIdentity([
                     new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "1"), // System user
+                    new Claim(ClaimTypes.NameIdentifier, "0"), // System user
                     new Claim(ClaimTypes.Name, "System")
-                }),
+                ]),
                 Expires = DateTime.UtcNow.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
