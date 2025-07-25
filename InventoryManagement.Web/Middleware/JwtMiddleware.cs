@@ -16,15 +16,32 @@ namespace InventoryManagement.Web.Middleware
             _next = next;
             _logger = logger;
         }
-
-        public async Task InvokeAsync(HttpContext context,IAuthService authService)
+        public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
             try
             {
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
-                    var token = context.Session.GetString("JwtToken");
-                    var refreshToken = context.Session.GetString("RefreshToken");
+                    string? token = null;
+                    string? refreshToken = null;
+                    bool isRemembered = false;
+
+                    // Check if user selected "Remember Me"
+                    var rememberMeClaim = context.User.FindFirst("RememberMe")?.Value;
+                    if (rememberMeClaim == "True")
+                    {
+                        // First check cookies for persistent login
+                        token = context.Request.Cookies["jwt_token"];
+                        refreshToken = context.Request.Cookies["refresh_token"];
+                        isRemembered = true;
+                    }
+
+                    // Fall back to session if not in cookies
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        token = context.Session.GetString("JwtToken");
+                        refreshToken = context.Session.GetString("RefreshToken");
+                    }
 
                     if (string.IsNullOrEmpty(token))
                     {
@@ -32,6 +49,7 @@ namespace InventoryManagement.Web.Middleware
                         await SignOutAndRedirect(context);
                         return;
                     }
+
                     var handler = new JwtSecurityTokenHandler();
                     if (handler.CanReadToken(token))
                     {
@@ -49,9 +67,28 @@ namespace InventoryManagement.Web.Middleware
                                     var result = await authService.RefreshTokenAsync(token, refreshToken);
                                     if (result != null)
                                     {
-                                        context.Session.SetString("JwtToken", result.AccessToken);
-                                        context.Session.SetString("RefreshToken", result.RefreshToken);
-                                        context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+                                        // Update storage based on remember me preference
+                                        if (isRemembered)
+                                        {
+                                            var cookieOptions = new CookieOptions
+                                            {
+                                                HttpOnly = true,
+                                                Secure = true,
+                                                SameSite = SameSiteMode.Strict,
+                                                Expires = DateTimeOffset.UtcNow.AddDays(30)
+                                            };
+
+                                            context.Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
+                                            context.Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
+                                            context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
+                                        }
+                                        else
+                                        {
+                                            context.Session.SetString("JwtToken", result.AccessToken);
+                                            context.Session.SetString("RefreshToken", result.RefreshToken);
+                                            context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+                                        }
+
                                         _logger.LogInformation("Token refreshed successfully");
                                     }
                                     else
@@ -78,10 +115,17 @@ namespace InventoryManagement.Web.Middleware
 
             await _next(context);
         }
+
         private async Task SignOutAndRedirect(HttpContext context)
         {
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             context.Session.Clear();
+
+            // Clear cookies
+            context.Response.Cookies.Delete("jwt_token");
+            context.Response.Cookies.Delete("refresh_token");
+            context.Response.Cookies.Delete("user_data");
+
             if (!context.Request.Path.StartsWithSegments("/Account/Login"))
             {
                 context.Response.Redirect($"/Account/Login?returnUrl={context.Request.Path}");

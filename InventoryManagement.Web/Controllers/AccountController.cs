@@ -56,32 +56,50 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result=await _authService.LoginAsync(model.Username,model.Password);
+                    var result = await _authService.LoginAsync(model.Username, model.Password);
                     if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                     {
-                        //Store JWT token in session
-                        HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                        HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                        HttpContext.Session.SetString("UserData",JsonConvert.SerializeObject(result.User));
-
-                        //Create claims
-                        var claims = new List<Claim>
+                        // Store JWT tokens
+                        if (model.RememberMe)
                         {
-                            new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
-                            new Claim(ClaimTypes.Name, result.User.Username),
-                            new Claim(ClaimTypes.Email, result.User.Email),
-                            new Claim("FirstName", result.User.FirstName),
-                            new Claim("LastName", result.User.LastName)
-                        };
+                            // Use cookies for persistent storage when Remember Me is checked
+                            var cookieOptions = new CookieOptions
+                            {
+                                HttpOnly = true,
+                                Secure = true,
+                                SameSite = SameSiteMode.Strict,
+                                Expires = DateTimeOffset.UtcNow.AddDays(30)
+                            };
 
-                        //Add role claims
-                        foreach(var role in result.User.Roles)
+                            Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
+                            Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
+                            Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
+                        }
+                        else
+                        {
+                            // Use session storage for non-persistent login
+                            HttpContext.Session.SetString("JwtToken", result.AccessToken);
+                            HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
+                            HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+                        }
+
+                        // Create claims for cookie authentication
+                        var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                    new Claim(ClaimTypes.Name, result.User.Username),
+                    new Claim(ClaimTypes.Email, result.User.Email),
+                    new Claim("FirstName", result.User.FirstName),
+                    new Claim("LastName", result.User.LastName),
+                    new Claim("RememberMe", model.RememberMe.ToString())
+                };
+
+                        foreach (var role in result.User.Roles)
                         {
                             claims.Add(new Claim(ClaimTypes.Role, role));
                         }
 
-                        //Add permission claims
-                        foreach(var permission in result.User.Permissions)
+                        foreach (var permission in result.User.Permissions)
                         {
                             claims.Add(new Claim("permission", permission));
                         }
@@ -90,7 +108,9 @@ namespace InventoryManagement.Web.Controllers
                         var authProperties = new AuthenticationProperties
                         {
                             IsPersistent = model.RememberMe,
-                            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(60)
+                            ExpiresUtc = model.RememberMe ?
+                                DateTimeOffset.UtcNow.AddDays(30) :
+                                DateTimeOffset.UtcNow.AddHours(8)
                         };
 
                         await HttpContext.SignInAsync(
@@ -98,7 +118,7 @@ namespace InventoryManagement.Web.Controllers
                             new ClaimsPrincipal(claimsIdentity),
                             authProperties);
 
-                        _logger.LogInformation($"User {model.Username} logged in successfully");
+                        _logger.LogInformation($"User {model.Username} logged in successfully with RememberMe={model.RememberMe}");
 
                         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                         {

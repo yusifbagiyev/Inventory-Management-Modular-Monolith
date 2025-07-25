@@ -66,43 +66,32 @@ namespace InventoryManagement.Web.Controllers
                 };
 
                 var form = HttpContext.Request.Form;
-                var json = await _apiService.PostFormAsync<string>("api/products", form, dto);
-
-                if (!string.IsNullOrEmpty(json))
+                try
                 {
-                    try
-                    {
-                        // Parse the JSON response
-                        var response = JsonConvert.DeserializeObject<dynamic>(json);
+                    // Use dynamic type to handle different response structures
+                    var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
 
-                        if (response?.status?.ToString() == "PendingApproval" ||
-                            response?.Status?.ToString() == "PendingApproval")
+
+                    if (response != null)
+                    {
+                        // Check if it's an approval request response
+                        if (response.IsSuccess == false)
                         {
-                            TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
-                        }
-                        else if (response?.approvalRequestId != null)
-                        {
-                            TempData["Info"] = "Your product creation request has been submitted for approval. You will be notified once it's processed.";
-                        }
-                        else if (response?.id != null)
-                        {
-                            TempData["Success"] = "Product created successfully.";
+                            TempData["Info"] = response.Message ??
+                                "Your product creation request has been submitted for approval. You will be notified once it's processed.";
                         }
                         else
                         {
                             TempData["Success"] = "Product created successfully.";
                         }
-                    }
-                    catch
-                    {
-                        // If it's not JSON, assume success
-                        TempData["Success"] = "Product created successfully.";
-                    }
 
-                    return RedirectToAction(nameof(Index));
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
-
-                ModelState.AddModelError("", "Failed to create product.");
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Failed to create product: {ex.Message}");
+                }
             }
             await LoadDropdowns(productModel);
             return View(productModel);

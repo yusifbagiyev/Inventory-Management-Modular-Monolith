@@ -247,107 +247,147 @@
         }
 
                 function renderPermissions(permissions) {
-            // Separate direct and available permissions
-            const directPermissions = permissions.filter(p => p.isDirect);
-            const availablePermissions = permissions.filter(p => !p.isDirect && !p.isFromRole);
-            const rolePermissions = permissions.filter(p => p.isFromRole && !p.isDirect);
+                // Group permissions by status
+                const currentDirectPermissions = permissions.filter(p => p.isDirect);
+                const roleBasedPermissions = permissions.filter(p => p.isFromRole && !p.isDirect);
+                const availablePermissions = permissions.filter(p => !p.isDirect && !p.isFromRole);
 
-            let html = '<div class="permissions-container">';
+                let html = '<div class="permissions-container">';
 
-            // Current Direct Permissions Section
-            if (directPermissions.length > 0) {
+                // Section 1: Current Direct Permissions 
+                    if (directPermissions.length > 0) {
+                        html += `
+                                 html += `
+                    <div class="permissions-section mb-4">
+                        <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-success mb-0">
+                                <i class="fas fa-check-circle"></i> Current User Permissions
+                            </h6>
+                            <span class="badge bg-success">${currentDirectPermissions.length} permissions</span>
+                    </div>
+                                `;
+
+                    if (currentDirectPermissions.length > 0) {
+                    html += '<div class="row">';
+                    currentDirectPermissions.forEach(perm => {
+                        html += `
+                            <div class="col-md-6 mb-2">
+                                <div class="permission-card current-permission">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="permission-info">
+                                            <div class="permission-name">
+                                                <i class="fas fa-shield-alt text-success"></i>
+                                                <strong>${perm.name}</strong>
+                                            </div>
+                                            <small class="text-muted d-block">${perm.description}</small>
+                                            <small class="text-info"><i class="fas fa-tag"></i> ${perm.category}</small>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                onclick="removePermission('${perm.name}')"
+                                                title="Remove this permission">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<p class="text-muted">No direct permissions assigned to this user.</p>';
+                }
+                html += '</div>';
+
+                // Section 2: Permissions from Roles (Read-only)
+
+                    if (roleBasedPermissions.length > 0) {
                 html += `
                     <div class="permissions-section mb-4">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-check-circle"></i> Current Direct Permissions
-                        </h6>
+                        <div class="section-header mb-3">
+                            <h6 class="text-info mb-0">
+                                <i class="fas fa-users"></i> Permissions from Roles
+                            </h6>
+                            <small class="text-muted">These permissions are inherited from user's roles</small>
+                        </div>
                         <div class="row">
                 `;
 
-                directPermissions.forEach(perm => {
+                roleBasedPermissions.forEach(perm => {
                     html += `
                         <div class="col-md-6 mb-2">
-                            <div class="permission-item current-permission p-2 border rounded bg-light">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           id="perm_${perm.name}"
-                                           data-permission-name="${perm.name}"
-                                           checked>
-                                    <label class="form-check-label" for="perm_${perm.name}">
-                                        <strong>${perm.name}</strong>
-                                        <small class="d-block text-muted">${perm.description}</small>
-                                    </label>
+                            <div class="permission-card role-permission">
+                                <div class="permission-info">
+                                    <div class="permission-name">
+                                        <i class="fas fa-lock text-info"></i>
+                                        <span>${perm.name}</span>
+                                    </div>
+                                    <small class="text-muted d-block">${perm.description}</small>
+                                    <small class="text-primary">
+                                        <i class="fas fa-user-tag"></i> From: ${perm.roles.join(', ')}
+                                    </small>
                                 </div>
                             </div>
                         </div>
                     `;
                 });
-
                 html += '</div></div>';
             }
 
-            // Permissions from Roles Section
-            if (rolePermissions.length > 0) {
-                html += `
-                    <div class="permissions-section mb-4">
-                        <h6 class="text-info mb-3">
-                            <i class="fas fa-shield-alt"></i> Permissions from Roles (Read-only)
+            // Section 3: Available Permissions to Add
+            html += `
+                <div class="permissions-section">
+                    <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-primary mb-0">
+                            <i class="fas fa-plus-circle"></i> Available Permissions
                         </h6>
-                        <div class="row">
-                `;
+                        <span class="badge bg-primary">${availablePermissions.length} available</span>
+                    </div>
+            `;
 
-                rolePermissions.forEach(perm => {
-                    html += `
-                        <div class="col-md-6 mb-2">
-                            <div class="permission-item role-permission p-2 border rounded bg-light opacity-75">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           id="perm_role_${perm.name}"
-                                           checked disabled>
-                                    <label class="form-check-label" for="perm_role_${perm.name}">
-                                        <strong>${perm.name}</strong>
-                                        <small class="d-block text-muted">${perm.description}</small>
-                                        <small class="text-info"><i class="fas fa-lock"></i> From: ${perm.roles.join(', ')}</small>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
-
-            // Available Permissions to Add Section
             if (availablePermissions.length > 0) {
-                html += `
-                    <div class="permissions-section">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-plus-circle"></i> Available Permissions to Add
-                        </h6>
-                        <div class="row">
-                `;
-
+                // Group by category for better organization
+                const groupedPermissions = {};
                 availablePermissions.forEach(perm => {
-                    html += `
-                        <div class="col-md-6 mb-2">
-                            <div class="permission-item available-permission p-2 border rounded">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"
-                                           id="perm_${perm.name}"
-                                           data-permission-name="${perm.name}">
-                                    <label class="form-check-label" for="perm_${perm.name}">
-                                        <strong>${perm.name}</strong>
-                                        <small class="d-block text-muted">${perm.description}</small>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    if (!groupedPermissions[perm.category]) {
+                        groupedPermissions[perm.category] = [];
+                    }
+                    groupedPermissions[perm.category].push(perm);
                 });
 
-                html += '</div></div>';
+                for (const [category, perms] of Object.entries(groupedPermissions)) {
+                    html += `
+                        <div class="category-group mb-3">
+                            <h6 class="category-title">
+                                <i class="fas fa-folder"></i> ${category}
+                            </h6>
+                            <div class="row">
+                    `;
+
+                    perms.forEach(perm => {
+                        html += `
+                            <div class="col-md-6 mb-2">
+                                <div class="permission-card available-permission"
+                                     onclick="addPermission('${perm.name}')"
+                                     style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="permission-info">
+                                            <div class="permission-name">
+                                                <span>${perm.name}</span>
+                                            </div>
+                                            <small class="text-muted d-block">${perm.description}</small>
+                                        </div>
+                                        <i class="fas fa-plus-circle text-primary"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div></div>';
+                }
+            } else {
+                html += '<p class="text-muted">All available permissions have been assigned.</p>';
             }
+            html += '</div>';
 
             html += '</div>';
             $('#permissionsContainer').html(html);
@@ -478,4 +518,68 @@
         .permission-item.current-permission:hover {
             box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
         }
+</style>
+<style>
+    .permissions-container {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    .permissions-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .permission-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+
+    .current-permission {
+        border-left: 4px solid #28a745;
+    }
+
+    .role-permission {
+        border-left: 4px solid #17a2b8;
+        background: #f8f9fa;
+    }
+
+    .available-permission:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .permission-name {
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .category-group {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #e9ecef;
+    }
+
+    .category-title {
+        color: #495057;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
 </style>

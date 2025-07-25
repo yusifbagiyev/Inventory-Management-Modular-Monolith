@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Services.Interfaces;
+﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Services.Interfaces;
 using Newtonsoft.Json;
 using System.Net;
 using System.Net.Http.Headers;
@@ -27,6 +28,8 @@ namespace InventoryManagement.Web.Services
             _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
             _logger = logger;
         }
+
+
         private void AddAuthorizationHeader()
         {
             var token=_httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
@@ -119,7 +122,7 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public async Task<TResponse?> PostFormAsync<TResponse>(
+        public async Task<ApiResponse<T>> PostFormAsync<T>(
             string endpoint,
             IFormCollection form,
             object? dataDto=null)
@@ -171,22 +174,47 @@ namespace InventoryManagement.Web.Services
                     response = await _httpClient.PostAsync(endpoint, content);
                 }
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    // If TResponse is string, return the raw content
-                    if (typeof(TResponse) == typeof(string))
-                    {
-                        return (TResponse)(object)responseContent;
-                    }
-                    return JsonConvert.DeserializeObject<TResponse>(responseContent);
-                }
+                var responseContent=await response.Content.ReadAsStringAsync();
 
-                return default;
+                // Parse the response to determine if it's an approval or direct action
+                var apiResponse = new ApiResponse<T>();
+
+                try
+                {
+                    dynamic? jsonResponse=JsonConvert.DeserializeObject(responseContent);
+
+                    if (jsonResponse?.status == "PendingApproval" ||
+                        jsonResponse?.Status == "PendingApproval" ||
+                        jsonResponse?.approvalRequestId != null ||
+                        jsonResponse?.ApprovalRequestId != null)
+                    {
+                        apiResponse.IsApprovalRequest = true;
+                        apiResponse.Message = jsonResponse?.message ?? "Request submitted for approval";
+                        apiResponse.ApprovalRequestId = jsonResponse?.approvalRequestId ?? jsonResponse?.ApprovalRequestId;
+                    }
+                    else
+                    {
+                        apiResponse.IsSuccess = response.IsSuccessStatusCode;
+                        apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
+                    }
+                }
+                catch
+                {
+                    apiResponse.IsSuccess = response.IsSuccessStatusCode;
+                    if (response.IsSuccessStatusCode && typeof(T) != typeof(string))
+                    {
+                        apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
+                    }
+                }
+                return apiResponse;
             }
-            catch
+            catch(Exception ex)
             {
-                return default;
+                return new ApiResponse<T>
+                {
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
             }
         }
 
@@ -220,9 +248,9 @@ namespace InventoryManagement.Web.Services
         }
 
         public async Task<TResponse?> PutFormAsync<TResponse>(
-    string endpoint,
-    IFormCollection form,
-    object? dataDto = null)
+            string endpoint,
+            IFormCollection form,
+            object? dataDto = null)
         {
             try
             {
