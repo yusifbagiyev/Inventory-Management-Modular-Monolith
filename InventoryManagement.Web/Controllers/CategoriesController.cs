@@ -28,6 +28,7 @@ namespace InventoryManagement.Web.Controllers
             return View(new CategoryViewModel());
         }
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CategoryViewModel model)
@@ -36,15 +37,22 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _apiService.PostAsync<CategoryViewModel, CategoryViewModel>("api/categories", model);
+                    var response = await _apiService.PostAsync<CategoryViewModel, CategoryViewModel>("api/categories", model);
 
-                    if (result != null)
+                    if (response.IsApprovalRequest)
                     {
-                        TempData["Success"] = "Category created successfully!";
+                        TempData["Info"] = response.Message;
                         return RedirectToAction(nameof(Index));
                     }
-
-                    ModelState.AddModelError("", "Failed to create category");
+                    else if (response.IsSuccess)
+                    {
+                        TempData["Success"] = "Category created successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", response.Message ?? "Failed to create category");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -56,15 +64,20 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
+
         public async Task<IActionResult> Edit(int id)
         {
             var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
+
 
             if (category == null)
                 return NotFound();
 
             return View(category);
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -74,15 +87,22 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _apiService.PutAsync<CategoryViewModel, bool>($"api/categories/{id}", model);
+                    var response = await _apiService.PutAsync<CategoryViewModel, bool>($"api/categories/{id}", model);
 
-                    if (result)
+                    if (response.IsApprovalRequest)
                     {
-                        TempData["Success"] = "Category updated successfully!";
+                        TempData["Info"] = response.Message;
                         return RedirectToAction(nameof(Index));
                     }
-
-                    ModelState.AddModelError("", "Failed to update category");
+                    else if (response.IsSuccess)
+                    {
+                        TempData["Success"] = "Category updated successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", response.Message ?? "Failed to update category");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -94,21 +114,28 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var result = await _apiService.DeleteAsync($"api/categories/{id}");
+                var response = await _apiService.DeleteAsync($"api/categories/{id}");
 
-                if (result)
+                if (response.IsApprovalRequest)
                 {
-                    TempData["Success"] = "Category deleted successfully!";
+                    TempData["Info"] = response.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                else if (response.IsSuccess)
+                {
+                    TempData["Success"] = "Category deleted successfully.";
                 }
                 else
                 {
-                    TempData["Error"] = "Failed to delete category. It may be in use.";
+                    ModelState.AddModelError("", response.Message ?? "Failed to delete category");
                 }
             }
             catch (Exception ex)

@@ -168,58 +168,45 @@
             }
         }
 
-        $('form').on('submit', function(e) {
+                $('form').on('submit', function(e) {
             e.preventDefault();
 
             var form = $(this);
             var formData = new FormData(form[0]);
 
             $.ajax({
-        url: form.attr('action'),
-        type: form.attr('method'),
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(response) {
-            console.log('Response:', response); // Debug log
+                url: form.attr('action'),
+                type: form.attr('method'),
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    console.log('Raw response:', response);
 
-            // Handle string response (which is what's being returned)
-            if (typeof response === 'string') {
-                try {
-                    // Try to parse the string as JSON
-                    var jsonResponse = JSON.parse(response);
+                    // The response should already be parsed JSON
+                    if (response) {
+                        if (response.status === 'PendingApproval' ||
+                            response.Status === 'PendingApproval' ||
+                            response.approvalRequestId ||
+                            response.ApprovalRequestId) {
 
-                    if (jsonResponse.status === 'PendingApproval' ||
-                        jsonResponse.Status === 'PendingApproval' ||
-                        jsonResponse.approvalRequestId ||
-                        jsonResponse.ApprovalRequestId) {
-                        showToast('Your product creation request has been submitted for approval. You will be notified once it\'s processed.', 'info');
-                        setTimeout(() => window.location.href = '/Products', 2000);
-                    } else {
-                        // Product was created directly
-                        showToast('Product created successfully!', 'success');
-                        setTimeout(() => window.location.href = '/Products', 1500);
+                            // Show approval message
+                            showToast(
+                                response.message || response.Message ||
+                                'Your product creation request has been submitted for approval. You will be notified once it\'s processed.',
+                                'info'
+                            );
+
+                            setTimeout(() => window.location.href = '/Products', 2000);
+                        } else {
+                            // Product was created directly
+                            showToast('Product created successfully!', 'success');
+                            setTimeout(() => window.location.href = '/Products', 1500);
+                        }
                     }
-                } catch (e) {
-                    // If not JSON, assume success
-                    showToast('Product created successfully!', 'success');
-                    setTimeout(() => window.location.href = '/Products', 1500);
-                }
-            } else if (response && typeof response === 'object') {
-                // Handle object response
-                if (response.status === 'PendingApproval' ||
-                    response.Status === 'PendingApproval' ||
-                    response.approvalRequestId ||
-                    response.ApprovalRequestId) {
-                    showToast('Your product creation request has been submitted for approval. You will be notified once it\'s processed.', 'info');
-                    setTimeout(() => window.location.href = '/Products', 2000);
-                } else {
-                    showToast('Product created successfully!', 'success');
-                    setTimeout(() => window.location.href = '/Products', 1500);
-                }
-            }
-        },
+                },
                 error: function(xhr) {
+                    console.error('Ajax error:', xhr);
                     var errorMessage = 'An error occurred. Please try again.';
 
                     try {
@@ -230,11 +217,9 @@
                                 errorMessage += '\n' + response.details;
                             }
                         } else if (response.errors) {
-                            // Handle validation errors
                             errorMessage = Object.values(response.errors).flat().join('\n');
                         }
                     } catch (e) {
-                        // If response is not JSON, use status text
                         if (xhr.status === 403) {
                             errorMessage = 'You do not have permission to perform this action.';
                         } else if (xhr.status === 400) {

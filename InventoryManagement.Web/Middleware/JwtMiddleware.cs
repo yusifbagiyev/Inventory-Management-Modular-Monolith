@@ -50,6 +50,10 @@ namespace InventoryManagement.Web.Middleware
                         return;
                     }
 
+                    // Store token in HttpContext.Items for this request
+                    context.Items["JwtToken"] = token;
+                    context.Items["RefreshToken"] = refreshToken;
+
                     var handler = new JwtSecurityTokenHandler();
                     if (handler.CanReadToken(token))
                     {
@@ -67,6 +71,10 @@ namespace InventoryManagement.Web.Middleware
                                     var result = await authService.RefreshTokenAsync(token, refreshToken);
                                     if (result != null)
                                     {
+                                        // Update the token in HttpContext.Items immediately
+                                        context.Items["JwtToken"] = result.AccessToken;
+                                        context.Items["RefreshToken"] = result.RefreshToken;
+
                                         // Update storage based on remember me preference
                                         if (isRemembered)
                                         {
@@ -82,17 +90,16 @@ namespace InventoryManagement.Web.Middleware
                                             context.Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
                                             context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
                                         }
-                                        else
-                                        {
-                                            context.Session.SetString("JwtToken", result.AccessToken);
-                                            context.Session.SetString("RefreshToken", result.RefreshToken);
-                                            context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-                                        }
+                                        context.Session.SetString("JwtToken", result.AccessToken);
+                                        context.Session.SetString("RefreshToken", result.RefreshToken);
+                                        context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+
 
                                         _logger.LogInformation("Token refreshed successfully");
                                     }
                                     else
                                     {
+                                        _logger.LogWarning("Token refresh returned null");
                                         await SignOutAndRedirect(context);
                                         return;
                                     }
@@ -104,7 +111,19 @@ namespace InventoryManagement.Web.Middleware
                                     return;
                                 }
                             }
+                            else
+                            {
+                                _logger.LogWarning("No refresh token available");
+                                await SignOutAndRedirect(context);
+                                return;
+                            }
                         }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Cannot read JWT token");
+                        await SignOutAndRedirect(context);
+                        return;
                     }
                 }
             }

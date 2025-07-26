@@ -246,61 +246,58 @@
             });
         }
 
-                function renderPermissions(permissions) {
-                // Group permissions by status
-                const currentDirectPermissions = permissions.filter(p => p.isDirect);
-                const roleBasedPermissions = permissions.filter(p => p.isFromRole && !p.isDirect);
-                const availablePermissions = permissions.filter(p => !p.isDirect && !p.isFromRole);
+                        function renderPermissions(permissions) {
+            // Group permissions by status
+            const currentDirectPermissions = permissions.filter(p => p.isDirect);
+            const roleBasedPermissions = permissions.filter(p => p.isFromRole && !p.isDirect);
+            const availablePermissions = permissions.filter(p => !p.isDirect && !p.isFromRole);
 
-                let html = '<div class="permissions-container">';
+            let html = '<div class="permissions-container">';
 
-                // Section 1: Current Direct Permissions 
-                    if (directPermissions.length > 0) {
-                        html += `
-                                 html += `
-                    <div class="permissions-section mb-4">
-                        <div class="section-header d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="text-success mb-0">
-                                <i class="fas fa-check-circle"></i> Current User Permissions
-                            </h6>
-                            <span class="badge bg-success">${currentDirectPermissions.length} permissions</span>
+            // Section 1: Current Direct Permissions
+            html += `
+                <div class="permissions-section mb-4">
+                    <div class="section-header d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-success mb-0">
+                            <i class="fas fa-check-circle"></i> Current User Permissions
+                        </h6>
+                        <span class="badge bg-success">${currentDirectPermissions.length} permissions</span>
                     </div>
-                                `;
+            `;
 
-                    if (currentDirectPermissions.length > 0) {
-                    html += '<div class="row">';
-                    currentDirectPermissions.forEach(perm => {
-                        html += `
-                            <div class="col-md-6 mb-2">
-                                <div class="permission-card current-permission">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="permission-info">
-                                            <div class="permission-name">
-                                                <i class="fas fa-shield-alt text-success"></i>
-                                                <strong>${perm.name}</strong>
-                                            </div>
-                                            <small class="text-muted d-block">${perm.description}</small>
-                                            <small class="text-info"><i class="fas fa-tag"></i> ${perm.category}</small>
+            if (currentDirectPermissions.length > 0) {
+                html += '<div class="row">';
+                currentDirectPermissions.forEach(perm => {
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <div class="permission-card current-permission">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="permission-info">
+                                        <div class="permission-name">
+                                            <i class="fas fa-shield-alt text-success"></i>
+                                            <strong>${perm.name}</strong>
                                         </div>
-                                        <button class="btn btn-sm btn-outline-danger"
-                                                onclick="removePermission('${perm.name}')"
-                                                title="Remove this permission">
-                                            <i class="fas fa-times"></i>
-                                        </button>
+                                        <small class="text-muted d-block">${perm.description || 'No description'}</small>
+                                        <small class="text-info"><i class="fas fa-tag"></i> ${perm.category || 'General'}</small>
                                     </div>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            onclick="removePermission('${perm.name}')"
+                                            title="Remove this permission">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
                             </div>
-                        `;
-                    });
-                    html += '</div>';
-                } else {
-                    html += '<p class="text-muted">No direct permissions assigned to this user.</p>';
-                }
+                        </div>
+                    `;
+                });
                 html += '</div>';
+            } else {
+                html += '<p class="text-muted">No direct permissions assigned to this user.</p>';
+            }
+            html += '</div>';
 
-                // Section 2: Permissions from Roles (Read-only)
-
-                    if (roleBasedPermissions.length > 0) {
+            // Section 2: Permissions from Roles
+            if (roleBasedPermissions.length > 0) {
                 html += `
                     <div class="permissions-section mb-4">
                         <div class="section-header mb-3">
@@ -321,9 +318,9 @@
                                         <i class="fas fa-lock text-info"></i>
                                         <span>${perm.name}</span>
                                     </div>
-                                    <small class="text-muted d-block">${perm.description}</small>
+                                    <small class="text-muted d-block">${perm.description || 'No description'}</small>
                                     <small class="text-primary">
-                                        <i class="fas fa-user-tag"></i> From: ${perm.roles.join(', ')}
+                                        <i class="fas fa-user-tag"></i> From: ${perm.roles ? perm.roles.join(', ') : 'Role'}
                                     </small>
                                 </div>
                             </div>
@@ -333,7 +330,7 @@
                 html += '</div></div>';
             }
 
-            // Section 3: Available Permissions to Add
+            // Section 3: Available Permissions
             html += `
                 <div class="permissions-section">
                     <div class="section-header d-flex justify-content-between align-items-center mb-3">
@@ -345,13 +342,14 @@
             `;
 
             if (availablePermissions.length > 0) {
-                // Group by category for better organization
+                // Group by category
                 const groupedPermissions = {};
                 availablePermissions.forEach(perm => {
-                    if (!groupedPermissions[perm.category]) {
-                        groupedPermissions[perm.category] = [];
+                    const category = perm.category || 'General';
+                    if (!groupedPermissions[category]) {
+                        groupedPermissions[category] = [];
                     }
-                    groupedPermissions[perm.category].push(perm);
+                    groupedPermissions[category].push(perm);
                 });
 
                 for (const [category, perms] of Object.entries(groupedPermissions)) {
@@ -374,7 +372,7 @@
                                             <div class="permission-name">
                                                 <span>${perm.name}</span>
                                             </div>
-                                            <small class="text-muted d-block">${perm.description}</small>
+                                            <small class="text-muted d-block">${perm.description || 'No description'}</small>
                                         </div>
                                         <i class="fas fa-plus-circle text-primary"></i>
                                     </div>
@@ -392,6 +390,57 @@
             html += '</div>';
             $('#permissionsContainer').html(html);
         }
+
+                function addPermission(permissionName) {
+            if (confirm(`Grant "${permissionName}" permission to this user?`)) {
+                $.ajax({
+                    url: '@Url.Action("GrantPermission", new { id = Model.Id })',
+                    type: 'POST',
+                    data: JSON.stringify({ permissionName: permissionName }),
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast(`Permission "${permissionName}" granted successfully`, 'success');
+                            loadUserPermissionsStatus(); // Reload permissions
+                        } else {
+                            showToast('Failed to grant permission', 'error');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error granting permission', 'error');
+                    }
+                });
+            }
+        }
+
+                function removePermission(permissionName) {
+            if (confirm(`Remove "${permissionName}" permission from this user?`)) {
+                $.ajax({
+                    url: '@Url.Action("RevokePermission", new { id = Model.Id })',
+                    type: 'POST',
+                    data: JSON.stringify({ permissionName: permissionName }),
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast(`Permission "${permissionName}" removed successfully`, 'success');
+                            loadUserPermissionsStatus(); // Reload permissions
+                        } else {
+                            showToast('Failed to remove permission', 'error');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error removing permission', 'error');
+                    }
+                });
+            }
+        }
+
 
         function filterPermissions(searchTerm) {
             $('.permission-item').each(function() {

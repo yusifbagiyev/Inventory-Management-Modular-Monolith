@@ -84,24 +84,21 @@ namespace InventoryManagement.Web.Controllers
                         actionData["imageFileName"] = imageFile.FileName;
                     }
 
-                    var result = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
+                    var response = await _apiService.PostFormAsync<RouteViewModel>("api/inventoryroutes/transfer", HttpContext.Request.Form);
 
-                    if (result != null)
+
+                    if (response.IsApprovalRequest)
                     {
-                        var resultType = result.GetType();
-                        var statusProperty = resultType.GetProperty("Status");
-
-                        if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
-                        {
-                            TempData["Info"] = "Your transfer request has been submitted for approval. You will be notified once it's processed.";
-                        }
-                        else
-                        {
-                            TempData["Success"] = "Product transferred successfully!";
-                        }
+                        TempData["Info"] = response.Message;
                         return RedirectToAction(nameof(Index));
                     }
-                    ModelState.AddModelError("", "Failed to transfer product");
+                    else if(response.IsSuccess)
+                    {
+                        TempData["Success"] = "Product transferred successfully!";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                        ModelState.AddModelError("", "Failed to transfer product");
                 }
                 catch (Exception ex)
                 {
@@ -141,16 +138,14 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _apiService.PutAsync<object, bool>($"api/inventoryroutes/{id}/complete", new { });
+                var response = await _apiService.PutAsync<object, bool>($"api/inventoryroutes/{id}/complete", new { });
 
-                if (result)
+                if (response.IsSuccess)
                 {
                     TempData["Success"] = "Route completed successfully!";
                 }
                 else
-                {
-                    TempData["Error"] = "Failed to complete route";
-                }
+                    TempData["Error"] = response.Message ?? "Failed to complete route";
             }
             catch (Exception ex)
             {
@@ -168,16 +163,20 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _apiService.DeleteAsync($"api/inventoryroutes/{id}");
+                var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}");
 
-                if (result)
+                if (response.IsApprovalRequest)
+                {
+                    TempData["Info"] = response.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                else if (response.IsSuccess)
                 {
                     TempData["Success"] = "Route deleted successfully!";
+                    return RedirectToAction(nameof(Index));
                 }
                 else
-                {
-                    TempData["Error"] = "Failed to delete route";
-                }
+                    ModelState.AddModelError("", response.Message ?? "Failed to delete route");
             }
             catch (Exception ex)
             {

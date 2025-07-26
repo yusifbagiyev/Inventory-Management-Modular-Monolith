@@ -20,13 +20,17 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Index()
         {
             var departments = await _apiService.GetAsync<List<DepartmentViewModel>>("api/departments");
-            return View(departments ?? new List<DepartmentViewModel>());
+            return View(departments ?? []);
         }
+
+
 
         public IActionResult Create()
         {
             return View(new DepartmentViewModel());
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -36,15 +40,21 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _apiService.PostAsync<DepartmentViewModel, DepartmentViewModel>("api/departments", model);
+                    var response = await _apiService.PostAsync<DepartmentViewModel, DepartmentViewModel>("api/departments", model);
 
-                    if (result != null)
+
+                    if (response.IsApprovalRequest)
+                    {
+                        TempData["Info"] = response.Message;
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else if (response.IsSuccess)
                     {
                         TempData["Success"] = "Department created successfully!";
                         return RedirectToAction(nameof(Index));
                     }
-
-                    ModelState.AddModelError("", "Failed to create department");
+                    else
+                        ModelState.AddModelError("", "Failed to create department");
                 }
                 catch (Exception ex)
                 {
@@ -56,6 +66,8 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
+
         public async Task<IActionResult> Edit(int id)
         {
             var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
@@ -66,6 +78,8 @@ namespace InventoryManagement.Web.Controllers
             return View(department);
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, DepartmentViewModel model)
@@ -74,15 +88,20 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _apiService.PutAsync<DepartmentViewModel, bool>($"api/departments/{id}", model);
+                    var response = await _apiService.PutAsync<DepartmentViewModel, bool>($"api/departments/{id}", model);
 
-                    if (result)
+                    if (response.IsApprovalRequest)
+                    {
+                        TempData["Info"] = response.Message;
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else if(response.IsSuccess)
                     {
                         TempData["Success"] = "Department updated successfully!";
                         return RedirectToAction(nameof(Index));
                     }
-
-                    ModelState.AddModelError("", "Failed to update department");
+                    else
+                        ModelState.AddModelError("", "Failed to update department");
                 }
                 catch (Exception ex)
                 {
@@ -90,9 +109,10 @@ namespace InventoryManagement.Web.Controllers
                     ModelState.AddModelError("", "An error occurred");
                 }
             }
-
             return View(model);
         }
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -100,16 +120,20 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _apiService.DeleteAsync($"api/departments/{id}");
+                var response = await _apiService.DeleteAsync($"api/departments/{id}");
 
-                if (result)
+                if (response.IsApprovalRequest)
+                {
+                    TempData["Info"] = response.Message;
+                    return RedirectToAction(nameof(Index));
+                }
+                else if (response.IsSuccess)
                 {
                     TempData["Success"] = "Department deleted successfully!";
+                    return RedirectToAction(nameof(Index));
                 }
                 else
-                {
-                    TempData["Error"] = "Failed to delete department. It may have associated products.";
-                }
+                    ModelState.AddModelError("", response.Message ?? "Failed to delete department");
             }
             catch (Exception ex)
             {
@@ -120,6 +144,8 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+
+
         public async Task<IActionResult> Details(int id)
         {
             var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
@@ -129,7 +155,7 @@ namespace InventoryManagement.Web.Controllers
 
             // Get products in this department
             var products = await _apiService.GetAsync<List<ProductViewModel>>($"api/products?departmentId={id}");
-            ViewBag.Products = products ?? new List<ProductViewModel>();
+            ViewBag.Products = products ?? [];
 
             return View(department);
         }

@@ -583,15 +583,18 @@
             `;
 
             const $container = $('#toastContainer');
-            $container.append(toastHtml);
+            if ($container.length === 0) {
+                $('body').append('<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
+            }
 
-            const toastElement = $container.find('.toast').last()[0];
+            $('#toastContainer').append(toastHtml);
+
+            const toastElement = $('#toastContainer .toast').last()[0];
             const toast = new bootstrap.Toast(toastElement, {
                 delay: 5000
             });
             toast.show();
 
-            // Remove toast element after it's hidden
             $(toastElement).on('hidden.bs.toast', function() {
                 $(this).remove();
             });

@@ -4,7 +4,6 @@ using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -71,21 +70,19 @@ namespace InventoryManagement.Web.Controllers
                     // Use dynamic type to handle different response structures
                     var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
 
-
-                    if (response != null)
+                    if (response.IsApprovalRequest)
                     {
-                        // Check if it's an approval request response
-                        if (response.IsSuccess == false)
-                        {
-                            TempData["Info"] = response.Message ??
-                                "Your product creation request has been submitted for approval. You will be notified once it's processed.";
-                        }
-                        else
-                        {
-                            TempData["Success"] = "Product created successfully.";
-                        }
-
+                        TempData["Info"] = response.Message;
                         return RedirectToAction(nameof(Index));
+                    }
+                    else if (response.IsSuccess)
+                    {
+                        TempData["Success"] = "Product created successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", response.Message ?? "Failed to create product");
                     }
                 }
                 catch (Exception ex)
@@ -121,26 +118,20 @@ namespace InventoryManagement.Web.Controllers
                 {
                     // Always use form data for updates
                     var form = HttpContext.Request.Form;
-                    var result = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
+                    var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
 
-                    if (result)
+                    if (response.IsApprovalRequest)
                     {
-                        var resultType = result.GetType();
-                        var statusProperty = resultType.GetProperty("Status");
-
-                        if(statusProperty!=null&& statusProperty.GetValue(result)?.ToString() == "PendingApproval")
-                        {
-                            TempData["Info"] = "Your product update request has been submitted for approval. You will be notified once it's processed.";
-                        }
-                        else
-                        {
-                            TempData["Success"] = "Product updated successfully.";
-                        }
-
+                        TempData["Info"] = response.Message;
                         return RedirectToAction(nameof(Index));
                     }
-
-                    ModelState.AddModelError("", "Failed to update product.");
+                    else if (response.IsSuccess)
+                    {
+                        TempData["Success"] = "Product created successfully.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    else
+                        ModelState.AddModelError("", response.Message ?? "Failed to create product");
                 }
                 catch 
                 {
@@ -158,19 +149,20 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _apiService.DeleteAsync($"api/products/{id}");
-            if (result)
+            var response = await _apiService.DeleteAsync($"api/products/{id}");
+            if (response.IsApprovalRequest)
             {
-                var resultType = result.GetType();
-                var statusProperty = resultType.GetProperty("Status");
-                if (statusProperty != null && statusProperty.GetValue(result)?.ToString() == "PendingApproval")
-                {
-                    TempData["Info"] = "Your product deletion request has been submitted for approval. You will be notified once it's processed.";
-                }
+                TempData["Info"] = response.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            else if (response.IsSuccess)
+            {
+                TempData["Success"] = "Product created successfully.";
+                return RedirectToAction(nameof(Index));
             }
             else
             {
-                TempData["Error"] = "Failed to delete product.";
+                ModelState.AddModelError("", response.Message ?? "Failed to create product");
             }
             return RedirectToAction(nameof(Index));
         }

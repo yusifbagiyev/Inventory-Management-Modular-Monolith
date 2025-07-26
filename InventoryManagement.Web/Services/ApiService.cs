@@ -32,32 +32,79 @@ namespace InventoryManagement.Web.Services
 
         private void AddAuthorizationHeader()
         {
-            var token=_httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
+            // Clear any existing authorization header
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+
+            // First try to get token from HttpContext.Items (set by middleware)
+            var token = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string;
+
+            // If not in Items, try session
+            if (string.IsNullOrEmpty(token))
+            {
+                token = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
+            }
+
+            // If still not found, try cookies (for remember me scenarios)
+            if (string.IsNullOrEmpty(token))
+            {
+                token = _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
+            }
+
             if (!string.IsNullOrEmpty(token))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                _logger.LogDebug("Added authorization header with token");
+            }
+            else
+            {
+                _logger.LogWarning("No JWT token found for authorization header");
             }
         }
-        
+
+
         private async Task<bool> TryRefreshTokenAsync()
         {
-            var accessToken = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
-            var refreshToken = _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken");
-            if(string.IsNullOrEmpty(refreshToken)||string.IsNullOrEmpty(accessToken))
+            var accessToken = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
+                           ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
+                           ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
+
+            var refreshToken = _httpContextAccessor.HttpContext?.Items["RefreshToken"] as string
+                            ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken")
+                            ?? _httpContextAccessor.HttpContext?.Request.Cookies["refresh_token"];
+
+            if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
             {
+                _logger.LogWarning("Cannot refresh token - missing access or refresh token");
                 return false;
             }
-            
-            var tokenDto = await _authService.RefreshTokenAsync(accessToken, refreshToken);
 
-            if(tokenDto != null)
+            try
             {
-                _httpContextAccessor.HttpContext?.Session.SetString("JwtToken", tokenDto.AccessToken);
-                _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", tokenDto.RefreshToken);
-                return true;
+                var tokenDto = await _authService.RefreshTokenAsync(accessToken, refreshToken);
+
+                if (tokenDto != null && !string.IsNullOrEmpty(tokenDto.AccessToken))
+                {
+                    // Update in HttpContext.Items for immediate use
+                    _httpContextAccessor?.HttpContext?.Items["JwtToken"] = tokenDto.AccessToken;
+                    _httpContextAccessor?.HttpContext?.Items["RefreshToken"] = tokenDto.RefreshToken;
+
+                    // Update in session
+                    _httpContextAccessor?.HttpContext?.Session.SetString("JwtToken", tokenDto.AccessToken);
+                    _httpContextAccessor?.HttpContext?.Session.SetString("RefreshToken", tokenDto.RefreshToken);
+                    _httpContextAccessor?.HttpContext?.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
+
+                    _logger.LogInformation("Token refreshed successfully in ApiService");
+                    return true;
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token in ApiService");
+            }
+
             return false;
         }
+
 
         public async Task<T?> GetAsync<T>(string endpoint)
         {
@@ -66,10 +113,13 @@ namespace InventoryManagement.Web.Services
                 AddAuthorizationHeader();
                 var response = await _httpClient.GetAsync(endpoint);
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.GetAsync(endpoint);
+                    if (await TryRefreshTokenAsync())
+                    {
+                        AddAuthorizationHeader();
+                        response = await _httpClient.GetAsync(endpoint);
+                    }
                 }
 
                 if (response.IsSuccessStatusCode)
@@ -82,7 +132,16 @@ namespace InventoryManagement.Web.Services
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger?.LogError($"API request failed: {response.StatusCode} - {errorContent}");
 
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    throw new UnauthorizedAccessException("Authentication failed");
+                }
+
                 return default;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Re-throw to be handled by calling code
             }
             catch (Exception ex)
             {
@@ -91,36 +150,77 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public async Task<TResponse?> PostAsync<TRequest,TResponse>(string endpoint, TRequest data)
+
+        public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
             try
             {
                 AddAuthorizationHeader();
 
-                var json=JsonConvert.SerializeObject(data);
-                var content= new StringContent(json, Encoding.UTF8, "application/json");
+                var json = JsonConvert.SerializeObject(data);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response=await _httpClient.PostAsync(endpoint, content);
+                var response = await _httpClient.PostAsync(endpoint, content);
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.PostAsync(endpoint, content);
+                    if(await TryRefreshTokenAsync())
+                    {
+                        AddAuthorizationHeader();
+                        response = await _httpClient.PostAsync(endpoint, content);
+                    }
                 }
 
-                if (response.IsSuccessStatusCode)
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<TResponse>(responseContent);
+                    // Check if it's an approval response
+                    try
+                    {
+                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+
+                        if (jsonResponse?.Status == "PendingApproval" ||
+                            jsonResponse?.status == "PendingApproval" ||
+                            response.StatusCode == HttpStatusCode.Accepted)
+                        {
+                            return new ApiResponse<TResponse>
+                            {
+                                IsSuccess = false,
+                                IsApprovalRequest = true,
+                                Message = jsonResponse?.Message ?? "Request submitted for approval",
+                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                                Data = default
+                            };
+                        }
+                    }
+                    catch { }
+
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = true,
+                        Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                    };
                 }
 
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = false,
+                    Message = $"Request failed with status {response.StatusCode}",
+                    Data = default
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    Data = default
+                };
             }
         }
+
 
         public async Task<ApiResponse<T>> PostFormAsync<T>(
             string endpoint,
@@ -163,7 +263,7 @@ namespace InventoryManagement.Web.Services
                         (dataDto?.GetType().GetProperty(field.Key)!=null))
                         continue; // Skip if already handled fields
 
-                    content.Add(new StringContent(field.Value), field.Key);
+                    content.Add(new StringContent(field.Value!), field.Key);
                 }
 
                 var response = await _httpClient.PostAsync(endpoint, content);
@@ -218,14 +318,15 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public async Task<TResponse?> PutAsync<TRequest,TResponse>(string endpoint, TRequest data)
+
+        public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
             try
             {
                 AddAuthorizationHeader();
-                var json=JsonConvert.SerializeObject(data);
-                var content=new StringContent(json, Encoding.UTF8, "application/json");
-                var response=await _httpClient.PutAsync(endpoint, content);
+                var json = JsonConvert.SerializeObject(data);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PutAsync(endpoint, content);
 
                 if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
                 {
@@ -233,21 +334,57 @@ namespace InventoryManagement.Web.Services
                     response = await _httpClient.PutAsync(endpoint, content);
                 }
 
-                if (response.IsSuccessStatusCode)
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<TResponse>(responseContent);
+                    // Check for approval response
+                    try
+                    {
+                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+                        if (jsonResponse?.Status == "PendingApproval" || response.StatusCode == HttpStatusCode.Accepted)
+                        {
+                            return new ApiResponse<TResponse>
+                            {
+                                IsSuccess = false,
+                                IsApprovalRequest = true,
+                                Message = jsonResponse?.Message ?? "Request submitted for approval",
+                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                                Data = default
+                            };
+                        }
+                    }
+                    catch { }
+
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = true,
+                        Data = response.StatusCode == HttpStatusCode.NoContent
+                            ? (TResponse)(object)true
+                            : JsonConvert.DeserializeObject<TResponse>(responseContent)
+                    };
                 }
 
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = false,
+                    Message = $"Request failed with status {response.StatusCode}",
+                    Data = default
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    Data = default
+                };
             }
         }
 
-        public async Task<TResponse?> PutFormAsync<TResponse>(
+
+        public async Task<ApiResponse<TResponse>> PutFormAsync<TResponse>(
             string endpoint,
             IFormCollection form,
             object? dataDto = null)
@@ -261,7 +398,6 @@ namespace InventoryManagement.Web.Services
                 foreach (var field in form)
                 {
                     if (field.Key == "__RequestVerificationToken") continue;
-
                     content.Add(new StringContent(field.Value.ToString()), field.Key);
                 }
 
@@ -284,20 +420,41 @@ namespace InventoryManagement.Web.Services
                     response = await _httpClient.PutAsync(endpoint, content);
                 }
 
-                if (response.IsSuccessStatusCode)
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.StatusCode == HttpStatusCode.Accepted)
                 {
-                    return (TResponse)(object)true;
+                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = false,
+                        IsApprovalRequest = true,
+                        Message = jsonResponse?.Message ?? "Request submitted for approval",
+                        ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                        Data = default
+                    };
                 }
 
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = response.IsSuccessStatusCode,
+                    Data = response.IsSuccessStatusCode ? (TResponse)(object)true : default,
+                    Message = response.IsSuccessStatusCode ? null : "Request failed"
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return default;
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    Data = default
+                };
             }
         }
 
-        public async Task<bool> DeleteAsync(string endpoint)
+
+        public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
         {
             try
             {
@@ -310,11 +467,36 @@ namespace InventoryManagement.Web.Services
                     response = await _httpClient.DeleteAsync(endpoint);
                 }
 
-                return response.IsSuccessStatusCode;
+                if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+
+                    return new ApiResponse<bool>
+                    {
+                        IsSuccess = false,
+                        IsApprovalRequest = true,
+                        Message = jsonResponse?.Message ?? "Request submitted for approval",
+                        ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                        Data = false
+                    };
+                }
+
+                return new ApiResponse<bool>
+                {
+                    IsSuccess = response.IsSuccessStatusCode,
+                    Data = response.IsSuccessStatusCode,
+                    Message = response.IsSuccessStatusCode ? null : $"Request failed with status {response.StatusCode}"
+                };
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return new ApiResponse<bool>
+                {
+                    IsSuccess = false,
+                    Message = ex.Message,
+                    Data = false
+                };
             }
         }
     }
