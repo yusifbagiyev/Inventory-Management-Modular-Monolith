@@ -69,31 +69,93 @@ function copyToClipboard(text) {
 }
 
 // Toast notification
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 5000) {
+    // Map type to Bootstrap color classes
+    const toastHtml = {
+        'success': 'bg-success text-white',
+        'error': 'bg-danger text-white',
+        'warning': 'bg-warning',
+        'info': 'bg-info text-white',
+        'danger': 'bg-danger text-white'
+    }
+    const colorClasses = typeMap[type] || typeMap['info'];
+
+    // Create toast HTML with proper styling
     const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+        <div class="toast align-items-center ${colorClasses} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                <div class="toast-body">
+                    ${escapeHtml(message)}
+                </div>
+                <button type="button" class="btn-close ${type === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     `;
 
-    const toastContainer = document.getElementById('toast-container') || createToastContainer();
-    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    // Ensure toast container exists
+    let container = document.getElementById('toast-container');
 
-    const toastElement = toastContainer.lastElementChild;
-    const toast = new bootstrap.Toast(toastElement);
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+
+    // Add toast to container
+    container.insertAdjacentHTML('beforeend', toastHtml);
+
+    // Initialize and show the toast
+    const toastElement = container.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement, {
+        delay: duration,
+        autohide: true
+    });
+
     toast.show();
+
+    // Remove element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', function () {
+        toastElement.remove();
+    });
 }
 
-function createToastContainer() {
-    const container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'toast-container position-fixed top-0 end-0 p-3';
-    document.body.appendChild(container);
-    return container;
+
+// Helper function to escape HTML
+function escapeHtml(unsafe) {
+    return unsafe.replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
 }
+
+
+// Global function to reset form state
+function resetFormState(fromElement){
+    // Find all submit buttons in the form
+    const submitButtons = fromElement.querySelectorAll('button[type="submit"]');
+
+    submitButtons.forEach(button => {
+        // Reset button state
+        button.disabled = false;
+
+        // Restore original text (store it first if not already)
+        if (button.dataset.originalText) {
+            button.innerHTML = button.dataset.originalText;
+        } else {
+            // Remove spinner if present
+            const spinner = button.querySelector('.spinner-border');
+            if (spinner) {
+                spinner.remove();
+            }
+            // Remove "Processing..." text
+            button.innerHTML = button.innerHTML.replace('Processing...', 'Submit');
+        }
+    });
+}
+
 
 function initializeImageZoom() {
     $('.zoomable-image').click(function () {
@@ -176,6 +238,7 @@ function showLoader() {
 function hideLoader() {
     $('.loader-overlay').remove();
 }
+
 // Update AJAX calls to show/hide loader
 $.ajaxSetup({
     beforeSend: function () {

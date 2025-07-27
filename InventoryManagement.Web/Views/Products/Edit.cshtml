@@ -151,13 +151,13 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/errorHandler.js"></script>
+    <script src="~/js/ajaxFormHandler.js"></script>
     <script>
+        // Image handling functions
         function removeCurrentImage() {
-            // Hide current image
             $('#currentImageContainer').hide();
-            // Set flag to remove image
             $('#RemoveImage').val('true');
-            // Change label text
             $('#newImageContainer label').text('Upload New Image');
         }
 
@@ -169,32 +169,20 @@
                 };
                 reader.readAsDataURL(input.files[0]);
 
-                // If there was a current image and user selects new one, hide current
                 if ($('#currentImageContainer').length) {
                     $('#currentImageContainer').hide();
                     $('#RemoveImage').val('true');
                 }
             }
         }
-    </script>
-    <script>
-                $('form').on('submit', function(e) {
-            e.preventDefault();
 
-            var form = $(this);
-            var formData = new FormData(form[0]);
-
-            $.ajax({
-                url: form.attr('action'),
-                type: form.attr('method'),
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    handleApprovalResponse(response, 'Product update', '/Products');
-                },
-                error: function(xhr) {
-                    // Error handling...
+        // Initialize AJAX form handler
+        $(document).ready(function() {
+            initializeAjaxForm('form', {
+                successMessage: 'Product updated successfully!',
+                successRedirect: '/Products',
+                onError: function(errorMessage, response) {
+                    console.error('Update failed:', errorMessage);
                 }
             });
         });

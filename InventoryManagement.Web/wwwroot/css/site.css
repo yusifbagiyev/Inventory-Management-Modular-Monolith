@@ -419,7 +419,6 @@ body {
         border-top-right-radius: 0.25rem;
         border-bottom-right-radius: 0.25rem;
     }
-<style >
 .permissions-container {
     max-height: 600px;
     overflow-y: auto;
@@ -482,5 +481,36 @@ body {
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #e9ecef;
 }
+.toast{
+    min-width:300px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    border:none;
+}
+    .toast.bg-danger {
+        background-color: #dc3545 !important;
+    }
+    .toast.bg-success {
+        background-color: #28a745 !important;
+    }
+    .toast.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important; /* Dark text for yellow background */
+    }
+    .toast.bg-info {
+        background-color: #17a2b8 !important;
+    }
+    .toast-body{
+        padding:0.75rem;
+        font-weight:500;
+    }
 
-</style >
+    /* Ensure text is always visible */
+    .toast.text-white .toast -body {
+        color: #ffffff !important;
+    }
+
+    /* Error-specific styling  */
+    .toast.bg-danger .toast-body {
+        color: #ffffff !important;
+        font-weight: 600;
+    }

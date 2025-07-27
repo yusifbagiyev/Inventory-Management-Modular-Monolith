@@ -196,16 +196,62 @@
                 }, 500);
             });
 
-            // Prevent form submission if no valid product
-            $('#transferForm').on('submit', function(e) {
-                const productId = $('#productId').val();
-                if (!productId) {
-                    e.preventDefault();
-                    showError('Please enter a valid inventory code first');
-                    $('#inventoryCodeInput').focus();
-                    return false;
+                    $('#transferForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const productId = $('#productId').val();
+            if (!productId) {
+                showError('Please enter a valid inventory code first');
+                $('#inventoryCodeInput').focus();
+                return false;
+            }
+
+            const form = this;
+            const $submitBtn = $(form).find('#submitBtn');
+            const originalBtnHtml = $submitBtn.html();
+
+            // Disable submit button
+            $submitBtn.prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+            const formData = new FormData(form);
+
+            $.ajax({
+                url: form.action,
+                type: form.method,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
+
+                    if (response.approvalRequestId || response.status === 'PendingApproval') {
+                        showToast(
+                            response.message || 'Transfer request submitted for approval',
+                            'info'
+                        );
+                        setTimeout(() => window.location.href = '/Routes', 2000);
+                    } else if (response.isSuccess !== false) {
+                        showToast('Product transferred successfully!', 'success');
+                        setTimeout(() => window.location.href = '/Routes', 1500);
+                    } else {
+                        showError(response.message || response.error || 'Transfer failed');
+                    }
+                },
+                error: function(xhr) {
+                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
+
+                    const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Transfer failed');
+                    showError(errorMessage);
+
+                    // Log detailed error
+                    console.error('Transfer error:', {
+                        status: xhr.status,
+                        response: xhr.responseText
+                    });
                 }
             });
+        });
         });
 
         function searchProduct(inventoryCode) {

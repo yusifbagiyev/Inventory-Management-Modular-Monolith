@@ -157,6 +157,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/errorHandler.js"></script>
     <script>
         function previewImage(input, targetId) {
             if (input.files && input.files[0]) {
@@ -168,57 +169,71 @@
             }
         }
 
-                        $('form').on('submit', function(e) {
-            e.preventDefault();
+        $(document).ready(function() {
+            $('form').on('submit', function(e) {
+                e.preventDefault();
 
-            var form = $(this);
-            var formData = new FormData(form[0]);
+                var form = $(this)[0];
+                var formData = new FormData(form);
+                var $submitBtn = $(this).find('button[type="submit"]');
 
-            $.ajax({
-                url: form.attr('action'),
-                type: form.attr('method'),
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    console.log('Response:', response);
-
-                    // Check if it's actually an error
-                    if (!response.isSuccess && !response.isApprovalRequest) {
-                        showToast(response.message || 'An error occurred', 'error');
-                        return;
-                    }
-
-                    if (response.isApprovalRequest) {
-                        showToast(
-                            response.message || 'Request submitted for approval',
-                            'info'
-                        );
-                        setTimeout(() => window.location.href = '/Products', 2000);
-                    } else if (response.isSuccess) {
-                        showToast('Product created successfully!', 'success');
-                        setTimeout(() => window.location.href = '/Products', 1500);
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Ajax error:', xhr);
-
-                    // Handle AJAX-level errors
-                    var errorMessage = 'An error occurred. Please try again.';
-
-                    if (xhr.status === 403) {
-                        errorMessage = 'You do not have permission to perform this action.';
-                    } else if (xhr.status === 400) {
-                        try {
-                            var response = JSON.parse(xhr.responseText);
-                            errorMessage = response.message || response.error || errorMessage;
-                        } catch (e) {
-                            errorMessage = 'Invalid request. Please check your input.';
-                        }
-                    }
-
-                    showToast(errorMessage, 'error');
+                // Store original button text
+                if (!$submitBtn.data('originalText')) {
+                    $submitBtn.data('originalText', $submitBtn.html());
                 }
+
+                // Disable button and show spinner
+                $submitBtn.prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+                $.ajax({
+                    url: form.action,
+                    type: form.method,
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log('Response:', response);
+
+                        // Check various response formats
+                        if (response.approvalRequestId || response.ApprovalRequestId ||
+                            response.status === 'PendingApproval' || response.Status === 'PendingApproval') {
+                            // Approval request
+                            showToast(
+                                response.message || response.Message || 'Request submitted for approval',
+                                'info'
+                            );
+                            setTimeout(() => window.location.href = '/Products', 2000);
+                        } else if (response.isSuccess !== false) {
+                            // Direct success
+                            showToast('Product created successfully!', 'success');
+                            setTimeout(() => window.location.href = '/Products', 1500);
+                        } else {
+                            // Response indicates failure
+                            showToast(response.message || 'Failed to create product', 'error');
+                            resetFormState(form);
+                        }
+                    },
+                    error: function(xhr) {
+                        ErrorHandler.handleAjaxError(xhr, xhr.statusText, null, {
+                            form: form,
+                            defaultMessage: 'Failed to create product. Please check your input and try again.',
+                            onError: function(errorMessage) {
+                                // Additional handling for specific errors
+                                if (errorMessage.toLowerCase().includes('inventory code')) {
+                                    $('#InventoryCode').addClass('is-invalid')
+                                        .after('<div class="invalid-feedback">' + errorMessage + '</div>');
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Clear validation errors on input change
+            $('input').on('input change', function() {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
             });
         });
     </script>
