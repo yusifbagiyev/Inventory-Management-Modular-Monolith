@@ -90,7 +90,7 @@ namespace IdentityService.Infrastructure.Services
                 throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
 
             // Assign default role
-            var role = dto.Role ?? AllRoles.User;
+            var role = dto.SelectedRole ?? AllRoles.User;
             await _userManager.AddToRoleAsync(user, role);
 
             return await GenerateTokenResponse(user);

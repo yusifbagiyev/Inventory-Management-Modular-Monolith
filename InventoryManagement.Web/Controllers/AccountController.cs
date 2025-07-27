@@ -46,6 +46,8 @@ namespace InventoryManagement.Web.Controllers
             return View();
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
@@ -59,15 +61,20 @@ namespace InventoryManagement.Web.Controllers
                     var result = await _authService.LoginAsync(model.Username, model.Password);
                     if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                     {
-                        // Store JWT tokens
+                        // Always store in session for immediate use
+                        HttpContext.Session.SetString("JwtToken", result.AccessToken);
+                        HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
+                        HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+
+                        // Store in cookies if Remember Me is checked
                         if (model.RememberMe)
                         {
-                            // Use cookies for persistent storage when Remember Me is checked
                             var cookieOptions = new CookieOptions
                             {
                                 HttpOnly = true,
-                                Secure = true,
-                                SameSite = SameSiteMode.Strict,
+                                // Only require HTTPS in production
+                                Secure = HttpContext.Request.IsHttps,
+                                SameSite = SameSiteMode.Lax, // Changed from Strict to allow OAuth flows
                                 Expires = DateTimeOffset.UtcNow.AddDays(30)
                             };
 
@@ -75,14 +82,6 @@ namespace InventoryManagement.Web.Controllers
                             Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
                             Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
                         }
-                        else
-                        {
-                            // Use session storage for non-persistent login
-                            HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                            HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                            HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-                        }
-
                         // Create claims for cookie authentication
                         var claims = new List<Claim>
                 {
@@ -140,6 +139,8 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -147,10 +148,19 @@ namespace InventoryManagement.Web.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             HttpContext.Session.Clear();
 
+            // Clear the JWT cookies
+            if (Request.Cookies.ContainsKey("jwt_token"))
+            {
+                Response.Cookies.Delete("jwt_token");
+                Response.Cookies.Delete("refresh_token");
+                Response.Cookies.Delete("user_data");
+            }
             _logger.LogInformation("User logged out");
 
             return RedirectToAction("Login", "Account");
         }
+
+
 
         public IActionResult AccessDenied()
         {

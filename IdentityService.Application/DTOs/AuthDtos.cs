@@ -30,7 +30,7 @@ namespace IdentityService.Application.DTOs
         [Required]
         public string LastName { get; init; } = string.Empty;
 
-        public string? Role { get; init; }
+        public string? SelectedRole { get; init; }
     }
 
     public record TokenDto

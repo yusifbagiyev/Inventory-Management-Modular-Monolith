@@ -1,7 +1,5 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
-using InventoryManagement.Web.Services;
-using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using NotificationService.Application.Services;
 
@@ -20,6 +18,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Cookie.Name = ".InventoryManagement.Auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.IsEssential = true; // Make the authentication cookie essential
+
+        // Configure based on environment
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
 

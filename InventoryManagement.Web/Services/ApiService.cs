@@ -53,7 +53,6 @@ namespace InventoryManagement.Web.Services
             if (!string.IsNullOrEmpty(token))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                _logger.LogDebug("Added authorization header with token");
             }
             else
             {

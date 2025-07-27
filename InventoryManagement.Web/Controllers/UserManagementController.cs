@@ -1,6 +1,5 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
-using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -405,7 +404,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var permissions = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/users/{id}/direct-permissions");
-                return Json(permissions ?? new List<PermissionViewModel>());
+                return Json(permissions ?? []);
             }
             catch
             {
@@ -449,7 +448,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var permissions = await _apiService.GetAsync<List<PermissionViewModel>>("/api/auth/permissions");
-                return Json(permissions ?? new List<PermissionViewModel>());
+                return Json(permissions ?? []);
             }
             catch
             {

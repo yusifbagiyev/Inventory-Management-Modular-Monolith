@@ -24,23 +24,30 @@ namespace InventoryManagement.Web.Middleware
                 {
                     string? token = null;
                     string? refreshToken = null;
-                    bool isRemembered = false;
 
-                    // Check if user selected "Remember Me"
-                    var rememberMeClaim = context.User.FindFirst("RememberMe")?.Value;
-                    if (rememberMeClaim == "True")
-                    {
-                        // First check cookies for persistent login
-                        token = context.Request.Cookies["jwt_token"];
-                        refreshToken = context.Request.Cookies["refresh_token"];
-                        isRemembered = true;
-                    }
+                    // Try to get tokens from session first (always available for logged-in users)
+                    token = context.Session.GetString("JwtToken");
+                    refreshToken = context.Session.GetString("RefreshToken");
 
-                    // Fall back to session if not in cookies
+                    // If not in session, try cookies (for Remember Me scenarios after session expires)
                     if (string.IsNullOrEmpty(token))
                     {
-                        token = context.Session.GetString("JwtToken");
-                        refreshToken = context.Session.GetString("RefreshToken");
+                        token = context.Request.Cookies["jwt_token"];
+                        refreshToken = context.Request.Cookies["refresh_token"];
+
+                        // If found in cookies, restore to session for this request
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            context.Session.SetString("JwtToken", token);
+                            context.Session.SetString("RefreshToken", refreshToken ?? "");
+
+                            // Also restore user data if available
+                            var userData = context.Request.Cookies["user_data"];
+                            if (!string.IsNullOrEmpty(userData))
+                            {
+                                context.Session.SetString("UserData", userData);
+                            }
+                        }
                     }
 
                     if (string.IsNullOrEmpty(token))
@@ -71,18 +78,23 @@ namespace InventoryManagement.Web.Middleware
                                     var result = await authService.RefreshTokenAsync(token, refreshToken);
                                     if (result != null)
                                     {
-                                        // Update the token in HttpContext.Items immediately
+                                        // Update tokens everywhere
                                         context.Items["JwtToken"] = result.AccessToken;
                                         context.Items["RefreshToken"] = result.RefreshToken;
 
-                                        // Update storage based on remember me preference
-                                        if (isRemembered)
+                                        // Update session
+                                        context.Session.SetString("JwtToken", result.AccessToken);
+                                        context.Session.SetString("RefreshToken", result.RefreshToken);
+                                        context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
+
+                                        // Update cookies if they exist (Remember Me was used)
+                                        if (context.Request.Cookies.ContainsKey("jwt_token"))
                                         {
                                             var cookieOptions = new CookieOptions
                                             {
                                                 HttpOnly = true,
-                                                Secure = true,
-                                                SameSite = SameSiteMode.Strict,
+                                                Secure = context.Request.IsHttps,
+                                                SameSite = SameSiteMode.Lax,
                                                 Expires = DateTimeOffset.UtcNow.AddDays(30)
                                             };
 
@@ -90,10 +102,6 @@ namespace InventoryManagement.Web.Middleware
                                             context.Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
                                             context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
                                         }
-                                        context.Session.SetString("JwtToken", result.AccessToken);
-                                        context.Session.SetString("RefreshToken", result.RefreshToken);
-                                        context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-
 
                                         _logger.LogInformation("Token refreshed successfully");
                                     }
@@ -140,10 +148,15 @@ namespace InventoryManagement.Web.Middleware
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             context.Session.Clear();
 
-            // Clear cookies
-            context.Response.Cookies.Delete("jwt_token");
-            context.Response.Cookies.Delete("refresh_token");
-            context.Response.Cookies.Delete("user_data");
+            // Clear cookies if they exist
+            var cookiesToClear = new[] { "jwt_token", "refresh_token", "user_data" };
+            foreach (var cookieName in cookiesToClear)
+            {
+                if (context.Request.Cookies.ContainsKey(cookieName))
+                {
+                    context.Response.Cookies.Delete(cookieName);
+                }
+            }
 
             if (!context.Request.Path.StartsWithSegments("/Account/Login"))
             {
