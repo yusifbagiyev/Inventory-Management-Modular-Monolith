@@ -42,11 +42,11 @@ namespace IdentityService.Infrastructure.Data
                 entity.HasKey(up => new { up.UserId, up.PermissionId });
 
                 entity.HasOne(up => up.User)
-                    .WithMany()
+                    .WithMany(u=>u.UserPermissions)
                     .HasForeignKey(up => up.UserId);
 
                 entity.HasOne(up => up.Permission)
-                    .WithMany()
+                    .WithMany(p=>p.UserPermissions)
                     .HasForeignKey(up => up.PermissionId);
             });
 
@@ -82,7 +82,8 @@ namespace IdentityService.Infrastructure.Data
                 PasswordHash = "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==",
                 LockoutEnabled = false,
                 EmailConfirmed = true,
-                AccessFailedCount = 0
+                AccessFailedCount = 0,
+                CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0, DateTimeKind.Utc) // Static date
             };
 
             builder.Entity<User>().HasData(user);

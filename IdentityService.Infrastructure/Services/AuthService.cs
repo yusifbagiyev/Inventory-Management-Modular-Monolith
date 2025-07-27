@@ -173,7 +173,6 @@ namespace IdentityService.Infrastructure.Services
                 LastLoginAt = user.LastLoginAt,
                 Roles = roles.ToList(),
                 Permissions = permissions,
-                DirectPermissions= directPermissions
             };
         }
 

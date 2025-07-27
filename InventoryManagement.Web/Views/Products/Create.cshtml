@@ -168,7 +168,7 @@
             }
         }
 
-                $('form').on('submit', function(e) {
+                        $('form').on('submit', function(e) {
             e.preventDefault();
 
             var form = $(this);
@@ -181,48 +181,38 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
-                    console.log('Raw response:', response);
+                    console.log('Response:', response);
 
-                    // The response should already be parsed JSON
-                    if (response) {
-                        if (response.status === 'PendingApproval' ||
-                            response.Status === 'PendingApproval' ||
-                            response.approvalRequestId ||
-                            response.ApprovalRequestId) {
+                    // Check if it's actually an error
+                    if (!response.isSuccess && !response.isApprovalRequest) {
+                        showToast(response.message || 'An error occurred', 'error');
+                        return;
+                    }
 
-                            // Show approval message
-                            showToast(
-                                response.message || response.Message ||
-                                'Your product creation request has been submitted for approval. You will be notified once it\'s processed.',
-                                'info'
-                            );
-
-                            setTimeout(() => window.location.href = '/Products', 2000);
-                        } else {
-                            // Product was created directly
-                            showToast('Product created successfully!', 'success');
-                            setTimeout(() => window.location.href = '/Products', 1500);
-                        }
+                    if (response.isApprovalRequest) {
+                        showToast(
+                            response.message || 'Request submitted for approval',
+                            'info'
+                        );
+                        setTimeout(() => window.location.href = '/Products', 2000);
+                    } else if (response.isSuccess) {
+                        showToast('Product created successfully!', 'success');
+                        setTimeout(() => window.location.href = '/Products', 1500);
                     }
                 },
                 error: function(xhr) {
                     console.error('Ajax error:', xhr);
+
+                    // Handle AJAX-level errors
                     var errorMessage = 'An error occurred. Please try again.';
 
-                    try {
-                        var response = JSON.parse(xhr.responseText);
-                        if (response.error) {
-                            errorMessage = response.error;
-                            if (response.details) {
-                                errorMessage += '\n' + response.details;
-                            }
-                        } else if (response.errors) {
-                            errorMessage = Object.values(response.errors).flat().join('\n');
-                        }
-                    } catch (e) {
-                        if (xhr.status === 403) {
-                            errorMessage = 'You do not have permission to perform this action.';
-                        } else if (xhr.status === 400) {
+                    if (xhr.status === 403) {
+                        errorMessage = 'You do not have permission to perform this action.';
+                    } else if (xhr.status === 400) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            errorMessage = response.message || response.error || errorMessage;
+                        } catch (e) {
                             errorMessage = 'Invalid request. Please check your input.';
                         }
                     }

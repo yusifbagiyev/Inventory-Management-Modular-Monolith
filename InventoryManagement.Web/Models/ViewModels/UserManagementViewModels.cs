@@ -137,4 +137,9 @@ namespace InventoryManagement.Web.Models.ViewModels
     {
         public string PermissionName { get; set; } = string.Empty;
     }
+    public record TogglePermissionViewModel
+    {
+        public string PermissionName { get; set; } = string.Empty;
+        public bool IsGranting { get; set; }
+    }
 }

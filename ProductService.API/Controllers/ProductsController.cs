@@ -72,6 +72,13 @@ namespace ProductService.API.Controllers
             var userId=int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value??"0");
             var userName = User.Identity?.Name ?? "Unknown";
 
+            // Firstly, check the product is not already created
+            var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
+            if (existingProduct != null)
+            {
+                return BadRequest(new { error = "Product with this inventory code already exists." });
+            }
+
             //Check if user has direct permission
             if (User.HasClaim("permission", AllPermissions.ProductCreateDirect))
             {

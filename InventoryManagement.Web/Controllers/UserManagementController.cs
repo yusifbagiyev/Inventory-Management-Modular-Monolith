@@ -351,66 +351,42 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
-        public async Task<JsonResult> GetUserPermissionsStatus(int id)
+        public async Task<JsonResult> GetUserPermissions(int id)
         {
             try
             {
+                // Get user details to get their current permissions
+                var user = await _apiService.GetAsync<UserDto>($"/api/auth/users/{id}");
+                if(user == null)
+                {
+                    return Json(new { error = "User not found" });
+                }
+
                 // Get all available permissions
                 var allPermissions = await _apiService.GetAsync<List<PermissionViewModel>>("/api/auth/permissions")
                     ?? [];
 
-                // Get user's direct permissions
-                var directPermissions = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/users/{id}/direct-permissions");
-
-                // Get user details to access their roles
-                var user = await _apiService.GetAsync<UserDto>($"/api/auth/users/{id}")
-                    ?? new UserDto { Id = id, Roles = [] };
-
-                // Get permissions from roles
-                var rolePermissions = new List<PermissionViewModel>();
-                foreach (var role in user.Roles)
-                {
-                    // You'll need to add an endpoint to get permissions by role
-                    var perms = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/roles/{role}/permissions");
-                    if (perms != null)
-                        rolePermissions.AddRange(perms);
-                }
-
-                // Mark which permissions are assigned and their source
-                var permissionStatus = allPermissions.Select(p => new
+                // Create a simple structure showing which permissions are assigned
+                var permissionStatus=allPermissions.Select(p=>new
                 {
                     p.Id,
                     p.Name,
                     p.Description,
                     p.Category,
-                    IsDirect = directPermissions?.Any(dp => dp.Name == p.Name) ?? false,
-                    IsFromRole = rolePermissions.Any(rp => rp.Name == p.Name),
-                    Roles = user.Roles.Where(r => rolePermissions.Any(rp => rp.Name == p.Name)).ToList()
+                    IsAssigned=user.Permissions.Contains(p.Name),
+                    IsFromRole=false
                 }).ToList();
 
                 return Json(permissionStatus);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting user permissions status");
+                _logger.LogError(ex, "Error getting user permissions");
                 return Json(new { error = "Failed to load permissions" });
             }
         }
 
 
-        [HttpGet]
-        public async Task<JsonResult> GetUserDirectPermissions(int id)
-        {
-            try
-            {
-                var permissions = await _apiService.GetAsync<List<PermissionViewModel>>($"/api/auth/users/{id}/direct-permissions");
-                return Json(permissions ?? []);
-            }
-            catch
-            {
-                return Json(new List<PermissionViewModel>());
-            }
-        }
 
         [HttpPost]
         public async Task<JsonResult> GrantPermission(int id, [FromBody] GrantPermissionViewModel model)
@@ -427,6 +403,29 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
+        [HttpPost]
+        public async Task<JsonResult> TogglePermission(int id, [FromBody] TogglePermissionViewModel model)
+        {
+            try
+            {
+                var url = model.IsGranting
+                    ? $"/api/auth/users/{id}/grant-permission"
+                    : $"/api/auth/users/{id}/revoke-permission";
+
+                var result = await _apiService.PostAsync<object, bool>(url,
+                    new { permissionName = model.PermissionName });
+
+                return Json(new { success = result });
+            }
+            catch
+            {
+                return Json(new { success = false });
+            }
+        }
+
+
+
         [HttpPost]
         public async Task<JsonResult> RevokePermission(int id, [FromBody] RevokePermissionViewModel model)
         {
@@ -441,6 +440,8 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new { success = false });
             }
         }
+
+
 
         [HttpGet]
         public async Task<JsonResult> GetAllPermissions()

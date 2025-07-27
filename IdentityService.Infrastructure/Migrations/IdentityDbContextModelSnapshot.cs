@@ -472,7 +472,7 @@ namespace IdentityService.Infrastructure.Migrations
                             Id = 1,
                             AccessFailedCount = 0,
                             ConcurrencyStamp = "STATIC_CONCURRENCY_STAMP_123",
-                            CreatedAt = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "yusifbv24@gmail.com",
                             EmailConfirmed = true,
                             FirstName = "Yusif",
@@ -504,14 +504,9 @@ namespace IdentityService.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("UserId1")
-                        .HasColumnType("integer");
-
                     b.HasKey("UserId", "PermissionId");
 
                     b.HasIndex("PermissionId");
-
-                    b.HasIndex("UserId1");
 
                     b.ToTable("UserPermissions");
                 });
@@ -659,20 +654,16 @@ namespace IdentityService.Infrastructure.Migrations
             modelBuilder.Entity("IdentityService.Domain.Entities.UserPermission", b =>
                 {
                     b.HasOne("IdentityService.Domain.Entities.Permission", "Permission")
-                        .WithMany()
+                        .WithMany("UserPermissions")
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("IdentityService.Domain.Entities.User", "User")
-                        .WithMany()
+                        .WithMany("UserPermissions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("IdentityService.Domain.Entities.User", null)
-                        .WithMany("UserPermissions")
-                        .HasForeignKey("UserId1");
 
                     b.Navigation("Permission");
 
@@ -733,6 +724,8 @@ namespace IdentityService.Infrastructure.Migrations
             modelBuilder.Entity("IdentityService.Domain.Entities.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
+
+                    b.Navigation("UserPermissions");
                 });
 
             modelBuilder.Entity("IdentityService.Domain.Entities.Role", b =>

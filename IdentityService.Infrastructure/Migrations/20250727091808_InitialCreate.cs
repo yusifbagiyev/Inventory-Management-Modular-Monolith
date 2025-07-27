@@ -238,8 +238,7 @@ namespace IdentityService.Infrastructure.Migrations
                     UserId = table.Column<int>(type: "integer", nullable: false),
                     PermissionId = table.Column<int>(type: "integer", nullable: false),
                     GrantedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    GrantedBy = table.Column<string>(type: "text", nullable: false),
-                    UserId1 = table.Column<int>(type: "integer", nullable: true)
+                    GrantedBy = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -250,11 +249,6 @@ namespace IdentityService.Infrastructure.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserPermissions_AspNetUsers_UserId1",
-                        column: x => x.UserId1,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_UserPermissions_Permissions_PermissionId",
                         column: x => x.PermissionId,
@@ -276,7 +270,7 @@ namespace IdentityService.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "FirstName", "IsActive", "LastLoginAt", "LastName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "UserName" },
-                values: new object[] { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" });
+                values: new object[] { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" });
 
             migrationBuilder.InsertData(
                 table: "Permissions",
@@ -392,11 +386,6 @@ namespace IdentityService.Infrastructure.Migrations
                 name: "IX_UserPermissions_PermissionId",
                 table: "UserPermissions",
                 column: "PermissionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserPermissions_UserId1",
-                table: "UserPermissions",
-                column: "UserId1");
         }
 
         /// <inheritdoc />

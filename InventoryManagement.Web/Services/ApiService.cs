@@ -1,6 +1,7 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -275,13 +276,23 @@ namespace InventoryManagement.Web.Services
 
                 var responseContent=await response.Content.ReadAsStringAsync();
 
-                // Parse the response to determine if it's an approval or direct action
                 var apiResponse = new ApiResponse<T>();
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new ApiResponse<T>
+                    {
+                        IsSuccess = false,
+                        Message = ParseErrorMessage(responseContent, response.StatusCode),
+                        Data = default
+                    };
+                }
 
+                // Handle successful responses
                 try
                 {
-                    dynamic? jsonResponse=JsonConvert.DeserializeObject(responseContent);
+                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
 
+                    // Check for approval responses
                     if (jsonResponse?.status == "PendingApproval" ||
                         jsonResponse?.Status == "PendingApproval" ||
                         jsonResponse?.approvalRequestId != null ||
@@ -290,24 +301,26 @@ namespace InventoryManagement.Web.Services
                         apiResponse.IsApprovalRequest = true;
                         apiResponse.Message = jsonResponse?.message ?? "Request submitted for approval";
                         apiResponse.ApprovalRequestId = jsonResponse?.approvalRequestId ?? jsonResponse?.ApprovalRequestId;
+                        apiResponse.IsSuccess = false; // Approval requests aren't "successful" in the traditional sense
                     }
                     else
                     {
-                        apiResponse.IsSuccess = response.IsSuccessStatusCode;
+                        apiResponse.IsSuccess = true;
                         apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
                     }
                 }
                 catch
                 {
-                    apiResponse.IsSuccess = response.IsSuccessStatusCode;
-                    if (response.IsSuccessStatusCode && typeof(T) != typeof(string))
+                    apiResponse.IsSuccess = true;
+                    if (typeof(T) != typeof(string))
                     {
                         apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
                     }
                 }
+
                 return apiResponse;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return new ApiResponse<T>
                 {
@@ -334,6 +347,16 @@ namespace InventoryManagement.Web.Services
                 }
 
                 var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = false,
+                        Message = ParseErrorMessage(responseContent, response.StatusCode),
+                        Data=default
+                    };
+                }
 
                 if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
                 {
@@ -421,16 +444,42 @@ namespace InventoryManagement.Web.Services
 
                 var responseContent = await response.Content.ReadAsStringAsync();
 
-                if (response.StatusCode == HttpStatusCode.Accepted)
+                if (!response.IsSuccessStatusCode)
                 {
-                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
                     return new ApiResponse<TResponse>
                     {
                         IsSuccess = false,
-                        IsApprovalRequest = true,
-                        Message = jsonResponse?.Message ?? "Request submitted for approval",
-                        ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                        Message = ParseErrorMessage(responseContent, response.StatusCode),
                         Data = default
+                    };
+                }
+
+                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    // Check for approval response
+                    try
+                    {
+                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+                        if (jsonResponse?.Status == "PendingApproval" || response.StatusCode == HttpStatusCode.Accepted)
+                        {
+                            return new ApiResponse<TResponse>
+                            {
+                                IsSuccess = false,
+                                IsApprovalRequest = true,
+                                Message = jsonResponse?.Message ?? "Request submitted for approval",
+                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                                Data = default
+                            };
+                        }
+                    }
+                    catch { }
+
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = true,
+                        Data = response.StatusCode == HttpStatusCode.NoContent
+                            ? (TResponse)(object)true
+                            : JsonConvert.DeserializeObject<TResponse>(responseContent)
                     };
                 }
 
@@ -497,6 +546,45 @@ namespace InventoryManagement.Web.Services
                     Data = false
                 };
             }
+        }
+
+
+        private string ParseErrorMessage(string responseContent, HttpStatusCode statusCode)
+        {
+            try
+            {
+                dynamic? errorResponse = JsonConvert.DeserializeObject(responseContent);
+
+                if (errorResponse?.error != null)
+                    return errorResponse.error.ToString();
+
+                if (errorResponse?.message != null)
+                    return errorResponse.message.ToString();
+
+                if (errorResponse?.errors != null)
+                {
+                    var errors = new List<string>();
+                    foreach (var error in errorResponse.errors)
+                    {
+                        if (error.Value is JArray array)
+                        {
+                            foreach (var item in array)
+                                errors.Add(item.ToString());
+                        }
+                        else
+                        {
+                            errors.Add(error.Value.ToString());
+                        }
+                    }
+                    return string.Join("; ", errors);
+                }
+            }
+            catch
+            {
+                return $"Request failed with status {statusCode}";
+            }
+
+            return $"Request failed with status {statusCode}";
         }
     }
 }
