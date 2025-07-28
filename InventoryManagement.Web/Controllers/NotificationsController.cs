@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,63 +7,120 @@ using Microsoft.AspNetCore.Mvc;
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
-    public class NotificationsController : Controller
+    public class NotificationsController : BaseController
     {
         private readonly INotificationService _notificationService;
 
-        public NotificationsController(INotificationService notificationService)
+        public NotificationsController(INotificationService notificationService, ILogger<NotificationsController> logger)
+            :base(logger)
         {
             _notificationService = notificationService;
         }
 
         public async Task<IActionResult> Index(string? status = null, string? type = null)
         {
-            var notifications = await _notificationService.GetNotificationsAsync(status == "unread");
-
-            var model = new NotificationListViewModel
+            try
             {
-                Notifications = notifications
-                    .Where(n => type == null || n.Type == type)
-                    .ToList()
-            };
+                var notifications = await _notificationService.GetNotificationsAsync(status == "unread");
 
-            ViewBag.StatusFilter = status;
-            ViewBag.TypeFilter = type;
+                var model = new NotificationListViewModel
+                {
+                    Notifications = notifications
+                        .Where(n => type == null || n.Type == type)
+                        .ToList()
+                };
 
-            return View(model);
+                ViewBag.StatusFilter = status;
+                ViewBag.TypeFilter = type;
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, new NotificationListViewModel());
+            }
         }
 
+
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAsRead(int notificationId)
         {
-            await _notificationService.MarkAsReadAsync(notificationId);
-            return Ok();
+            try
+            {
+                await _notificationService.MarkAsReadAsync(notificationId);
+
+                if (IsAjaxRequest())
+                {
+                    return AjaxResponse(true, "Notification marked as read");
+                }
+
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
 
+
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            await _notificationService.MarkAllAsReadAsync();
-            return Ok();
+            try
+            {
+                await _notificationService.MarkAllAsReadAsync();
+
+                if (IsAjaxRequest())
+                {
+                    return AjaxResponse(true, "All notifications marked as read");
+                }
+
+                TempData["Success"] = "All notifications marked as read";
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
+
+
 
         [HttpGet]
         public async Task<IActionResult> GetUnreadCount()
         {
-            var count = await _notificationService.GetUnreadCountAsync();
-            return Json(count);
+            try
+            {
+                var count = await _notificationService.GetUnreadCountAsync();
+                return Json(count);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to get unread notification count");
+                return Json(0);
+            }
         }
+
+
 
         [HttpGet]
         public async Task<IActionResult> GetRecentNotifications()
         {
-            var notifications = await _notificationService.GetNotificationsAsync(false);
-            var recent = notifications
-                .OrderByDescending(n => n.CreatedAt)
-                .Take(5)
-                .ToList();
-
-            return Json(recent);
+            try
+            {
+                var notifications = await _notificationService.GetNotificationsAsync(unreadOnly: true);
+                var recentNotifications = notifications.Take(5).ToList();
+                return Json(recentNotifications);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to get recent notifications");
+                return Json(new List<NotificationDto>());
+            }
         }
     }
 }

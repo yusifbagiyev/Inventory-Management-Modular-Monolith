@@ -6,64 +6,96 @@ using Microsoft.AspNetCore.Mvc;
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
-    public class MyRequestsController : Controller
+    public class MyRequestsController : BaseController
     {
         private readonly IApprovalService _approvalService;
-        private readonly ILogger<MyRequestsController> _logger;
 
-        public MyRequestsController(
-            IApprovalService approvalService,
-            ILogger<MyRequestsController> logger)
+        public MyRequestsController(IApprovalService approvalService, ILogger<MyRequestsController> logger)
+            : base(logger)
         {
             _approvalService = approvalService;
-            _logger = logger;
         }
-
 
         public async Task<IActionResult> Index()
         {
             try
             {
                 var requests = await _approvalService.GetMyRequestsAsync();
-                var model = new MyRequestsViewModel
+
+                var viewModel = new MyRequestsViewModel
                 {
-                    Requests = requests.OrderByDescending(r => r.CreatedAt).ToList()
+                    Requests = requests,
+                    StatusCounts = requests.GroupBy(r => r.Status)
+                        .ToDictionary(g => g.Key, g => g.Count())
                 };
-                return View(model);
+
+                return View(viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading my requests");
-                return View(new MyRequestsViewModel());
+                return HandleException(ex, new MyRequestsViewModel());
             }
         }
 
+        public async Task<IActionResult> Details(int id)
+        {
+            try
+            {
+                var request = await _approvalService.GetRequestDetailsAsync(id);
+
+                if (request == null)
+                    return NotFound();
+
+                // Verify the user owns this request
+                if (request.RequestedById != GetCurrentUserId())
+                {
+                    return Forbid();
+                }
+
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)
         {
             try
             {
+                // Get the request to verify ownership
+                var request = await _approvalService.GetRequestDetailsAsync(id);
+
+                if (request == null)
+                    return NotFound();
+
+                if (request.RequestedById != GetCurrentUserId())
+                {
+                    return HandleError("You can only cancel your own requests");
+                }
+
+                if (request.Status != "Pending")
+                {
+                    return HandleError("Only pending requests can be cancelled");
+                }
+
                 await _approvalService.CancelRequestAsync(id);
+
+                if (IsAjaxRequest())
+                {
+                    return AjaxResponse(true, "Request cancelled successfully");
+                }
+
                 TempData["Success"] = "Request cancelled successfully";
-                return Json(new { success = true });
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cancelling request {RequestId}", id);
-                return Json(new { success = false, message = ex.Message });
+                return HandleException(ex);
             }
-        }
-
-
-        public async Task<IActionResult> Details(int id)
-        {
-            var request = await _approvalService.GetRequestDetailsAsync(id);
-            if (request == null)
-            {
-                return NotFound();
-            }
-            return PartialView("~/Views/Approvals/_ApprovalDetails.cshtml", request);
         }
     }
 }

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using InventoryManagement.Web.Models;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -6,18 +8,24 @@ using Microsoft.AspNetCore.Mvc;
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
         private readonly IApiService _apiService;
-        public HomeController(IApiService apiService)
+        public HomeController(IApiService apiService,ILogger<HomeController> logger)
+            :base(logger)
         {
             _apiService = apiService;
         }
 
         public IActionResult Index()
         {
-            return RedirectToAction("Dashboard");
+            if (User.Identity?.IsAuthenticated ?? false)
+            {
+                return RedirectToAction("Dashboard");
+            }
+            return View();
         }
+
 
         public async Task<IActionResult> Dashboard()
         {
@@ -65,6 +73,10 @@ namespace InventoryManagement.Web.Controllers
             {
                 return RedirectToAction("Login", "Account", new { returnUrl = Request.Path });
             }
+            catch(Exception ex)
+            {
+                return HandleException(ex,new DashboardViewModel());
+            }
 
             //Mock data for demo
             model.DepartmentStats =
@@ -85,16 +97,34 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [AllowAnonymous]
         public IActionResult Privacy()
         {
             return View();
         }
 
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View();
+            var errorViewModel = new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            };
+
+            // Check if this is an AJAX request
+            if (IsAjaxRequest())
+            {
+                return Json(new
+                {
+                    isSuccess = false,
+                    message = "An error occurred while processing your request",
+                    requestId = errorViewModel.RequestId
+                });
+            }
+
+            return View(errorViewModel);
         }
     }
 }

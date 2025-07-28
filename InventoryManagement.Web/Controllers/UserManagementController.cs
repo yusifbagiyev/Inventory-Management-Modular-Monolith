@@ -3,23 +3,22 @@ using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize(Roles = "Admin")]
-    public class UserManagementController : Controller
+    public class UserManagementController : BaseController
     {
         private readonly IUserManagementService _userManagementService;
-        private readonly ILogger<UserManagementController> _logger;
         private readonly IApiService _apiService;
 
         public UserManagementController(
             IUserManagementService userManagementService,
             ILogger<UserManagementController> logger,
-            IApiService apiService)
+            IApiService apiService) :base(logger)
         {
             _userManagementService = userManagementService;
-            _logger = logger;
             _apiService = apiService;
         }
 
@@ -33,9 +32,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving users");
-                TempData["ErrorMessage"] = "Error retrieving users. Please try again.";
-                return View(new List<UserListViewModel>());
+                return HandleException(ex, new List<UserListViewModel>());
             }
         }
 
@@ -48,7 +45,7 @@ namespace InventoryManagement.Web.Controllers
                 var roles = await _userManagementService.GetAllRolesAsync();
                 var model = new CreateUserViewModel
                 {
-                    Roles = roles.Select(r => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                    Roles = roles.Select(r => new SelectListItem
                     {
                         Value = r,
                         Text = r
@@ -56,9 +53,8 @@ namespace InventoryManagement.Web.Controllers
                 };
                 return View(model);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error loading create user form");
                 TempData["ErrorMessage"] = "Error loading form. Please try again.";
                 return RedirectToAction(nameof(Index));
             }
@@ -69,44 +65,37 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateUserViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    var result = await _userManagementService.CreateUserAsync(model);
-                    if (result)
-                    {
-                        TempData["SuccessMessage"] = "User created successfully!";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", "Failed to create user. Please try again.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error creating user");
-                    ModelState.AddModelError("", "An error occurred while creating the user.");
-                }
+                await LoadRoles(model);
+                return HandleValidationErrors(model);
             }
 
-            // Reload roles if validation fails
             try
             {
-                var roles = await _userManagementService.GetAllRolesAsync();
-                model.Roles = roles.Select(r => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                var success = await _userManagementService.CreateUserAsync(model);
+
+                if (IsAjaxRequest())
                 {
-                    Value = r,
-                    Text = r
-                }).ToList();
+                    return AjaxResponse(success,
+                        success ? "User created successfully" : "Failed to create user");
+                }
+
+                if (success)
+                {
+                    TempData["Success"] = "User created successfully";
+                    return RedirectToAction("Index");
+                }
+
+                ModelState.AddModelError("", "Failed to create user");
+                await LoadRoles(model);
+                return View(model);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reloading roles");
+                await LoadRoles(model);
+                return HandleException(ex, model);
             }
-
-            return View(model);
         }
 
 
@@ -116,18 +105,14 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var user = await _userManagementService.GetUserByIdAsync(id);
-                if (user == null || user.Id == 0)
-                {
-                    TempData["ErrorMessage"] = "User not found.";
-                    return RedirectToAction(nameof(Index));
-                }
+                if (user == null)
+                    return NotFound();
+
                 return View(user);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user for editing");
-                TempData["ErrorMessage"] = "Error retrieving user. Please try again.";
-                return RedirectToAction(nameof(Index));
+                return HandleException(ex);
             }
         }
 
@@ -136,51 +121,34 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EditUserViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    // Ensure SelectedRoles is not null (happens when no checkboxes are checked)
-                    model.SelectedRoles = model.SelectedRoles ?? new List<string>();
-
-                    // Log the state for debugging
-                    _logger.LogInformation("Updating user {UserId} with roles: {Roles}",
-                        model.Id, string.Join(", ", model.SelectedRoles));
-
-                    var result = await _userManagementService.UpdateUserAsync(model);
-                    if (result)
-                    {
-                        TempData["SuccessMessage"] = "User updated successfully!";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", "Failed to update user. Please check the logs for details.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error updating user");
-                    ModelState.AddModelError("", "An error occurred while updating the user.");
-                }
+                return HandleValidationErrors(model);
             }
 
-            // If we got here, something failed, redisplay form
             try
             {
-                // Reload the current state from the server to ensure data consistency
-                var currentUser = await _userManagementService.GetUserByIdAsync(model.Id);
+                var success = await _userManagementService.UpdateUserAsync(model);
 
-                // Preserve the attempted changes in the model for user feedback
-                model.CurrentRoles = currentUser.CurrentRoles;
-                model.AvailableRoles = currentUser.AvailableRoles;
+                if (IsAjaxRequest())
+                {
+                    return AjaxResponse(success,
+                        success ? "User updated successfully" : "Failed to update user");
+                }
+
+                if (success)
+                {
+                    TempData["Success"] = "User updated successfully";
+                    return RedirectToAction("Index");
+                }
+
+                ModelState.AddModelError("", "Failed to update user");
+                return View(model);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reloading user data");
+                return HandleException(ex, model);
             }
-
-            return View(model);
         }
 
 
@@ -190,23 +158,29 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _userManagementService.DeleteUserAsync(id);
-                if (result)
+                var success = await _userManagementService.DeleteUserAsync(id);
+
+                if (IsAjaxRequest())
                 {
-                    TempData["SuccessMessage"] = "User deleted successfully!";
+                    return AjaxResponse(success,
+                        success ? "User deleted successfully" : "Failed to delete user");
+                }
+
+                if (success)
+                {
+                    TempData["Success"] = "User deleted successfully";
                 }
                 else
                 {
-                    TempData["ErrorMessage"] = "Failed to delete user. Please try again.";
+                    TempData["Error"] = "Failed to delete user";
                 }
+
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user");
-                TempData["ErrorMessage"] = "An error occurred while deleting the user.";
+                return HandleException(ex);
             }
-
-            return RedirectToAction(nameof(Index));
         }
 
 
@@ -216,23 +190,19 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _userManagementService.ToggleUserStatusAsync(id);
-                if (result)
+                var success = await _userManagementService.ToggleUserStatusAsync(id);
+                if (IsAjaxRequest())
                 {
-                    TempData["SuccessMessage"] = "User status updated successfully!";
+                    return AjaxResponse(success,
+                        success ? "User status updated successfully" : "Failed to update user status");
                 }
-                else
-                {
-                    TempData["ErrorMessage"] = "Failed to update user status. Please try again.";
-                }
+
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error toggling user status");
-                TempData["ErrorMessage"] = "An error occurred while updating user status.";
+                return HandleException(ex);
             }
-
-            return RedirectToAction(nameof(Index));
         }
 
 
@@ -242,10 +212,10 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var user = await _userManagementService.GetUserByIdAsync(id);
-                if (user == null || user.Id == 0)
+                if (user == null)
                 {
                     TempData["ErrorMessage"] = "User not found.";
-                    return RedirectToAction(nameof(Index));
+                    return NotFound();
                 }
 
                 var model = new ResetPasswordViewModel
@@ -258,9 +228,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading reset password form");
-                TempData["ErrorMessage"] = "Error loading form. Please try again.";
-                return RedirectToAction(nameof(Index));
+                return HandleException(ex);
             }
         }
 
@@ -269,29 +237,34 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    var result = await _userManagementService.ResetPasswordAsync(model.UserId, model.NewPassword);
-                    if (result)
-                    {
-                        TempData["SuccessMessage"] = "Password reset successfully!";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", "Failed to reset password. Please try again.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error resetting password");
-                    ModelState.AddModelError("", "An error occurred while resetting the password.");
-                }
+                return HandleValidationErrors(model);
             }
 
-            return View(model);
+            try
+            {
+                var success = await _userManagementService.ResetPasswordAsync(model.UserId, model.NewPassword);
+
+                if (IsAjaxRequest())
+                {
+                    return AjaxResponse(success,
+                        success ? "Password reset successfully" : "Failed to reset password");
+                }
+
+                if (success)
+                {
+                    TempData["Success"] = "Password reset successfully";
+                    return RedirectToAction("Edit", new { id = model.UserId });
+                }
+
+                ModelState.AddModelError("", "Failed to reset password");
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, model);
+            }
         }
 
 
@@ -310,9 +283,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user details");
-                TempData["ErrorMessage"] = "Error retrieving user details. Please try again.";
-                return RedirectToAction(nameof(Index));
+                return HandleException(ex);
             }
         }
 
@@ -326,9 +297,8 @@ namespace InventoryManagement.Web.Controllers
                 var user = await _userManagementService.GetUserByIdAsync(id);
                 return Json(new { success = true, data = user });
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error retrieving user via AJAX");
                 return Json(new { success = false, message = "Error retrieving user." });
             }
         }
@@ -342,9 +312,8 @@ namespace InventoryManagement.Web.Controllers
                 var result = await _userManagementService.ToggleUserStatusAsync(id);
                 return Json(new { success = result });
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error toggling user status via AJAX");
                 return Json(new { success = false, message = "Error updating user status." });
             }
         }
@@ -379,9 +348,8 @@ namespace InventoryManagement.Web.Controllers
 
                 return Json(permissionStatus);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error getting user permissions");
                 return Json(new { error = "Failed to load permissions" });
             }
         }
@@ -454,6 +422,25 @@ namespace InventoryManagement.Web.Controllers
             catch
             {
                 return Json(new List<PermissionViewModel>());
+            }
+        }
+
+
+        private async Task LoadRoles(CreateUserViewModel model)
+        {
+            try
+            {
+                var roles = await _userManagementService.GetAllRolesAsync();
+                model.Roles = roles.Select(r => new SelectListItem
+                {
+                    Value = r,
+                    Text = r
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load roles");
+                model.Roles = new List<SelectListItem>();
             }
         }
     }

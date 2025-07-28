@@ -8,29 +8,43 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
-    public class ProductsController : Controller
+    public class ProductsController : BaseController
     {
         private readonly IApiService _apiService;
-        public ProductsController(IApiService apiService)
+        public ProductsController(IApiService apiService,ILogger<ProductsController> logger): base(logger)
         {
             _apiService = apiService;
         }
 
         public async Task<IActionResult> Index()
         {
-            var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
-            return View(products ?? []);
+            try
+            {
+                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+                return View(products ?? []);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, new List<ProductViewModel>());
+            }
         }
 
 
 
         public async Task<IActionResult> Details(int id)
         {
-            var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
-            if (product == null)
-                return NotFound();
+            try
+            {
+                var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
+                if (product == null)
+                    return NotFound();
 
-            return View(product);
+                return View(product);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
 
 
@@ -44,66 +58,60 @@ namespace InventoryManagement.Web.Controllers
 
 
 
-        [HttpPost]
+        [HttpPost]  
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ProductViewModel productModel)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                var dto = new CreateProductDto
-                {
-                    InventoryCode = productModel.InventoryCode,
-                    Model = productModel.Model,
-                    Vendor = productModel.Vendor,
-                    Worker = productModel.Worker,
-                    Description = productModel.Description,
-                    IsWorking = productModel.IsWorking,
-                    IsActive = productModel.IsActive,
-                    IsNewItem = productModel.IsNewItem,
-                    CategoryId = productModel.CategoryId,
-                    DepartmentId = productModel.DepartmentId
-                };
-
-                var form = HttpContext.Request.Form;
-                try
-                {
-                    // Use dynamic type to handle different response structures
-                    var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
-
-                    if (response.IsApprovalRequest)
-                    {
-                        TempData["Info"] = response.Message;
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else if (response.IsSuccess)
-                    {
-                        TempData["Success"] = "Product created successfully.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", response.Message ?? "Failed to create product");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Failed to create product: {ex.Message}");
-                }
+                await LoadDropdowns(productModel);
+                return HandleValidationErrors(productModel);
             }
-            await LoadDropdowns(productModel);
-            return View(productModel);
+            var dto = new CreateProductDto
+            {
+                InventoryCode = productModel.InventoryCode,
+                Model = productModel.Model,
+                Vendor = productModel.Vendor,
+                Worker = productModel.Worker,
+                Description = productModel.Description,
+                IsWorking = productModel.IsWorking,
+                IsActive = productModel.IsActive,
+                IsNewItem = productModel.IsNewItem,
+                CategoryId = productModel.CategoryId,
+                DepartmentId = productModel.DepartmentId
+            };
+
+            try
+            {
+                var form = HttpContext.Request.Form;
+                var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
+
+                return HandleApiResponse(response, "Index");
+            }
+            catch (Exception ex)
+            {
+                await LoadDropdowns(productModel);
+                return HandleException(ex, productModel);
+            }
         }
 
 
 
         public async Task<IActionResult> Edit(int id)
         {
-            var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
-            if (product == null)
-                return NotFound();
+            try
+            {
+                var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
+                if (product == null)
+                    return NotFound();
 
-            await LoadDropdowns(product);
-            return View(product);
+                await LoadDropdowns(product);
+                return View(product);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
 
 
@@ -112,35 +120,23 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, ProductViewModel productModel)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                try
-                {
-                    // Always use form data for updates
-                    var form = HttpContext.Request.Form;
-                    var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
-
-                    if (response.IsApprovalRequest)
-                    {
-                        TempData["Info"] = response.Message;
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else if (response.IsSuccess)
-                    {
-                        TempData["Success"] = "Product created successfully.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                        ModelState.AddModelError("", response.Message ?? "Failed to create product");
-                }
-                catch 
-                {
-                    ModelState.AddModelError("", "An error occurred while updating the product.");
-                }
+                await LoadDropdowns(productModel);
+                return HandleValidationErrors(productModel);
             }
+            try
+            {
+                var form = HttpContext.Request.Form;
+                var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
 
-            await LoadDropdowns(productModel);
-            return View(productModel);
+                return HandleApiResponse(response, "Index");
+            }
+            catch(Exception ex)
+            {
+                await LoadDropdowns(productModel);
+                return HandleException(ex, productModel);
+            }
         }
 
 
@@ -149,22 +145,15 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var response = await _apiService.DeleteAsync($"api/products/{id}");
-            if (response.IsApprovalRequest)
+            try
             {
-                TempData["Info"] = response.Message;
-                return RedirectToAction(nameof(Index));
+                var response = await _apiService.DeleteAsync($"api/products/{id}");
+                return HandleApiResponse(response, "Index");
             }
-            else if (response.IsSuccess)
+            catch (Exception ex)
             {
-                TempData["Success"] = "Product created successfully.";
-                return RedirectToAction(nameof(Index));
+                return HandleException(ex);
             }
-            else
-            {
-                ModelState.AddModelError("", response.Message ?? "Failed to create product");
-            }
-            return RedirectToAction(nameof(Index));
         }
 
 
@@ -187,8 +176,9 @@ namespace InventoryManagement.Web.Controllers
                     Text = d.Name
                 }).ToList() ?? [];
             }
-            catch
+            catch(Exception ex)
             {
+                _logger?.LogError(ex, "Failed to load dropdowns");
                 model.Categories = [];
                 model.Departments = [];
             }

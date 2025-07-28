@@ -15,17 +15,17 @@
            class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Routes" ? "active" : "")">
             <i class="fas fa-route me-2"></i>Routes
         </a>
-        <a asp-controller="Categories" asp-action="Index"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
-            <i class="fas fa-tags me-2"></i>Categories
-        </a>
-        <a asp-controller="Departments" asp-action="Index"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Departments" ? "active" : "")">
-            <i class="fas fa-building me-2"></i>Departments
-        </a>
 
         @if (User.IsInRole("Admin"))
         {
+            <a asp-controller="Categories" asp-action="Index"
+               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
+                <i class="fas fa-tags me-2"></i>Categories
+            </a>
+            <a asp-controller="Departments" asp-action="Index"
+               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Departments" ? "active" : "")">
+                <i class="fas fa-building me-2"></i>Departments
+            </a>
             <div class="sidebar-heading text-white text-uppercase mt-4 mb-2 px-3 small">
                 Administration
             </div>

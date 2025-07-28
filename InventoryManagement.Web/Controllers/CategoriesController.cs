@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,22 +7,46 @@ using Microsoft.AspNetCore.Mvc;
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
-    public class CategoriesController : Controller
+    public class CategoriesController : BaseController
     {
         private readonly IApiService _apiService;
-        private readonly ILogger<CategoriesController> _logger;
 
         public CategoriesController(IApiService apiService, ILogger<CategoriesController> logger)
+            :base(logger)
         {
             _apiService = apiService;
-            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
         {
-            var categories = await _apiService.GetAsync<List<CategoryViewModel>>("api/categories");
-            return View(categories ?? new List<CategoryViewModel>());
+            try
+            {
+                var categories = await _apiService.GetAsync<List<CategoryViewModel>>("api/categories");
+                return View(categories ?? []);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, new List<CategoryViewModel>());
+            }
         }
+
+
+        public async Task<IActionResult> Details(int id)
+        {
+            try
+            {
+                var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
+                if (category == null)
+                    return NotFound();
+
+                return View(category);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
 
         public IActionResult Create()
         {
@@ -33,48 +58,45 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CategoryViewModel model)
         {
-            if (ModelState.IsValid)
+            if(!ModelState.IsValid)
             {
-                try
-                {
-                    var response = await _apiService.PostAsync<CategoryViewModel, CategoryViewModel>("api/categories", model);
-
-                    if (response.IsApprovalRequest)
-                    {
-                        TempData["Info"] = response.Message;
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else if (response.IsSuccess)
-                    {
-                        TempData["Success"] = "Category created successfully.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", response.Message ?? "Failed to create category");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Create category error");
-                    ModelState.AddModelError("", "An error occurred");
-                }
+                return HandleValidationErrors(model);
             }
+            try
+            {
+                var dto = new CreateCategoryDto
+                {
+                    Name = model.Name,
+                    Description = model.Description,
+                    IsActive = model.IsActive
+                };
 
-            return View(model);
+                var response = await _apiService.PostAsync<CreateCategoryDto, CategoryDto>("api/categories", dto);
+                return HandleApiResponse(response, "Index");
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex,model);
+            }
         }
 
 
 
         public async Task<IActionResult> Edit(int id)
         {
-            var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
+            try
+            {
+                var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
 
+                if (category == null)
+                    return NotFound();
 
-            if (category == null)
-                return NotFound();
-
-            return View(category);
+                return View(category);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
 
 
@@ -83,35 +105,25 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, CategoryViewModel model)
         {
-            if (ModelState.IsValid)
+            if(!ModelState.IsValid)
             {
-                try
-                {
-                    var response = await _apiService.PutAsync<CategoryViewModel, bool>($"api/categories/{id}", model);
-
-                    if (response.IsApprovalRequest)
-                    {
-                        TempData["Info"] = response.Message;
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else if (response.IsSuccess)
-                    {
-                        TempData["Success"] = "Category updated successfully.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        ModelState.AddModelError("", response.Message ?? "Failed to update category");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Update category error");
-                    ModelState.AddModelError("", "An error occurred");
-                }
+                return HandleValidationErrors(model);
             }
-
-            return View(model);
+            try
+            {
+                var dto = new UpdateCategoryDto
+                {
+                    Name = model.Name,
+                    Description = model.Description,
+                    IsActive = model.IsActive
+                };
+                var response = await _apiService.PutAsync<UpdateCategoryDto, bool>($"api/categories/{id}", dto);
+                return HandleApiResponse(response, "Index");
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, model);
+            }
         }
 
 
@@ -123,28 +135,12 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var response = await _apiService.DeleteAsync($"api/categories/{id}");
-
-                if (response.IsApprovalRequest)
-                {
-                    TempData["Info"] = response.Message;
-                    return RedirectToAction(nameof(Index));
-                }
-                else if (response.IsSuccess)
-                {
-                    TempData["Success"] = "Category deleted successfully.";
-                }
-                else
-                {
-                    ModelState.AddModelError("", response.Message ?? "Failed to delete category");
-                }
+                return HandleApiResponse(response, "Index");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Delete category error");
-                TempData["Error"] = "An error occurred";
+                return HandleException(ex);
             }
-
-            return RedirectToAction(nameof(Index));
         }
     }
 }

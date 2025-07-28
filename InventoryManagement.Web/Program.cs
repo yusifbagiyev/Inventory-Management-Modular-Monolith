@@ -38,6 +38,38 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = ".InventoryManagement.Session";
 });
 
+
+// Configure authentication to handle AJAX requests properly
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            context.Response.StatusCode = 401; // Unauthorized
+        }
+        else
+        {
+            context.Response.Redirect(context.RedirectUri);
+        }
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            context.Response.StatusCode = 403; // Forbidden
+        }
+        else
+        {
+            context.Response.Redirect(context.RedirectUri);
+        }
+        return Task.CompletedTask;
+    };
+});
+
+
 //Add HTTP clients
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
