@@ -49,45 +49,70 @@ function initializeAjaxForm(formSelector, options = {}) {
                 // Reset button state
                 $submitBtn.prop('disabled', false).html(originalBtnHtml);
 
-                // Handle approval requests
-                if (response.approvalRequestId || response.status === 'PendingApproval') {
-                    showToast(
-                        response.message || 'Request submitted for approval',
-                        'info'
-                    );
-
-                    if (settings.successRedirect) {
-                        setTimeout(() => {
-                            window.location.href = settings.successRedirect;
-                        }, settings.redirectDelay);
+                // Check if response is a string (might be HTML)
+                if (typeof response === 'string') {
+                    // Check if it's JSON string
+                    try {
+                        response = JSON.parse(response);
+                    } catch (e) {
+                        // Not JSON, might be HTML redirect
+                        if (response.includes('<!DOCTYPE')) {
+                            window.location.reload();
+                            return;
+                        }
                     }
-                    return;
                 }
 
-                // Handle success
-                if (response.isSuccess !== false) {
+                // Now handle the response properly
+                if (response && typeof response === 'object') {
+                    // Handle approval requests
+                    if (response.isApprovalRequest === true) {
+                        showToast(
+                            response.message || 'Request submitted for approval',
+                            'info'
+                        );
+
+                        if (settings.successRedirect) {
+                            setTimeout(() => {
+                                window.location.href = settings.successRedirect;
+                            }, settings.redirectDelay);
+                        }
+                        return;
+                    }
+
+                    // Handle success (including when isSuccess is true or undefined for backward compatibility)
+                    if (response.isSuccess !== false) {
+                        showToast(response.message || settings.successMessage, 'success');
+
+                        if (settings.onSuccess) {
+                            settings.onSuccess(response, form);
+                        }
+
+                        if (settings.resetOnSuccess) {
+                            form.reset();
+                        }
+
+                        if (settings.successRedirect) {
+                            setTimeout(() => {
+                                window.location.href = settings.successRedirect;
+                            }, settings.redirectDelay);
+                        }
+                    } else {
+                        // Handle failure
+                        const errorMsg = response.message || response.error || 'Operation failed';
+                        showToast(errorMsg, 'error');
+
+                        if (settings.onError) {
+                            settings.onError(errorMsg, response);
+                        }
+                    }
+                } else {
+                    // Fallback for non-standard responses
                     showToast(settings.successMessage, 'success');
-
-                    if (settings.onSuccess) {
-                        settings.onSuccess(response, form);
-                    }
-
-                    if (settings.resetOnSuccess) {
-                        form.reset();
-                    }
-
                     if (settings.successRedirect) {
                         setTimeout(() => {
                             window.location.href = settings.successRedirect;
                         }, settings.redirectDelay);
-                    }
-                } else {
-                    // Handle failure in success response
-                    const errorMsg = response.message || response.error || 'Operation failed';
-                    showToast(errorMsg, 'error');
-
-                    if (settings.onError) {
-                        settings.onError(errorMsg, response);
                     }
                 }
             },

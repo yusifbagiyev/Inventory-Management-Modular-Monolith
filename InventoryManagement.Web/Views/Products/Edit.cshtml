@@ -85,15 +85,18 @@
                         <div class="mb-3">
                             <label class="form-label">Product Image</label>
 
+                            <!-- Replace the current image display section -->
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
                                 <div id="currentImageContainer" class="mb-3">
                                     <p class="text-muted mb-2">Current image:</p>
                                     <div class="position-relative" style="max-width: 200px;">
                                         <img src="@Model.FullImageUrl"
-                                             class="img-thumbnail"
+                                             class="img-thumbnail cursor-pointer"
                                              alt="@Model.Model"
-                                             id="currentImage" />
+                                             id="currentImage"
+                                             onclick="showImageModal('@Model.FullImageUrl', '@Model.Model')"
+                                             style="cursor: pointer;" />
                                         <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
                                                 onclick="removeCurrentImage()" title="Remove image">
                                             <i class="fas fa-times"></i>

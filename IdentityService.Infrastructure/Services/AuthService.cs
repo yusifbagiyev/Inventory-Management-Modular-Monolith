@@ -93,8 +93,11 @@ namespace IdentityService.Infrastructure.Services
             var role = dto.SelectedRole ?? AllRoles.User;
             await _userManager.AddToRoleAsync(user, role);
 
+            await AssignRolePermissionsToUser(user.Id, role);
+
             return await GenerateTokenResponse(user);
         }
+
 
         public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
         {
@@ -351,6 +354,32 @@ namespace IdentityService.Infrastructure.Services
 
             return permissions.Cast<object>();
         }
+
+        private async Task AssignRolePermissionsToUser(int userId, string roleName)
+        {
+            // Get role permissions
+            var rolePermissions = await _context.RolePermissions
+                .Include(rp => rp.Permission)
+                .Where(rp => rp.Role.Name == roleName)
+                .ToListAsync();
+
+            // Add each permission to UserPermissions
+            foreach (var rolePermission in rolePermissions)
+            {
+                var userPermission = new UserPermission
+                {
+                    UserId = userId,
+                    PermissionId = rolePermission.PermissionId,
+                    GrantedAt = DateTime.UtcNow,
+                    GrantedBy = "System - Role Assignment"
+                };
+
+                _context.UserPermissions.Add(userPermission);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
 
         public async Task<bool> HasPermissionAsync(int userId, string permission)
         {

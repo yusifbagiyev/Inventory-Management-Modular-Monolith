@@ -160,6 +160,21 @@
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
 
+    <!-- Global Image Modal -->
+    <div class="modal fade" id="globalImageModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Image Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img id="globalModalImage" class="img-fluid" alt="Preview">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
 
     <!-- Scripts -->
@@ -601,6 +616,12 @@
                 $(this).remove();
             });
         };
+        
+        function showImageModal(imageUrl, title) {
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

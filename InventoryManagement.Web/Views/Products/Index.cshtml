@@ -62,7 +62,21 @@
                                         }
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary fs-6">@product.InventoryCode</span>
+                                        <span class="badge bg-primary fs-6 inventory-code-display" data-id="@product.Id">
+                                            @product.InventoryCode
+                                        </span>
+                                        <div class="inventory-code-edit d-none" data-id="@product.Id">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control form-control-sm inventory-code-input"
+                                                       value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id">
+                                                <button class="btn btn-success btn-sm save-inventory-code" data-id="@product.Id">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         <div>
@@ -193,5 +207,66 @@
             $('#deleteForm').attr('action', '/Products/Delete/' + id);
             $('#deleteModal').modal('show');
         }
+    </script>
+    <script>
+        $(document).ready(function() {
+            // Double-click to edit inventory code
+            $('.inventory-code-display').on('dblclick', function() {
+                const id = $(this).data('id');
+                $(this).addClass('d-none');
+                $(`.inventory-code-edit[data-id="${id}"]`).removeClass('d-none');
+                $(`.inventory-code-input[data-id="${id}"]`).focus().select();
+            });
+
+            // Save inventory code
+            $('.save-inventory-code').on('click', function() {
+                const id = $(this).data('id');
+                const newCode = $(`.inventory-code-input[data-id="${id}"]`).val();
+
+                if (newCode < 1 || newCode > 9999) {
+                    showToast('Inventory code must be between 1 and 9999', 'error');
+                    return;
+                }
+
+                // Call API to update only inventory code
+                $.ajax({
+                    url: `/api/products/${id}/inventory-code`,
+                    type: 'PUT',
+                    data: JSON.stringify({ inventoryCode: newCode }),
+                    contentType: 'application/json',
+                    headers: {
+                        'Authorization': 'Bearer ' + $('#jwtToken').val(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function() {
+                        $(`.inventory-code-display[data-id="${id}"]`).text(newCode).removeClass('d-none');
+                        $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
+                        showToast('Inventory code updated successfully', 'success');
+                    },
+                    error: function(xhr) {
+                        const errorMsg = ErrorHandler.parseErrorMessage(xhr, 'Failed to update inventory code');
+                        showToast(errorMsg, 'error');
+                    }
+                });
+            });
+
+            // Cancel edit
+            $('.cancel-inventory-code').on('click', function() {
+                const id = $(this).data('id');
+                $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none');
+                $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
+            });
+
+            // Press Enter to save, Escape to cancel
+            $('.inventory-code-input').on('keypress', function(e) {
+                if (e.which === 13) { // Enter
+                    const id = $(this).data('id');
+                    $(`.save-inventory-code[data-id="${id}"]`).click();
+                } else if (e.which === 27) { // Escape
+                    const id = $(this).data('id');
+                    $(`.cancel-inventory-code[data-id="${id}"]`).click();
+                }
+            });
+        });
     </script>
 }

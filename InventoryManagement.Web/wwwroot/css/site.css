@@ -185,11 +185,6 @@ body {
 .image-zoom {
     transition: transform 0.3s ease;
 }
-
-.image-container:hover .image-zoom {
-    transform: scale(1.5);
-}
-
 /* Modal image viewer */
 .image-modal {
     display: none;

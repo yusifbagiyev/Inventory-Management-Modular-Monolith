@@ -340,5 +340,25 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new DeleteProduct.Command(id));
             return NoContent();
         }
+
+
+        [HttpPut("{id}/inventory-code")]
+        [Permission(AllPermissions.ProductUpdate)]
+        public async Task<IActionResult> UpdateInventoryCode(int id, [FromBody] UpdateInventoryCodeDto dto)
+        {
+            // Add logic to update only inventory code
+            var product = await _mediator.Send(new GetProductByIdQuery(id));
+            if (product == null)
+                return NotFound();
+
+            // Check if new code already exists
+            var existing = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
+            if (existing != null && existing.Id != id)
+                return BadRequest(new { error = "Inventory code already exists" });
+
+            // Update only the inventory code
+            await _mediator.Send(new UpdateProductInventoryCode.Command(id, dto.InventoryCode));
+            return NoContent();
+        }
     }
 }
