@@ -70,14 +70,13 @@ function copyToClipboard(text) {
 
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
-    // Map type to Bootstrap color classes
-    const toastHtml = {
+    const typeMap = {
         'success': 'bg-success text-white',
         'error': 'bg-danger text-white',
-        'warning': 'bg-warning',
-        'info': 'bg-info text-white',
-        'danger': 'bg-danger text-white'
-    }
+        'danger': 'bg-danger text-white',
+        'warning': 'bg-warning text-dark',
+        'info': 'bg-info text-white'
+    };
     const colorClasses = typeMap[type] || typeMap['info'];
 
     // Create toast HTML with proper styling
@@ -155,41 +154,6 @@ function resetFormState(fromElement){
         }
     });
 }
-
-
-function initializeImageZoom() {
-    $('.zoomable-image').click(function () {
-        var src = $(this).attr('src');
-        var alt = $(this).attr('alt');
-        showImageModal(src, alt);
-    });
-}
-
-function showImageModal(src, filename) {
-    var modal = $(`
-        <div class="image-modal" onclick="closeImageModal()">
-            <img class="image-modal-content" src="${src}" alt="${filename}">
-            <a class="image-download" onclick="event.stopPropagation(); downloadImage('${src}', '${filename}')" title="Download">
-                <i class="fas fa-download"></i>
-            </a>
-        </div>
-    `);
-
-    $('body').append(modal);
-    $('.image-modal').fadeIn();
-}
-
-function closeImageModal() {
-    $('.image-modal').fadeOut(function () {
-        $(this).remove();
-    });
-}
-
-// Initialize on page load
-$(document).ready(function () {
-    initializeImageZoom();
-});
-
 notificationConnection.onreconnecting((error) => {
     console.log('SignalR Reconnecting:', error);
 });

@@ -51,7 +51,7 @@
                                         {
                                             <img src="@product.FullImageUrl" class="img-thumbnail"
                                                  style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
-                                                 onclick="showImageModal('@product.FullImageUrl','@product.Model')"
+                                                 onclick="showImageModal('@product.FullImageUrl','@product.CategoryName')"
                                                  alt="@product.CategoryName">
                                         }
                                         else
@@ -268,5 +268,10 @@
                 }
             });
         });
+        function showImageModal(imageUrl, title) {
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
     </script>
 }

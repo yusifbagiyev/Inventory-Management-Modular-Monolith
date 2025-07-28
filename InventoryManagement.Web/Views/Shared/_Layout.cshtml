@@ -194,6 +194,9 @@
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
 
+        // Store whether user is admin for JavaScript usage
+		const isAdmin=@(User.IsInRole("Admin") ? "true" : "false");
+
         $(document).ready(function() {
             // Sidebar toggle
             $('#menu-toggle').click(function(e) {
@@ -209,9 +212,8 @@
                 loadRecentNotifications();
 
                 // Check for pending approvals if admin
-                @if (User.IsInRole("Admin"))
-                {
-                        <text>loadPendingApprovalsCount();</text>
+                if (isAdmin) {
+                loadPendingApprovalsCount();
                 }
             }
         });
@@ -222,6 +224,12 @@
                 console.error('No JWT token available');
                 return;
             }
+
+            // Add check for existing connection
+            if(notificationConnection&&notificationConnection.state === signalR.HubConnectionState.Connected) {
+                console.log('SignalR already connected');
+                return;
+			}
 
             console.log('Initializing SignalR connection...');
 
@@ -287,14 +295,9 @@
                 // playNotificationSound();
 
                 // If admin and approval request, update pending count
-                @if (User.IsInRole("Admin"))
-                {
-                        <text>
-                        if (notification.type === 'ApprovalRequest') {
-                            loadPendingApprovalsCount()
-                        }
-                        </text>
-                }
+                if (isAdmin && notification.type === 'ApprovalRequest') {
+                loadPendingApprovalsCount();
+                    }
             });
 
             // Handle connection confirmation
@@ -306,8 +309,8 @@
             startConnection();
         }
 
-        function startConnection() {
-            if (notificationConnection) {
+            function startConnection() {
+            if (notificationConnection && notificationConnection.state === signalR.HubConnectionState.Disconnected) {
                 notificationConnection.start()
                     .then(() => {
                         console.log('SignalR connected successfully');
@@ -616,12 +619,6 @@
                 $(this).remove();
             });
         };
-        
-        function showImageModal(imageUrl, title) {
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
-        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

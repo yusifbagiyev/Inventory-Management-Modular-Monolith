@@ -180,12 +180,22 @@
         }
 
         // Initialize AJAX form handler
-        $(document).ready(function() {
+               $(document).ready(function() {
             AjaxHandler.handleForm('form', {
                 successMessage: 'Product updated successfully!',
                 successRedirect: '/Products',
+                onSuccess: function(response) {
+                    // Handle the specific response format
+                    if (response && response.isSuccess === true) {
+                        showToast('Product updated successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/Products';
+                        }, 1500);
+                    }
+                },
                 onError: function(errorMessage, response) {
-                    console.log('Product update failed:', errorMessage);
+                    console.error('Product update failed:', errorMessage);
+                    showToast(errorMessage || 'Failed to update product', 'error');
                 }
             });
         });
