@@ -84,7 +84,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 await _approvalService.RejectRequestAsync(id, reason);
-                return Json(new { success = true, message = "Request rejected" });
+
             }
             catch (Exception ex)
             {
