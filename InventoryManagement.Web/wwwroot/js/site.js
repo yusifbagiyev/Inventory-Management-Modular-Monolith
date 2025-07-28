@@ -71,17 +71,19 @@ function copyToClipboard(text) {
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
     const typeMap = {
-        'success': 'bg-success text-white',
-        'error': 'bg-danger text-white',
-        'danger': 'bg-danger text-white',
-        'warning': 'bg-warning text-dark',
-        'info': 'bg-info text-white'
+        'success': 'bg-success',
+        'error': 'bg-danger',
+        'danger': 'bg-danger',
+        'warning': 'bg-warning',
+        'info': 'bg-info',
+        'secondary': 'bg-secondary'
     };
-    const colorClasses = typeMap[type] || typeMap['info'];
+    const bgClass = typeMap[type] || typeMap['info'];
+    const textClass = type === 'warning' ? 'text-dark' : 'text-white';
 
     // Create toast HTML with proper styling
     const toastHtml = `
-        <div class="toast align-items-center ${colorClasses} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast align-items-center ${bgClass} ${textClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body">
                     ${escapeHtml(message)}
@@ -92,8 +94,7 @@ function showToast(message, type = 'info', duration = 5000) {
     `;
 
     // Ensure toast container exists
-    let container = document.getElementById('toast-container');
-
+    let container = document.getElementById('toastContainer');
     if (!container) {
         container = document.createElement('div');
         container.id = 'toastContainer';

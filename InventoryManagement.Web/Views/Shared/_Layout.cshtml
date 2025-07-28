@@ -186,8 +186,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/errorHandler.js" asp-append-version="true"></script>
-    <script src="~/js/ajaxFormHandler.js" asp-append-version="true"></script>
-
     <script>
         // Global notification variables
         let notificationConnection = null;
@@ -217,6 +215,19 @@
                 }
             }
         });
+
+        function playNotificationSound() 
+        {
+                    try {
+                        const audio = new Audio('/sounds/notify.mp3');
+                        audio.volume = 0.5; // 50% volume
+                        audio.play().catch(err => {
+                            console.log('Could not play notification sound:', err);
+                        });
+                    } catch (error) {
+                        console.error('Error playing notification sound:', error);
+                    }
+         }
 
         function initializeNotifications() {
             const token = $('#jwtToken').val();
@@ -291,8 +302,8 @@
                     loadRecentNotifications();
                 }
 
-                // Play notification sound (optional)
-                // playNotificationSound();
+                // Play notification sound
+                playNotificationSound();
 
                 // If admin and approval request, update pending count
                 if (isAdmin && notification.type === 'ApprovalRequest') {

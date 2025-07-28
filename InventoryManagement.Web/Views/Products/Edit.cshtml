@@ -155,7 +155,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/errorHandler.js"></script>
-    <script src="~/js/ajaxFormHandler.js"></script>
+    <script src="~/js/ajaxHandler.js"></script>
     <script>
         // Image handling functions
         function removeCurrentImage() {
@@ -180,22 +180,20 @@
         }
 
         // Initialize AJAX form handler
-               $(document).ready(function() {
+        $(document).ready(function() {
             AjaxHandler.handleForm('form', {
                 successMessage: 'Product updated successfully!',
                 successRedirect: '/Products',
+                redirectDelay: 1500,
                 onSuccess: function(response) {
-                    // Handle the specific response format
-                    if (response && response.isSuccess === true) {
-                        showToast('Product updated successfully!', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/Products';
-                        }, 1500);
+                    // The response structure shows isSuccess:true, so we handle it properly
+                    if (response && (response.isSuccess === true || response.isSuccess !== false)) {
+                        // Let the main handler deal with the redirect
+                        return true;
                     }
                 },
                 onError: function(errorMessage, response) {
                     console.error('Product update failed:', errorMessage);
-                    showToast(errorMessage || 'Failed to update product', 'error');
                 }
             });
         });

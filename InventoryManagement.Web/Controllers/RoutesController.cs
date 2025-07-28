@@ -46,6 +46,27 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, [FromForm] UpdateRouteViewModel model)
+        {
+            try
+            {
+                var dto = new UpdateRouteDto
+                {
+                    ToWorker = model.ToWorker,
+                    Notes = model.Notes
+                };
+
+                var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", HttpContext.Request.Form, dto);
+                return HandleApiResponse(response, "Index");
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex, model);
+            }
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
