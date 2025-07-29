@@ -239,10 +239,9 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogInformation($"Product created: {productEvent.Model} ({productEvent.InventoryCode})");
 
-                // Notify department users about new product
-                var departmentUsers = await GetUsersInDepartment(productEvent.DepartmentId);
+                var allUsers = await GetAllUsersId();
 
-                foreach (var userId in departmentUsers)
+                foreach (var userId in allUsers)
                 {
                     var notification = new Notification(
                         userId,
@@ -276,9 +275,9 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogInformation($"Product deleted: {productEvent.Model} ({productEvent.InventoryCode})");
 
                 // Notify relevant users
-                var departmentUsers = await GetUsersInDepartment(productEvent.DepartmentId);
+                var allUsers = await GetAllUsersId();
 
-                foreach (var userId in departmentUsers)
+                foreach (var userId in allUsers)
                 {
                     var notification = new Notification(
                         userId,
@@ -312,9 +311,9 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogInformation($"Route created for product {routeEvent.Model} to {routeEvent.ToDepartmentName}");
 
                 // Notify destination department
-                var toDeptUsers = await GetUsersInDepartment(routeEvent.ToDepartmentId);
+                var allUsers = await GetAllUsersId();
 
-                foreach (var userId in toDeptUsers)
+                foreach (var userId in allUsers)
                 {
                     var notification = new Notification(
                         userId,
@@ -346,10 +345,8 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogInformation($"Route completed: {routeEvent.RouteId}");
 
-                // Notify relevant departments
-                var fromDeptUsers = await GetUsersInDepartment(routeEvent.FromDepartmentId);
-                var toDeptUsers = await GetUsersInDepartment(routeEvent.ToDepartmentId);
-                var allUsers = fromDeptUsers.Union(toDeptUsers).Distinct();
+                // Notify relevant users
+                var allUsers = await GetAllUsersId();
 
                 foreach (var userId in allUsers)
                 {
@@ -412,38 +409,18 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        private async Task<List<int>> GetUsersInRole(string role)
+        private async Task<List<int>> GetAllUsersId()
         {
             using var scope = _serviceProvider.CreateScope();
             var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-            var users = await userService.GetUsersAsync(role);
-            return users.Select(u => u.Id).ToList();
-        }
-
-        private async Task<List<int>> GetUsersInDepartment(int departmentId)
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-
-            // You might need to implement this method in UserService
-            // For now, return managers and admins
-            var managers = await userService.GetUsersAsync("Manager");
+            var operators = await userService.GetUsersAsync("Operator");
             var admins = await userService.GetUsersAsync("Admin");
 
-            return managers.Select(u => u.Id)
+            return operators.Select(u => u.Id)
                 .Union(admins.Select(u => u.Id))
                 .Distinct()
                 .ToList();
-        }
-
-        private async Task<List<int>> GetAllUserIds()
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
-
-            var users = await userService.GetUsersAsync(null);
-            return users.Select(u => u.Id).ToList();
         }
 
         private string GetReadableRequestType(string requestType)

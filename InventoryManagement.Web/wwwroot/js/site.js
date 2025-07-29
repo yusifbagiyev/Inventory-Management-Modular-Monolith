@@ -85,16 +85,15 @@ function showToast(message, type = 'info', duration = 5000) {
     const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
     const icon = getToastIcon(type);
-    const toastClass = `toast-${type}`;
 
     const toastHtml = `
-        <div id="${toastId}" class="toast ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-body">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${icon} toast-icon"></i>
-                    <span>${escapeHtml(message)}</span>
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${icon} me-2"></i>
+                    ${escapeHtml(message)}
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     `;

@@ -486,17 +486,6 @@ body {
     border-radius: 8px;
 }
 
-.toast-success{
-    background-color:#10b981;
-    color:white;
-}
-
-.toast-error,
-.toast-danger{
-    background-color:#ef4444;
-    color:white;
-}
-
 .toast-warning{
     background-color:#f59e0b;
     color:white;

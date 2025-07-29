@@ -52,7 +52,6 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
-        [Permission(AllPermissions.RouteUpdate)]
         public async Task<IActionResult> Edit(int id)
         {
             try
@@ -208,11 +207,21 @@ namespace InventoryManagement.Web.Controllers
             {
                 var response = await _apiService.PutAsync<object, bool>($"api/inventoryroutes/{id}/complete", new { });
 
-                return HandleApiResponse(response, "Index");
+                if (response.IsSuccess)
+                {
+                    TempData["Success"] = "Route completed successfully";
+                }
+                else
+                {
+                    TempData["Error"] = response.Message ?? "Failed to complete route";
+                }
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                return HandleException(ex);
+                _logger?.LogError(ex, "Error completing route");
+                TempData["Error"] = "An error occurred while completing the route";
+                return RedirectToAction(nameof(Index));  // Add this return
             }
         }
 

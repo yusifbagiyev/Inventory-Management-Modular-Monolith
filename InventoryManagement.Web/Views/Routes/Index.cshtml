@@ -140,7 +140,7 @@
                                            class="btn btn-sm btn-outline-info" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        @if (User.HasPermission("route.update"))
+										@if (User.HasPermission("route.update") && !route.IsCompleted)
                                         {
                                             <button type="button" class="btn btn-sm btn-outline-warning"
                                                     onclick="editRoute(@route.Id)" title="Edit">
@@ -154,7 +154,7 @@
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         }
-                                        @if (User.HasPermission("route.delete"))
+                                        @if (User.HasPermission("route.delete")&&!route.IsCompleted)
                                         {
                                             <button type="button" class="btn btn-sm btn-outline-danger"
                                                     onclick="deleteRoute(@route.Id)" title="Delete">

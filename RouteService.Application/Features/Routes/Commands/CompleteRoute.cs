@@ -36,14 +36,30 @@ namespace RouteService.Application.Features.Routes.Commands
                 await _repository.UpdateAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                // Prepare image data if available
+                byte[]? imageData = null;
+                string? imageFileName = null;
+                
+                if(!string.IsNullOrEmpty(route.ImageUrl))
+                {
+                    // Extract fileName from URL
+                    var segments = route.ImageUrl.Split('/');
+                    if(segments.Length > 0)
+                    {
+                        imageFileName = segments[^1]; // Get the last segment as file name
+
+                        // ? How to get image data?
+                    }
+                }
+
                 // Now publish the transfer event to update the product
                 var transferEvent = new ProductTransferredEvent
                 {
                     ProductId = route.ProductSnapshot.ProductId,
                     ToDepartmentId = route.ToDepartmentId,
                     ToWorker = route.ToWorker,
-                    ImageData = null,
-                    ImageFileName = null,
+                    ImageData = imageData,
+                    ImageFileName = imageFileName,
                     TransferredAt = DateTime.UtcNow
                 };
 
