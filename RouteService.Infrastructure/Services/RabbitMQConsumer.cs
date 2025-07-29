@@ -67,8 +67,14 @@ namespace RouteService.Infrastructure.Services
                         if (deletedEvent != null)
                             await ProcessProductDeleted(deletedEvent);
                     }
+                    else if(ea.RoutingKey == "product.updated")
+                    {
+                        var updatedEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(message);
+                        if (updatedEvent != null)
+                            await ProcessProductUpdated(updatedEvent);
+                    }
 
-                    _channel.BasicAck(ea.DeliveryTag, false);
+                        _channel.BasicAck(ea.DeliveryTag, false);
                 }
                 catch (FluentValidation.ValidationException ex)
                 {
@@ -86,6 +92,8 @@ namespace RouteService.Infrastructure.Services
 
             _channel.QueueBind(_queueName, "inventory-events", "product.created");
             _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
+            _channel.QueueBind(_queueName, "inventory-events", "product.updated");
+
             _channel.BasicConsume(_queueName, false, consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -158,6 +166,41 @@ namespace RouteService.Infrastructure.Services
             await repository.AddAsync(route);
             await unitOfWork.SaveChangesAsync();
         }
+
+
+        private async Task ProcessProductUpdated(ProductUpdatedEvent updatedEvent)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
+            var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var productClient= scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
+
+            // Get current product details
+            var product = await productClient.GetProductByIdAsync(updatedEvent.ProductId);
+            if (product == null) return;
+
+            var productSnapshot = new ProductSnapshot(
+                updatedEvent.ProductId,
+                updatedEvent.InventoryCode,
+                product.Model,
+                product.Vendor,
+                product.CategoryName,
+                product.IsWorking);
+
+            // Create an update route entry
+            var route = InventoryRoute.CreateUpdate(
+                productSnapshot,
+                product.DepartmentId,
+                product.DepartmentName,
+                product.Worker,
+                $"Product updated: {updatedEvent.Changes}");
+
+            await repository.AddAsync(route);
+            route.Complete();
+            await unitOfWork.SaveChangesAsync();
+        }
+
+
         public override void Dispose()
         {
             _channel?.Dispose();

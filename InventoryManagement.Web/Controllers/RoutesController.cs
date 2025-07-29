@@ -4,8 +4,6 @@ using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using SharedServices.Authorization;
-using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -24,8 +22,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                var queryString = isCompleted.HasValue ? $"&isCompleted={isCompleted.Value}" : "";
+
                 var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
-                    $"api/inventoryroutes?pageNumber={pageNumber}&pageSize={pageSize}");
+                    $"api/inventoryroutes?pageNumber={pageNumber}&pageSize={pageSize}{queryString}");
 
                 ViewBag.CurrentFilter = isCompleted;
                 ViewBag.PageNumber = pageNumber ?? 1;

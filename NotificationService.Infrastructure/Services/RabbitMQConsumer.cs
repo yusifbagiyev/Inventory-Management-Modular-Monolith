@@ -34,25 +34,31 @@ namespace NotificationService.Infrastructure.Services
                 HostName = configuration["RabbitMQ:HostName"] ?? "localhost",
                 UserName = configuration["RabbitMQ:UserName"] ?? "guest",
                 Password = configuration["RabbitMQ:Password"] ?? "guest",
-                DispatchConsumersAsync = true
+                DispatchConsumersAsync = true,
+                AutomaticRecoveryEnabled = true,
+                NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
             };
 
-            _connection = factory.CreateConnection();
+            _connection = factory.CreateConnection("NotificationService");
             _channel = _connection.CreateModel();
+
+            // Set QoS
+            _channel.BasicQos(prefetchSize:0, prefetchCount: 1, global: false);
+
 
             // Declare exchange and queue
             _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
             _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
+
 
             // Bind all event types we want to listen to
             _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
             _channel.QueueBind(_queueName, "inventory-events", "approval.request.processed");
             _channel.QueueBind(_queueName, "inventory-events", "product.created");
             _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
+            _channel.QueueBind(_queueName, "inventory-events", "product.updated");
             _channel.QueueBind(_queueName, "inventory-events", "route.created");
             _channel.QueueBind(_queueName, "inventory-events", "route.completed");
-
-            _channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

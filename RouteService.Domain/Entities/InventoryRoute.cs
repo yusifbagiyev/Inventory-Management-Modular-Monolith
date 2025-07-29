@@ -49,6 +49,8 @@ namespace RouteService.Domain.Entities
                 CreatedAt = DateTime.UtcNow
             };
         }
+
+
         // For transfers between departments
         public static InventoryRoute CreateTransfer(
             ProductSnapshot productSnapshot,
@@ -78,6 +80,8 @@ namespace RouteService.Domain.Entities
             };
         }
 
+
+
         // For removing from inventory
         public static InventoryRoute CreateRemoval(
             ProductSnapshot productSnapshot,
@@ -101,6 +105,30 @@ namespace RouteService.Domain.Entities
                 CreatedAt = DateTime.UtcNow
             };
         }
+
+
+        public static InventoryRoute CreateUpdate(
+            ProductSnapshot productSnapshot,
+            int departmentId,
+            string departmentName,
+            string? worker,
+            string notes)
+        {
+            return new InventoryRoute
+            {
+                RouteType = RouteType.Update,
+                ProductSnapshot = productSnapshot,
+                FromDepartmentId = departmentId, // No previous department for updates
+                FromDepartmentName = departmentName,
+                ToDepartmentId = departmentId,
+                ToDepartmentName = departmentName,
+                FromWorker = worker,
+                ToWorker = worker,
+                Notes = notes,
+                CreatedAt = DateTime.UtcNow
+            };
+        }
+
         public void Complete()
         {
             IsCompleted = true;

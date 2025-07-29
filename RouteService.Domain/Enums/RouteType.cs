@@ -4,7 +4,8 @@
     {
         New=1,
         Existing=2,
-        Transfer=3,
-        Removal=4,
+        Update=3,
+        Transfer= 4,
+        Removal=5,
     }
 }

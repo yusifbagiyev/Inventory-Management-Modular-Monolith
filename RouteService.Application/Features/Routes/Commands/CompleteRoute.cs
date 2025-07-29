@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RouteService.Application.Events;
 using RouteService.Application.Interfaces;
 using RouteService.Domain.Exceptions;
@@ -15,12 +17,21 @@ namespace RouteService.Application.Features.Routes.Commands
             private readonly IInventoryRouteRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMessagePublisher _messagePublisher;
+            private readonly IServiceProvider _serviceProvider;
+            private readonly ILogger<Handler> _logger;
 
-            public Handler(IInventoryRouteRepository repository, IUnitOfWork unitOfWork, IMessagePublisher messagePublisher)
+            public Handler(
+                IInventoryRouteRepository repository, 
+                IUnitOfWork unitOfWork, 
+                IMessagePublisher messagePublisher,
+                IServiceProvider serviceProvider,
+                ILogger<Handler> logger)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _messagePublisher = messagePublisher;
+                _serviceProvider = serviceProvider;
+                _logger = logger;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
@@ -42,13 +53,30 @@ namespace RouteService.Application.Features.Routes.Commands
                 
                 if(!string.IsNullOrEmpty(route.ImageUrl))
                 {
-                    // Extract fileName from URL
-                    var segments = route.ImageUrl.Split('/');
-                    if(segments.Length > 0)
+                    try
                     {
-                        imageFileName = segments[^1]; // Get the last segment as file name
+                        // Get the image service to read the image
+                        using var scope=_serviceProvider.CreateScope();
+                        var imageService = scope.ServiceProvider.GetRequiredService<IImageService>();
 
-                        // ? How to get image data?
+                        // Extract the file path from the URL
+                        var segments=route.ImageUrl.Split('/');
+                        if (segments.Length >=2)
+                        {
+                            var inventoryCode = segments[^2];
+                            imageFileName=segments[^1];
+
+                            // Read the image file
+                            var imagePath=Path.Combine("wwwroot",route.ImageUrl.TrimStart('/'));
+                            if (File.Exists(imagePath))
+                            {
+                                imageData = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to read image data for route {RouteId}", route.Id);
                     }
                 }
 
