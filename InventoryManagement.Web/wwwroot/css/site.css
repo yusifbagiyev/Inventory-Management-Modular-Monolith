@@ -483,6 +483,28 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border: none;
     overflow: hidden;
+    border-radius: 8px;
+}
+
+.toast-success{
+    background-color:#10b981;
+    color:white;
+}
+
+.toast-error,
+.toast-danger{
+    background-color:#ef4444;
+    color:white;
+}
+
+.toast-warning{
+    background-color:#f59e0b;
+    color:white;
+}
+
+.toast-info {
+    background-color: #3b82f6;
+    color: white;
 }
 
 .toast-header {
@@ -492,41 +514,28 @@ body {
 
 .toast-body {
     padding: 1rem;
-    color: #212529;
-    background-color: white;
-    word-wrap: break-word;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-/* Ensure proper styling for different toast types */
-.toast-header.bg-success {
-    background-color: #198754 !important;
+.toast .btn-colse{
+    background-color:transparent;
+    opacity:0.8;
+    filter:brightness(0) invert(1);
+    margin-left:1rem;
 }
 
-.toast-header.bg-danger {
-    background-color: #dc3545 !important;
+.toast .btn-colse:hover {
+    opacity: 1;
 }
 
-.toast-header.bg-warning {
-    background-color: #ffc107 !important;
-    color: #212529 !important;
+.toast-icon {
+    margin-right: 0.75rem;
+    font-size:1.25rem;
 }
 
-.toast-header.bg-info {
-    background-color: #0dcaf0 !important;
-}
-
-.toast-header.bg-secondary {
-    background-color: #6c757d !important;
-}
-
-/* Fix close button visibility */
-.toast-header.bg-warning .btn-close {
-    filter: none;
-}
-
-.toast-header .btn-close-white {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
 
 /* Inventory code error specific styling */
 .inventory-code-edit .invalid-feedback {

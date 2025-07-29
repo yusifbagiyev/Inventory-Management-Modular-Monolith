@@ -126,8 +126,12 @@
                                     else
                                     {
                                         <span class="badge bg-warning">
-                                            <i class="fas fa-clock"></i> Pending
+                                            <i class="fas fa-clock"></i> Pending Transfer
                                         </span>
+                                        <br />
+                                        <small class="text-muted">
+                                            Created: @route.CreatedAt.ToString("MM/dd HH:mm")
+                                        </small>
                                     }
                                 </td>
                                 <td>
@@ -298,23 +302,7 @@
         }
         
         function editRoute(id) {
-            // First, get the route details from the server
-            $.ajax({
-                url: '/api/inventoryroutes/' + id,
-                type: 'GET',
-                headers: {
-                    'Authorization': 'Bearer ' + $('#jwtToken').val()
-                },
-                success: function(route) {
-                    $('#editRouteId').val(route.id);
-                    $('#editToWorker').val(route.toWorker || '');
-                    $('#editNotes').val(route.notes || '');
-                    $('#editRouteModal').modal('show');
-                },
-                error: function(xhr) {
-                    showToast('Failed to load route details', 'error');
-                }
-            });
+            window.location.href = `/Routes/Edit/${id}`;
         }
 
         function saveRouteEdit() {

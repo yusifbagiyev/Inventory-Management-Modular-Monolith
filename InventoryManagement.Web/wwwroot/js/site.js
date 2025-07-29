@@ -70,7 +70,7 @@ function copyToClipboard(text) {
 
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
-    / Ensure we have a valid type
+    // Ensure we have a valid type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
     if (!validTypes.includes(type)) {
         type = 'info';
@@ -84,15 +84,17 @@ function showToast(message, type = 'info', duration = 5000) {
     // Create toast HTML with proper styling
     const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
+    const icon = getToastIcon(type);
+    const toastClass = `toast-${type}`;
+
     const toastHtml = `
-        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="${duration}">
-            <div class="toast-header bg-${type} text-white">
-                <i class="fas fa-${getToastIcon(type)} me-2"></i>
-                <strong class="me-auto">${getToastTitle(type)}</strong>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
+        <div id="${toastId}" class="toast ${toastClass}" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-body">
-                ${escapeHtml(message)}
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${icon} toast-icon"></i>
+                    <span>${escapeHtml(message)}</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     `;
@@ -112,7 +114,10 @@ function showToast(message, type = 'info', duration = 5000) {
 
     // Initialize and show the toast
     const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement);
+    const toast = new bootstrap.Toast(toastElement, {
+        delay: duration,
+        autohide: true
+    });
     toast.show();
 
     // Remove element after it's hidden

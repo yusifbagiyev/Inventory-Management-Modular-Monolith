@@ -1,5 +1,7 @@
 ﻿using FluentValidation;
 using MediatR;
+using ProductService.Application.Events;
+using ProductService.Application.Interfaces;
 using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
 
@@ -21,10 +23,12 @@ namespace ProductService.Application.Features.Products.Commands
         {
             private readonly IProductRepository _productRepository;
             private readonly IUnitOfWork _unitOfWork;
-            public Handler(IProductRepository productRepository, IUnitOfWork unitOfWork)
+            private readonly IMessagePublisher _messagePublisher;
+            public Handler(IProductRepository productRepository, IUnitOfWork unitOfWork,IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
+                _messagePublisher = messagePublisher;
             }
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
@@ -33,9 +37,29 @@ namespace ProductService.Application.Features.Products.Commands
                 {
                     throw new NotFoundException($"Product with ID {request.Id} not found");
                 }
+
+                // Track what changed
+                string changes = string.Empty;
+
+                if (product.InventoryCode != request.InventoryCode)
+                    changes = $"Inventory code changed from {product.InventoryCode} to {request.InventoryCode}";
+
                 product.ChangeInventoryCode(request.InventoryCode);
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                
+
+                if(string.IsNullOrEmpty(changes))
+                {
+                    var eventMessage = new ProductUpdatedEvent
+                    {
+                        ProductId = product.Id,
+                        InventoryCode = product.InventoryCode,
+                        Changes = "Inventory code updated",
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await _messagePublisher.PublishAsync(eventMessage,"product.updated", cancellationToken);
+                }
             }
         }
     }

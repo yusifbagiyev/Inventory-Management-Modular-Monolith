@@ -334,22 +334,5 @@ namespace RouteService.API.Controllers
             var result = await _mediator.Send(new BatchDeleteRoutes.Command(dto));
             return Ok(result);
         }
-
-
-
-        [HttpDelete("{id}/rollback")]
-        [Permission(AllPermissions.RouteDelete)]
-        public async Task<IActionResult> DeleteWithRollback(int id)
-        {
-            try
-            {
-                await _mediator.Send(new DeleteRouteWithRollback.Command(id));
-                return Ok(new { message = "Route deleted and product rolled back successfully" });
-            }
-            catch (RouteException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-        }
     }
 }

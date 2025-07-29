@@ -104,22 +104,6 @@ namespace RouteService.Application.Features.Routes.Commands
 
                     await _repository.AddAsync(route, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-                    var transferEvent = new ProductTransferredEvent
-                    {
-                        ProductId = dto.ProductId,
-                        ToDepartmentId = dto.ToDepartmentId,
-                        ToWorker = dto.ToWorker,
-                        ImageData = imageData,
-                        ImageFileName = dto.ImageFile?.FileName,
-                        TransferredAt = DateTime.UtcNow
-                    };
-
-                    await _messagePublisher.PublishAsync(transferEvent, "product.transferred", cancellationToken);
-
-                    // Complete route
-                    route.Complete();
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
                     await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
                     return _mapper.Map<InventoryRouteDto>(route);

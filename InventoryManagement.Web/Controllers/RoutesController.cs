@@ -113,33 +113,6 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Permission(AllPermissions.RouteDelete)]
-        public async Task<IActionResult> DeleteWithRollback(int id)
-        {
-            try
-            {
-                var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}/rollback");
-
-                if (response.IsSuccess)
-                {
-                    return Json(new { success = true, message = "Route deleted and product rolled back successfully" });
-                }
-                else
-                {
-                    return Json(new { success = false, message = response.Message ?? "Failed to delete route" });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error deleting route with rollback");
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
-
-
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Transfer(TransferViewModel model)
         {
             if (!ModelState.IsValid)
@@ -252,11 +225,23 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}");
-                return HandleApiResponse(response, "Index");
+
+                if (response.IsSuccess)
+                {
+                    TempData["Success"] = "Route deleted successfully";
+                }
+                else
+                {
+                    TempData["Error"] = response.Message ?? "Failed to delete route";
+                }
+
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                return HandleException(ex);
+                _logger?.LogError(ex, "Error deleting route");
+                TempData["Error"] = "An error occurred while deleting the route";
+                return RedirectToAction(nameof(Index));
             }
         }
 

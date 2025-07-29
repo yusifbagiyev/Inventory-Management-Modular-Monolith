@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using RouteService.Application.Events;
+using RouteService.Application.Interfaces;
 using RouteService.Domain.Exceptions;
 using RouteService.Domain.Repositories;
 
@@ -12,11 +14,13 @@ namespace RouteService.Application.Features.Routes.Commands
         {
             private readonly IInventoryRouteRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
+            private readonly IMessagePublisher _messagePublisher;
 
-            public Handler(IInventoryRouteRepository repository, IUnitOfWork unitOfWork)
+            public Handler(IInventoryRouteRepository repository, IUnitOfWork unitOfWork, IMessagePublisher messagePublisher)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
+                _messagePublisher = messagePublisher;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
@@ -24,10 +28,42 @@ namespace RouteService.Application.Features.Routes.Commands
                 var route = await _repository.GetByIdAsync(request.Id, cancellationToken)
                     ?? throw new RouteException($"Route with ID {request.Id} not found");
 
+                if (route.IsCompleted)
+                    throw new RouteException("Route is already completed");
+
                 route.Complete();
 
                 await _repository.UpdateAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Now publish the transfer event to update the product
+                var transferEvent = new ProductTransferredEvent
+                {
+                    ProductId = route.ProductSnapshot.ProductId,
+                    ToDepartmentId = route.ToDepartmentId,
+                    ToWorker = route.ToWorker,
+                    ImageData = null,
+                    ImageFileName = null,
+                    TransferredAt = DateTime.UtcNow
+                };
+
+                await _messagePublisher.PublishAsync(transferEvent, "product.transferred", cancellationToken);
+
+                // Publish route completed event for notifications
+                var completedEvent = new RouteCompletedEvent
+                {
+                    RouteId = route.Id,
+                    ProductId = route.ProductSnapshot.ProductId,
+                    InventoryCode = route.ProductSnapshot.InventoryCode,
+                    Model = route.ProductSnapshot.Model,
+                    FromDepartmentId = route.FromDepartmentId ?? 0,
+                    FromDepartmentName = route.FromDepartmentName ?? "",
+                    ToDepartmentId = route.ToDepartmentId,
+                    ToDepartmentName = route.ToDepartmentName,
+                    CompletedAt = DateTime.UtcNow
+                };
+
+                await _messagePublisher.PublishAsync(completedEvent, "route.completed", cancellationToken);
             }
         }
     }
