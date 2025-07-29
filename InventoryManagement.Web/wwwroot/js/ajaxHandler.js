@@ -49,8 +49,16 @@
 
             // Store original button state
             const originalBtnHtml = $submitBtn.html();
+            const originalBtnDisabled = $submitBtn.prop('disabled');
+
+            // Store original button content as data attribute for recovery
+            if (!$submitBtn.data('original-html')) {
+                $submitBtn.data('original-html', originalBtnHtml);
+            }
+
             $submitBtn.prop('disabled', true)
                 .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
 
             $.ajax({
                 url: form.action,
@@ -62,9 +70,8 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 success: function (response) {
-                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
+                    resetButton(); // Always reset button first
 
-                    // Since an AJAX response is usually expecting a JSON return value 
                     // Check if we got a redirect page instead of JSON
                     if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
                         if (response.toLowerCase().includes('login')) {
@@ -89,7 +96,7 @@
                     }
                 },
                 error: function (xhr, status, error) {
-                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
+                    resetButton(); // Always reset button on error
 
                     // Handle authentication errors
                     if (xhr.status === 401) {
@@ -131,6 +138,12 @@
                 $inventoryCode.addClass('is-invalid')
                     .after('<div class="invalid-feedback">' + errorMessage + '</div>');
             }
+        }
+
+        // Ensure button is reset (it should already be reset, but just in case)
+        const $submitBtn = $form.find('button[type="submit"]');
+        if ($submitBtn.data('original-html')) {
+            $submitBtn.prop('disabled', false).html($submitBtn.data('original-html'));
         }
 
         if (settings.onError) {

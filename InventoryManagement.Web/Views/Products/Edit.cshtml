@@ -180,19 +180,32 @@
         }
 
         // Initialize AJAX form handler
-        $(document).ready(function() {
+                $(document).ready(function() {
+            // Store original button text
+            const $submitBtn = $('#submitBtn, button[type="submit"]');
+            const originalBtnText = $submitBtn.html();
+
             AjaxHandler.handleForm('form', {
                 successMessage: 'Product updated successfully!',
                 successRedirect: '/Products',
                 redirectDelay: 1500,
                 onSuccess: function(response) {
-                    // The response structure shows isSuccess:true, so we handle it properly
                     if (response && (response.isSuccess === true || response.isSuccess !== false)) {
-                        // Let the main handler deal with the redirect
                         return true;
                     }
                 },
                 onError: function(errorMessage, response) {
+                    // Explicitly reset button on error
+                    $submitBtn.prop('disabled', false).html(originalBtnText);
+
+                    // Special handling for inventory code errors
+                    if (errorMessage.toLowerCase().includes('inventory code')) {
+                        $('#InventoryCode').addClass('is-invalid');
+                        if (!$('#InventoryCode').next('.invalid-feedback').length) {
+                            $('#InventoryCode').after('<div class="invalid-feedback">' + errorMessage + '</div>');
+                        }
+                    }
+
                     console.error('Product update failed:', errorMessage);
                 }
             });

@@ -4,6 +4,8 @@ using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using SharedServices.Authorization;
+using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -16,6 +18,8 @@ namespace InventoryManagement.Web.Controllers
         {
             _apiService= apiService;
         }
+
+
         public async Task<IActionResult> Index(int? pageNumber = 1, int? pageSize = 20, bool? isCompleted = null)
         {
             try
@@ -46,16 +50,46 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+
+        [HttpGet]
+        [Permission(AllPermissions.RouteUpdate)]
+        public async Task<IActionResult> Edit(int id)
+        {
+            try
+            {
+                var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
+                if (route == null)
+                    return NotFound();
+
+                // Load departments for dropdown
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+                ViewBag.Departments = departments?.Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = d.Name
+                }).ToList() ?? new List<SelectListItem>();
+
+                return View(route);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [FromForm] UpdateRouteViewModel model)
         {
             try
             {
-                var dto = new UpdateRouteDto
+                var dto = new
                 {
-                    ToWorker = model.ToWorker,
-                    Notes = model.Notes
+                    model.ToDepartmentId,
+                    model.ToWorker,
+                    model.Notes
                 };
 
                 var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", HttpContext.Request.Form, dto);
@@ -63,9 +97,36 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
+                // Reload departments on error
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+                ViewBag.Departments = departments?.Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = d.Name
+                }).ToList() ?? new List<SelectListItem>();
+
                 return HandleException(ex, model);
             }
         }
+
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Permission(AllPermissions.RouteDelete)]
+        public async Task<IActionResult> DeleteWithRollback(int id)
+        {
+            try
+            {
+                var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}/rollback");
+                return Json(new { success = response.IsSuccess, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
 
 
         [HttpPost]
@@ -174,6 +235,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -188,6 +250,7 @@ namespace InventoryManagement.Web.Controllers
                 return HandleException(ex);
             }
         }
+
 
 
         private async Task LoadTransferDropdowns(TransferViewModel model)

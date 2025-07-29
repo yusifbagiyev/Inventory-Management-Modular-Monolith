@@ -70,25 +70,25 @@ function copyToClipboard(text) {
 
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
-    const typeMap = {
-        'success': 'bg-success',
-        'error': 'bg-danger',
-        'danger': 'bg-danger',
-        'warning': 'bg-warning',
-        'info': 'bg-info',
-        'secondary': 'bg-secondary'
+    const typeConfig = {
+        'success': { bgClass: 'bg-success', textClass: 'text-white', closeClass: 'btn-close-white' },
+        'error': { bgClass: 'bg-danger', textClass: 'text-white', closeClass: 'btn-close-white' },
+        'danger': { bgClass: 'bg-danger', textClass: 'text-white', closeClass: 'btn-close-white' },
+        'warning': { bgClass: 'bg-warning', textClass: 'text-dark', closeClass: '' },
+        'info': { bgClass: 'bg-info', textClass: 'text-white', closeClass: 'btn-close-white' },
+        'secondary': { bgClass: 'bg-secondary', textClass: 'text-white', closeClass: 'btn-close-white' }
     };
-    const bgClass = typeMap[type] || typeMap['info'];
-    const textClass = type === 'warning' ? 'text-dark' : 'text-white';
+    const config = typeConfig[type] || typeConfig['info'];
 
     // Create toast HTML with proper styling
+    const toastId = 'toast-' + Date.now();
     const toastHtml = `
-        <div class="toast align-items-center ${bgClass} ${textClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast ${config.bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="${duration}">
             <div class="d-flex">
-                <div class="toast-body">
+                <div class="toast-body ${config.textClass}">
                     ${escapeHtml(message)}
                 </div>
-                <button type="button" class="btn-close ${type === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close ${config.closeClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     `;
@@ -99,7 +99,6 @@ function showToast(message, type = 'info', duration = 5000) {
         container = document.createElement('div');
         container.id = 'toastContainer';
         container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
 
@@ -107,11 +106,8 @@ function showToast(message, type = 'info', duration = 5000) {
     container.insertAdjacentHTML('beforeend', toastHtml);
 
     // Initialize and show the toast
-    const toastElement = container.lastElementChild;
-    const toast = new bootstrap.Toast(toastElement, {
-        delay: duration,
-        autohide: true
-    });
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
 
     toast.show();
 

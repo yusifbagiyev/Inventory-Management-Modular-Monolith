@@ -22,5 +22,6 @@ namespace RouteService.Domain.Repositories
             CancellationToken cancellationToken = default);
         Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default);
         Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default);
+        Task<InventoryRoute?> GetPreviousRouteForProductAsync(int productId, int currentRouteId, CancellationToken cancellationToken = default);
     }
 }

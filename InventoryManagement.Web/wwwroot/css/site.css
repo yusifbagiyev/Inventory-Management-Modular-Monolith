@@ -476,61 +476,73 @@ body {
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #e9ecef;
 }
-.toast{
-    min-width:300px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    border:none;
+
+.toast {
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: none;
 }
+
+    /* Error toast (red background, white text) */
     .toast.bg-danger {
         background-color: #dc3545 !important;
     }
+
+        .toast.bg-danger .toast-body {
+            color: #ffffff !important;
+        }
+
+    /* Success toast (green background, white text) */
     .toast.bg-success {
         background-color: #28a745 !important;
     }
+
+        .toast.bg-success .toast-body {
+            color: #ffffff !important;
+        }
+
+    /* Warning toast (yellow background, dark text) */
     .toast.bg-warning {
         background-color: #ffc107 !important;
     }
+
+        .toast.bg-warning .toast-body {
+            color: #212529 !important;
+        }
+
+    /* Info toast (blue background, white text) */
     .toast.bg-info {
         background-color: #17a2b8 !important;
     }
+
+        .toast.bg-info .toast-body {
+            color: #ffffff !important;
+        }
+
+    /* Secondary toast (gray background, white text) */
     .toast.bg-secondary {
         background-color: #6c757d !important;
     }
-    .toast-body{
-        padding:0.75rem;
-        font-weight:500;
-    }
+
+        .toast.bg-secondary .toast-body {
+            color: #ffffff !important;
+        }
+
+/* Toast body styling */
+.toast-body {
+    padding: 0.75rem;
+    font-weight: 500;
+}
+
+/* Toast container positioning */
 .toast-container {
     z-index: 9999 !important;
-}
-.toast.bg-danger {
-    background-color: #dc3545 !important;
-}
-
-.toast.bg-danger .toast-body{
-    color: #ffffff !important;
-}
-
-/* Error message positioning fix */
-.position-fixed.top-0.end-0 {
+    position: fixed !important;
     top: 1rem !important;
     right: 1rem !important;
 }
-        
-    /* Ensure text is always visible */
-    .toast.text-white .toast -body {
-        color: #ffffff !important;
-    }
 
-    .toast.bg-warning .toast-body {
-        color: #212529 !important; /* Dark text for yellow background */
-    }
-    /* Error-specific styling  */
-.toast.bg-danger .toast-body,
-.toast.bg-danger {
-    color: #ffffff !important;
-}
-/* Ensure toast close button is visible */
+/* Ensure close button is visible */
 .toast .btn-close {
     opacity: 0.8;
 }
@@ -538,6 +550,8 @@ body {
 .toast .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
 }
+
+/* Inventory code error specific styling */
 .inventory-code-edit .invalid-feedback {
     color: #dc3545 !important;
     background-color: #f8d7da;

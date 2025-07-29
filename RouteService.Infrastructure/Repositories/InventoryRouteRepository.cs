@@ -114,5 +114,13 @@ namespace RouteService.Infrastructure.Repositories
             _context.InventoryRoutes.Remove(route);
             return Task.CompletedTask;
         }
+
+        public async Task<InventoryRoute?> GetPreviousRouteForProductAsync(int productId, int currentRouteId, CancellationToken cancellationToken = default)
+        {
+            return await _context.InventoryRoutes
+                .Where(r => r.ProductSnapshot.ProductId == productId && r.Id < currentRouteId)
+                .OrderByDescending(r => r.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
     }
 }

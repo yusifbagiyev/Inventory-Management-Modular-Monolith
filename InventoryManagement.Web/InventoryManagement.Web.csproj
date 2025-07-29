@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NotificationService.Application\NotificationService.Application.csproj" />
+    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>
