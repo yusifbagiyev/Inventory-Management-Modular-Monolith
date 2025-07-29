@@ -119,10 +119,19 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}/rollback");
-                return Json(new { success = response.IsSuccess, message = response.Message });
+
+                if (response.IsSuccess)
+                {
+                    return Json(new { success = true, message = "Route deleted and product rolled back successfully" });
+                }
+                else
+                {
+                    return Json(new { success = false, message = response.Message ?? "Failed to delete route" });
+                }
             }
             catch (Exception ex)
             {
+                _logger?.LogError(ex, "Error deleting route with rollback");
                 return Json(new { success = false, message = ex.Message });
             }
         }

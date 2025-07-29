@@ -477,77 +477,54 @@ body {
     border-bottom: 1px solid #e9ecef;
 }
 
+/* Enhanced Toast Styling */
 .toast {
-    min-width: 300px;
+    min-width: 350px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     border: none;
+    overflow: hidden;
 }
 
-    /* Error toast (red background, white text) */
-    .toast.bg-danger {
-        background-color: #dc3545 !important;
-    }
+.toast-header {
+    font-weight: 600;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
 
-        .toast.bg-danger .toast-body {
-            color: #ffffff !important;
-        }
-
-    /* Success toast (green background, white text) */
-    .toast.bg-success {
-        background-color: #28a745 !important;
-    }
-
-        .toast.bg-success .toast-body {
-            color: #ffffff !important;
-        }
-
-    /* Warning toast (yellow background, dark text) */
-    .toast.bg-warning {
-        background-color: #ffc107 !important;
-    }
-
-        .toast.bg-warning .toast-body {
-            color: #212529 !important;
-        }
-
-    /* Info toast (blue background, white text) */
-    .toast.bg-info {
-        background-color: #17a2b8 !important;
-    }
-
-        .toast.bg-info .toast-body {
-            color: #ffffff !important;
-        }
-
-    /* Secondary toast (gray background, white text) */
-    .toast.bg-secondary {
-        background-color: #6c757d !important;
-    }
-
-        .toast.bg-secondary .toast-body {
-            color: #ffffff !important;
-        }
-
-/* Toast body styling */
 .toast-body {
-    padding: 0.75rem;
-    font-weight: 500;
+    padding: 1rem;
+    color: #212529;
+    background-color: white;
+    word-wrap: break-word;
 }
 
-/* Toast container positioning */
-.toast-container {
-    z-index: 9999 !important;
-    position: fixed !important;
-    top: 1rem !important;
-    right: 1rem !important;
+/* Ensure proper styling for different toast types */
+.toast-header.bg-success {
+    background-color: #198754 !important;
 }
 
-/* Ensure close button is visible */
-.toast .btn-close {
-    opacity: 0.8;
+.toast-header.bg-danger {
+    background-color: #dc3545 !important;
 }
 
-.toast .btn-close-white {
+.toast-header.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.toast-header.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.toast-header.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+/* Fix close button visibility */
+.toast-header.bg-warning .btn-close {
+    filter: none;
+}
+
+.toast-header .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
 }
 

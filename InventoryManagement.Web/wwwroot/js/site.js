@@ -70,25 +70,29 @@ function copyToClipboard(text) {
 
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
-    const typeConfig = {
-        'success': { bgClass: 'bg-success', textClass: 'text-white', closeClass: 'btn-close-white' },
-        'error': { bgClass: 'bg-danger', textClass: 'text-white', closeClass: 'btn-close-white' },
-        'danger': { bgClass: 'bg-danger', textClass: 'text-white', closeClass: 'btn-close-white' },
-        'warning': { bgClass: 'bg-warning', textClass: 'text-dark', closeClass: '' },
-        'info': { bgClass: 'bg-info', textClass: 'text-white', closeClass: 'btn-close-white' },
-        'secondary': { bgClass: 'bg-secondary', textClass: 'text-white', closeClass: 'btn-close-white' }
-    };
-    const config = typeConfig[type] || typeConfig['info'];
+    / Ensure we have a valid type
+    const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
+    if (!validTypes.includes(type)) {
+        type = 'info';
+    }
+
+    // Map error to danger for Bootstrap compatibility
+    if (type === 'error') {
+        type = 'danger';
+    }
 
     // Create toast HTML with proper styling
-    const toastId = 'toast-' + Date.now();
+    const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
     const toastHtml = `
-        <div id="${toastId}" class="toast ${config.bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="${duration}">
-            <div class="d-flex">
-                <div class="toast-body ${config.textClass}">
-                    ${escapeHtml(message)}
-                </div>
-                <button type="button" class="btn-close ${config.closeClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="${duration}">
+            <div class="toast-header bg-${type} text-white">
+                <i class="fas fa-${getToastIcon(type)} me-2"></i>
+                <strong class="me-auto">${getToastTitle(type)}</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${escapeHtml(message)}
             </div>
         </div>
     `;
@@ -99,6 +103,7 @@ function showToast(message, type = 'info', duration = 5000) {
         container = document.createElement('div');
         container.id = 'toastContainer';
         container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
 
@@ -108,7 +113,6 @@ function showToast(message, type = 'info', duration = 5000) {
     // Initialize and show the toast
     const toastElement = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastElement);
-
     toast.show();
 
     // Remove element after it's hidden
@@ -117,6 +121,29 @@ function showToast(message, type = 'info', duration = 5000) {
     });
 }
 
+// Helper function to get toast icon
+function getToastIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'danger': 'exclamation-circle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle',
+        'secondary': 'cog'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Helper function to get toast title
+function getToastTitle(type) {
+    const titles = {
+        'success': 'Success',
+        'danger': 'Error',
+        'warning': 'Warning',
+        'info': 'Information',
+        'secondary': 'Notice'
+    };
+    return titles[type] || 'Notice';
+}
 
 // Helper function to escape HTML
 function escapeHtml(unsafe) {
@@ -151,6 +178,7 @@ function resetFormState(fromElement){
         }
     });
 }
+
 notificationConnection.onreconnecting((error) => {
     console.log('SignalR Reconnecting:', error);
 });

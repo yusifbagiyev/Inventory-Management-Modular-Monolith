@@ -143,6 +143,33 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateInventoryCode([FromBody] UpdateInventoryCodeDto request)
+        {
+            try
+            {
+                var response = await _apiService.PutAsync<UpdateInventoryCodeDto, bool>(
+                    $"api/products/{request.Id}/inventory-code",
+                    new UpdateInventoryCodeDto { InventoryCode = request.InventoryCode });
+
+                if (response.IsSuccess)
+                {
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return BadRequest(new { error = response.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             try
