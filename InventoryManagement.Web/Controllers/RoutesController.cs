@@ -66,7 +66,7 @@ namespace InventoryManagement.Web.Controllers
                 {
                     Value = d.Id.ToString(),
                     Text = d.Name
-                }).ToList() ?? new List<SelectListItem>();
+                }).ToList() ?? [];
 
                 return View(route);
             }

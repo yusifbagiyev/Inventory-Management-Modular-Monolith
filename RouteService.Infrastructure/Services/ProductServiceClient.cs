@@ -1,7 +1,11 @@
-﻿using System.Net.Http.Headers;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using RouteService.Application.DTOs;
 using RouteService.Application.Interfaces;
 
@@ -11,24 +15,38 @@ namespace RouteService.Infrastructure.Services
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
+        private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         public ProductServiceClient(HttpClient httpClient, IConfiguration configuration,IHttpContextAccessor httpContextAccessor)
         {
             _httpClient = httpClient;
             _baseUrl = configuration["ProductService:BaseUrl"] ?? "http://localhost:5001";
             _httpContextAccessor = httpContextAccessor;
+            _configuration = configuration;
         }
 
         private void AddAuthorizationHeader()
         {
-            // Get the authorization header from the current request
-            var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(authHeader))
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", authHeader.Replace("Bearer ", ""));
-            }
-        }   
+                Subject = new ClaimsIdentity([
+                    new Claim(ClaimTypes.Role, "Admin"),
+                    new Claim(ClaimTypes.NameIdentifier, "0"), // System user
+                    new Claim(ClaimTypes.Name, "System")
+                ]),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"]
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", tokenHandler.WriteToken(token));
+        }
         public async Task<ProductInfoDto?> GetProductByIdAsync(int productId, CancellationToken cancellationToken = default)
         {
             AddAuthorizationHeader();

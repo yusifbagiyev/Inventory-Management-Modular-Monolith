@@ -55,23 +55,14 @@ namespace RouteService.Application.Features.Routes.Commands
                 {
                     try
                     {
-                        // Get the image service to read the image
-                        using var scope=_serviceProvider.CreateScope();
-                        var imageService = scope.ServiceProvider.GetRequiredService<IImageService>();
+                        // Get the correct path
+                        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", route.ImageUrl.TrimStart('/'));
 
-                        // Extract the file path from the URL
-                        var segments=route.ImageUrl.Split('/');
-                        if (segments.Length >=2)
+                        if (File.Exists(imagePath))
                         {
-                            var inventoryCode = segments[^2];
-                            imageFileName=segments[^1];
-
-                            // Read the image file
-                            var imagePath=Path.Combine("wwwroot",route.ImageUrl.TrimStart('/'));
-                            if (File.Exists(imagePath))
-                            {
-                                imageData = await File.ReadAllBytesAsync(imagePath, cancellationToken);
-                            }
+                            imageData = await File.ReadAllBytesAsync(imagePath, cancellationToken);
+                            var segments = route.ImageUrl.Split('/');
+                            imageFileName = segments.Length > 0 ? segments[^1] : "image.jpg";
                         }
                     }
                     catch (Exception ex)

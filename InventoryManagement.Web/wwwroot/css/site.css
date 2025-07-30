@@ -502,7 +502,11 @@ body {
 }
 .toast.bg-danger {
     background-color: #dc3545 !important;
+    color: white !important;
 }
+    .toast.bg-danger .btn-close {
+        filter: brightness(0) invert(1);
+    }
 .toast.bg-success {
     background-color: #198754 !important;
 }

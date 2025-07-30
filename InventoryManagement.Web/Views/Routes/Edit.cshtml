@@ -56,7 +56,8 @@
                                         <option value="">-- Select Department --</option>
                                         @foreach (var dept in ViewBag.Departments as List<SelectListItem>)
                                         {
-                                            <option value="@dept.Value @(dept.Value == Model.ToDepartmentId.ToString() ? "selected" : "")">
+											var selected = dept.Value == Model.ToDepartmentId.ToString() ? "selected" : "";
+                                            <option value="@dept.Value" selected>
                                                 @dept.Text
                                             </option>
                                         }
