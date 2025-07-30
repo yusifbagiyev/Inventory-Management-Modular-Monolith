@@ -248,7 +248,7 @@ namespace ProductService.API.Controllers
 
             if (User.HasClaim("permission", AllPermissions.ProductDeleteDirect))
             {
-                await _mediator.Send(new DeleteProduct.Command(id));
+                await _mediator.Send(new DeleteProduct.Command(id,userName));
                 return NoContent();
             }
             else if (User.HasClaim("permission", AllPermissions.ProductDelete))
@@ -337,7 +337,8 @@ namespace ProductService.API.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteApproved(int id)
         {
-            await _mediator.Send(new DeleteProduct.Command(id));
+            var userName = User.Identity?.Name ?? "Unknown";
+            await _mediator.Send(new DeleteProduct.Command(id,userName));
             return NoContent();
         }
 

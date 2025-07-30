@@ -8,7 +8,7 @@ namespace ProductService.Application.Features.Products.Commands
 {
     public class DeleteProduct
     {
-        public record Command(int Id) : IRequest;
+        public record Command(int Id,string? userName) : IRequest;
         public class DeleteProductCommandHandler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
@@ -42,8 +42,10 @@ namespace ProductService.Application.Features.Products.Commands
                     Worker = product.Worker,
                     CategoryName = product.Category?.Name ?? "Unknown",
                     DepartmentName=product.Department?.Name?? "Unknown",
+                    DepartmentId=product.DepartmentId,
                     IsWorking= product.IsWorking,
-                    DeletedAt = DateTime.UtcNow
+                    DeletedAt = DateTime.UtcNow,
+                    RemovedBy=request.userName
                 };
                 await _messagePublisher.PublishAsync(deletedEvent, "product.deleted", cancellationToken);
 

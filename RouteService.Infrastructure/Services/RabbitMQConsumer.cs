@@ -159,9 +159,10 @@ namespace RouteService.Infrastructure.Services
             var route = InventoryRoute.CreateRemoval(
                 productSnapshot,
                 productDeletedEvent.DepartmentId,
-                "Deleted",
+                productDeletedEvent.DepartmentName,
                 productDeletedEvent.Worker ?? "No Worker",
-                "Product removed from system");
+                productDeletedEvent.RemovedBy,
+                $"Product removed by {productDeletedEvent.RemovedBy}");
 
             await repository.AddAsync(route);
             await unitOfWork.SaveChangesAsync();

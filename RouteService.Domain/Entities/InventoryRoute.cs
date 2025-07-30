@@ -88,6 +88,7 @@ namespace RouteService.Domain.Entities
             int fromDepartmentId,
             string fromDepartmentName,
             string fromWorker,
+            string removedBy,
             string reason)
         {
             return new InventoryRoute
@@ -99,7 +100,7 @@ namespace RouteService.Domain.Entities
                 ToDepartmentId = 0, // No destination for removal
                 ToDepartmentName = "Removed",
                 FromWorker = fromWorker,
-                ToWorker = "System",
+                ToWorker = removedBy,
                 Notes = reason,
                 IsCompleted = true,
                 CreatedAt = DateTime.UtcNow
