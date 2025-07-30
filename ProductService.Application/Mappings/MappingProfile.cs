@@ -24,9 +24,14 @@ namespace ProductService.Application.Mappings
                 .ConstructUsing(src => new Category(src.Name, src.Description,src.IsActive));
 
             // Department mappings
-            CreateMap<Department, DepartmentDto>();
+            CreateMap<Department, DepartmentDto>()
+                .ForMember(dest => dest.ProductCount,
+                opt => opt.MapFrom(src => src.Products.Count))
+                .ForMember(dest => dest.WorkerCount,
+                opt => opt.MapFrom(src => src.WorkerCount));
+
             CreateMap<CreateDepartmentDto, Department>()
-                .ConstructUsing(src => new Department(src.Name, src.Description));
+                .ConstructUsing(src => new Department(src.Name, src.Description,src.IsActive));
         }
     }
 }

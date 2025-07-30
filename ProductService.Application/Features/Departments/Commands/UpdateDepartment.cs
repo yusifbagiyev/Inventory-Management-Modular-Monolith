@@ -26,7 +26,7 @@ namespace ProductService.Application.Features.Departments.Commands
                 if (department == null)
                     throw new NotFoundException($"Department with ID {request.Id} not found");
 
-                department.Update(request.DepartmentDto.Name, request.DepartmentDto.Description);
+                department.Update(request.DepartmentDto.Name, request.DepartmentDto.Description,request.DepartmentDto.IsActive);
 
                 await _departmentRepository.UpdateAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

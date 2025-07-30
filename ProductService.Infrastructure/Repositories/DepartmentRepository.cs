@@ -21,7 +21,9 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<IEnumerable<Department>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Departments.ToListAsync(cancellationToken);
+            return await _context.Departments
+                .Include(p=>p.Products)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Department> AddAsync(Department department, CancellationToken cancellationToken = default)

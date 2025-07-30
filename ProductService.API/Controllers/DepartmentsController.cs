@@ -21,6 +21,8 @@ namespace ProductService.API.Controllers
             _mediator = mediator;
         }
 
+
+
         [HttpGet]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetAll()
@@ -28,6 +30,8 @@ namespace ProductService.API.Controllers
             var departments = await _mediator.Send(new GetAllDepartmentsQuery());
             return Ok(departments);
         }
+
+
 
         [HttpGet("{id}")]
         [Permission(AllPermissions.ProductView)]
@@ -39,6 +43,8 @@ namespace ProductService.API.Controllers
             return Ok(department);
         }
 
+
+
         [HttpPost]
         [Permission(AllPermissions.ProductCreate)]
         public async Task<ActionResult<DepartmentDto>> Create(CreateDepartmentDto dto)
@@ -47,6 +53,8 @@ namespace ProductService.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = department.Id }, department);
         }
 
+
+
         [HttpPut("{id}")]
         [Permission(AllPermissions.ProductUpdate)]
         public async Task<IActionResult> Update(int id, UpdateDepartmentDto dto)
@@ -54,6 +62,8 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new UpdateDepartment.Command(id, dto));
             return NoContent();
         }
+
+
 
         [HttpDelete("{id}")]
         [Permission(AllPermissions.ProductDelete)]

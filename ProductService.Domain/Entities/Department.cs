@@ -10,17 +10,25 @@
         public DateTime? UpdatedAt { get; private set; }
         // Navigation property
         public ICollection<Product> Products { get; private set; } = [];
+
+        public int WorkerCount => Products
+            .Where(p=>!string.IsNullOrEmpty(p.Worker))
+            .Select(p=>p.Worker)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count(); // Calculate count of workers which is not null in departments 
+
         // For EF Core
         protected Department() { }
-        public Department(string name, string? description)
+        public Department(string name, string? description,bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
             Name = name;
             Description = description??string.Empty;
+            IsActive = isActive;
             CreatedAt = DateTime.UtcNow;
         }
-        public void Update(string name, string? description)
+        public void Update(string name, string? description,bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
@@ -29,6 +37,7 @@
                 Description=description;
 
             Name = name;
+            IsActive = isActive;
             UpdatedAt = DateTime.UtcNow;
         }
         public void Activate()
