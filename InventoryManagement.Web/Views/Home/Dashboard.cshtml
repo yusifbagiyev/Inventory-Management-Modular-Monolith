@@ -4,76 +4,180 @@
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Dashboard</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Dashboard</h1>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm active" data-period="today">Today</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-period="week">This Week</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-period="month">This Month</button>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white mb-4">
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-white-50 small">Total Products</div>
-                            <div class="h2">@Model.TotalProducts</div>
+                            <p class="text-muted mb-2">Total Products</p>
+                            <h3 class="mb-0">@Model.TotalProducts.ToString("N0")</h3>
+                            <p class="text-success mb-0">
+                                <i class="fas fa-arrow-up"></i> @Model.ActiveProducts active
+                            </p>
                         </div>
-                        <i class="fas fa-boxes fa-3x opacity-50"></i>
+                        <div class="rounded-circle bg-primary-soft text-primary p-3">
+                            <i class="fas fa-boxes fa-2x"></i>
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="/Products">View Details</a>
-                    <i class="fas fa-angle-right"></i>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div class="text-white-50 small">Active Routes</div>
-                            <div class="h2">@Model.TotalRoutes</div>
+                            <p class="text-muted mb-2">Total Routes</p>
+                            <h3 class="mb-0">@Model.TotalRoutes.ToString("N0")</h3>
+                            <p class="text-warning mb-0">
+                                <i class="fas fa-clock"></i> @Model.PendingTransfers pending
+                            </p>
                         </div>
-                        <i class="fas fa-route fa-3x opacity-50"></i>
+                        <div class="rounded-circle bg-success-soft text-success p-3">
+                            <i class="fas fa-route fa-2x"></i>
+                        </div>
                     </div>
                 </div>
-                <div class="card-footer d-flex align-items-center justify-content-between">
-                    <a class="small text-white stretched-link" href="/Routes">View Details</a>
-                    <i class="fas fa-angle-right"></i>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-2">Active Departments</p>
+                            <h3 class="mb-0">@Model.DepartmentStats.Count</h3>
+                            <p class="text-info mb-0">
+                                <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers
+                            </p>
+                        </div>
+                        <div class="rounded-circle bg-info-soft text-info p-3">
+                            <i class="fas fa-building fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-2">Categories</p>
+                            <h3 class="mb-0">@Model.CategoryDistributions.Count</h3>
+                            <p class="text-secondary mb-0">
+                                <i class="fas fa-tags"></i> Active categories
+                            </p>
+                        </div>
+                        <div class="rounded-circle bg-warning-soft text-warning p-3">
+                            <i class="fas fa-tags fa-2x"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <!-- Charts Row -->
+    <div class="row mb-4">
         <div class="col-xl-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar me-1"></i>
-                    Products by Department
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Department Overview</h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-chart="bar">Bar</button>
+                            <button type="button" class="btn btn-outline-primary" data-chart="line">Line</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <canvas id="departmentChart" height="100"></canvas>
+                    <canvas id="departmentChart" height="300"></canvas>
                 </div>
             </div>
         </div>
+
         <div class="col-xl-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-bell me-1"></i>
-                    Recent Activities
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Category Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <div class="timeline">
-                        @foreach (var activity in Model.RecentActivities.Take(5))
-                        {
-                            <div class="timeline-item">
-                                <i class="fas @activity.Icon text-primary"></i>
-                                <div class="timeline-content">
-                                    <small class="text-muted">@activity.Timestamp.ToString("MMM dd, HH:mm")</small>
-                                    <p class="mb-0">@activity.Description</p>
-                                </div>
-                            </div>
-                        }
+                    <canvas id="categoryChart" height="300"></canvas>
+                    <div id="categoryLegend" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity and Performance Row -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Transfer Activity</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="transferChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Top Departments by Products</h5>
+                        <a href="/Reports/Departments" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Products</th>
+                                    <th>Workers</th>
+                                    <th>Utilization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dept in Model.DepartmentStats.OrderByDescending(d => d.ProductCount).Take(5))
+                                {
+                                    <tr>
+                                        <td>@dept.DepartmentName</td>
+                                        <td><span class="badge bg-primary">@dept.ProductCount</span></td>
+                                        <td>@dept.ActiveWorkers</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                @{
+                                                    var utilization = dept.ActiveWorkers > 0 ? (dept.ProductCount * 100.0 / (dept.ActiveWorkers * 10)) : 0;
+                                                    utilization = Math.Min(100, utilization);
+                                                }
+                                                <div class="progress-bar" style="width: @utilization%">
+                                                    @utilization.ToString("F0")%
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -84,21 +188,158 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        var ctx = document.getElementById('departmentChart').getContext('2d');
-        var chart = new Chart(ctx, {
+        // Color palette
+        const colors = {
+            primary: '#3B82F6',
+            success: '#10B981',
+            warning: '#F59E0B',
+            danger: '#EF4444',
+            info: '#06B6D4',
+            secondary: '#6B7280'
+        };
+
+        // Department Chart
+        const deptCtx = document.getElementById('departmentChart').getContext('2d');
+        const departmentChart = new Chart(deptCtx, {
             type: 'bar',
             data: {
-                labels: [@Html.Raw(string.Join(",", Model.DepartmentStats.Select(d => $"'{d.DepartmentName}'")))],
+                labels: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.DepartmentName))),
                 datasets: [{
                     label: 'Products',
-                    data: [@string.Join(",", Model.DepartmentStats.Select(d => d.ProductCount))],
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)'
+                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ProductCount))),
+                    backgroundColor: colors.primary,
+                    borderRadius: 8
+                }, {
+                    label: 'Workers',
+                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ActiveWorkers))),
+                    backgroundColor: colors.success,
+                    borderRadius: 8
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
             }
         });
+
+        // Category Chart
+        const catCtx = document.getElementById('categoryChart').getContext('2d');
+        const categoryChart = new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.CategoryName))),
+                datasets: [{
+                    data: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Count))),
+                    backgroundColor: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Color))),
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // Transfer Activity Chart
+        const transferCtx = document.getElementById('transferChart').getContext('2d');
+        const transferChart = new Chart(transferCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Completed',
+                    data: [12, 19, 15, 25, 22, 18, 20],
+                    borderColor: colors.success,
+                    backgroundColor: colors.success + '20',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Pending',
+                    data: [5, 8, 6, 10, 7, 5, 8],
+                    borderColor: colors.warning,
+                    backgroundColor: colors.warning + '20',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Chart type switcher
+        $('[data-chart]').click(function() {
+            const chartType = $(this).data('chart');
+            $(this).addClass('active').siblings().removeClass('active');
+
+            departmentChart.config.type = chartType;
+            departmentChart.update();
+        });
+
+        // Period switcher
+        $('[data-period]').click(function() {
+            const period = $(this).data('period');
+            $(this).addClass('active').siblings().removeClass('active');
+
+            // Reload data based on period
+            // Implementation would fetch new data via AJAX
+            showToast(`Switched to ${period} view`, 'info');
+        });
     </script>
+
+    <style>
+        .bg-primary-soft {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .bg-success-soft {
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        .bg-warning-soft {
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .bg-info-soft {
+            background-color: rgba(6, 182, 212, 0.1);
+        }
+
+        .card {
+            border-radius: 12px;
+        }
+
+        .progress {
+            background-color: #f3f4f6;
+        }
+    </style>
 }

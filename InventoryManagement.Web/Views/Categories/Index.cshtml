@@ -4,67 +4,178 @@
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Categories</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item active">Categories</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Categories</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Categories</li>
+                </ol>
+            </nav>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Category
+        </a>
+    </div>
 
-    <div class="card mb-4 shadow">
-        <div class="card-header">
-            <div class="row">
-                <div class="col">
-                    <i class="fas fa-tags me-1"></i>
-                    Category Management
-                </div>
-                <div class="col text-end">
-                    <a asp-action="Create" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus"></i> Add New Category
-                    </a>
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Categories</h6>
+                            <h3 class="mb-0">@Model.Count</h3>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-tags fa-2x"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-body">
-            <table class="table table-bordered table-hover" id="categoriesTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var category in Model)
-                    {
-                        <tr>
-                            <td>@category.Name</td>
-                            <td>@category.Description</td>
-                            <td>
-                                @if (category.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            <td>@category.CreatedAt.ToString("MM/dd/yyyy")</td>
-                            <td>
-                                <a asp-action="Edit" asp-route-id="@category.Id" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(@category.Id)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Active</h6>
+                            <h3 class="mb-0 text-success">@Model.Count(c => c.IsActive)</h3>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Inactive</h6>
+                            <h3 class="mb-0 text-secondary">@Model.Count(c => !c.IsActive)</h3>
+                        </div>
+                        <div class="text-secondary">
+                            <i class="fas fa-times-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">With Products</h6>
+                            <h3 class="mb-0">@Model.Count(c => c.ProductCount > 0)</h3>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-boxes fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control border-start-0"
+                               placeholder="Search categories...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="sortBy" class="form-select">
+                        <option value="name">Sort by Name</option>
+                        <option value="products">Sort by Products</option>
+                        <option value="created">Sort by Date</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Grid -->
+    <div class="row" id="categoriesGrid">
+        @foreach (var category in Model)
+        {
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4 category-item"
+                 data-name="@category.Name.ToLower()"
+                 data-status="@(category.IsActive ? "active" : "inactive")"
+                 data-products="@category.ProductCount"
+                 data-created="@category.CreatedAt.Ticks">
+                <div class="card h-100 border-0 shadow-sm category-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title mb-0">@category.Name</h5>
+                            @if (category.IsActive)
+                            {
+                                <span class="badge bg-success-soft text-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary-soft text-secondary">Inactive</span>
+                            }
+                        </div>
+
+                        <p class="text-muted small mb-3">
+                            @(string.IsNullOrEmpty(category.Description) ? "No description" : category.Description)
+                        </p>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-center">
+                                <h4 class="mb-0 text-primary">@category.ProductCount</h4>
+                                <small class="text-muted">Products</small>
+                            </div>
+                            <div class="vr mx-3"></div>
+                            <div class="text-center">
+                                <small class="text-muted d-block">Created</small>
+                                <small class="text-muted">@category.CreatedAt.ToString("MMM dd, yyyy")</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a asp-action="Edit" asp-route-id="@category.Id"
+                               class="btn btn-sm btn-outline-primary flex-fill">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger flex-fill"
+                                    onclick="deleteCategory(@category.Id, '@category.Name')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="text-center py-5" style="display: none;">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No categories found matching your criteria.</p>
     </div>
 </div>
 
@@ -77,7 +188,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to delete this category?
+                <p>Are you sure you want to delete <strong id="categoryName"></strong>?</p>
+                <p class="text-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    This action cannot be undone and may affect products in this category.
+                </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -92,16 +207,102 @@
 
 @section Scripts {
     <script>
+        let allCategories = [];
+
         $(document).ready(function() {
-            $('#categoriesTable').DataTable({
-                pageLength: 10,
-                responsive: true
+            // Store all categories for client-side filtering
+            $('.category-item').each(function() {
+                allCategories.push(this);
+            });
+
+            // Search functionality
+            $('#searchInput').on('keyup', function() {
+                filterCategories();
+            });
+
+            // Filter functionality
+            $('#statusFilter, #sortBy').on('change', function() {
+                filterCategories();
             });
         });
 
-        function deleteCategory(id) {
+        function filterCategories() {
+            const searchTerm = $('#searchInput').val().toLowerCase();
+            const statusFilter = $('#statusFilter').val();
+            const sortBy = $('#sortBy').val();
+
+            let visibleCategories = allCategories.filter(function(cat) {
+                const $cat = $(cat);
+                const matchesSearch = searchTerm === '' ||
+                    $cat.data('name').includes(searchTerm);
+                const matchesStatus = statusFilter === '' ||
+                    $cat.data('status') === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Sort categories
+            visibleCategories.sort(function(a, b) {
+                const $a = $(a);
+                const $b = $(b);
+
+                switch(sortBy) {
+                    case 'name':
+                        return $a.data('name').localeCompare($b.data('name'));
+                    case 'products':
+                        return $b.data('products') - $a.data('products');
+                    case 'created':
+                        return $b.data('created') - $a.data('created');
+                    default:
+                        return 0;
+                }
+            });
+
+            // Hide all and show filtered
+            $('.category-item').hide();
+            $(visibleCategories).show();
+
+            // Show/hide no results message
+            $('#noResults').toggle(visibleCategories.length === 0);
+        }
+
+        function resetFilters() {
+            $('#searchInput').val('');
+            $('#statusFilter').val('');
+            $('#sortBy').val('name');
+            filterCategories();
+        }
+
+        function deleteCategory(id, name) {
+            $('#categoryName').text(name);
             $('#deleteForm').attr('action', '/Categories/Delete/' + id);
             $('#deleteModal').modal('show');
         }
     </script>
+
+    <style>
+        .category-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+            .category-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            }
+
+        .bg-success-soft {
+            background-color: rgba(25, 135, 84, 0.1);
+        }
+
+        .bg-secondary-soft {
+            background-color: rgba(108, 117, 125, 0.1);
+        }
+
+        .vr {
+            width: 1px;
+            background-color: #dee2e6;
+            align-self: stretch;
+        }
+    </style>
 }

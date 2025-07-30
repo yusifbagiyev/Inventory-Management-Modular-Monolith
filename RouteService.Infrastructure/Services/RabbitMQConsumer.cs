@@ -168,7 +168,7 @@ namespace RouteService.Infrastructure.Services
         }
 
 
-        private async Task ProcessProductUpdated(ProductUpdatedEvent updatedEvent)
+        private async Task ProcessProductUpdated(ProductUpdatedEvent existingProduct)
         {
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
@@ -176,12 +176,12 @@ namespace RouteService.Infrastructure.Services
             var productClient= scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
 
             // Get current product details
-            var product = await productClient.GetProductByIdAsync(updatedEvent.ProductId);
+            var product = await productClient.GetProductByIdAsync(existingProduct.Product.ProductId);
             if (product == null) return;
 
-            var productSnapshot = new ProductSnapshot(
-                updatedEvent.ProductId,
-                updatedEvent.InventoryCode,
+            var updatedProduct = new ProductSnapshot(
+                existingProduct.Product.ProductId,
+                existingProduct.Product.InventoryCode,
                 product.Model,
                 product.Vendor,
                 product.CategoryName,
@@ -189,11 +189,12 @@ namespace RouteService.Infrastructure.Services
 
             // Create an update route entry
             var route = InventoryRoute.CreateUpdate(
-                productSnapshot,
+                existingProduct.Product,
+                updatedProduct,
                 product.DepartmentId,
                 product.DepartmentName,
                 product.Worker,
-                $"Product updated: {updatedEvent.Changes}");
+                $"Product updated: {existingProduct.Changes}");
 
             await repository.AddAsync(route);
             route.Complete();

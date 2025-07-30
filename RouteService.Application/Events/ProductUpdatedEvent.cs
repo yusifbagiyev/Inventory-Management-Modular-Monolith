@@ -1,9 +1,10 @@
-﻿namespace RouteService.Application.Events
+﻿using RouteService.Domain.ValueObjects;
+
+namespace RouteService.Application.Events
 {
     public record ProductUpdatedEvent
     {
-        public int ProductId { get; set; }
-        public int InventoryCode { get; set; }
+        public ExistingProduct Product { get; set; } = null!;
         public string? Changes { get; set; } = string.Empty;
         public DateTime UpdatedAt { get; set; }
     }

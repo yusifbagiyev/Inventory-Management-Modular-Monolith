@@ -3,6 +3,7 @@ using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Application.Events;
 using ProductService.Application.Interfaces;
+using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
 
@@ -62,6 +63,17 @@ namespace ProductService.Application.Features.Products.Commands
 
                 var dto = request.ProductDto;
 
+                var existingProduct = new ExistingProduct
+                {
+                    ProductId = product.Id,
+                    InventoryCode = product.InventoryCode,
+                    CategoryId = product.CategoryId,
+                    CategoryName = product.Category?.Name,
+                    DepartmentId = product.DepartmentId,
+                    DepartmentName = product.Department?.Name,
+                    Worker = product.Worker,
+                };
+
                 // Track what changed
                 var changes = new List<string>();
 
@@ -75,17 +87,13 @@ namespace ProductService.Application.Features.Products.Commands
                     changes.Add($"Worker: {product.Worker ?? "None"} → {dto.Worker ?? "None"}");
 
                 if (product.CategoryId != dto.CategoryId)
-                    changes.Add($"Category changed");
+                    changes.Add($"Category: {product.Category?.Name} → {await GetCategoryNameAsync(dto.CategoryId)}");
 
                 if (product.DepartmentId != dto.DepartmentId)
-                    changes.Add($"Department changed");
+                    changes.Add($"Department: {product.Department?.Name} → {await GetDepartmentNameAsync(dto.DepartmentId)}");
 
-
-                if (!await _categoryRepository.ExistsByIdAsync(dto.CategoryId, cancellationToken))
-                    throw new ArgumentException($"Category with ID {dto.CategoryId} not found");
-
-                if (!await _departmentRepository.ExistsByIdAsync(dto.DepartmentId, cancellationToken))
-                    throw new ArgumentException($"Department with ID {dto.DepartmentId} not found");
+                if (dto.ImageFile != null)
+                    changes.Add($"Image uploaded");
 
 
                 var oldImageUrl = product.ImageUrl;
@@ -100,6 +108,7 @@ namespace ProductService.Application.Features.Products.Commands
                             using var stream = dto.ImageFile!.OpenReadStream();
                             newImageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
                         }
+
                         // Update product with new image URL or keep the old one
                         product.Update(
                             dto.Model,
@@ -115,7 +124,7 @@ namespace ProductService.Application.Features.Products.Commands
 
 
                         // Delete old image only after successful update
-                        if (shouldUpdateImage&& !string.IsNullOrEmpty(oldImageUrl))
+                        if (shouldUpdateImage && !string.IsNullOrEmpty(oldImageUrl))
                         {
                             await _imageService.DeleteImageAsync(oldImageUrl);
                         }
@@ -125,8 +134,7 @@ namespace ProductService.Application.Features.Products.Commands
                         {
                             var updateEvent = new ProductUpdatedEvent
                             {
-                                ProductId = product.Id,
-                                InventoryCode = product.InventoryCode,
+                                Product = existingProduct,
                                 Changes = string.Join(", ", changes),
                                 UpdatedAt = DateTime.UtcNow,
                             };
@@ -143,6 +151,20 @@ namespace ProductService.Application.Features.Products.Commands
                             await _imageService.DeleteImageAsync(newImageUrl);
                         }
                     });
+            }
+
+
+            private async Task<string?> GetCategoryNameAsync(int categoryId)
+            {
+                var categoryName = await _categoryRepository.GetByIdAsync(categoryId)
+                    ?? throw new NotFoundException($"Category was not found with ID: {categoryId}");
+                return categoryName?.Name;
+            }
+            private async Task<string?> GetDepartmentNameAsync(int departmentId)
+            {
+                var departmentName = await _departmentRepository.GetByIdAsync(departmentId)
+                    ?? throw new NotFoundException($"Department was not found with ID: {departmentId}");
+                return departmentName.Name;
             }
         }
     }

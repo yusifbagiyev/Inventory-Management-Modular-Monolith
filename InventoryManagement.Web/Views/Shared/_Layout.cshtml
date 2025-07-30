@@ -601,35 +601,6 @@
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-
-        // Global toast function
-        window.showToast = function(message, type = 'info') {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-
-            const $container = $('#toastContainer');
-            if ($container.length === 0) {
-                $('body').append('<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>');
-            }
-
-            $('#toastContainer').append(toastHtml);
-
-            const toastElement = $('#toastContainer .toast').last()[0];
-            const toast = new bootstrap.Toast(toastElement, {
-                delay: 5000
-            });
-            toast.show();
-
-            $(toastElement).on('hidden.bs.toast', function() {
-                $(this).remove();
-            });
-        };
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

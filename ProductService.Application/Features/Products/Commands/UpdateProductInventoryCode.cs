@@ -22,13 +22,18 @@ namespace ProductService.Application.Features.Products.Commands
         public class Handler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
+            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMessagePublisher _messagePublisher;
-            public Handler(IProductRepository productRepository, IUnitOfWork unitOfWork,IMessagePublisher messagePublisher)
+            public Handler(IProductRepository productRepository,
+                IUnitOfWork unitOfWork,
+                IMessagePublisher messagePublisher,
+                IDepartmentRepository departmentRepository)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
                 _messagePublisher = messagePublisher;
+                _departmentRepository = departmentRepository;
             }
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
@@ -48,13 +53,22 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 
+                var departmentName = await _departmentRepository.GetByIdAsync(product.DepartmentId, cancellationToken)
+                    ?? throw new ArgumentException($"Department with ID {product.DepartmentId} not found");
 
-                if(string.IsNullOrEmpty(changes))
+                if (string.IsNullOrEmpty(changes))
                 {
                     var eventMessage = new ProductUpdatedEvent
                     {
-                        ProductId = product.Id,
-                        InventoryCode = product.InventoryCode,
+                        Product=new ExistingProduct
+                        {
+                            ProductId = product.Id,
+                            InventoryCode = product.InventoryCode,
+                            CategoryId = product.CategoryId,
+                            DepartmentId = product.DepartmentId,
+                            DepartmentName = departmentName.Name,
+                            Worker = product.Worker,
+                        },
                         Changes = "Inventory code updated",
                         UpdatedAt = DateTime.UtcNow
                     };

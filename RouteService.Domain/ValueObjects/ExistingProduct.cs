@@ -1,11 +1,5 @@
-﻿namespace ProductService.Application.Events
+﻿namespace RouteService.Domain.ValueObjects
 {
-    public record ProductUpdatedEvent
-    {
-        public ExistingProduct Product { get; set; }=null!;
-        public string? Changes { get; set; } = string.Empty;
-        public DateTime UpdatedAt { get; set; }
-    }
     public record ExistingProduct
     {
         public int ProductId { get; set; }
