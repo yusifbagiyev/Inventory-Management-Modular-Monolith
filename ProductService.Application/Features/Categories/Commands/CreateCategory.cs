@@ -40,7 +40,7 @@ namespace ProductService.Application.Features.Categories.Commands
 
             public async Task<CategoryDto> Handle(Command request, CancellationToken cancellationToken)
             {
-                var category = new Category(request.CategoryDto.Name, request.CategoryDto.Description);
+                var category = new Category(request.CategoryDto.Name, request.CategoryDto.Description,request.CategoryDto.IsActive);
 
                 await _categoryRepository.AddAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

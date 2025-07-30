@@ -15,17 +15,18 @@
         // For EF Core
         protected Category() { }
 
-        public Category(string name, string? description)
+        public Category(string name, string? description,bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Category name cannot be empty", nameof(name));
 
             Name = name;
             Description = description ?? string.Empty ;
+            IsActive = isActive;
             CreatedAt = DateTime.UtcNow;
         }
 
-        public void Update(string name, string? description)
+        public void Update(string name, string? description,bool isActive)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Category name cannot be empty", nameof(name));
@@ -33,18 +34,7 @@
             if (!string.IsNullOrWhiteSpace(description))
                 Description = description;
             Name = name;
-            UpdatedAt = DateTime.UtcNow;
-        }
-
-        public void Activate()
-        {
-            IsActive = true;
-            UpdatedAt = DateTime.UtcNow;
-        }
-
-        public void Deactivate()
-        {
-            IsActive = false;
+            IsActive= isActive;
             UpdatedAt = DateTime.UtcNow;
         }
     }

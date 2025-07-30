@@ -21,7 +21,9 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.ToListAsync(cancellationToken);
+            return await _context.Categories
+                .Include(p=>p.Products)
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<Category> AddAsync(Category category, CancellationToken cancellationToken = default)
@@ -45,6 +47,14 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Categories.AnyAsync(c => c.Id == id, cancellationToken);
+        }
+
+        public async Task<int?> GetProductCountAsync(int categoryId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Products
+                .Include(c=>c.Category)
+                .Where(c=>c.CategoryId==categoryId)
+                .CountAsync(cancellationToken);
         }
     }
 }

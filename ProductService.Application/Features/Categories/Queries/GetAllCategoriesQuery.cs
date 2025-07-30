@@ -21,7 +21,6 @@ namespace ProductService.Application.Features.Categories.Queries
         public async Task<IEnumerable<CategoryDto>> Handle(GetAllCategoriesQuery request, CancellationToken cancellationToken)
         {
             var categories = await _categoryRepository.GetAllAsync(cancellationToken);
-
             return _mapper.Map<IEnumerable<CategoryDto>>(categories);
         }
     }

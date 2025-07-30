@@ -16,7 +16,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? Description { get; set; } = string.Empty;
 
         [Display(Name = "Is Active")]
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

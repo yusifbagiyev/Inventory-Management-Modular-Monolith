@@ -40,7 +40,7 @@ namespace ProductService.Application.Features.Categories.Commands
             {
                 var category = await _categoryRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Category with ID {request.Id} not found");
-                category.Update(request.CategoryDto.Name, request.CategoryDto.Description);
+                category.Update(request.CategoryDto.Name, request.CategoryDto.Description,request.CategoryDto.IsActive);
 
                 await _categoryRepository.UpdateAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

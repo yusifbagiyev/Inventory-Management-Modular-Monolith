@@ -3,10 +3,11 @@
     ViewData["Title"] = "Categories";
 }
 
-<div class="container-fluid px-4">
+<div class="container-fluid px-4 py-3">
+    <!-- Header with breadcrumb and button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0">Categories</h1>
+            <h1 class="h3 mb-0">Category Management</h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
@@ -14,68 +15,71 @@
                 </ol>
             </nav>
         </div>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Category
+        <a asp-action="Create" class="btn btn-primary btn-icon">
+            <i class="fas fa-plus me-2"></i>Add Category
         </a>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Stats Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-primary shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">Total Categories</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Total Categories</h6>
                             <h3 class="mb-0">@Model.Count</h3>
                         </div>
-                        <div class="text-primary">
-                            <i class="fas fa-tags fa-2x"></i>
+                        <div class="icon-shape bg-primary-soft text-primary rounded-3">
+                            <i class="fas fa-tags fa-lg"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-success shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">Active</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Active</h6>
                             <h3 class="mb-0 text-success">@Model.Count(c => c.IsActive)</h3>
                         </div>
-                        <div class="text-success">
-                            <i class="fas fa-check-circle fa-2x"></i>
+                        <div class="icon-shape bg-success-soft text-success rounded-3">
+                            <i class="fas fa-check-circle fa-lg"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-secondary shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">Inactive</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Inactive</h6>
                             <h3 class="mb-0 text-secondary">@Model.Count(c => !c.IsActive)</h3>
                         </div>
-                        <div class="text-secondary">
-                            <i class="fas fa-times-circle fa-2x"></i>
+                        <div class="icon-shape bg-secondary-soft text-secondary rounded-3">
+                            <i class="fas fa-times-circle fa-lg"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-info shadow-sm">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="text-muted mb-2">With Products</h6>
-                            <h3 class="mb-0">@Model.Count(c => c.ProductCount > 0)</h3>
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">With Products</h6>
+                            <h3 class="mb-0">@Model.Sum(c=>c.ProductCount)</h3>
                         </div>
-                        <div class="text-info">
-                            <i class="fas fa-boxes fa-2x"></i>
+                        <div class="icon-shape bg-info-soft text-info rounded-3">
+                            <i class="fas fa-boxes fa-lg"></i>
                         </div>
                     </div>
                 </div>
@@ -83,122 +87,169 @@
         </div>
     </div>
 
-    <!-- Search and Filter Bar -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
+    <!-- Filter Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-4 col-md-6">
                     <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
                         <input type="text" id="searchInput" class="form-control border-start-0"
                                placeholder="Search categories...">
                     </div>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-lg-2 col-md-6">
                     <select id="statusFilter" class="form-select">
                         <option value="">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-lg-3 col-md-6">
                     <select id="sortBy" class="form-select">
                         <option value="name">Sort by Name</option>
                         <option value="products">Sort by Products</option>
                         <option value="created">Sort by Date</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary flex-grow-1" onclick="resetFilters()">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                        <button class="btn btn-outline-primary d-lg-none" id="filterToggle">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Categories Grid -->
-    <div class="row" id="categoriesGrid">
-        @foreach (var category in Model)
-        {
-            <div class="col-xl-3 col-lg-4 col-md-6 mb-4 category-item"
-                 data-name="@category.Name.ToLower()"
-                 data-status="@(category.IsActive ? "active" : "inactive")"
-                 data-products="@category.ProductCount"
-                 data-created="@category.CreatedAt.Ticks">
-                <div class="card h-100 border-0 shadow-sm category-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h5 class="card-title mb-0">@category.Name</h5>
-                            @if (category.IsActive)
-                            {
-                                <span class="badge bg-success-soft text-success">Active</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary-soft text-secondary">Inactive</span>
-                            }
-                        </div>
+    <!-- Categories Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th class="text-center">Products</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoriesTable">
+                        @foreach (var category in Model)
+                        {
+                            <tr class="category-item"
+                                data-name="@category.Name.ToLower()"
+                                data-status="@(category.IsActive ? "active" : "inactive")"
+                                data-products="@category.ProductCount"
+                                data-created="@category.CreatedAt.Ticks">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-shape bg-light text-primary rounded-2 p-2 me-3">
+                                            <i class="fas fa-tag"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@category.Name</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;">
+                                        @(string.IsNullOrEmpty(category.Description) ? "No description" : category.Description)
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill px-3 py-2">
+                                        @category.ProductCount
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (category.IsActive)
+                                    {
+                                        <span class="badge bg-success-soft text-success py-2 px-3">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-soft text-secondary py-2 px-3">
+                                            <i class="fas fa-times-circle me-1"></i>Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="text-muted small">
+                                        @category.CreatedAt.ToString("MMM dd, yyyy")
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a asp-action="Edit" asp-route-id="@category.Id"
+                                           class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-3"
+                                                onclick="deleteCategory(@category.Id, '@category.Name')">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
-                        <p class="text-muted small mb-3">
-                            @(string.IsNullOrEmpty(category.Description) ? "No description" : category.Description)
-                        </p>
-
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="text-center">
-                                <h4 class="mb-0 text-primary">@category.ProductCount</h4>
-                                <small class="text-muted">Products</small>
-                            </div>
-                            <div class="vr mx-3"></div>
-                            <div class="text-center">
-                                <small class="text-muted d-block">Created</small>
-                                <small class="text-muted">@category.CreatedAt.ToString("MMM dd, yyyy")</small>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <a asp-action="Edit" asp-route-id="@category.Id"
-                               class="btn btn-sm btn-outline-primary flex-fill">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger flex-fill"
-                                    onclick="deleteCategory(@category.Id, '@category.Name')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </div>
+            <!-- Empty State -->
+            <div id="noResults" class="text-center py-5" style="display: none;">
+                <div class="py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-4"></i>
+                    <h5 class="text-muted">No categories found</h5>
+                    <p class="text-muted">Try adjusting your search or filter criteria</p>
+                    <button class="btn btn-outline-primary mt-2" onclick="resetFilters()">
+                        <i class="fas fa-redo me-1"></i>Reset Filters
+                    </button>
                 </div>
             </div>
-        }
-    </div>
-
-    <!-- No Results Message -->
-    <div id="noResults" class="text-center py-5" style="display: none;">
-        <i class="fas fa-search fa-3x text-muted mb-3"></i>
-        <p class="text-muted">No categories found matching your criteria.</p>
+        </div>
     </div>
 </div>
 
 <!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirm Delete
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="categoryName"></strong>?</p>
-                <p class="text-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    This action cannot be undone and may affect products in this category.
-                </p>
+                <p>Are you sure you want to delete <strong class="text-danger" id="categoryName"></strong>?</p>
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    This will permanently delete the category and affect associated products.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="post" style="display: inline;">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
                 </form>
             </div>
         </div>
@@ -207,16 +258,12 @@
 
 @section Scripts {
     <script>
-        let allCategories = [];
-
         $(document).ready(function() {
-            // Store all categories for client-side filtering
-            $('.category-item').each(function() {
-                allCategories.push(this);
-            });
+            // Initialize Data
+            const allCategories = $('.category-item').toArray();
 
             // Search functionality
-            $('#searchInput').on('keyup', function() {
+            $('#searchInput').on('input', function() {
                 filterCategories();
             });
 
@@ -224,25 +271,30 @@
             $('#statusFilter, #sortBy').on('change', function() {
                 filterCategories();
             });
+
+            // Mobile filter toggle
+            $('#filterToggle').click(function() {
+                $('.col-lg-2, .col-lg-3').toggleClass('d-none d-md-block');
+            });
         });
 
         function filterCategories() {
-            const searchTerm = $('#searchInput').val().toLowerCase();
+            const searchTerm = $('#searchInput').val().toLowerCase().trim();
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
 
-            let visibleCategories = allCategories.filter(function(cat) {
-                const $cat = $(cat);
+            let visibleItems = allCategories.filter(item => {
+                const $item = $(item);
                 const matchesSearch = searchTerm === '' ||
-                    $cat.data('name').includes(searchTerm);
+                    $item.data('name').includes(searchTerm);
                 const matchesStatus = statusFilter === '' ||
-                    $cat.data('status') === statusFilter;
+                    $item.data('status') === statusFilter;
 
                 return matchesSearch && matchesStatus;
             });
 
-            // Sort categories
-            visibleCategories.sort(function(a, b) {
+            // Sort items
+            visibleItems.sort((a, b) => {
                 const $a = $(a);
                 const $b = $(b);
 
@@ -258,12 +310,12 @@
                 }
             });
 
-            // Hide all and show filtered
+            // Update table
             $('.category-item').hide();
-            $(visibleCategories).show();
+            $(visibleItems).show();
 
-            // Show/hide no results message
-            $('#noResults').toggle(visibleCategories.length === 0);
+            // Toggle empty state
+            $('#noResults').toggle(visibleItems.length === 0);
         }
 
         function resetFilters() {
@@ -281,28 +333,76 @@
     </script>
 
     <style>
-        .category-card {
-            transition: all 0.3s ease;
+        .card {
             border-radius: 12px;
+            border: none;
         }
 
-            .category-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
-            }
+        .border-start-3 {
+            border-left: 3px solid !important;
+        }
+
+        .icon-shape {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bg-primary-soft {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+        }
 
         .bg-success-soft {
-            background-color: rgba(25, 135, 84, 0.1);
+            background-color: rgba(25, 135, 84, 0.1) !important;
         }
 
         .bg-secondary-soft {
-            background-color: rgba(108, 117, 125, 0.1);
+            background-color: rgba(108, 117, 125, 0.1) !important;
         }
 
-        .vr {
-            width: 1px;
-            background-color: #dee2e6;
-            align-self: stretch;
+        .bg-info-soft {
+            background-color: rgba(13, 202, 240, 0.1) !important;
+        }
+
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .table tr {
+            transition: all 0.2s ease;
+        }
+
+            .table tr:hover {
+                background-color: rgba(248, 249, 250, 0.8);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            }
+
+        .table > tbody > tr:last-child > td {
+            border-bottom: none;
+        }
+
+        .table td {
+            vertical-align: middle;
+            padding: 1.2rem 1rem;
+        }
+
+        
+
+        .table-responsive {
+            border: none;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
         }
     </style>
 }

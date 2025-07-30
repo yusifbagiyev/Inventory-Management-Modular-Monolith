@@ -10,5 +10,6 @@ namespace ProductService.Domain.Repositories
         Task UpdateAsync(Category category, CancellationToken cancellationToken = default);
         Task DeleteAsync(Category category, CancellationToken cancellationToken = default);
         Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<int?> GetProductCountAsync(int  categoryId, CancellationToken cancellationToken = default);
     }
 }

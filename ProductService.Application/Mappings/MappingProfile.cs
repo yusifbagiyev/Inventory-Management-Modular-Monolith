@@ -16,9 +16,12 @@ namespace ProductService.Application.Mappings
                     !string.IsNullOrEmpty(src.ImageUrl) ? $"{src.ImageUrl}" : null));
 
             // Category mappings
-            CreateMap<Category, CategoryDto>();
+            CreateMap<Category, CategoryDto>()
+                .ForMember(dest => dest.ProductCount,
+                 opt => opt.MapFrom(src => src.Products.Count));
+
             CreateMap<CreateCategoryDto, Category>()
-                .ConstructUsing(src => new Category(src.Name, src.Description));
+                .ConstructUsing(src => new Category(src.Name, src.Description,src.IsActive));
 
             // Department mappings
             CreateMap<Department, DepartmentDto>();
