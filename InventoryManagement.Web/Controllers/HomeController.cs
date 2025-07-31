@@ -70,8 +70,22 @@ namespace InventoryManagement.Web.Controllers
                         CategoryName = c.Name,
                         Count = products.Count(p => p.CategoryId == c.Id),
                         Color = colors[index % colors.Length]
-                    }).Where(c => c.Count > 0).OrderByDescending(c => c.Count).ToList();
+                    }).Where(c => c.Count > 0).OrderByDescending(c => c.Count).Take(8).ToList();
                 }
+
+                // Calculate real trasnfer activity for the selected period
+                var now=DateTime.Now;
+                var period = Request.Query["period"].ToString();
+                DateTime startDate = period switch
+                {
+                    "week" => now.AddDays(-7),
+                    "month" => now.AddMonths(-1),
+                    _ => now.Date
+                };
+
+                var periodRoutes = routes?.Items.Where(r => r.CreatedAt >= startDate).ToList();
+                model.CompletedTransfers = periodRoutes?.Count(r => r.IsCompleted);
+                model.PendingTransfers = periodRoutes?.Count(r => !r.IsCompleted);
             }
             catch (UnauthorizedAccessException)
             {
@@ -81,23 +95,6 @@ namespace InventoryManagement.Web.Controllers
             {
                 return HandleException(ex,new DashboardViewModel());
             }
-
-            //Mock data for demo
-            model.DepartmentStats =
-            [
-                new() { DepartmentName = "Warehouse A", ProductCount = 45, ActiveWorkers = 12 },
-                new() { DepartmentName = "Warehouse B", ProductCount = 38, ActiveWorkers = 8 },
-                new() { DepartmentName = "Office", ProductCount = 22, ActiveWorkers = 15 }
-            ];
-
-            model.CategoryDistributions =
-            [
-                new() { CategoryName = "Electronics", Count = 35, Color = "#3B82F6" },
-                new() { CategoryName = "Furniture", Count = 28, Color = "#10B981" },
-                new() { CategoryName = "Vehicles", Count = 15, Color = "#F59E0B" },
-                new() { CategoryName = "Tools", Count = 22, Color = "#EF4444" }
-            ];
-
             return View(model);
         }
 

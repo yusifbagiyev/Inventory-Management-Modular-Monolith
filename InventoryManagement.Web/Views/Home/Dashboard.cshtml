@@ -317,8 +317,8 @@
             const period = $(this).data('period');
             $(this).addClass('active').siblings().removeClass('active');
 
-            // Reload data based on period
-            // Implementation would fetch new data via AJAX
+                // Reload page with period parameter
+            window.location.href = '/Home/Dashboard?period=' + period;
             showToast(`Switched to ${period} view`, 'info');
         });
     </script>

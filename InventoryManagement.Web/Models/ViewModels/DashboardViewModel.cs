@@ -5,7 +5,8 @@
         public int TotalProducts { get; set; }
         public int ActiveProducts { get; set; }
         public int TotalRoutes { get; set; }
-        public int PendingTransfers { get; set; }
+        public int? PendingTransfers { get; set; }
+        public int? CompletedTransfers { get; set; }
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
         public List<RecentActivity> RecentActivities { get; set; } = [];
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];

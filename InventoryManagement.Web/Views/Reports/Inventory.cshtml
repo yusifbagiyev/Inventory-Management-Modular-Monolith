@@ -1,0 +1,94 @@
+﻿@model InventoryReportViewModel
+@{
+    ViewData["Title"] = "Inventory Report";
+}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Inventory Report</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Assets</h5>
+                    <h2>@Model.TotalProducts</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Working Items</h5>
+                    <h2>@Model.WorkingItems</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Under Repair</h5>
+                    <h2>@Model.NotWorkingItems</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">New Items</h5>
+                    <h2>@Model.NewItems</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#byDepartment">By Department</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#byCategory">By Category</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#byWorker">By Worker</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="byDepartment">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Total Items</th>
+                                <th>Working</th>
+                                <th>Not Working</th>
+                                <th>Utilization %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var dept in Model.DepartmentReports)
+                            {
+                                <tr>
+                                    <td>@dept.DepartmentName</td>
+                                    <td>@dept.TotalItems</td>
+                                    <td>@dept.WorkingItems</td>
+                                    <td>@dept.NotWorkingItems</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: @dept.UtilizationPercentage%">
+                                                @dept.UtilizationPercentage%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
