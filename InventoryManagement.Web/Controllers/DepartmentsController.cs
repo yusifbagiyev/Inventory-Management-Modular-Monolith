@@ -40,6 +40,16 @@ namespace InventoryManagement.Web.Controllers
                 if (department == null)
                     return NotFound();
 
+                // Get products for this department
+                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+                var departmentProducts = products?.Where(p => p.DepartmentId == id).ToList() ?? [];
+
+                ViewBag.Products = departmentProducts;
+
+                // Update counts
+                department.ProductCount = departmentProducts.Count;
+                department.WorkerCount = departmentProducts.Select(p => p.Worker).Where(w => !string.IsNullOrEmpty(w)).Distinct().Count();
+
                 return View(department);
             }
             catch (Exception ex)

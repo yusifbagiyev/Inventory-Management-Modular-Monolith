@@ -170,20 +170,23 @@
         }
 
         $(document).ready(function() {
-            // Initialize AJAX form handling
+                // Store original button html
+        const $submitBtn = $('button[type="submit"]');
+        const originalBtnHtml = $submitBtn.html();
+
             AjaxHandler.handleForm('form', {
                 successMessage: 'Product created successfully!',
                 successRedirect: '/Products',
                 onError: function(errorMessage, response) {
-                    // Custom error handling if needed
-                    console.log('Product creation failed:', errorMessage);
-                }
-            });
+                    // Always reset button on error
+                    $submitBtn.prop('disabled', false).html(originalBtnHtml);
 
-            // Clear validation errors on input change
-            $('input, select, textarea').on('input change', function() {
-                $(this).removeClass('is-invalid');
-                $(this).next('.invalid-feedback').remove();
+                    // Special handling for inventory code errors
+            if (errorMessage.toLowerCase().includes('inventory code')) {
+                $('#InventoryCode').addClass('is-invalid')
+                    .after('<div class="invalid-feedback">' + errorMessage + '</div>');
+            }
+                }
             });
         });
     </script>

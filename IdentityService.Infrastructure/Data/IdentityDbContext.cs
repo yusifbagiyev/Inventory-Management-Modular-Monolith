@@ -115,15 +115,16 @@ namespace IdentityService.Infrastructure.Data
                 new Permission { Id = 5, Name = AllPermissions.RouteUpdateDirect, Category = "Route", Description = "Update routes directly" },
                 new Permission { Id = 6, Name = AllPermissions.RouteDelete, Category = "Route", Description = "Delete routes (requires approval)" },
                 new Permission { Id = 7, Name = AllPermissions.RouteDeleteDirect, Category = "Route", Description = "Delete routes directly" },
+                new Permission { Id = 8, Name = AllPermissions.RouteComplete, Category = "Route", Description = "Complete routes" },
         
                 // Product permissions
-                new Permission { Id = 8, Name = AllPermissions.ProductView, Category = "Product", Description = "View products" },
-                new Permission { Id = 9, Name = AllPermissions.ProductCreate, Category = "Product", Description = "Create products (requires approval)" },
-                new Permission { Id = 10, Name = AllPermissions.ProductCreateDirect, Category = "Product", Description = "Create products directly" },
-                new Permission { Id = 11, Name = AllPermissions.ProductUpdate, Category = "Product", Description = "Update products (requires approval)" },
-                new Permission { Id = 12, Name = AllPermissions.ProductUpdateDirect, Category = "Product", Description = "Update products directly" },
-                new Permission { Id = 13, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
-                new Permission { Id = 14, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
+                new Permission { Id = 9, Name = AllPermissions.ProductView, Category = "Product", Description = "View products" },
+                new Permission { Id = 10, Name = AllPermissions.ProductCreate, Category = "Product", Description = "Create products (requires approval)" },
+                new Permission { Id = 11, Name = AllPermissions.ProductCreateDirect, Category = "Product", Description = "Create products directly" },
+                new Permission { Id = 12, Name = AllPermissions.ProductUpdate, Category = "Product", Description = "Update products (requires approval)" },
+                new Permission { Id = 13, Name = AllPermissions.ProductUpdateDirect, Category = "Product", Description = "Update products directly" },
+                new Permission { Id = 14, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
+                new Permission { Id = 15, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
             };
             builder.Entity<Permission>().HasData(permissions);
 
@@ -131,7 +132,7 @@ namespace IdentityService.Infrastructure.Data
             var rolePermissions = new List<RolePermission>();
 
             // Admin - All direct permissions
-            for (int i = 1; i <= 14; i++)
+            for (int i = 1; i <= 15; i++)
             {
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }

@@ -16,7 +16,8 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<Department?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.Departments.FindAsync(new object[] { id }, cancellationToken);
+            return await _context.Departments
+                .FindAsync(new object[] { id }, cancellationToken);
         }
 
         public async Task<IEnumerable<Department>> GetAllAsync(CancellationToken cancellationToken = default)

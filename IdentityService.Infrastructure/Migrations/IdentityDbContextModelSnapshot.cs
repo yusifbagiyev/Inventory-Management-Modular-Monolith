@@ -99,48 +99,55 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             Id = 8,
+                            Category = "Route",
+                            Description = "Complete routes",
+                            Name = "route.complete"
+                        },
+                        new
+                        {
+                            Id = 9,
                             Category = "Product",
                             Description = "View products",
                             Name = "product.view"
                         },
                         new
                         {
-                            Id = 9,
+                            Id = 10,
                             Category = "Product",
                             Description = "Create products (requires approval)",
                             Name = "product.create"
                         },
                         new
                         {
-                            Id = 10,
+                            Id = 11,
                             Category = "Product",
                             Description = "Create products directly",
                             Name = "product.create.direct"
                         },
                         new
                         {
-                            Id = 11,
+                            Id = 12,
                             Category = "Product",
                             Description = "Update products (requires approval)",
                             Name = "product.update"
                         },
                         new
                         {
-                            Id = 12,
+                            Id = 13,
                             Category = "Product",
                             Description = "Update products directly",
                             Name = "product.update.direct"
                         },
                         new
                         {
-                            Id = 13,
+                            Id = 14,
                             Category = "Product",
                             Description = "Delete products (requires approval)",
                             Name = "product.delete"
                         },
                         new
                         {
-                            Id = 14,
+                            Id = 15,
                             Category = "Product",
                             Description = "Delete products directly",
                             Name = "product.delete.direct"
@@ -330,6 +337,11 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             RoleId = 1,
                             PermissionId = 14
+                        },
+                        new
+                        {
+                            RoleId = 1,
+                            PermissionId = 15
                         },
                         new
                         {

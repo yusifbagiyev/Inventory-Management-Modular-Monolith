@@ -284,13 +284,14 @@ namespace IdentityService.Infrastructure.Migrations
                     { 5, "Route", "Update routes directly", "route.update.direct" },
                     { 6, "Route", "Delete routes (requires approval)", "route.delete" },
                     { 7, "Route", "Delete routes directly", "route.delete.direct" },
-                    { 8, "Product", "View products", "product.view" },
-                    { 9, "Product", "Create products (requires approval)", "product.create" },
-                    { 10, "Product", "Create products directly", "product.create.direct" },
-                    { 11, "Product", "Update products (requires approval)", "product.update" },
-                    { 12, "Product", "Update products directly", "product.update.direct" },
-                    { 13, "Product", "Delete products (requires approval)", "product.delete" },
-                    { 14, "Product", "Delete products directly", "product.delete.direct" }
+                    { 8, "Route", "Complete routes", "route.complete" },
+                    { 9, "Product", "View products", "product.view" },
+                    { 10, "Product", "Create products (requires approval)", "product.create" },
+                    { 11, "Product", "Create products directly", "product.create.direct" },
+                    { 12, "Product", "Update products (requires approval)", "product.update" },
+                    { 13, "Product", "Update products directly", "product.update.direct" },
+                    { 14, "Product", "Delete products (requires approval)", "product.delete" },
+                    { 15, "Product", "Delete products directly", "product.delete.direct" }
                 });
 
             migrationBuilder.InsertData(
@@ -317,6 +318,7 @@ namespace IdentityService.Infrastructure.Migrations
                     { 12, 1 },
                     { 13, 1 },
                     { 14, 1 },
+                    { 15, 1 },
                     { 1, 2 },
                     { 2, 2 },
                     { 4, 2 },

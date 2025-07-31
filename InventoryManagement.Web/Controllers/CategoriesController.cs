@@ -39,6 +39,13 @@ namespace InventoryManagement.Web.Controllers
                 if (category == null)
                     return NotFound();
 
+                // Get products for this category
+                var products = await _apiService.GetAsync<List<ProductViewModel>>($"api/products");
+                var categoryProducts = products?.Where(p => p.CategoryId == id).ToList() ?? new List<ProductViewModel>();
+
+                ViewBag.Products = categoryProducts;
+                category.ProductCount = categoryProducts.Count;
+
                 return View(category);
             }
             catch (Exception ex)

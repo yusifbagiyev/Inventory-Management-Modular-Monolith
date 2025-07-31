@@ -194,7 +194,11 @@
                                     </div>
                                 </td>
                                 <td class="text-end">
-                                    <div class="d-flex gap-2 justify-content-end">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@category.Id"
+                                           class="btn btn-sm btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
                                         <a asp-action="Edit" asp-route-id="@category.Id"
                                            class="btn btn-sm btn-outline-primary rounded-3 px-3">
                                             <i class="fas fa-edit me-1"></i>Edit

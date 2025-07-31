@@ -81,7 +81,18 @@
                                     </small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info">@route.RouteTypeName</span>
+                                    @{
+                                        var typeColor = route.RouteTypeName switch
+                                        {
+                                            "New" => "bg-success",
+                                            "Existing" => "bg-primary",
+                                            "Transfer" => "bg-info",
+                                            "Update" => "bg-warning",
+                                            "Removal" => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @typeColor">@route.RouteTypeName</span>
                                 </td>
                                 <td>
                                     <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId"

@@ -106,7 +106,9 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <canvas id="departmentChart" height="300"></canvas>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="departmentChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,7 +119,9 @@
                     <h5 class="mb-0">Category Distribution</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="categoryChart" height="300"></canvas>
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
                     <div id="categoryLegend" class="mt-3"></div>
                 </div>
             </div>
@@ -132,7 +136,9 @@
                     <h5 class="mb-0">Transfer Activity</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="transferChart" height="250"></canvas>
+                    <div class="chart-container" style="position: relative; height: 250px;">
+                        <canvas id="transferChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -340,6 +346,12 @@
 
         .progress {
             background-color: #f3f4f6;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
         }
     </style>
 }

@@ -55,14 +55,13 @@ namespace RouteService.Application.Features.Routes.Commands
                 {
                     try
                     {
-                        // Get the correct path
-                        var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", route.ImageUrl.TrimStart('/'));
+                        var webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                        var imagePath = Path.Combine(webRootPath, route.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
                         if (File.Exists(imagePath))
                         {
                             imageData = await File.ReadAllBytesAsync(imagePath, cancellationToken);
-                            var segments = route.ImageUrl.Split('/');
-                            imageFileName = segments.Length > 0 ? segments[^1] : "image.jpg";
+                            imageFileName = Path.GetFileName(imagePath);
                         }
                     }
                     catch (Exception ex)

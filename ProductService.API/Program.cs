@@ -101,6 +101,12 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductUpdate)));
     options.AddPolicy(AllPermissions.ProductDelete, policy =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductDelete)));
+    options.AddPolicy(AllPermissions.ProductCreateDirect, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductCreateDirect)));
+    options.AddPolicy(AllPermissions.ProductUpdateDirect, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductUpdateDirect)));
+    options.AddPolicy(AllPermissions.ProductDeleteDirect, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.ProductDeleteDirect)));
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();

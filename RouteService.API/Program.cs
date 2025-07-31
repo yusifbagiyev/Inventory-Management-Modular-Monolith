@@ -100,8 +100,14 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteUpdate)));
     options.AddPolicy(AllPermissions.RouteDelete, policy =>
         policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteDelete)));
-    options.AddPolicy(AllPermissions.RouteBatchDelete, policy =>
-        policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteBatchDelete)));
+    options.AddPolicy(AllPermissions.RouteComplete, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteComplete)));
+    options.AddPolicy(AllPermissions.RouteCreateDirect, policy => 
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteCreateDirect)));
+    options.AddPolicy(AllPermissions.RouteUpdateDirect, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteUpdateDirect)));
+    options.AddPolicy(AllPermissions.RouteDeleteDirect, policy =>
+        policy.Requirements.Add(new PermissionRequirement(AllPermissions.RouteDeleteDirect)));
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
