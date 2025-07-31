@@ -12,18 +12,69 @@
 
     <div class="card mb-4 shadow">
         <div class="card-header">
-            <div class="row">
-                <div class="col">
-                    <i class="fas fa-route me-1"></i>
-                    Route History
+            <div class="row g-3">
+                <div class="col md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control"
+                               placeholder="Search by code, model, vendor..." />
+                    </div>
                 </div>
-                <div class="col text-end">
-                    @if (User.HasPermission("route.create")||User.HasPermission("route.create.direct"))
+
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                        <input type="text" id="dateRange" class="form-control"
+                               placeholder="Select date range" />
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <select id="statusFilter" class="form-select">
+                        @{
+                            var falseSelection = ViewBag.CurrentFilter == false ? "selected" : "";
+                            var trueSelection = ViewBag.CurrentFilter == true ? "selected" : "";
+                        }
+                        <option value="">All Status</option>
+                        <option value="false" falseSelection >Pending</option>
+                        <option value="true" trueSelection >Completed</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select id="departmentFilter" class="form-select">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <partial name="_GmailPagination" model="Model" />
+                </div>
+                <div class="col-auto">
+                    @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
                     {
                         <a asp-action="Transfer" class="btn btn-primary btn-sm">
                             <i class="fas fa-exchange-alt"></i> New Transfer
                         </a>
                     }
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
                     <div class="btn-group btn-group-sm" role="group">
                         <a asp-action="Index" asp-route-isCompleted="" class="btn btn-outline-secondary @(ViewBag.CurrentFilter == null ? "active" : "")">
                             All
@@ -37,26 +88,27 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 80px;">Image</th>
+                            <th><input type="checkbox" id="selectAll" /> </th>
+                            <th>Image</th>
                             <th>Date</th>
                             <th>Type</th>
                             <th>Product</th>
                             <th>From</th>
                             <th>To</th>
                             <th>Status</th>
-                            <th style="width: 150px;">Actions</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="routesTableBody">
                         @foreach (var route in Model.Items)
                         {
-                            <tr>
+                            <tr data-search="@($"{route.InventoryCode} {route.Model} {route.Vendor} {route.FromDepartmentName} {route.ToDepartmentName}".ToLower())">
+                                <td><input type="checkbox" class="route-checkbox" value="@route.Id" /></td>
                                 <td class="text-center">
                                     @if (!string.IsNullOrEmpty(route.ImageUrl))
                                     {
@@ -179,8 +231,9 @@
                     </tbody>
                 </table>
             </div>
+        </div>
 
-            <!-- Pagination -->
+            @* <!-- Pagination -->
             @if (Model.TotalPages > 1)
             {
                 <nav aria-label="Page navigation">
@@ -218,7 +271,10 @@
                     </ul>
                 </nav>
             }
-        </div>
+        </div> *@
+                <div class="card-footer">
+                    <partial name="_GmailPagination" model="Model" />
+                </div>
     </div>
 </div>
 
@@ -267,8 +323,94 @@
         </div>
     </div>
 </div>
+</div>
 
 @section Scripts {
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+            <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+            <script>
+                $(document).ready(function() {
+                    // Initialize date range picker
+                    $('#dateRange').daterangepicker({
+                        autoUpdateInput: false,
+                        locale: {
+                            cancelLabel: 'Clear',
+                            format: 'MM/DD/YYYY'
+                        }
+                    });
+
+                    $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
+                        $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                    });
+
+                    $('#dateRange').on('cancel.daterangepicker', function() {
+                        $(this).val('');
+                    });
+
+                    // Load departments
+                    loadDepartments();
+
+                    // Real-time search
+                    $('#searchInput').on('input', function() {
+                        filterTable();
+                    });
+                });
+
+                function filterTable() {
+                    const searchTerm = $('#searchInput').val().toLowerCase();
+                    $('#routesTableBody tr').each(function() {
+                        const searchData = $(this).data('search');
+                        $(this).toggle(searchData.includes(searchTerm));
+                    });
+                }
+
+                function loadDepartments() {
+                    $.get('/api/departments', function(departments) {
+                        const select = $('#departmentFilter');
+                        departments.forEach(dept => {
+                            select.append(`<option value="${dept.id}">${dept.name}</option>`);
+                        });
+                    });
+                }
+
+                function applyFilters() {
+                    const params = new URLSearchParams();
+
+                    const search = $('#searchInput').val();
+                    if (search) params.append('search', search);
+
+                    const dateRange = $('#dateRange').val();
+                    if (dateRange) {
+                        const dates = dateRange.split(' - ');
+                        params.append('startDate', dates[0]);
+                        params.append('endDate', dates[1]);
+                    }
+
+                    const status = $('#statusFilter').val();
+                    if (status) params.append('isCompleted', status);
+
+                    const dept = $('#departmentFilter').val();
+                    if (dept) params.append('departmentId', dept);
+
+                    params.append('pageNumber', '@Model.PageNumber');
+                    params.append('pageSize', '@Model.PageSize');
+
+                    window.location.href = '/Routes?' + params.toString();
+                }
+
+                function changePage(page) {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('pageNumber', page);
+                    window.location.href = '/Routes?' + params.toString();
+                }
+
+                function exportData() {
+                    const params = new URLSearchParams(window.location.search);
+                    params.append('export', 'true');
+                    window.location.href = '/Routes/Export?' + params.toString();
+                }
+            </script>
     <script>
         function showImageModal(imageUrl, title) {
             $('#modalImage').attr('src', imageUrl);
@@ -348,4 +490,14 @@
             });
         }
     </script>
+            <style>
+                .gmail-pagination {
+                    font-size: 0.875rem;
+                }
+
+                .pagination-controls .btn {
+                    padding: 0.25rem 0.5rem;
+                    margin: 0 0.125rem;
+                }
+            </style>
 }

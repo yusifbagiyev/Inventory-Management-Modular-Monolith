@@ -1,0 +1,22 @@
+﻿@model PagedResultDto<RouteViewModel>
+@{
+    var startItem = ((Model.PageNumber - 1) * Model.PageSize) + 1;
+    var endItem = Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount);
+}
+
+<div class="gmail-pagination d-flex align-items-center justify-content-between">
+    <div class="pagination-info">
+        <span class="text-muted">@startItem–@endItem of @Model.TotalCount</span>
+    </div>
+
+    <div class="pagination-controls">
+        <button class="btn btn-sm btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")"
+                onclick="changePage(@(Model.PageNumber - 1))" @(!Model.HasPreviousPage ? "disabled" : "")>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")"
+                onclick="changePage(@(Model.PageNumber + 1))" @(!Model.HasNextPage ? "disabled" : "")>
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+</div>

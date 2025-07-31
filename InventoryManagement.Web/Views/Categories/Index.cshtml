@@ -262,9 +262,9 @@
 
 @section Scripts {
     <script>
+            let allCategories=[];
         $(document).ready(function() {
-            // Initialize Data
-            const allCategories = $('.category-item').toArray();
+            allCategories=$('.category-item').toArray();
 
             // Search functionality
             $('#searchInput').on('input', function() {
@@ -290,7 +290,8 @@
             let visibleItems = allCategories.filter(item => {
                 const $item = $(item);
                 const matchesSearch = searchTerm === '' ||
-                    $item.data('name').includes(searchTerm);
+                    $item.data('name').includes(searchTerm) ||
+                    $item.find('.fw-semibold').text().toLowerCase().includes(searchTerm);
                 const matchesStatus = statusFilter === '' ||
                     $item.data('status') === statusFilter;
 
