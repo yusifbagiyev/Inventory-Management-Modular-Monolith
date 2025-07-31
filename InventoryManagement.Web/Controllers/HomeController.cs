@@ -34,39 +34,43 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 //Fetch dashboard data from API
-                var products = await _apiService.GetAsync<List<dynamic>>("api/products");
-                var routes = await _apiService.GetAsync<List<dynamic>>("api/inventoryroutes");
+                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+                var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>("api/inventoryroutes?pageNumber=1&pageSize=1000");
+                var departments = await _apiService.GetAsync<List<DepartmentViewModel>>("/api/departments");
+                var categories = await _apiService.GetAsync<List<CategoryViewModel>>("/api/categories");
 
                 if (products != null)
                 {
                     model.TotalProducts=products.Count;
-                    model.ActiveProducts = products.Count(p =>
-                    {
-                        try
-                        {
-                            return p.IsActive == true;
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
+                    model.ActiveProducts = products.Count(p => p.IsActive);
                 }
 
                 if (routes != null)
                 {
-                    model.TotalRoutes = routes.Count;
-                    model.PendingTransfers = routes.Count(r =>
+                    model.TotalRoutes = routes.TotalCount;
+                    model.PendingTransfers = routes.Items.Count(r => !r.IsCompleted);
+                }
+
+                if (departments != null && products != null)
+                {
+                    model.DepartmentStats = departments.Select(d => new DepartmentStats
                     {
-                        try
-                        {
-                            return r.isCompleted != true;
-                        }
-                        catch
-                        {
-                            return false;
-                        }
-                    });
+                        DepartmentName = d.Name,
+                        ProductCount = products.Count(p => p.DepartmentId == d.Id),
+                        ActiveWorkers = products.Where(p => p.DepartmentId == d.Id && !string.IsNullOrEmpty(p.Worker))
+                                              .Select(p => p.Worker).Distinct().Count()
+                    }).OrderByDescending(d => d.ProductCount).Take(5).ToList();
+                }
+
+                if (categories != null && products != null)
+                {
+                    var colors = new[] { "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899" };
+                    model.CategoryDistributions = categories.Select((c, index) => new CategoryDistribution
+                    {
+                        CategoryName = c.Name,
+                        Count = products.Count(p => p.CategoryId == c.Id),
+                        Color = colors[index % colors.Length]
+                    }).Where(c => c.Count > 0).OrderByDescending(c => c.Count).ToList();
                 }
             }
             catch (UnauthorizedAccessException)

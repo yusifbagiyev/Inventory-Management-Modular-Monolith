@@ -295,7 +295,13 @@
                         }, 2000);
                     }
                     else {
-                        errorMessage = 'Error searching for product. Please try again.';
+                        // Parse error message from response
+                        try {
+                            const response = xhr.responseJSON || JSON.parse(xhr.responseText);
+                            errorMessage = response.message || response.error || response.title || 'Error searching for product';
+                        } catch {
+                            errorMessage = 'Error searching for product. Please try again.';
+                        }
                     }
 
                     showError(errorMessage);

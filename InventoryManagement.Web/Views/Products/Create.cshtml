@@ -181,12 +181,17 @@
                     // Always reset button on error
                     $submitBtn.prop('disabled', false).html(originalBtnHtml);
 
+                    // Clear previous error states
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+
                     // Special handling for inventory code errors
             if (errorMessage.toLowerCase().includes('inventory code')) {
-                $('#InventoryCode').addClass('is-invalid')
-                    .after('<div class="invalid-feedback">' + errorMessage + '</div>');
-            }
+                $('#InventoryCode').addClass('is-invalid');
+                if (!$('#InventoryCode').next('.invalid-feedback').length) {
+                    $('#InventoryCode').after('<div class="invalid-feedback">' + errorMessage + '</div>');
                 }
+            }}
             });
         });
     </script>

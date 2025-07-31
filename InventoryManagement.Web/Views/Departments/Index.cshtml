@@ -3,10 +3,11 @@
     ViewData["Title"] = "Departments";
 }
 
-<div class="container-fluid px-4">
+<div class="container-fluid px-4 py-3">
+    <!-- Header with breadcrumb and button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0">Departments</h1>
+            <h1 class="h3 mb-0">Department Management</h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
@@ -14,114 +15,248 @@
                 </ol>
             </nav>
         </div>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Department
+        <a asp-action="Create" class="btn btn-primary btn-icon">
+            <i class="fas fa-plus me-2"></i>Add Department
         </a>
     </div>
 
-    <!-- Department Table with Enhanced Features -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <table class="table table-hover" id="departmentsTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Products</th>
-                        <th>Workers</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var department in Model)
-                    {
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-primary shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Total Departments</h6>
+                            <h3 class="mb-0">@Model.Count</h3>
+                        </div>
+                        <div class="icon-shape bg-primary-soft text-primary rounded-3">
+                            <i class="fas fa-building fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-success shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Active</h6>
+                            <h3 class="mb-0 text-success">@Model.Count(d => d.IsActive)</h3>
+                        </div>
+                        <div class="icon-shape bg-success-soft text-success rounded-3">
+                            <i class="fas fa-check-circle fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-secondary shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Inactive</h6>
+                            <h3 class="mb-0 text-secondary">@Model.Count(d => !d.IsActive)</h3>
+                        </div>
+                        <div class="icon-shape bg-secondary-soft text-secondary rounded-3">
+                            <i class="fas fa-times-circle fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-3 border-start-info shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">With Products</h6>
+                            <h3 class="mb-0">@Model.Sum(d => d.ProductCount)</h3>
+                        </div>
+                        <div class="icon-shape bg-info-soft text-info rounded-3">
+                            <i class="fas fa-boxes fa-lg"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-4 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchInput" class="form-control border-start-0"
+                               placeholder="Search departments...">
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <select id="sortBy" class="form-select">
+                        <option value="name">Sort by Name</option>
+                        <option value="products">Sort by Products</option>
+                        <option value="created">Sort by Date</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary flex-grow-1" onclick="resetFilters()">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Departments Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
                         <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="rounded-circle bg-primary-soft text-primary p-2 me-3">
-                                        <i class="fas fa-building"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-0">@department.Name</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="text-muted">
-                                    @(string.IsNullOrEmpty(department.Description) ? "-" : department.Description)
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-boxes text-primary me-2"></i>
-                                    <span class="fw-bold">@department.ProductCount</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-users text-success me-2"></i>
-                                    <span class="fw-bold">@department.WorkerCount</span>
-                                </div>
-                            </td>
-                            <td>
-                                @if (department.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            <td data-order="@department.CreatedAt.Ticks">
-                                @department.CreatedAt.ToString("MMM dd, yyyy")
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a asp-action="Details" asp-route-id="@department.Id"
-                                       class="btn btn-sm btn-outline-info" title="View">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@department.Id"
-                                       class="btn btn-sm btn-outline-warning" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                            onclick="deleteDepartment(@department.Id)" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            <th>Department</th>
+                            <th>Description</th>
+                            <th class="text-center">Products</th>
+                            <th class="text-center">Workers</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody id="departmentsTable">
+                        @foreach (var department in Model)
+                        {
+                            <tr class="department-item"
+                                data-name="@department.Name.ToLower()"
+                                data-status="@(department.IsActive ? "active" : "inactive")"
+                                data-products="@department.ProductCount"
+                                data-created="@department.CreatedAt.Ticks">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-shape bg-light text-primary rounded-2 p-2 me-3">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@department.Name</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;">
+                                        @(string.IsNullOrEmpty(department.Description) ? "No description" : department.Description)
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill px-3 py-2">
+                                        @department.ProductCount
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info rounded-pill px-3 py-2">
+                                        @department.WorkerCount
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (department.IsActive)
+                                    {
+                                        <span class="badge bg-success-soft text-success py-2 px-3">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-soft text-secondary py-2 px-3">
+                                            <i class="fas fa-times-circle me-1"></i>Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="text-muted small">
+                                        @department.CreatedAt.ToString("MMM dd, yyyy")
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@department.Id"
+                                           class="btn btn-sm btn-outline-info" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@department.Id"
+                                           class="btn btn-sm btn-outline-primary rounded-3 px-3">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-3"
+                                                onclick="deleteDepartment(@department.Id, '@department.Name')">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="noResults" class="text-center py-5" style="display: none;">
+                <div class="py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-4"></i>
+                    <h5 class="text-muted">No departments found</h5>
+                    <p class="text-muted">Try adjusting your search or filter criteria</p>
+                    <button class="btn btn-outline-primary mt-2" onclick="resetFilters()">
+                        <i class="fas fa-redo me-1"></i>Reset Filters
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirm Delete
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete this department?</p>
-                <p class="text-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    This action cannot be undone and may affect associated products.
-                </p>
+                <p>Are you sure you want to delete <strong class="text-danger" id="departmentName"></strong>?</p>
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    This will permanently delete the department and affect associated products.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <form id="deleteForm" method="post" style="display: inline;">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
                 </form>
             </div>
         </div>
@@ -130,72 +265,136 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            $('#departmentsTable').DataTable({
-                pageLength: 25,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                responsive: true,
-                order: [[5, 'desc']], // Sort by created date
-                columnDefs: [
-                    { orderable: false, targets: 6 } // Disable sorting on actions column
-                ],
-                language: {
-                    search: "Search departments:",
-                    lengthMenu: "Show _MENU_ departments per page",
-                    info: "Showing _START_ to _END_ of _TOTAL_ departments",
-                    paginate: {
-                        first: '<i class="fas fa-angle-double-left"></i>',
-                        previous: '<i class="fas fa-angle-left"></i>',
-                        next: '<i class="fas fa-angle-right"></i>',
-                        last: '<i class="fas fa-angle-double-right"></i>'
-                    }
-                },
-                dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
-                initComplete: function() {
-                    // Add custom filters
-                    this.api().columns([4]).every(function() {
-                        var column = this;
-                        var select = $('<select class="form-select form-select-sm ms-2"><option value="">All Status</option></select>')
-                            .appendTo($('.dataTables_filter'))
-                            .on('change', function() {
-                                var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                                column.search(val ? '^' + val + '$' : '', true, false).draw();
-                            });
+        let allDepartments = [];
 
-                        column.data().unique().sort().each(function(d, j) {
-                            select.append('<option value="' + d + '">' + d + '</option>');
-                        });
-                    });
-                }
+        $(document).ready(function() {
+            // Store all departments
+            allDepartments = $('.department-item').toArray();
+
+            // Search functionality
+            $('#searchInput').on('input', function() {
+                filterDepartments();
+            });
+
+            // Filter functionality
+            $('#statusFilter, #sortBy').on('change', function() {
+                filterDepartments();
             });
         });
 
-        function deleteDepartment(id) {
+        function filterDepartments() {
+            const searchTerm = $('#searchInput').val().toLowerCase().trim();
+            const statusFilter = $('#statusFilter').val();
+            const sortBy = $('#sortBy').val();
+
+            let visibleItems = allDepartments.filter(item => {
+                const $item = $(item);
+                const matchesSearch = searchTerm === '' ||
+                    $item.data('name').includes(searchTerm);
+                const matchesStatus = statusFilter === '' ||
+                    $item.data('status') === statusFilter;
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Sort items
+            visibleItems.sort((a, b) => {
+                const $a = $(a);
+                const $b = $(b);
+
+                switch(sortBy) {
+                    case 'name':
+                        return $a.data('name').localeCompare($b.data('name'));
+                    case 'products':
+                        return $b.data('products') - $a.data('products');
+                    case 'created':
+                        return $b.data('created') - $a.data('created');
+                    default:
+                        return 0;
+                }
+            });
+
+            // Update table
+            $('.department-item').hide();
+            $(visibleItems).show();
+
+            // Toggle empty state
+            $('#noResults').toggle(visibleItems.length === 0);
+        }
+
+        function resetFilters() {
+            $('#searchInput').val('');
+            $('#statusFilter').val('');
+            $('#sortBy').val('name');
+            filterDepartments();
+        }
+
+        function deleteDepartment(id, name) {
+            $('#departmentName').text(name);
             $('#deleteForm').attr('action', '/Departments/Delete/' + id);
             $('#deleteModal').modal('show');
         }
     </script>
 
     <style>
-        .bg-primary-soft {
-            background-color: rgba(59, 130, 246, 0.1);
+        .card {
+            border-radius: 12px;
+            border: none;
         }
 
-        .dataTables_filter {
+        .border-start-3 {
+            border-left: 3px solid !important;
+        }
+
+        .icon-shape {
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: center;
         }
 
-            .dataTables_filter label {
-                margin-bottom: 0;
-                display: flex;
-                align-items: center;
+        .bg-primary-soft {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+        }
+
+        .bg-success-soft {
+            background-color: rgba(25, 135, 84, 0.1) !important;
+        }
+
+        .bg-secondary-soft {
+            background-color: rgba(108, 117, 125, 0.1) !important;
+        }
+
+        .bg-info-soft {
+            background-color: rgba(13, 202, 240, 0.1) !important;
+        }
+
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .table tr {
+            transition: all 0.2s ease;
+        }
+
+            .table tr:hover {
+                background-color: rgba(248, 249, 250, 0.8);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.03);
             }
 
-            .dataTables_filter input {
-                margin-left: 0.5rem;
-                width: 250px;
-            }
+        .table > tbody > tr:last-child > td {
+            border-bottom: none;
+        }
+
+        .table td {
+            vertical-align: middle;
+            padding: 1.2rem 1rem;
+        }
     </style>
 }
