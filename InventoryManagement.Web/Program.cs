@@ -97,6 +97,8 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
 
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
