@@ -172,8 +172,11 @@
                                         <td>
                                             <div class="progress" style="height: 20px;">
                                                 @{
-                                                    var utilization = dept.ActiveWorkers > 0 ? (dept.ProductCount * 100.0 / (dept.ActiveWorkers * 10)) : 0;
-                                                    utilization = Math.Min(100, utilization);
+                                                    // Utilization = (Products / (Workers * 10)) * 100
+                                                    // Assuming each worker can handle 10 products optimally
+                                                    var utilization = dept.ActiveWorkers > 0
+                                                    ? Math.Min(100, (dept.ProductCount * 100.0 / (dept.ActiveWorkers * 10)))
+                                                    : 0;
                                                 }
                                                 <div class="progress-bar" style="width: @utilization%">
                                                     @utilization.ToString("F0")%
@@ -319,7 +322,12 @@
 
                 // Reload page with period parameter
             window.location.href = '/Home/Dashboard?period=' + period;
-            showToast(`Switched to ${period} view`, 'info');
+        });
+
+        // Set active button on page load
+        $(document).ready(function() {
+            const currentPeriod = '@ViewBag.Period' || 'today';
+            $(`[data-period="${currentPeriod}"]`).addClass('active');
         });
     </script>
 

@@ -27,7 +27,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        public async Task<IActionResult> Dashboard()
+        public async Task<IActionResult> Dashboard(string period="today")
         {
             var model = new DashboardViewModel();
 
@@ -48,7 +48,18 @@ namespace InventoryManagement.Web.Controllers
                 if (routes != null)
                 {
                     model.TotalRoutes = routes.TotalCount;
-                    model.PendingTransfers = routes.Items.Count(r => !r.IsCompleted);
+
+                    var now = DateTime.Now;
+                    DateTime startDate = period switch
+                    {
+                        "week" => now.AddDays(-7),
+                        "month" => now.AddMonths(-1),
+                        _ => now.Date
+                    };
+
+                    var periodRoutes = routes.Items.Where(r => r.CreatedAt >= startDate).ToList();
+                    model.CompletedTransfers = periodRoutes.Count(r => r.IsCompleted);
+                    model.PendingTransfers = periodRoutes.Count(r => !r.IsCompleted);
                 }
 
                 if (departments != null && products != null)
@@ -72,20 +83,6 @@ namespace InventoryManagement.Web.Controllers
                         Color = colors[index % colors.Length]
                     }).Where(c => c.Count > 0).OrderByDescending(c => c.Count).Take(8).ToList();
                 }
-
-                // Calculate real trasnfer activity for the selected period
-                var now=DateTime.Now;
-                var period = Request.Query["period"].ToString();
-                DateTime startDate = period switch
-                {
-                    "week" => now.AddDays(-7),
-                    "month" => now.AddMonths(-1),
-                    _ => now.Date
-                };
-
-                var periodRoutes = routes?.Items.Where(r => r.CreatedAt >= startDate).ToList();
-                model.CompletedTransfers = periodRoutes?.Count(r => r.IsCompleted);
-                model.PendingTransfers = periodRoutes?.Count(r => !r.IsCompleted);
             }
             catch (UnauthorizedAccessException)
             {
@@ -95,6 +92,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 return HandleException(ex,new DashboardViewModel());
             }
+
             return View(model);
         }
 

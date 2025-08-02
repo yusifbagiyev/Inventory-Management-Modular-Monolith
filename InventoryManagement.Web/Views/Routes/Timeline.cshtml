@@ -16,9 +16,22 @@
         <div class="col-lg-8">
             <div class="card mb-4 shadow">
                 <div class="card-header">
-                    <i class="fas fa-history me-1"></i>
-                    Product Transfer History
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-history me-1"></i>
+                            Product Transfer History
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="exportTimeline()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="printTimeline()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
                 </div>
+            </div>
                 <div class="card-body">
                     @if (Model.Any())
                     {
@@ -127,7 +140,41 @@
             </div>
         </div>
     </div>
-</div>
+@section Scripts {
+    <script src="~/js/export-utils.js"></script>
+    <script>
+        function exportTimeline() {
+            let csv = ['Date,Type,From,To,Status,Notes'];
+
+            @foreach (var route in Model.OrderByDescending(r => r.CreatedAt))
+            {
+                    <text>
+                    csv.push([
+                        '@route.CreatedAt.ToString("yyyy-MM-dd HH:mm")',
+                        '@route.RouteTypeName',
+                        '@(route.FromDepartmentName ?? "N/A") (@(route.FromWorker ?? "N/A"))',
+                        '@route.ToDepartmentName (@(route.ToWorker ?? "N/A"))',
+                        '@(route.IsCompleted ? "Completed" : "Pending")',
+                        '@(route.Notes?.Replace("\"", "\"\"") ?? "")'
+                    ].join(','));
+                    </text>
+            }
+
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'timeline_' + new Date().toISOString().split('T')[0] + '.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function printTimeline() {
+            window.print();
+        }
+    </script>
+}
 
 <style>
     .timeline {

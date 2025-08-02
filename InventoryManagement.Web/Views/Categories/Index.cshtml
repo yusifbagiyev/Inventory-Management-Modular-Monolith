@@ -307,9 +307,9 @@
                     case 'name':
                         return $a.data('name').localeCompare($b.data('name'));
                     case 'products':
-                        return $b.data('products') - $a.data('products');
+                        return parseInt($b.data('products')) - parseInt($a.data('products'));
                     case 'created':
-                        return $b.data('created') - $a.data('created');
+                        return parseInt($b.data('created')) - parseInt($a.data('created'));
                     default:
                         return 0;
                 }
