@@ -276,7 +276,7 @@
             <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
             <script src="~/js/export-utils.js"></script>
             <script>
-                $(document).ready(function() {
+        $(document).ready(function() {
                     // Initialize date range picker
                     $('#dateRange').daterangepicker({
                         autoUpdateInput: false,
@@ -304,60 +304,89 @@
                         $('.route-checkbox').prop('checked', $(this).prop('checked'));
                     });
                 });
-
-                function filterTable() {
-                    const searchTerm = $('#searchInput').val().toLowerCase();
-                    $('#routesTableBody tr').each(function() {
-                        const searchData = $(this).data('search');
-                        $(this).toggle(searchData.includes(searchTerm));
-                    });
-                }
-
-                function applyFilters() {
-                    const params = new URLSearchParams();
-
-                    const search = $('#searchInput').val();
-                    if (search) params.append('search', search);
-
-                    const dateRange = $('#dateRange').val();
-                    if (dateRange) {
-                        const dates = dateRange.split(' - ');
-                        params.append('startDate', dates[0]);
-                        params.append('endDate', dates[1]);
+        function filterTable() {
+                        const searchTerm = $('#searchInput').val().toLowerCase();
+                        $('#routesTableBody tr').each(function() {
+                            const searchData = $(this).data('search');
+                            $(this).toggle(searchData.includes(searchTerm));
+                        });
                     }
+        function applyFilters() {
+            const params = new URLSearchParams();
 
-                    const status = $('#statusFilter').val();
-                    if (status) params.append('isCompleted', status);
+            const search = $('#searchInput').val();
+            if (search) params.append('search', search);
 
-                    params.append('pageNumber', '@Model.PageNumber');
-                    params.append('pageSize', '@Model.PageSize');
-
-                    window.location.href = '/Routes?' + params.toString();
+            const dateRange = $('#dateRange').val();
+            if (dateRange) {
+                const dates = dateRange.split(' - ');
+                if (dates.length === 2) {
+                    params.append('startDate', dates[0]);
+                    params.append('endDate', dates[1]);
                 }
+            }
 
-                    function resetFilters() {
+            const status = $('#statusFilter').val();
+            if (status) params.append('isCompleted', status);
+
+            // Preserve page size
+            params.append('pageSize', '@Model.PageSize');
+
+            window.location.href = '/Routes?' + params.toString();
+        }
+        function resetFilters() {
                     $('#searchInput').val('');
                     $('#dateRange').val('');
                     $('#statusFilter').val('');
                     window.location.href = '/Routes';
                 }
+        function changePage(page) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('pageNumber', page);
+            window.location.href = '/Routes?' + params.toString();
+        }
+        function exportData()
+         {
+            const selectedIds = $('.route-checkbox:checked').map(function() {
+                return $(this).val();
+            }).get();
 
-                function changePage(page) {
-                        exportTableToCSV('routesTable', 'routes_' + new Date().toISOString().split('T')[0]);
-                }
+            if (selectedIds.length === 0) {
+                showToast('Please select routes to export', 'warning');
+                return;
+            }
 
-                function exportData() {
-                    const params = new URLSearchParams(window.location.search);
-                    params.append('export', 'true');
-                    window.location.href = '/Routes/Export?' + params.toString();
-                }
-                function showImageModal(imageUrl, title) {
+            // Create a form for POST request
+            const form = $('<form>', {
+                method: 'POST',
+                action: '/Routes/ExportToPdf'
+            });
+
+            selectedIds.forEach(id => {
+                form.append($('<input>', {
+                    type: 'hidden',
+                    name: 'routeIds',
+                    value: id
+                }));
+            });
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: '__RequestVerificationToken',
+                value: $('input[name="__RequestVerificationToken"]').val()
+            }));
+
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        }
+        function showImageModal(imageUrl, title) {
                     $('#modalImage').attr('src', imageUrl);
                     $('#imageModalTitle').text(title);
                     $('#imageModal').modal('show');
                 }
-
-                function completeRoute(id) {
+        function completeRoute(id)
+                {
                     if (confirm('Are you sure you want to mark this route as completed?')) {
                         const form = document.createElement('form');
                         form.method = 'POST';
@@ -374,8 +403,7 @@
                         form.submit();
                     }
                 }
-
-                function deleteRoute(id) {
+        function deleteRoute(id) {
                     if (confirm('Are you sure you want to delete this route?')) {
                         const form = document.createElement('form');
                         form.method = 'POST';

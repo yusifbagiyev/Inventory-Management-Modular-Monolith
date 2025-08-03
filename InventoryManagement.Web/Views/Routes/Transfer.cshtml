@@ -271,8 +271,9 @@
                         currentProductId = product.id;
                         displayProductInfo(product);
                         $('#productId').val(product.id);
-                        showTransferFields();
-                        hideError();
+
+                        // Check for pending routes
+                        checkPendingRoutes(product.id);
                     } else {
                         currentProductId = null;
                         showError('No product found with inventory code: ' + inventoryCode);
@@ -307,6 +308,38 @@
                     showError(errorMessage);
                     hideProductInfo();
                     hideTransferFields();
+                }
+            });
+        }
+
+        function checkPendingRoutes(productId)
+        {
+            $.ajax({
+                url:'@Configuration["ApiGateway:BaseUrl"]'+'/api/inventoryroutes/product/'+productId,
+                type:'GET',
+                headers:{
+                    'Authorization':'Bearer @ViewBag.JwtToken'
+                },
+                        success: function(routes) {
+                    const pendingRoutes = routes.filter(r => !r.isCompleted);
+
+                    if (pendingRoutes.length > 0) {
+                        const lastPending = pendingRoutes[0];
+                        const warningHtml = `
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Warning:</strong> This product has a pending transfer to ${lastPending.toDepartmentName}
+                                created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
+                                <br>
+                                <small>The pending transfer must be completed or cancelled before creating a new one.</small>
+                            </div>
+                        `;
+                        $('#productInfo').after(warningHtml);
+                        hideTransferFields();
+                    } else {
+                        showTransferFields();
+                        hideError();
+                    }
                 }
             });
         }

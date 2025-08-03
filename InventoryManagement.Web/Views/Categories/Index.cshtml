@@ -282,7 +282,7 @@
             });
         });
 
-        function filterCategories() {
+                function filterCategories() {
             const searchTerm = $('#searchInput').val().toLowerCase().trim();
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
@@ -298,7 +298,7 @@
                 return matchesSearch && matchesStatus;
             });
 
-            // Sort items
+            // Fixed sorting logic - ensure proper type conversion
             visibleItems.sort((a, b) => {
                 const $a = $(a);
                 const $b = $(b);
@@ -307,8 +307,10 @@
                     case 'name':
                         return $a.data('name').localeCompare($b.data('name'));
                     case 'products':
+                        // Convert to numbers for proper comparison
                         return parseInt($b.data('products')) - parseInt($a.data('products'));
                     case 'created':
+                        // Convert to numbers for date comparison
                         return parseInt($b.data('created')) - parseInt($a.data('created'));
                     default:
                         return 0;
@@ -318,6 +320,12 @@
             // Update table
             $('.category-item').hide();
             $(visibleItems).show();
+
+            // Reorder the DOM elements to reflect the sort
+            const $tbody = $('#categoriesTable tbody');
+            visibleItems.forEach(item => {
+                $tbody.append(item);
+            });
 
             // Toggle empty state
             $('#noResults').toggle(visibleItems.length === 0);

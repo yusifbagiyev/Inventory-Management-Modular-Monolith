@@ -53,7 +53,7 @@ namespace InventoryManagement.Web.Controllers
 
                 if (IsAjaxRequest())
                 {
-                    return AjaxResponse(true, "Notification marked as read");
+                    return Json( new {succcess=true} );
                 }
 
                 return RedirectToAction("Index");

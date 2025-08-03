@@ -24,8 +24,17 @@ namespace InventoryManagement.Web.Controllers
             {
                 var queryString = isCompleted.HasValue ? $"&isCompleted={isCompleted.Value}" : "";
 
+                // Add ordering to show pending first
+                queryString += "&orderBy=IsCompleted&ascending=true";
+
                 var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
                     $"api/inventoryroutes?pageNumber={pageNumber}&pageSize={pageSize}{queryString}");
+
+                // If API doesn't support ordering, sort client-side
+                if (routes != null && routes.Items.Any())
+                {
+                    routes.Items = routes.Items.OrderBy(r => r.IsCompleted).ThenByDescending(r => r.CreatedAt).ToList();
+                }
 
                 ViewBag.CurrentFilter = isCompleted;
                 ViewBag.PageNumber = pageNumber ?? 1;
