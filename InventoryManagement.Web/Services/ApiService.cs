@@ -37,23 +37,14 @@ namespace InventoryManagement.Web.Services
             _httpClient.DefaultRequestHeaders.Authorization = null;
 
             // First try to get token from HttpContext.Items (set by middleware)
-            var token = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string;
-
-            // If not in Items, try session
-            if (string.IsNullOrEmpty(token))
-            {
-                token = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
-            }
-
-            // If still not found, try cookies (for remember me scenarios)
-            if (string.IsNullOrEmpty(token))
-            {
-                token = _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
-            }
+            var token = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
 
             if (!string.IsNullOrEmpty(token))
             {
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                _logger.LogDebug("Authorization header set with token");
             }
             else
             {
@@ -62,15 +53,56 @@ namespace InventoryManagement.Web.Services
         }
 
 
+        private string? GetCurrentAccessToken()
+        {
+            return _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
+        }
+
+        private string? GetCurrentRefreshToken()
+        {
+            return _httpContextAccessor.HttpContext?.Items["RefreshToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["refresh_token"];
+        }
+
+        private void StoreTokens(TokenDto tokenDto)
+        {
+            var context=_httpContextAccessor.HttpContext;
+            if (context == null) return;
+
+            // Update in HttpContext.Items for immediate use
+            context.Items["JwtToken"]=tokenDto.AccessToken;
+            context.Items["RefreshToken"]= tokenDto.RefreshToken;
+
+            // Update in session
+            context.Session.SetString("JwtToken",tokenDto.AccessToken);
+            context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
+            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
+
+            // Update cookies if they exists (Remember me)
+            if (context.Request.Cookies.ContainsKey("jwt_token"))
+            {
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = context.Request.IsHttps,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                };
+
+                context.Response.Cookies.Append("jwt_token",tokenDto.AccessToken, cookieOptions);
+                context.Response.Cookies.Append("refresh_token",tokenDto.RefreshToken,cookieOptions);
+                context.Response.Cookies.Append("user_data",JsonConvert.SerializeObject(tokenDto.User),cookieOptions);
+            }
+        }
+
         private async Task<bool> TryRefreshTokenAsync()
         {
-            var accessToken = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
-                           ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
-                           ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
+            var accessToken = GetCurrentAccessToken();
 
-            var refreshToken = _httpContextAccessor.HttpContext?.Items["RefreshToken"] as string
-                            ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken")
-                            ?? _httpContextAccessor.HttpContext?.Request.Cookies["refresh_token"];
+            var refreshToken = GetCurrentRefreshToken();
 
             if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
             {
@@ -84,15 +116,7 @@ namespace InventoryManagement.Web.Services
 
                 if (tokenDto != null && !string.IsNullOrEmpty(tokenDto.AccessToken))
                 {
-                    // Update in HttpContext.Items for immediate use
-                    _httpContextAccessor?.HttpContext?.Items["JwtToken"] = tokenDto.AccessToken;
-                    _httpContextAccessor?.HttpContext?.Items["RefreshToken"] = tokenDto.RefreshToken;
-
-                    // Update in session
-                    _httpContextAccessor?.HttpContext?.Session.SetString("JwtToken", tokenDto.AccessToken);
-                    _httpContextAccessor?.HttpContext?.Session.SetString("RefreshToken", tokenDto.RefreshToken);
-                    _httpContextAccessor?.HttpContext?.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
-
+                    StoreTokens(tokenDto);
                     _logger.LogInformation("Token refreshed successfully in ApiService");
                     return true;
                 }
@@ -108,117 +132,93 @@ namespace InventoryManagement.Web.Services
 
         public async Task<T?> GetAsync<T>(string endpoint)
         {
-            try
+            AddAuthorizationHeader();
+
+            var response = await _httpClient.GetAsync(endpoint);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                AddAuthorizationHeader();
-                var response = await _httpClient.GetAsync(endpoint);
+                _logger.LogInformation("Received 401, attempting token refresh for GET {Endpoint}", endpoint);
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                if (await TryRefreshTokenAsync())
                 {
-                    if (await TryRefreshTokenAsync())
-                    {
-                        AddAuthorizationHeader();
-                        response = await _httpClient.GetAsync(endpoint);
-                    }
+                    AddAuthorizationHeader();
+                    response = await _httpClient.GetAsync(endpoint);
                 }
-
-                if (response.IsSuccessStatusCode)
+                else
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<T>(content);
+                    // Let the middleware handle this as unauthorized
+                    throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
                 }
-
-                // Log error response
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger?.LogError($"API request failed: {response.StatusCode} - {errorContent}");
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
-                {
-                    throw new UnauthorizedAccessException("Authentication failed");
-                }
-
-                return default;
             }
-            catch (UnauthorizedAccessException)
+
+            if (response.IsSuccessStatusCode)
             {
-                throw; // Re-throw to be handled by calling code
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<T>(content);
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Error calling API endpoint: {endpoint}");
-                return default;
-            }
+
+            // Log error response
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError("API request failed: {StatusCode} - {ErrorContent} for endpoint: {Endpoint}",
+            response.StatusCode, errorContent, endpoint);
+
+            // Let the middleware handle non-success status codes
+            await ThrowHttpRequestException(response, errorContent);
+            return default; // This line won't be reached but satisfies compiler
         }
 
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            try
+            AddAuthorizationHeader();
+
+            var json = JsonConvert.SerializeObject(data);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                AddAuthorizationHeader();
-
-                var json = JsonConvert.SerializeObject(data);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync(endpoint, content);
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                if (await TryRefreshTokenAsync())
                 {
-                    if(await TryRefreshTokenAsync())
-                    {
-                        AddAuthorizationHeader();
-                        response = await _httpClient.PostAsync(endpoint, content);
-                    }
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PostAsync(endpoint, content);
                 }
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
+                else
                 {
-                    // Check if it's an approval response
-                    try
-                    {
-                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-                        if (jsonResponse?.Status == "PendingApproval" ||
-                            jsonResponse?.status == "PendingApproval" ||
-                            response.StatusCode == HttpStatusCode.Accepted)
-                        {
-                            return new ApiResponse<TResponse>
-                            {
-                                IsSuccess = false,
-                                IsApprovalRequest = true,
-                                Message = jsonResponse?.Message ?? "Request submitted for approval",
-                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
-                                Data = default
-                            };
-                        }
-                    }
-                    catch { }
-
                     return new ApiResponse<TResponse>
                     {
-                        IsSuccess = true,
-                        Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                        IsSuccess = false,
+                        Message = "Authentication failed - please login again"
                     };
+                }
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Check if response indicates approval even with 200 OK
+                if (IsApprovalResponse(responseContent))
+                {
+                    return HandleApprovalResponse<TResponse>(responseContent);
                 }
 
                 return new ApiResponse<TResponse>
                 {
-                    IsSuccess = false,
-                    Message = $"Request failed with status {response.StatusCode}",
-                    Data = default
+                    IsSuccess = true,
+                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
                 };
             }
-            catch (Exception ex)
+
+            // For non-success responses, return structured error
+            return new ApiResponse<TResponse>
             {
-                return new ApiResponse<TResponse>
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    Data = default
-                };
-            }
+                IsSuccess = false,
+                Message = ParseErrorMessage(responseContent, response.StatusCode),
+                Data = default
+            };
         }
 
 
@@ -227,182 +227,42 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto=null)
         {
-            try
+            AddAuthorizationHeader();
+
+            using var content = BuildMultipartContent(form, dataDto);
+
+            var response = await _httpClient.PostAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
             {
                 AddAuthorizationHeader();
-
-                using var content = new MultipartFormDataContent();
-
-                // Add DTO properties first
-                if (dataDto != null)
-                {
-                    var properties = dataDto.GetType().GetProperties();
-                    foreach (var prop in properties)
-                    {
-                        if (prop.Name == "ImageFile") continue;
-
-                        var value = prop.GetValue(dataDto)?.ToString() ?? "";
-                        content.Add(new StringContent(value), prop.Name);
-                    }
-                }
-
-                // Add form files
-                foreach (var file in form.Files)
-                {
-                    var streamContent = new StreamContent(file.OpenReadStream());
-                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-                    content.Add(streamContent, "ImageFile", file.FileName);
-                }
-
-
-                // Add remaining form fields (prioritizing DTO values)
-                foreach (var field in form)
-                {
-                    if(field.Key=="ImageFile"||
-                        field.Key=="__RequestVerificationToken"||
-                        (dataDto?.GetType().GetProperty(field.Key)!=null))
-                        continue; // Skip if already handled fields
-
-                    content.Add(new StringContent(field.Value!), field.Key);
-                }
-
-                var response = await _httpClient.PostAsync(endpoint, content);
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
-                {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.PostAsync(endpoint, content);
-                }
-
-                var responseContent=await response.Content.ReadAsStringAsync();
-
-                var apiResponse = new ApiResponse<T>();
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new ApiResponse<T>
-                    {
-                        IsSuccess = false,
-                        Message = ParseErrorMessage(responseContent, response.StatusCode),
-                        Data = default
-                    };
-                }
-
-                // Handle successful responses
-                try
-                {
-                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-                    // Check for approval responses
-                    if (jsonResponse?.status == "PendingApproval" ||
-                        jsonResponse?.Status == "PendingApproval" ||
-                        jsonResponse?.approvalRequestId != null ||
-                        jsonResponse?.ApprovalRequestId != null)
-                    {
-                        apiResponse.IsApprovalRequest = true;
-                        apiResponse.Message = jsonResponse?.message ?? "Request submitted for approval";
-                        apiResponse.ApprovalRequestId = jsonResponse?.approvalRequestId ?? jsonResponse?.ApprovalRequestId;
-                        apiResponse.IsSuccess = false; // Approval requests aren't "successful" in the traditional sense
-                    }
-                    else
-                    {
-                        apiResponse.IsSuccess = true;
-                        apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
-                    }
-                }
-                catch
-                {
-                    apiResponse.IsSuccess = true;
-                    if (typeof(T) != typeof(string))
-                    {
-                        apiResponse.Data = JsonConvert.DeserializeObject<T>(responseContent);
-                    }
-                }
-
-                return apiResponse;
+                response = await _httpClient.PostAsync(endpoint, content);
             }
-            catch (Exception ex)
-            {
-                return new ApiResponse<T>
-                {
-                    IsSuccess = false,
-                    Message = ex.Message
-                };
-            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            return await ProcessResponse<T>(response, responseContent);
         }
 
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            try
+            AddAuthorizationHeader();
+
+            var json = JsonConvert.SerializeObject(data);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
             {
                 AddAuthorizationHeader();
-                var json = JsonConvert.SerializeObject(data);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PutAsync(endpoint, content);
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
-                {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.PutAsync(endpoint, content);
-                }
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new ApiResponse<TResponse>
-                    {
-                        IsSuccess = false,
-                        Message = ParseErrorMessage(responseContent, response.StatusCode),
-                        Data=default
-                    };
-                }
-
-                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
-                {
-                    // Check for approval response
-                    try
-                    {
-                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-                        if (jsonResponse?.Status == "PendingApproval" || response.StatusCode == HttpStatusCode.Accepted)
-                        {
-                            return new ApiResponse<TResponse>
-                            {
-                                IsSuccess = false,
-                                IsApprovalRequest = true,
-                                Message = jsonResponse?.Message ?? "Request submitted for approval",
-                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
-                                Data = default
-                            };
-                        }
-                    }
-                    catch { }
-
-                    return new ApiResponse<TResponse>
-                    {
-                        IsSuccess = true,
-                        Data = response.StatusCode == HttpStatusCode.NoContent
-                            ? (TResponse)(object)true
-                            : JsonConvert.DeserializeObject<TResponse>(responseContent)
-                    };
-                }
-
-                return new ApiResponse<TResponse>
-                {
-                    IsSuccess = false,
-                    Message = $"Request failed with status {response.StatusCode}",
-                    Data = default
-                };
+                response = await _httpClient.PutAsync(endpoint, content);
             }
-            catch (Exception ex)
-            {
-                return new ApiResponse<TResponse>
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    Data = default
-                };
-            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            return await ProcessResponse<TResponse>(response, responseContent);
         }
 
 
@@ -411,143 +271,178 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto = null)
         {
-            try
+            AddAuthorizationHeader();
+
+            using var content = BuildMultipartContent(form, dataDto);
+
+            var response = await _httpClient.PutAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
             {
                 AddAuthorizationHeader();
-                using var content = new MultipartFormDataContent();
-
-                // Add all form fields
-                foreach (var field in form)
-                {
-                    if (field.Key == "__RequestVerificationToken") continue;
-                    content.Add(new StringContent(field.Value.ToString()), field.Key);
-                }
-
-                // Add files if any
-                foreach (var file in form.Files)
-                {
-                    if (file.Length > 0)
-                    {
-                        var streamContent = new StreamContent(file.OpenReadStream());
-                        streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-                        content.Add(streamContent, file.Name, file.FileName);
-                    }
-                }
-
-                var response = await _httpClient.PutAsync(endpoint, content);
-
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
-                {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.PutAsync(endpoint, content);
-                }
-
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return new ApiResponse<TResponse>
-                    {
-                        IsSuccess = false,
-                        Message = ParseErrorMessage(responseContent, response.StatusCode),
-                        Data = default
-                    };
-                }
-
-                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Accepted)
-                {
-                    // Check for approval response
-                    try
-                    {
-                        dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-                        if (jsonResponse?.Status == "PendingApproval" || response.StatusCode == HttpStatusCode.Accepted)
-                        {
-                            return new ApiResponse<TResponse>
-                            {
-                                IsSuccess = false,
-                                IsApprovalRequest = true,
-                                Message = jsonResponse?.Message ?? "Request submitted for approval",
-                                ApprovalRequestId = jsonResponse?.ApprovalRequestId,
-                                Data = default
-                            };
-                        }
-                    }
-                    catch { }
-
-                    return new ApiResponse<TResponse>
-                    {
-                        IsSuccess = true,
-                        Data = response.StatusCode == HttpStatusCode.NoContent
-                            ? (TResponse)(object)true
-                            : JsonConvert.DeserializeObject<TResponse>(responseContent)
-                    };
-                }
-
-                return new ApiResponse<TResponse>
-                {
-                    IsSuccess = response.IsSuccessStatusCode,
-                    Data = response.IsSuccessStatusCode ? (TResponse)(object)true : default,
-                    Message = response.IsSuccessStatusCode ? null : "Request failed"
-                };
+                response = await _httpClient.PutAsync(endpoint, content);
             }
-            catch (Exception ex)
-            {
-                return new ApiResponse<TResponse>
-                {
-                    IsSuccess = false,
-                    Message = ex.Message,
-                    Data = default
-                };
-            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            return await ProcessResponse<TResponse>(response, responseContent);
         }
 
 
         public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
         {
-            try
+            AddAuthorizationHeader();
+
+            var response = await _httpClient.DeleteAsync(endpoint);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
             {
                 AddAuthorizationHeader();
-                var response = await _httpClient.DeleteAsync(endpoint);
+                response = await _httpClient.DeleteAsync(endpoint);
+            }
 
-                if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
-                {
-                    AddAuthorizationHeader();
-                    response = await _httpClient.DeleteAsync(endpoint);
-                }
-
-                if (response.StatusCode == HttpStatusCode.Accepted)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-                    return new ApiResponse<bool>
-                    {
-                        IsSuccess = false,
-                        IsApprovalRequest = true,
-                        Message = jsonResponse?.Message ?? "Request submitted for approval",
-                        ApprovalRequestId = jsonResponse?.ApprovalRequestId,
-                        Data = false
-                    };
-                }
+            if (response.StatusCode == HttpStatusCode.Accepted)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
 
                 return new ApiResponse<bool>
                 {
-                    IsSuccess = response.IsSuccessStatusCode,
-                    Data = response.IsSuccessStatusCode,
-                    Message = response.IsSuccessStatusCode ? null : $"Request failed with status {response.StatusCode}"
+                    IsSuccess = false,
+                    IsApprovalRequest = true,
+                    Message = jsonResponse?.Message ?? "Request submitted for approval",
+                    ApprovalRequestId = jsonResponse?.ApprovalRequestId,
+                    Data = false
+                };
+            }
+
+            return new ApiResponse<bool>
+            {
+                IsSuccess = response.IsSuccessStatusCode,
+                Data = response.IsSuccessStatusCode,
+                Message = response.IsSuccessStatusCode ? null : $"Request failed with status {response.StatusCode}"
+            };
+        }
+
+
+        private MultipartFormDataContent BuildMultipartContent(IFormCollection form,object? dataDto)
+        {
+            var content= new MultipartFormDataContent();
+
+            // Add DTO properties first
+            if(dataDto != null)
+            {
+                var properties = dataDto.GetType().GetProperties();
+                foreach (var prop in properties)
+                {
+                    if (prop.Name == "ImageFile") continue;
+
+                    var value = prop.GetValue(dataDto)?.ToString() ?? "";
+                    content.Add(new StringContent(value), prop.Name);
+                }
+            }
+
+            // Add form files
+            foreach(var file in form.Files)
+            {
+                if (file.Length > 0)
+                {
+                    var streamContent=new StreamContent(file.OpenReadStream());
+                    streamContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+                    content.Add(streamContent, file.Name, file.FileName);
+                }
+            }
+
+            // Add remaining form fields
+            foreach(var field in form)
+            {
+                if(field.Key=="ImageFile"||
+                    field.Key=="__RequestVerificationToken"||
+                    (dataDto?.GetType().GetProperty(field.Key) != null))
+                    continue;
+
+                content.Add(new StringContent(field.Value!),field.Key);
+            }
+            return content;
+        }
+
+
+        private async Task<ApiResponse<T>> ProcessResponse<T>(HttpResponseMessage response, string responseContent)
+        {
+            // Handle approval responses
+            if (response.StatusCode == HttpStatusCode.Accepted|| IsApprovalResponse(responseContent))
+            {
+                return HandleApprovalResponse<T>(responseContent);
+            }
+            if (!response.IsSuccessStatusCode)
+            {
+                return new ApiResponse<T>
+                {
+                    IsSuccess = false,
+                    Message = ParseErrorMessage(responseContent, response.StatusCode),
+                    Data = default
+                };
+            }
+
+            // Handle NoContent responses
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                return new ApiResponse<T>
+                {
+                    IsSuccess = true,
+                    Data = typeof(T) == typeof(bool) ? (T)(object)true : default
+                };
+            }
+
+            return new ApiResponse<T>
+            {
+                IsSuccess = true,
+                Data = JsonConvert.DeserializeObject<T>(responseContent)
+            };
+        }
+
+        private bool IsApprovalResponse(string responseContent)
+        {
+            try
+            {
+                dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
+                return jsonResponse?.Status=="PendingApproval"||
+                       jsonResponse?.status=="PendingApproval"||
+                       jsonResponse?.approvalRequestId!=null||
+                       jsonResponse?.ApprovalRequestId!=null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private ApiResponse<T> HandleApprovalResponse<T> (string responseContent)
+        {
+            try
+            {
+                dynamic? jsonResponse= JsonConvert.DeserializeObject(responseContent);
+                return new ApiResponse<T>
+                {
+                    IsSuccess = false,
+                    IsApprovalRequest = true,
+                    Message = jsonResponse?.Message ?? jsonResponse?.message ?? "Request submitted for approval",
+                    ApprovalRequestId = jsonResponse?.ApprovalRequestId ?? jsonResponse?.approvalRequestId,
+                    Data=default
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse<bool>
+                _logger.LogError(ex, "Error parsing approval response");
+                return new ApiResponse<T>
                 {
                     IsSuccess = false,
-                    Message = ex.Message,
-                    Data = false
+                    IsApprovalRequest = true,
+                    Message = "Request submitted for approval",
+                    Data = default
                 };
             }
         }
-
 
         private string ParseErrorMessage(string responseContent, HttpStatusCode statusCode)
         {
@@ -579,12 +474,46 @@ namespace InventoryManagement.Web.Services
                     return string.Join("; ", errors);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return $"Request failed with status {statusCode}";
+                _logger.LogError(ex, "Error parsing error message from response");
             }
+            // Return status-based default message
+            return GetDefaultErrorMessage(statusCode);
+        }
 
-            return $"Request failed with status {statusCode}";
+        private string GetDefaultErrorMessage(HttpStatusCode statusCode)
+        {
+            return statusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid request. Please check your input.",
+                HttpStatusCode.Unauthorized => "You are not authorized. Please login again.",
+                HttpStatusCode.Forbidden => "You don't have permission to perform this action.",
+                HttpStatusCode.NotFound => "The requested resource was not found.",
+                HttpStatusCode.Conflict => "This operation conflicts with existing data.",
+                HttpStatusCode.InternalServerError => "Server error occurred. Please try again later.",
+                _ => $"Request failed with status {statusCode}"
+            };
+        }
+
+        // Throw appropriate exception based on HTTP status
+        private Task ThrowHttpRequestException(HttpResponseMessage response, string content)
+        {
+            var message = ParseErrorMessage(content, response.StatusCode);
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Unauthorized:
+                    throw new UnauthorizedAccessException(message);
+                case HttpStatusCode.Forbidden:
+                    throw new UnauthorizedAccessException(message);
+                case HttpStatusCode.NotFound:
+                    throw new KeyNotFoundException(message);
+                case HttpStatusCode.Conflict:
+                    throw new InvalidOperationException(message);
+                default:
+                    throw new HttpRequestException(message);
+            }
         }
     }
 }
