@@ -1,62 +1,69 @@
-﻿function exportTableToCSV(tableId, filename) {
-    const table = document.getElementById(tableId);
-    const rows = table.querySelectorAll('tr');
-    let csv = [];
+﻿function exportToPDF(data, filename, title) {
+    // This is a placeholder - you'll need to implement actual PDF generation
+    // For now, we'll create a formatted HTML that can be saved as PDF
 
-    for (let i = 0; i < rows.length; i++) {
-        const row = [];
-        const cols = rows[i].querySelectorAll('td, th');
+    const printWindow = window.open('', '_blank');
+    const htmlContent = generatePDFContent(data, title);
 
-        for (let j = 0; j < cols.length; j++) {
-            // Skip action columns
-            if (!cols[j].classList.contains('actions-column')) {
-                let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, '').trim();
-                data = data.replace(/"/g, '""');
-                row.push('"' + data + '"');
-            }
-        }
-        csv.push(row.join(','));
-    }
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
 
-    const csvContent = csv.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename + '.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // Trigger browser's print dialog which allows saving as PDF
+    printWindow.onload = function () {
+        printWindow.print();
+        printWindow.close();
+    };
 }
 
-function printTable(tableId, title) {
-    const printWindow = window.open('', '_blank');
-    const table = document.getElementById(tableId).outerHTML;
-
-    printWindow.document.write(`
+function generatePDFContent(data, title) {
+    return `
+        <!DOCTYPE html>
         <html>
         <head>
             <title>${title}</title>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
             <style>
-                body { font-family: Arial, sans-serif; }
-                .actions-column, .no-print { display: none !important; }
-                table { width: 100%; }
-                @media print {
-                    .no-print { display: none !important; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 20px;
+                }
+                h1 { 
+                    color: #333; 
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 10px;
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 20px;
+                }
+                th, td { 
+                    border: 1px solid #ddd; 
+                    padding: 8px; 
+                    text-align: left;
+                }
+                th { 
+                    background-color: #f2f2f2; 
+                    font-weight: bold;
+                }
+                tr:nth-child(even) { 
+                    background-color: #f9f9f9;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
                 }
             </style>
         </head>
         <body>
-            <h2>${title}</h2>
-            <p>Printed on: ${new Date().toLocaleString()}</p>
-            ${table}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    window.close();
-                }
-            </script>
+            <h1>${title}</h1>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+            ${data}
+            <div class="footer">
+                <p>© ${new Date().getFullYear()} Inventory Management System</p>
+            </div>
         </body>
         </html>
-    `);
+    `;
 }

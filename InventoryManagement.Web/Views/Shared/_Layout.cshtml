@@ -432,20 +432,24 @@
             `;
         }
 
-        function markAsRead(notificationId) {
+                function markAsRead(notificationId) {
             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
-                data: { notificationId: notificationId },
+                contentType: 'application/json',
+                data: JSON.stringify(notificationId),
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
-                success: function() {
-                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
-                    loadNotificationCount();
+                success: function(response) {
+                    if (response.success) {
+                        $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                        loadNotificationCount();
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to mark notification as read:', error);
+                    showToast('Failed to mark notification as read', 'error');
                 }
             });
         }

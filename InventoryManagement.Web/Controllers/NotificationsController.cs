@@ -45,22 +45,17 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkAsRead(int notificationId)
+        public async Task<IActionResult> MarkAsRead([FromBody] int notificationId)
         {
             try
             {
                 await _notificationService.MarkAsReadAsync(notificationId);
-
-                if (IsAjaxRequest())
-                {
-                    return Json( new {succcess=true} );
-                }
-
-                return RedirectToAction("Index");
+                return Json(new { success = true });
             }
             catch (Exception ex)
             {
-                return HandleException(ex);
+                _logger.LogError(ex, "Failed to mark notification as read");
+                return Json(new { success = false, error = ex.Message });
             }
         }
 

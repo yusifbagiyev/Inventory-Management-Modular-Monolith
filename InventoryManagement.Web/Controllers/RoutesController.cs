@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+﻿using System.Text;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -231,6 +232,54 @@ namespace InventoryManagement.Web.Controllers
                 _logger?.LogError(ex, "Error completing route");
                 TempData["Error"] = "An error occurred while completing the route";
                 return RedirectToAction(nameof(Index));  // Add this return
+            }
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExportToPdf([FromForm] List<int> routeIds)
+        {
+            try
+            {
+                if (routeIds == null || !routeIds.Any())
+                {
+                    TempData["Error"] = "Please select routes to export";
+                    return RedirectToAction("Index");
+                }
+
+                // For now, let's export as CSV until PDF implementation is ready
+                var routes = new List<RouteViewModel>();
+
+                foreach (var id in routeIds)
+                {
+                    var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
+                    if (route != null)
+                        routes.Add(route);
+                }
+
+                // Generate CSV content
+                var csv = new StringBuilder();
+                csv.AppendLine("Date,Type,Product,From,To,Status");
+
+                foreach (var route in routes)
+                {
+                    csv.AppendLine($"{route.CreatedAt:yyyy-MM-dd HH:mm}," +
+                                  $"{route.RouteTypeName}," +
+                                  $"{route.InventoryCode} - {route.Model}," +
+                                  $"{route.FromDepartmentName ?? "N/A"} ({route.FromWorker ?? "N/A"})," +
+                                  $"{route.ToDepartmentName} ({route.ToWorker ?? "N/A"})," +
+                                  $"{(route.IsCompleted ? "Completed" : "Pending")}");
+                }
+
+                var bytes = Encoding.UTF8.GetBytes(csv.ToString());
+                return File(bytes, "text/csv", $"routes_export_{DateTime.Now:yyyyMMdd}.csv");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting routes");
+                TempData["Error"] = "Failed to export routes";
+                return RedirectToAction("Index");
             }
         }
 

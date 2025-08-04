@@ -18,11 +18,8 @@
                     Product Inventory
                 </div>
                 <div class="col text-end">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="exportTableToCSV('productsTable', 'products_' + new Date().toISOString().split('T')[0])">
-                        <i class="fas fa-download"></i> Export CSV
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="printTable('productsTable', 'Product Inventory')">
-                        <i class="fas fa-print"></i> Print
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportProductsToPDF()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                     @if (User.HasPermission("product.create")||User.HasPermission("product.create.direct"))
                     {
@@ -290,10 +287,27 @@
                 }
             });
         });
+
         function showImageModal(imageUrl, title) {
             $('#globalModalImage').attr('src', imageUrl);
             $('#globalImageModal .modal-title').text(title || 'Image Preview');
             $('#globalImageModal').modal('show');
+        }
+
+            function exportProductsToPDF() {
+            const table = document.getElementById('productsTable').cloneNode(true);
+
+            // Remove action columns
+            const headers = table.querySelectorAll('th');
+            const actionIndex = Array.from(headers).findIndex(th => th.textContent.includes('Actions'));
+            if (actionIndex > -1) {
+                headers[actionIndex].remove();
+                table.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells[actionIndex]) cells[actionIndex].remove();
+                });
+            }
+            exportToPDF(table.outerHTML, 'products_export.pdf', 'Product Inventory Report');
         }
     </script>
 }

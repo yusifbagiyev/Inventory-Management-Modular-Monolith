@@ -185,6 +185,7 @@
                     showError('Inventory code must be between 1 and 9999');
                     hideProductInfo();
                     hideTransferFields();
+                    $('.route-warning').remove();
                     return;
                 }
 
@@ -258,6 +259,7 @@
 
         // Moved searchProduct function to global scope
         function searchProduct(inventoryCode) {
+            $('.route-warning').remove();
             $.ajax({
                 url: '@Configuration["ApiGateway:BaseUrl"]' + '/api/products/search/inventory-code/' + inventoryCode,
                 type: 'GET',
@@ -287,7 +289,7 @@
                     let errorMessage = '';
 
                     if (xhr.status === 404) {
-                        errorMessage = 'Product not found with code: ' + inventoryCode;
+                        errorMessage = 'Product not found with code: ${inventoryCode}';
                     }
                     else if (xhr.status === 401) {
                         errorMessage = 'Session expired. Redirecting to login...';
@@ -298,8 +300,19 @@
                     else {
                         // Parse error message from response
                         try {
-                            const response = xhr.responseJSON || JSON.parse(xhr.responseText);
-                            errorMessage = response.message || response.error || response.title || 'Error searching for product';
+                            if (xhr.responseJSON) {
+                                errorMessage = xhr.responseJSON.message ||
+                                              xhr.responseJSON.error ||
+                                              xhr.responseJSON.title ||
+                                              'Error searching for product';
+                            } 
+                            else if (xhr.responseText) {
+                                // Try to parse as JSON
+                                const response = JSON.parse(xhr.responseText);
+                                errorMessage = response.message || response.error || 'Error searching for product';
+                            } else {
+                                errorMessage = 'Error searching for product. Please try again.';
+                            }
                         } catch {
                             errorMessage = 'Error searching for product. Please try again.';
                         }
@@ -314,6 +327,9 @@
 
         function checkPendingRoutes(productId)
         {
+                // Remove any existing warnings first
+                $('.route-warning').remove();
+
             $.ajax({
                 url:'@Configuration["ApiGateway:BaseUrl"]'+'/api/inventoryroutes/product/'+productId,
                 type:'GET',
@@ -326,21 +342,26 @@
                     if (pendingRoutes.length > 0) {
                         const lastPending = pendingRoutes[0];
                         const warningHtml = `
-                            <div class="alert alert-warning mt-3">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Warning:</strong> This product has a pending transfer to ${lastPending.toDepartmentName}
-                                created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
-                                <br>
-                                <small>The pending transfer must be completed or cancelled before creating a new one.</small>
-                            </div>
-                        `;
+                    <div class="alert alert-warning mt-3 route-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> This product has a pending transfer to ${lastPending.toDepartmentName}
+                        created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
+                        <br>
+                        <small>The pending transfer must be completed or cancelled before creating a new one.</small>
+                    </div>
+                `;
                         $('#productInfo').after(warningHtml);
                         hideTransferFields();
                     } else {
                         showTransferFields();
                         hideError();
                     }
-                }
+                },
+                error: function(xhr) {
+                console.error('Failed to check pending routes:', xhr);
+                // Continue anyway if check fails
+                showTransferFields();
+        }
             });
         }
 
@@ -394,6 +415,7 @@
             hideTransferFields();
             hideError();
             $('#searchFeedback').empty();
+            $('.route-warning').remove(); // Remove any warnings
             currentProductId=null;
             $('#productId').val('');
         }

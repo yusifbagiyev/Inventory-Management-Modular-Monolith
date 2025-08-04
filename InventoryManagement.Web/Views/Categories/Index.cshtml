@@ -282,7 +282,7 @@
             });
         });
 
-                function filterCategories() {
+            function filterCategories() {
             const searchTerm = $('#searchInput').val().toLowerCase().trim();
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
@@ -298,36 +298,41 @@
                 return matchesSearch && matchesStatus;
             });
 
-            // Fixed sorting logic - ensure proper type conversion
+            // Sort items with proper type conversion
             visibleItems.sort((a, b) => {
                 const $a = $(a);
                 const $b = $(b);
 
                 switch(sortBy) {
                     case 'name':
-                        return $a.data('name').localeCompare($b.data('name'));
+                        // String comparison for names
+                        return $a.data('name').toString().localeCompare($b.data('name').toString());
                     case 'products':
-                        // Convert to numbers for proper comparison
-                        return parseInt($b.data('products')) - parseInt($a.data('products'));
+                        // Convert to numbers explicitly for proper numerical comparison
+                        const aProducts = parseInt($a.data('products')) || 0;
+                        const bProducts = parseInt($b.data('products')) || 0;
+                        return bProducts - aProducts; // Descending order (highest first)
                     case 'created':
-                        // Convert to numbers for date comparison
-                        return parseInt($b.data('created')) - parseInt($a.data('created'));
+                        // Convert to numbers for date comparison (ticks)
+                        const aCreated = parseInt($a.data('created')) || 0;
+                        const bCreated = parseInt($b.data('created')) || 0;
+                        return bCreated - aCreated; // Descending order (newest first)
                     default:
                         return 0;
                 }
             });
 
-            // Update table
-            $('.category-item').hide();
-            $(visibleItems).show();
+            // Clear and rebuild the table body
+            const $tbody = $('#categoriesTable');
+            $tbody.empty();
 
-            // Reorder the DOM elements to reflect the sort
-            const $tbody = $('#categoriesTable tbody');
+            // Append sorted items
             visibleItems.forEach(item => {
                 $tbody.append(item);
             });
 
-            // Toggle empty state
+            // Show/hide the table and empty state
+            $('.table-responsive').toggle(visibleItems.length > 0);
             $('#noResults').toggle(visibleItems.length === 0);
         }
 

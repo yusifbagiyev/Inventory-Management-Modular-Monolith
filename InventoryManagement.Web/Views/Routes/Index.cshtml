@@ -327,13 +327,18 @@
             }
 
             const status = $('#statusFilter').val();
-            if (status) params.append('isCompleted', status);
+            if (status !== '') {
+                params.append('isCompleted', status);
+            }
 
-            // Preserve page size
+            // Preserve current page size
             params.append('pageSize', '@Model.PageSize');
+            params.append('pageNumber', '1'); // Reset to first page
 
-            window.location.href = '/Routes?' + params.toString();
+            // Navigate to the filtered URL
+            window.location.href = '/Routes' + (params.toString() ? '?' + params.toString() : '');
         }
+
         function resetFilters() {
                     $('#searchInput').val('');
                     $('#dateRange').val('');
