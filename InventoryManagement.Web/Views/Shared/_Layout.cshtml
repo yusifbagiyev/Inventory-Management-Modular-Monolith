@@ -218,16 +218,27 @@
 
         function playNotificationSound() 
         {
-                    try {
-                        const audio = new Audio('/sounds/notify.mp3');
-                        audio.volume = 0.5; // 50% volume
-                        audio.play().catch(err => {
-                            console.log('Could not play notification sound:', err);
-                        });
-                    } catch (error) {
-                        console.error('Error playing notification sound:', error);
-                    }
+            try {
+                // Create a new audio instance each time to ensure it plays
+                    const audio = new Audio('/sounds/notify.mp3');
+                    audio.volume = 0.5;
+
+                    // Reset the audio to beginning before playing
+                    audio.currentTime = 0;
+                    // Use a promise chain to handle play completion
+                    audio.play().then(() =>
+                    {
+                        console.log('Notification sound played successfully');
+                    })
+                    .catch(err => {
+                        console.log('Could not play notification sound:', err);
+                    });
+                }
+                catch (error) {
+                    console.error('Error playing notification sound:', error);
+                }
          }
+
 
         function initializeNotifications() {
             const token = $('#jwtToken').val();
@@ -454,18 +465,26 @@
             });
         }
 
-        function markAllAsRead() {
+                function markAllAsRead() {
             $.ajax({
                 url: '/Notifications/MarkAllAsRead',
                 type: 'POST',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val() // Get first token
                 },
-                success: function() {
-                    $('.notification-item').removeClass('unread');
-                    $('.notification-dot').remove();
-                    updateNotificationBadge(0);
-                    showToast('All notifications marked as read', 'success');
+                success: function(response) {
+                    // Handle both JSON and direct responses
+                    if (response && response.success !== false) {
+                        $('.notification-item').removeClass('unread');
+                        $('.notification-dot').remove();
+                        updateNotificationBadge(0);
+                        showToast('All notifications marked as read', 'success');
+
+                        // Reload notifications if dropdown is open
+                        if ($('#notificationDropdown').hasClass('show')) {
+                            loadRecentNotifications();
+                        }
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to mark all as read:', error);

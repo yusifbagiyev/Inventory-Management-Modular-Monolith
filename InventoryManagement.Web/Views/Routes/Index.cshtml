@@ -66,10 +66,7 @@
                         </a>
                     }
                     <button class="btn btn-outline-secondary btn-sm" onclick="exportData()">
-                        <i class="fas fa-download"></i> Export
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-                        <i class="fas fa-print"></i> Print
+                        <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                     <div class="btn-group btn-group-sm" role="group">
                         <a asp-action="Index" asp-route-isCompleted="" class="btn btn-outline-secondary @(ViewBag.CurrentFilter == null ? "active" : "")">
@@ -149,10 +146,10 @@
                                             <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId"
                                                class="text-decoration-none">
                                                 <span class="badge bg-primary">@route.InventoryCode</span>
-                                                @route.Model
+                                                @route.Vendor
                                             </a>
                                             <br />
-                                            <small class="text-muted">@route.Vendor</small>
+                                            <small class="text-muted">@route.Model</small>
                                         </td>
                                         <td>
                                             @if (route.FromDepartmentName != null)
@@ -274,7 +271,7 @@
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
             <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-            <script src="~/js/export-utils.js"></script>
+            <script src="~/js/pdf-export.js"></script>
             <script>
         $(document).ready(function() {
                     // Initialize date range picker
@@ -304,13 +301,16 @@
                         $('.route-checkbox').prop('checked', $(this).prop('checked'));
                     });
                 });
-        function filterTable() {
-                        const searchTerm = $('#searchInput').val().toLowerCase();
+
+        function filterTable() 
+        {
+            const searchTerm = $('#searchInput').val().toLowerCase();
                         $('#routesTableBody tr').each(function() {
                             const searchData = $(this).data('search');
                             $(this).toggle(searchData.includes(searchTerm));
                         });
-                    }
+        }
+
         function applyFilters() {
             const params = new URLSearchParams();
 
@@ -321,8 +321,16 @@
             if (dateRange) {
                 const dates = dateRange.split(' - ');
                 if (dates.length === 2) {
-                    params.append('startDate', dates[0]);
-                    params.append('endDate', dates[1]);
+                    // Convert local dates to UTC for API
+                    const startDate = new Date(dates[0]);
+                    const endDate = new Date(dates[1]);
+
+                    // Set end date to end of day in local time
+                    endDate.setHours(23, 59, 59, 999);
+
+                    // Format as ISO strings (which will be in UTC)
+                    params.append('startDate', startDate.toISOString());
+                    params.append('endDate', endDate.toISOString());
                 }
             }
 
@@ -339,6 +347,18 @@
             window.location.href = '/Routes' + (params.toString() ? '?' + params.toString() : '');
         }
 
+        function formatLocalDateTime(utcDateString) {
+            const date = new Date(utcDateString);
+            return date.toLocaleString('en-US', {
+                timeZone: 'Asia/Baku', // Azerbaijan timezone
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
         function resetFilters() {
                     $('#searchInput').val('');
                     $('#dateRange').val('');
@@ -352,38 +372,7 @@
         }
         function exportData()
          {
-            const selectedIds = $('.route-checkbox:checked').map(function() {
-                return $(this).val();
-            }).get();
-
-            if (selectedIds.length === 0) {
-                showToast('Please select routes to export', 'warning');
-                return;
-            }
-
-            // Create a form for POST request
-            const form = $('<form>', {
-                method: 'POST',
-                action: '/Routes/ExportToPdf'
-            });
-
-            selectedIds.forEach(id => {
-                form.append($('<input>', {
-                    type: 'hidden',
-                    name: 'routeIds',
-                    value: id
-                }));
-            });
-
-            form.append($('<input>', {
-                type: 'hidden',
-                name: '__RequestVerificationToken',
-                value: $('input[name="__RequestVerificationToken"]').val()
-            }));
-
-            $('body').append(form);
-            form.submit();
-            form.remove();
+             exportRoutesToPDF();
         }
         function showImageModal(imageUrl, title) {
                     $('#modalImage').attr('src', imageUrl);
@@ -453,6 +442,19 @@
         .pagination-controls .btn {
             padding: 0.25rem 0.5rem;
             margin: 0 0.125rem;
+        }
+        #routesTable{
+            font-weight:normal;
+        }
+    
+        #routesTable tbody tr {
+            font-weight: normal; /* Ensure body rows are normal weight */
+        }
+    
+        /* Additional styles matching products view */
+        #routesTable tbody td {
+            vertical-align: middle;
+            font-weight: 400;
         }
     </style>
 }

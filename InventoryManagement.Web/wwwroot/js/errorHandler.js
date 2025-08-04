@@ -1,5 +1,4 @@
-﻿// Global Error Handler for AJAX requests
-const ErrorHandler = {
+﻿const ErrorHandler = {
     // Parse error message from various response formats
     parseErrorMessage: function (xhr, defaultMessage = 'An error occured') {
         try {

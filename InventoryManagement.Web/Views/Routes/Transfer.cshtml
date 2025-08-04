@@ -289,7 +289,7 @@
                     let errorMessage = '';
 
                     if (xhr.status === 404) {
-                        errorMessage = 'Product not found with code: ${inventoryCode}';
+                        errorMessage = `Product not found with code: ${inventoryCode}`;
                     }
                     else if (xhr.status === 401) {
                         errorMessage = 'Session expired. Redirecting to login...';
@@ -298,23 +298,14 @@
                         }, 2000);
                     }
                     else {
-                        // Parse error message from response
-                        try {
-                            if (xhr.responseJSON) {
-                                errorMessage = xhr.responseJSON.message ||
-                                              xhr.responseJSON.error ||
-                                              xhr.responseJSON.title ||
-                                              'Error searching for product';
-                            } 
-                            else if (xhr.responseText) {
-                                // Try to parse as JSON
-                                const response = JSON.parse(xhr.responseText);
-                                errorMessage = response.message || response.error || 'Error searching for product';
-                            } else {
-                                errorMessage = 'Error searching for product. Please try again.';
-                            }
-                        } catch {
-                            errorMessage = 'Error searching for product. Please try again.';
+                        // Parse error message more carefully
+                        errorMessage = 'Error searching for product. Please try again.';
+
+                        // Don't show raw JSON errors
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
                         }
                     }
 

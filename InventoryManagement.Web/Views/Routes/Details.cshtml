@@ -111,11 +111,11 @@
                     {
                         <hr />
                         <h6 class="text-muted">Transfer Image</h6>
-                        var fullImageUrl = Model.ImageUrl.StartsWith("http")
-                        ? Model.ImageUrl
-                        : $"http://localhost:5000{Model.ImageUrl}";
-
-                        <img src="@fullImageUrl" class="img-fluid rounded" style="max-width: 400px;" alt="Transfer Image" />
+                        <img src="@Model.FullImageUrl"
+                             class="img-fluid rounded cursor-pointer"
+                             style="max-width: 400px; cursor: pointer;"
+                             alt="Transfer Image"
+                             onclick="showImageModal('@Model.FullImageUrl', 'Transfer Image')" />
                     }
                 </div>
                 <div class="card-footer">
