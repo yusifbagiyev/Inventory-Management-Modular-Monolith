@@ -333,6 +333,15 @@
                 });
             });
 
+            // Clean up Code column - remove edit controls
+            tableClone.querySelectorAll('td:first-child').forEach(cell => {
+                const displaySpan = cell.querySelector('.inventory-code-display');
+                if (displaySpan) {
+                    // Extract just the code number
+                    cell.textContent = displaySpan.textContent.trim();
+                }
+            });
+
             exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Product Inventory Report');
         }
     </script>
