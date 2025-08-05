@@ -12,6 +12,6 @@
         public DateTime? RevokedAt { get; set; }
         public string? ReplacedByToken { get; set; }
 
-        public bool IsActive => !IsRevoked && DateTime.UtcNow < ExpiresAt;
+        public bool IsActive => !IsRevoked && DateTime.UtcNow.AddHours(4) < ExpiresAt;
     }
 }

@@ -443,24 +443,22 @@
             `;
         }
 
-                function markAsRead(notificationId) {
+    function markAsRead(notificationId) {
             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
+                data: JSON.stringify({ notificationId: notificationId }),
                 contentType: 'application/json',
-                data: JSON.stringify(notificationId),
                 headers: {
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
                 success: function(response) {
-                    if (response.success) {
                         $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
-                        loadNotificationCount();
-                    }
+                            loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
-                    console.error('Failed to mark notification as read:', error);
-                    showToast('Failed to mark notification as read', 'error');
+                        const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Failed to mark notification as read');
+                        showToast(errorMessage, 'error');
                 }
             });
         }
@@ -473,8 +471,6 @@
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val() // Get first token
                 },
                 success: function(response) {
-                    // Handle both JSON and direct responses
-                    if (response && response.success !== false) {
                         $('.notification-item').removeClass('unread');
                         $('.notification-dot').remove();
                         updateNotificationBadge(0);
@@ -484,11 +480,10 @@
                         if ($('#notificationDropdown').hasClass('show')) {
                             loadRecentNotifications();
                         }
-                    }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Failed to mark all as read:', error);
-                    showToast('Failed to mark notifications as read', 'error');
+                        const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Failed to mark notifications as read');
+                        showToast(errorMessage, 'error');
                 }
             });
         }
@@ -587,6 +582,8 @@
                 'ApprovalResponse': 'fas fa-check-circle',
                 'ProductUpdate': 'fas fa-box',
                 'RouteUpdate': 'fas fa-route',
+                'RouteCompleted':'fas fa-check-double',
+                'TransferCompleted':'fas fa-exchange-alt',
                 'System': 'fas fa-info-circle'
             };
             return icons[type] || 'fas fa-bell';
@@ -598,6 +595,8 @@
                 'ApprovalResponse': 'success',
                 'ProductUpdate': 'info',
                 'RouteUpdate': 'info',
+                'RouteCompleted':'success',
+                'TransferCompleted':'success',
                 'System': 'secondary'
             };
             return types[type] || 'info';
@@ -609,6 +608,8 @@
                 'ApprovalResponse': 'bg-success',
                 'ProductUpdate': 'bg-info',
                 'RouteUpdate': 'bg-primary',
+                'RouteCompleted':'bg-success',
+                'TransferCompleted':'bg-success',
                 'System': 'bg-secondary'
             };
             return colors[type] || 'bg-primary';

@@ -81,7 +81,7 @@ namespace NotificationService.Application.Services
                 Type = type,
                 Title = title,
                 Message = message,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow.AddHours(4),
                 Data = data
             });
         }

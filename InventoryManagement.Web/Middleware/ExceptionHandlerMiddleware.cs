@@ -39,7 +39,7 @@ namespace InventoryManagement.Web.Middleware
             var errorResponse = new ErrorResponse
             {
                 TraceId = context.TraceIdentifier,
-                Timestamp= DateTime.UtcNow
+                Timestamp= DateTime.UtcNow.AddHours(4)
             };
 
             switch (exception)

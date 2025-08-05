@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NotificationService.Application.DTOs;
 using NotificationService.Domain.Repositories;
@@ -19,10 +20,12 @@ namespace NotificationService.API.Controllers
             _unitOfWork = unitOfWork;
         }
 
+
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<NotificationDto>>> GetMyNotifications([FromQuery] bool unreadOnly = false)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
             if (userId == 0)
                 return Ok(new List<NotificationDto>());
@@ -42,10 +45,11 @@ namespace NotificationService.API.Controllers
         }
 
 
+
         [HttpGet("recent")]
         public async Task<ActionResult<IEnumerable<NotificationDto>>> GetRecentNotifications()
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
             if (userId == 0)
                 return Ok(new List<NotificationDto>());
@@ -70,6 +74,8 @@ namespace NotificationService.API.Controllers
         }
 
 
+
+
         [HttpGet("unread-count")]
         public async Task<ActionResult<int>> GetUnreadCount()
         {
@@ -78,17 +84,59 @@ namespace NotificationService.API.Controllers
             return Ok(count);
         }
 
+
+
+
         [HttpPost("mark-as-read")]
         public async Task<IActionResult> MarkAsRead(MarkAsReadDto dto)
         {
-            var notification = await _repository.GetByIdAsync(dto.NotificationId);
-            if (notification == null)
-                return NotFound();
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            notification.MarkAsRead();
-            await _unitOfWork.SaveChangesAsync();
+                var notification = await _repository.GetByIdAsync(dto.NotificationId);
+                if (notification == null)
+                    return NotFound(new { message = "Notification not found" });
 
-            return NoContent();
+                // Verify the notification belongs to the user
+                if (notification.UserId != userId)
+                    return Forbid();
+
+                notification.MarkAsRead();
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { success = true });
+            }
+            catch
+            {
+                return BadRequest(new { message = "Failed to mark notification as read" });
+            }
+        }
+
+
+
+        [HttpPost("mark-all-read")]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                var notifications = await _repository.GetByUserIdAsync(userId, unreadOnly: true);
+
+                foreach (var notification in notifications)
+                {
+                    notification.MarkAsRead();
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { success = true, count = notifications.Count() });
+            }
+            catch
+            {
+                return BadRequest(new { message = "Failed to mark all notifications as read" });
+            }
         }
     }
 }

@@ -78,7 +78,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     ToWorker = route.ToWorker,
                     ImageData = imageData,
                     ImageFileName = imageFileName,
-                    TransferredAt = DateTime.UtcNow
+                    TransferredAt = DateTime.UtcNow.AddHours(4)
                 };
 
                 await _messagePublisher.PublishAsync(transferEvent, "product.transferred", cancellationToken);
@@ -94,7 +94,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     FromDepartmentName = route.FromDepartmentName ?? "",
                     ToDepartmentId = route.ToDepartmentId,
                     ToDepartmentName = route.ToDepartmentName,
-                    CompletedAt = DateTime.UtcNow
+                    CompletedAt = DateTime.UtcNow.AddHours(4)
                 };
 
                 await _messagePublisher.PublishAsync(completedEvent, "route.completed", cancellationToken);

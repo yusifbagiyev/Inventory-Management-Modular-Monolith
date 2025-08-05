@@ -136,7 +136,7 @@ namespace ProductService.Application.Features.Products.Commands
                             {
                                 Product = existingProduct,
                                 Changes = string.Join(", ", changes),
-                                UpdatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow.AddHours(4),
                             };
 
                             await _messagePublisher.PublishAsync(updateEvent, "product.updated", cancellationToken);

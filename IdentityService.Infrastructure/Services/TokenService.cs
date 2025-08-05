@@ -58,7 +58,7 @@ namespace IdentityService.Infrastructure.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"])),
+                Expires = DateTime.UtcNow.AddHours(4).AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"])),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"]
@@ -122,8 +122,8 @@ namespace IdentityService.Infrastructure.Services
             {
                 Token = token,
                 UserId = userId,
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7"))
+                CreatedAt = DateTime.UtcNow.AddHours(4),
+                ExpiresAt = DateTime.UtcNow.AddHours(4).AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7"))
             };
 
             _dbContext.RefreshTokens.Add(refreshToken);
@@ -144,7 +144,7 @@ namespace IdentityService.Infrastructure.Services
             if (refreshToken != null)
             {
                 refreshToken.IsRevoked = true;
-                refreshToken.RevokedAt = DateTime.UtcNow;
+                refreshToken.RevokedAt = DateTime.UtcNow.AddHours(4);
                 refreshToken.ReplacedByToken = replacedByToken;
                 await _dbContext.SaveChangesAsync();
             }

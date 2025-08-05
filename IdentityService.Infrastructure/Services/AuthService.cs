@@ -62,7 +62,7 @@ namespace IdentityService.Infrastructure.Services
                 throw new UnauthorizedAccessException("Invalid credentials");
             }
 
-            user.LastLoginAt = DateTime.UtcNow;
+            user.LastLoginAt = DateTime.UtcNow.AddHours(4);
             await _userManager.UpdateAsync(user);
 
             // Reset lockout on successful login
@@ -82,7 +82,7 @@ namespace IdentityService.Infrastructure.Services
                 Email = dto.Email,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow.AddHours(4)
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);
@@ -141,7 +141,7 @@ namespace IdentityService.Infrastructure.Services
             {
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
+                ExpiresAt = DateTime.UtcNow.AddHours(4).AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
                 User = userDto!
             };
         }
@@ -370,7 +370,7 @@ namespace IdentityService.Infrastructure.Services
                 {
                     UserId = userId,
                     PermissionId = rolePermission.PermissionId,
-                    GrantedAt = DateTime.UtcNow,
+                    GrantedAt = DateTime.UtcNow.AddHours(4),
                     GrantedBy = "System - Role Assignment"
                 };
 
@@ -415,7 +415,7 @@ namespace IdentityService.Infrastructure.Services
             {
                 UserId = userId,
                 PermissionId = permission.Id,
-                GrantedAt = DateTime.UtcNow,
+                GrantedAt = DateTime.UtcNow.AddHours(4),
                 GrantedBy = grantedBy
             });
 
@@ -549,7 +549,7 @@ namespace IdentityService.Infrastructure.Services
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
+                ExpiresAt = DateTime.UtcNow.AddHours(4).AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpirationInMinutes"] ?? "480")),
                 User = userDto!
             };
         }
@@ -563,7 +563,7 @@ namespace IdentityService.Infrastructure.Services
             foreach (var token in activeTokens)
             {
                 token.IsRevoked = true;
-                token.RevokedAt = DateTime.UtcNow;
+                token.RevokedAt = DateTime.UtcNow.AddHours(4);
             }
 
             if (activeTokens.Any())

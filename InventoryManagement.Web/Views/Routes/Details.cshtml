@@ -169,6 +169,13 @@
 
 @section Scripts {
     <script>
+    function showImageModal(imageUrl, title) {
+            // Use the global image modal from _Layout
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
+
         function completeRoute(id) {
             if (confirm('Are you sure you want to mark this route as completed?')) {
                 const form = document.createElement('form');

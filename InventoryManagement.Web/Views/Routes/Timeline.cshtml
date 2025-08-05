@@ -147,6 +147,12 @@
                 showImageModal(imageUrl,'Transfer Image');
             });
         });
+                function showImageModal(imageUrl, title) {
+            // Use the global image modal from _Layout
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
     </script>
 <style>
     .timeline {
