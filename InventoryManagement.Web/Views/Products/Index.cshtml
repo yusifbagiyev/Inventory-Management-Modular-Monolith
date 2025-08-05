@@ -294,20 +294,46 @@
             $('#globalImageModal').modal('show');
         }
 
-            function exportProductsToPDF() {
-            const table = document.getElementById('productsTable').cloneNode(true);
-
-            // Remove action columns
-            const headers = table.querySelectorAll('th');
-            const actionIndex = Array.from(headers).findIndex(th => th.textContent.includes('Actions'));
-            if (actionIndex > -1) {
-                headers[actionIndex].remove();
-                table.querySelectorAll('tr').forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    if (cells[actionIndex]) cells[actionIndex].remove();
-                });
+                        function exportProductsToPDF() {
+            const table = document.getElementById('productsTable');
+            if (!table) {
+                showToast('Table not found', 'error');
+                return;
             }
-            exportToPDF(table.outerHTML, 'products_export.pdf', 'Product Inventory Report');
+
+            // Clone the table to modify it
+            const tableClone = table.cloneNode(true);
+
+            // Find all headers to determine indices to remove
+            const headers = tableClone.querySelectorAll('th');
+            const indicesToRemove = [];
+            const headersToKeep = ['Code', 'Product Details', 'Location', 'Status'];
+
+            headers.forEach((header, index) => {
+                const headerText = header.textContent.trim();
+                // Keep only specified columns
+                if (!headersToKeep.some(keep => headerText.includes(keep))) {
+                    indicesToRemove.push(index);
+                }
+            });
+
+            // Sort indices in descending order for safe removal
+            indicesToRemove.sort((a, b) => b - a);
+
+            // Remove headers
+            indicesToRemove.forEach(index => {
+                headers[index].remove();
+            });
+
+            // Remove corresponding cells in rows
+            tableClone.querySelectorAll('tr').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                indicesToRemove.forEach(index => {
+                    if (cells[index]) cells[index].remove();
+                });
+            });
+
+            exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Product Inventory Report');
         }
     </script>
 }

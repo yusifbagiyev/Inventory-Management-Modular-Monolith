@@ -447,7 +447,7 @@
             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
-                data: JSON.stringify({ notificationId: notificationId }),
+                data: JSON.stringify(notificationId),
                 contentType: 'application/json',
                 headers: {
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
@@ -595,8 +595,8 @@
                 'ApprovalResponse': 'success',
                 'ProductUpdate': 'info',
                 'RouteUpdate': 'info',
-                'RouteCompleted':'success',
-                'TransferCompleted':'success',
+                'RouteCompleted': 'success',
+                'TransferCompleted': 'success',
                 'System': 'secondary'
             };
             return types[type] || 'info';

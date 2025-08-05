@@ -1,44 +1,8 @@
-﻿function exportTableToPDF(tableId, filename, title) {
-    const table = document.getElementById(tableId);
-    if (!table) {
-        showToast('Table not found for export', 'error');
-        return;
-    }
-
-    // Clone the table
-    const tableClone = table.cloneNode(true);
-
-    // Remove unwanted columns (checkboxes, actions)
-    const headersToRemove = ['Actions', 'Select'];
-    const headers = tableClone.querySelectorAll('th');
-    const indicesToRemove = [];
-
-    headers.forEach((header, index) => {
-        const headerText = header.textContent.trim();
-        if (headersToRemove.some(h => headerText.includes(h)) ||
-            header.querySelector('input[type="checkbox"]')) {
-            indicesToRemove.push(index);
-            header.remove();
-        }
-    });
-
-    // Remove corresponding cells
-    tableClone.querySelectorAll('tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        indicesToRemove.reverse().forEach(index => {
-            if (cells[index]) cells[index].remove();
-        });
-    });
-
-    // Remove any remaining checkboxes
-    tableClone.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.closest('td, th')?.remove();
-    });
-
-    // Create print window
+﻿function exportToPDF(tableHTML, filename, title) {
     const printWindow = window.open('', '_blank');
 
-    const css = `
+    // Enhanced styles for 4-column layout
+    const styles = `
         <style>
             @page { 
                 size: landscape; 
@@ -47,32 +11,31 @@
             body { 
                 font-family: Arial, sans-serif; 
                 font-size: 12px;
-                color: #333;
             }
             h1 { 
                 text-align: center; 
-                color: #333; 
                 margin-bottom: 20px;
-            }
-            .header-info {
-                text-align: center;
-                margin-bottom: 20px;
-                color: #666;
             }
             table { 
                 width: 100%; 
-                border-collapse: collapse; 
-                margin-top: 20px; 
+                border-collapse: collapse;
+                table-layout: fixed;
             }
+            /* Column width distribution */
+            th:nth-child(1) { width: 15%; }  /* Code */
+            th:nth-child(2) { width: 35%; }  /* Product Details */
+            th:nth-child(3) { width: 30%; }  /* Location */
+            th:nth-child(4) { width: 20%; }  /* Status */
+            
             th, td { 
                 border: 1px solid #ddd; 
                 padding: 8px; 
                 text-align: left; 
+                word-wrap: break-word;
             }
             th { 
                 background-color: #f8f9fa; 
                 font-weight: bold; 
-                color: #495057;
             }
             tr:nth-child(even) { 
                 background-color: #f2f2f2; 
@@ -82,49 +45,39 @@
                 border-radius: 3px;
                 font-size: 10px;
                 font-weight: bold;
+                display: inline-block;
+                margin: 2px;
             }
-            .bg-primary { background-color: #007bff; color: white; }
             .bg-success { background-color: #28a745; color: white; }
-            .bg-warning { background-color: #ffc107; color: black; }
             .bg-danger { background-color: #dc3545; color: white; }
             .bg-info { background-color: #17a2b8; color: white; }
-            .no-print { display: none !important; }
+            .bg-warning { background-color: #ffc107; color: black; }
+            .bg-secondary { background-color: #6c757d; color: white; }
             @media print {
                 body { margin: 0; }
-                table { page-break-inside: auto; }
-                tr { page-break-inside: avoid; page-break-after: auto; }
-                thead { display: table-header-group; }
             }
         </style>
     `;
 
-    const content = `
+    // Build the document
+    const documentContent = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <title>${title}</title>
-            ${css}
+            ${styles}
         </head>
         <body>
             <h1>${title}</h1>
-            <div class="header-info">
-                <p>Generated on: ${new Date().toLocaleString('en-US', {
-        timeZone: 'Asia/Baku',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })}</p>
-                <p>Total Records: ${tableClone.querySelectorAll('tbody tr').length}</p>
-            </div>
-            ${tableClone.outerHTML}
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+            ${tableHTML}
         </body>
         </html>
     `;
 
-    printWindow.document.write(content);
+    // Write content and trigger print
+    printWindow.document.write(documentContent);
     printWindow.document.close();
 
     // Wait for content to load then print
@@ -136,12 +89,4 @@
             };
         }, 250);
     };
-}
-
-function exportProductsToPDF() {
-    exportTableToPDF('productsTable', 'products_export.pdf', 'Product Inventory Report');
-}
-
-function exportRoutesToPDF() {
-    exportTableToPDF('routesTable', 'routes_export.pdf', 'Routes Report');
 }

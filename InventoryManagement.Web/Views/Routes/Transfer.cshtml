@@ -199,60 +199,67 @@
             });
 
             // Fixed form submission handler
-            $('#transferForm').on('submit', function(e) {
-                e.preventDefault();
+                $('#transferForm').on('submit', function(e) {
+        e.preventDefault();
 
-                if (!currentProductId) {
-                    showError('Please enter a valid inventory code first');
-                    $('#inventoryCodeInput').focus();
-                    return false;
+        if (!currentProductId) {
+            showError('Please enter a valid inventory code first');
+            $('#inventoryCodeInput').focus();
+            return false;
+        }
+
+        const form = this;
+        const $submitBtn = $('#submitBtn');
+        const originalBtnHtml = $submitBtn.html();
+        const originalBtnDisabled = $submitBtn.prop('disabled');
+
+        // Function to reset button
+        const resetButton = () => {
+            $submitBtn.prop('disabled', originalBtnDisabled)
+                      .html(originalBtnHtml);
+        };
+
+        // Disable submit button
+        $submitBtn.prop('disabled', true)
+            .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+        const formData = new FormData(form);
+
+        $.ajax({
+            url: form.action,
+            type: form.method,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                resetButton(); // Always reset button first
+
+                if (response.approvalRequestId || response.status === 'PendingApproval') {
+                    showToast(
+                        response.message || 'Transfer request submitted for approval',
+                        'info'
+                    );
+                    setTimeout(() => window.location.href = '/Routes', 2000);
                 }
+                else if (response.isSuccess) {
+                    showToast('Product transferred successfully!', 'success');
+                    setTimeout(() => window.location.href = '/Routes', 1500);
+                }
+                else {
+                    showError(response.message || 'Transfer failed');
+                }
+            },
+            error: function(xhr) {
+                resetButton(); // Always reset button on error
 
-                const form = this;
-                const $submitBtn = $('#submitBtn');
-                const originalBtnHtml = $submitBtn.html();
-
-                // Disable submit button
-                $submitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
-
-                const formData = new FormData(form);
-
-                $.ajax({
-                    url: form.action,
-                    type: form.method,
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        $submitBtn.prop('disabled', false).html(originalBtnHtml);
-
-                        if (response.approvalRequestId || response.status === 'PendingApproval') {
-                            showToast(
-                                response.message || 'Transfer request submitted for approval',
-                                'info'
-                            );
-                            setTimeout(() => window.location.href = '/Routes', 2000);
-                        }
-                        else if (response.isSuccess) {
-                            showToast('Product transferred successfully!', 'success');
-                            setTimeout(() => window.location.href = '/Routes', 1500);
-                        }
-                        else {
-                            showError(response.message || 'Transfer failed');
-                        }
-                    },
-                    error: function(xhr) {
-                        $submitBtn.prop('disabled', false).html(originalBtnHtml);
-                        let errorMessage = 'Error processing transfer';
-
-                        if (xhr.responseJSON) {
-                            errorMessage = xhr.responseJSON.message ||
-                                            xhr.responseJSON.title ||
-                                            errorMessage;
-                        }
-                        showError(errorMessage);
-                    }
+                let errorMessage = 'Error processing transfer';
+                if (xhr.responseJSON) {
+                    errorMessage = xhr.responseJSON.message ||
+                                  xhr.responseJSON.title ||
+                                  errorMessage;
+                }
+                showError(errorMessage);
+            }
                 });
             });
         });

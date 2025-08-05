@@ -54,7 +54,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to mark notification as read");
+                _logger?.LogError(ex, "Failed to mark notification as read");
                 return Json(new { success = false, error = ex.Message });
             }
         }

@@ -58,7 +58,15 @@ namespace InventoryManagement.Web.Services
         {
             AddAuthorizationHeader();
 
-            var response = await _httpClient.PostAsync($"/api/notifications/{notificationId}/mark-as-read", null);
+            var dto = new MarkAsReadDto
+            {
+                NotificationId = notificationId,
+            };
+
+            var json = JsonConvert.SerializeObject(dto);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync($"/api/notifications/mark-as-read",content);
             response.EnsureSuccessStatusCode();
         }
 
