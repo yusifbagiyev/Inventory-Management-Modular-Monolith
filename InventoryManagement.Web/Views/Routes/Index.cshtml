@@ -311,7 +311,7 @@
                         });
         }
 
-        function applyFilters() {
+                function applyFilters() {
             const params = new URLSearchParams();
 
             const search = $('#searchInput').val();
@@ -321,16 +321,12 @@
             if (dateRange) {
                 const dates = dateRange.split(' - ');
                 if (dates.length === 2) {
-                    // Convert local dates to UTC for API
-                    const startDate = new Date(dates[0]);
-                    const endDate = new Date(dates[1]);
+                    // Parse the dates properly
+                    const startDate = moment(dates[0], 'MM/DD/YYYY').startOf('day').toISOString();
+                    const endDate = moment(dates[1], 'MM/DD/YYYY').endOf('day').toISOString();
 
-                    // Set end date to end of day in local time
-                    endDate.setHours(23, 59, 59, 999);
-
-                    // Format as ISO strings (which will be in UTC)
-                    params.append('startDate', startDate.toISOString());
-                    params.append('endDate', endDate.toISOString());
+                    params.append('startDate', startDate);
+                    params.append('endDate', endDate);
                 }
             }
 

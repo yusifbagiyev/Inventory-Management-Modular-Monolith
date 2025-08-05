@@ -5,34 +5,53 @@
             // Check if response has JSON content
             const contentType = xhr.getResponseHeader('content-type');
             if (contentType && contentType.includes('application/json')) {
-                const response = typeof xhr.responseJSON === 'object'
-                    ? xhr.responseJSON
-                    : JSON.parse(xhr.responseText);
+                let response;
+
+                // Try to parse the response
+                if (typeof xhr.responseJSON === 'object') {
+                    response = xhr.responseJSON;
+                } else if (xhr.responseText) {
+                    try {
+                        response = JSON.parse(xhr.responseText);
+                    } catch (e) {
+                        // If parsing fails, use responseText directly
+                        return xhr.responseText;
+                    }
+                }
+
+                // Handle ASP.NET Core problem details format
+                if (response && response.type && response.title) {
+                    // This is a problem details response
+                    return response.title || response.detail || defaultMessage;
+                }
 
                 // Check various error message formats
-                if (response.error) return response.error;
-                if (response.message) return response.message;
-                if (response.errors) {
-                    // Handle validation errors
-                    if (typeof response.errors === 'object') {
-                        const errorMessages = [];
-                        for (const [key, value] of Object.entries(response.errors)) {
-                            if (Array.isArray(value)) {
-                                errorMessages.push(...value);
-                            } else {
-                                errorMessages.push(value);
+                if (response) {
+                    if (response.error) return response.error;
+                    if (response.message) return response.message;
+                    if (response.errors) {
+                        // Handle validation errors
+                        if (typeof response.errors === 'object') {
+                            const errorMessages = [];
+                            for (const [key, value] of Object.entries(response.errors)) {
+                                if (Array.isArray(value)) {
+                                    errorMessages.push(...value);
+                                } else {
+                                    errorMessages.push(value);
+                                }
                             }
+                            return errorMessages.join(', ');
                         }
-                        return errorMessages.join(', ');
+                        return response.errors;
                     }
-                    return response.errors;
+                    if (response.detail) return response.detail;
                 }
-                if (response.title) return response.title;
-                if (response.detail) return response.detail;
             }
 
             // Check for plain text response
-            if (xhr.responseText && xhr.responseText.length < 500) {
+            if (xhr.responseText && xhr.responseText.length < 500 &&
+                !xhr.responseText.includes('<!DOCTYPE') &&
+                !xhr.responseText.includes('<html')) {
                 return xhr.responseText;
             }
 

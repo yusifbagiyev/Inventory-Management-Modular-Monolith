@@ -58,7 +58,7 @@ namespace InventoryManagement.Web.Services
         {
             AddAuthorizationHeader();
 
-            var response = await _httpClient.PostAsync("$/api/notifications/{notificationId}/mark-as-read", null);
+            var response = await _httpClient.PostAsync($"/api/notifications/{notificationId}/mark-as-read", null);
             response.EnsureSuccessStatusCode();
         }
 
@@ -66,11 +66,9 @@ namespace InventoryManagement.Web.Services
         {
             AddAuthorizationHeader();
 
-            var notifications = await GetNotificationsAsync(true);
-            foreach (var notification in notifications)
-            {
-                await MarkAsReadAsync(notification.Id);
-            }
+            // Instead of marking individually, use a bulk endpoint
+            var response = await _httpClient.PostAsync("/api/notifications/mark-all-read", null);
+            response.EnsureSuccessStatusCode();
         }
     }
 }
