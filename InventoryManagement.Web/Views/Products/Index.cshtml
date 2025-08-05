@@ -294,7 +294,7 @@
             $('#globalImageModal').modal('show');
         }
 
-                        function exportProductsToPDF() {
+                                function exportProductsToPDF() {
             const table = document.getElementById('productsTable');
             if (!table) {
                 showToast('Table not found', 'error');
@@ -333,13 +333,40 @@
                 });
             });
 
-            // Clean up Code column - remove edit controls
+            // Clean up Code column - remove edit controls and extra elements
             tableClone.querySelectorAll('td:first-child').forEach(cell => {
                 const displaySpan = cell.querySelector('.inventory-code-display');
                 if (displaySpan) {
                     // Extract just the code number
-                    cell.textContent = displaySpan.textContent.trim();
+                    cell.innerHTML = `<span style="font-weight: bold;">${displaySpan.textContent.trim()}</span>`;
                 }
+            });
+
+            // Simplify product details column
+            tableClone.querySelectorAll('td:nth-child(2)').forEach(cell => {
+                const modelEl = cell.querySelector('strong');
+                const vendorEl = cell.querySelector('small');
+                const categoryEl = cell.querySelector('.fa-tag')?.parentElement;
+
+                if (modelEl && vendorEl && categoryEl) {
+                    cell.innerHTML = `
+                        <div style="font-weight: bold; font-size: 11pt;">${modelEl.textContent}</div>
+                        <div style="font-size: 9pt; color: #555;">${vendorEl.textContent.replace('by ', '')}</div>
+                        <div style="font-size: 9pt; color: #666;">${categoryEl.textContent}</div>
+                    `;
+                }
+            });
+
+            // Simplify location column
+            tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
+                const deptEl = cell.querySelector('.fa-building')?.parentElement;
+                const workerEl = cell.querySelector('.fa-user')?.parentElement;
+
+                let content = '';
+                if (deptEl) content += `<div style="font-weight: bold;">${deptEl.textContent}</div>`;
+                if (workerEl) content += `<div style="font-size: 9pt;">${workerEl.textContent}</div>`;
+
+                if (content) cell.innerHTML = content;
             });
 
             exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Product Inventory Report');

@@ -113,6 +113,7 @@
                     <select id="sortBy" class="form-select">
                         <option value="name">Sort by Name</option>
                         <option value="products">Sort by Products</option>
+                        <option value="workers">Sort by Workers</option>
                         <option value="created">Sort by Date</option>
                     </select>
                 </div>
@@ -132,6 +133,14 @@
     <div class="card shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Departments List</h6>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="exportDepartmentsToPDF()">
+                            <i class="fas fa-file-pdf me-1"></i> Export PDF
+                        </button>
+                    </div>
+                </div>
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
@@ -264,6 +273,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/pdf-export.js"></script>
     <script>
         let allDepartments = [];
 
@@ -290,7 +300,8 @@
             let visibleItems = allDepartments.filter(item => {
                 const $item = $(item);
                 const matchesSearch = searchTerm === '' ||
-                    $item.data('name').includes(searchTerm);
+                    $item.data('name').includes(searchTerm) ||
+                    $item.find('.fw-semibold').text().toLowerCase().includes(searchTerm);
                 const matchesStatus = statusFilter === '' ||
                     $item.data('status') === statusFilter;
 
@@ -304,21 +315,38 @@
 
                 switch(sortBy) {
                     case 'name':
-                        return $a.data('name').localeCompare($b.data('name'));
+                        // String comparison for names
+                        return $a.data('name').toString().localeCompare($b.data('name').toString());
                     case 'products':
-                        return $b.data('products') - $a.data('products');
+                        // Convert to numbers explicitly for proper numerical comparison
+                        const aProducts = parseInt($a.data('products')) || 0;
+                        const bProducts = parseInt($b.data('products')) || 0;
+                        return bProducts - aProducts; // Descending order (highest first)
+                    case 'workers':
+                        const aWorkers=parseInt($a.data('workers')) || 0;
+                        const bWorkers=parseInt($b.data('workers')) || 0;
+                        return bWorkers - aWorkers;
                     case 'created':
-                        return $b.data('created') - $a.data('created');
+                        // Convert to numbers for date comparison (ticks)
+                        const aCreated = parseInt($a.data('created')) || 0;
+                        const bCreated = parseInt($b.data('created')) || 0;
+                        return bCreated - aCreated; // Descending order (newest first)
                     default:
                         return 0;
                 }
             });
 
-            // Update table
-            $('.department-item').hide();
-            $(visibleItems).show();
+            // Clear and rebuild the table body
+            const $tbody = $('#departmentsTable');
+            $tbody.empty();
 
-            // Toggle empty state
+            // Append sorted items
+            visibleItems.forEach(item => {
+                $tbody.append(item);
+            });
+
+            // Show/hide the table and empty state
+            $('.table-responsive').toggle(visibleItems.length > 0);
             $('#noResults').toggle(visibleItems.length === 0);
         }
 
