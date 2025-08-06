@@ -102,18 +102,6 @@
                                     <i class="fas fa-chevron-down ms-1 small"></i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                    <li class="dropdown-header">
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                <span>@User.Identity.Name?.Substring(0, 1).ToUpper()</span>
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold">@User.Identity.Name</div>
-                                                <small class="text-muted">@User.FindFirst("email")?.Value</small>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item" href="/Account/Profile">
                                             <i class="fas fa-user-circle me-2"></i> My Profile

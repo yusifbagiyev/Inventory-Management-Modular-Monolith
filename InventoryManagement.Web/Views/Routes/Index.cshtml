@@ -102,7 +102,6 @@
                                 @foreach (var route in Model.Items)
                                 {
                                     <tr data-search="@($"{route.InventoryCode} {route.Model} {route.Vendor} {route.FromDepartmentName} {route.ToDepartmentName}".ToLower())">
-                                        <td><input type="checkbox" class="route-checkbox form-check-input" value="@route.Id" /></td>
                                         <td class="text-center">
                                             @if (!string.IsNullOrEmpty(route.ImageUrl))
                                             {
@@ -149,19 +148,28 @@
                                             <small class="text-muted">@route.Model</small>
                                         </td>
                                         <td>
-                                            @if (route.FromDepartmentName != null)
+                                            @if (!string.IsNullOrEmpty(route.FromDepartmentName))
                                             {
                                                 <div>@route.FromDepartmentName</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(route.FromWorker))
+                                            {
                                                 <small class="text-muted">
                                                     <i class="fas fa-user"></i> @(route.FromWorker)
                                                 </small>
                                             }
                                         </td>
                                         <td>
-                                            <div>@route.ToDepartmentName</div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-user"></i> @(route.ToWorker)
-                                            </small>
+                                            @if (!string.IsNullOrEmpty(route.ToDepartmentName))
+                                            {
+                                                <div>@route.ToDepartmentName</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(route.ToWorker))
+                                            {
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user"></i> @(route.ToWorker)
+                                                </small>
+                                            }
                                         </td>
                                         <td>
                                             @if (route.IsCompleted)
