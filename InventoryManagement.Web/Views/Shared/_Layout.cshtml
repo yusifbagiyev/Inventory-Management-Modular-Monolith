@@ -151,34 +151,6 @@
 
             <!-- Page Content -->
             <div class="page-content">
-                <!-- Alert Messages -->
-                <div class="container-fluid">
-                    @if (TempData["Success"] != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show modern-alert" role="alert">
-                            <i class="fas fa-check-circle me-2"></i>
-                            @TempData["Success"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
-                    @if (TempData["Error"] != null)
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show modern-alert" role="alert">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            @TempData["Error"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
-                    @if (TempData["Info"] != null)
-                    {
-                        <div class="alert alert-info alert-dismissible fade show modern-alert" role="alert">
-                            <i class="fas fa-info-circle me-2"></i>
-                            @TempData["Info"]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    }
-                </div>
-
                 @RenderBody()
             </div>
 
@@ -536,26 +508,33 @@
         }
 
                 function markAllAsRead() {
-            $.ajax({
+                         // Find the first available CSRF token
+            var token = $('input[name="__RequestVerificationToken"]').first().val();
+                 if (!token) {
+            // If no token found in forms, create a temporary form to get one
+            var tempForm = $('<form>').html('@Html.AntiForgeryToken()');
+            token = tempForm.find('input[name="__RequestVerificationToken"]').val();
+            }
+                    $.ajax({
                 url: '/Notifications/MarkAllAsRead',
                 type: 'POST',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val() // Get first token
+                    'RequestVerificationToken': token
                 },
                 success: function(response) {
-                        $('.notification-item').removeClass('unread');
-                        $('.notification-dot').remove();
-                        updateNotificationBadge(0);
-                        showToast('All notifications marked as read', 'success');
+                    $('.notification-item').removeClass('unread');
+                    $('.notification-dot').remove();
+                    updateNotificationBadge(0);
+                    showToast('All notifications marked as read', 'success');
 
-                        // Reload notifications if dropdown is open
-                        if ($('#notificationDropdown').hasClass('show')) {
-                            loadRecentNotifications();
-                        }
+                    // Reload notifications if dropdown is open
+                    if ($('.notification-dropdown').hasClass('show')) {
+                        loadRecentNotifications();
+                    }
                 },
                 error: function(xhr, status, error) {
-                        const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Failed to mark notifications as read');
-                        showToast(errorMessage, 'error');
+                    console.error('Mark all as read failed:', xhr.responseText);
+                    showToast('Failed to mark notifications as read', 'error');
                 }
             });
         }

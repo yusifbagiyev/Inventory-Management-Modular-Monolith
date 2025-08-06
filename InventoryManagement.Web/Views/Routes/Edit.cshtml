@@ -52,9 +52,9 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">To Department <span class="text-danger">*</span></label>
-                                    <select name="ToDepartmentId" class="form-select" required>
+                                    <select name="ToDepartmentId" class="form-select" required >
                                         <option value="">-- Select Department --</option>
-                                        @foreach (var dept in ViewBag.Departments as List<SelectListItem>)
+                                        @foreach (var dept in ViewBag.Departments as List<SelectListItem>??new List<SelectListItem>())
                                         {
 											var selected = dept.Value == Model.ToDepartmentId.ToString() ? "selected" : "";
                                             <option value="@dept.Value" selected>

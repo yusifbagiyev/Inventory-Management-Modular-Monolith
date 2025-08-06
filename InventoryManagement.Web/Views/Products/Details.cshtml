@@ -166,32 +166,32 @@
 
 @section Scripts {
     <script>
-                 function showImageModal(imageUrl, title) {
-    // Check if modal exists, create if not
-    if ($('#productImageModal').length === 0) {
-        const modalHtml = `
-            <div class="modal fade" id="productImageModal" tabindex="-1">
-                <div class="modal-dialog modal-xl modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">${title || 'Product Image'}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    function showImageModal(imageUrl, title) {
+        if ($('#productImageModal').length === 0) {
+                    const modalHtml = `
+                        <div class="modal fade" id="productImageModal" tabindex="-1">
+                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">${title || 'Product Image'}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-center p-0">
+                                        <img src="${imageUrl}" class="img-fluid" style="max-height: 90vh;">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-body text-center p-0">
-                            <img src="${imageUrl}" class="img-fluid" style="max-height: 80vh;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        $('body').append(modalHtml);
-    } else {
-        $('#productImageModal .modal-title').text(title || 'Product Image');
-        $('#productImageModal img').attr('src', imageUrl);
-    }
-    
-    $('#productImageModal').modal('show');
-}
+                    `;
+                    $('body').append(modalHtml);
+                } else {
+                    $('#productImageModal .modal-title').text(title || 'Product Image');
+                    $('#productImageModal img').attr('src', imageUrl);
+                }
+
+                const modal = new bootstrap.Modal(document.getElementById('productImageModal'));
+                modal.show();
+            }
 
         function confirmDelete(id) {
             $('#deleteModal').modal('show');

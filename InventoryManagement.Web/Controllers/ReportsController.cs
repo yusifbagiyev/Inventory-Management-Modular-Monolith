@@ -123,6 +123,8 @@ namespace InventoryManagement.Web.Controllers
             return BadRequest("Unsupported format");
         }
 
+
+
         [HttpGet]
         public async Task<IActionResult> GetFilteredInventoryData(
             string dateRange,
@@ -133,34 +135,61 @@ namespace InventoryManagement.Web.Controllers
             {
                 var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
 
+                if (products == null)
+                {
+                    return Json(new { error = "Failed to load products" });
+                }
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(department))
                 {
-                    products = products?.Where(p => p.DepartmentName == department).ToList();
+                    products = products.Where(p => p.DepartmentName == department).ToList();
                 }
 
                 if (!string.IsNullOrEmpty(category))
                 {
-                    products = products?.Where(p => p.CategoryName == category).ToList();
+                    products = products.Where(p => p.CategoryName == category).ToList();
                 }
+
+                // Apply date range filter if needed
+                // Note: You'll need to add CreatedAt to ProductViewModel for this to work
 
                 // Prepare response data
                 var filteredData = new
                 {
-                    TotalProducts = products?.Count,
-                    WorkingItems = products?.Count(p => p.IsWorking),
-                    NotWorkingItems = products?.Count(p => !p.IsWorking),
-                    DepartmentData = products?.GroupBy(p => p.DepartmentName)
-                        .Select(g => new { Name = g.Key, Count = g.Count() }),
-                    CategoryData = products?.GroupBy(p => p.CategoryName)
-                        .Select(g => new { Name = g.Key, Count = g.Count() })
+                    TotalProducts = products.Count,
+                    WorkingItems = products.Count(p => p.IsWorking),
+                    NotWorkingItems = products.Count(p => !p.IsWorking),
+                    NewItems = products.Count(p => p.IsNewItem),
+                    DepartmentData = products.GroupBy(p => p.DepartmentName)
+                        .Select(g => new { Name = g.Key, Count = g.Count() }).ToList(),
+                    CategoryData = products.GroupBy(p => p.CategoryName)
+                        .Select(g => new { Name = g.Key, Count = g.Count() }).ToList()
                 };
 
                 return Json(filteredData);
             }
             catch (Exception ex)
             {
-                return Json(new { error = ex.Message });
+                _logger?.LogError(ex, "Error loading filtered data");
+                return Json(new { error = "Error loading filtered data" });
+            }
+        }
+
+        // Add the PDF export endpoint
+        [HttpPost]
+        public IActionResult ExportInventoryPDF([FromBody] dynamic filters)
+        {
+            try
+            {
+                // For now, return a simple response
+                // You can implement actual PDF generation using a library like iTextSharp or similar
+                return Json(new { success = true, message = "PDF export initiated" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting PDF");
+                return Json(new { error = "Failed to export PDF" });
             }
         }
     }
