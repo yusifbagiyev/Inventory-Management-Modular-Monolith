@@ -8,92 +8,225 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Inventory Management</title>
+    <title>Login - Inventory Pro</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
         body {
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .login-container {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
             width: 100%;
-            max-width: 400px;
+            max-width: 1000px;
         }
 
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
+        .login-left {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 60px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-            .login-header i {
-                font-size: 3rem;
-                color: #667eea;
+        .login-right {
+            padding: 60px;
+        }
+
+        .brand-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+            .form-control:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.1);
             }
+
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 500;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+            .btn-login:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .form-floating {
+            position: relative;
+        }
+
+            .form-floating input {
+                padding-left: 45px;
+            }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+        }
+
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-header">
-            <i class="fas fa-warehouse"></i>
-            <h3 class="mt-3">Inventory Management</h3>
-            <p class="text-muted">Sign in to your account</p>
-        </div>
+    <div class="container">
+        <div class="login-container">
+            <div class="row g-0">
+                <div class="col-lg-6 d-none d-lg-block">
+                    <div class="login-left h-100">
+                        <div>
+                            <h1 class="brand-logo">
+                                <i class="fas fa-warehouse me-2"></i>
+                                Inventory Pro
+                            </h1>
+                            <p class="lead mb-5">Your complete inventory management solution</p>
 
-        @if (ViewData.ModelState.Any(x => x.Value?.Errors.Count > 0))
-        {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong>Error!</strong> Please check your credentials and try again.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <div class="features">
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-box fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Product Management</h5>
+                                        <p class="mb-0 opacity-75">Track and manage your inventory efficiently</p>
+                                    </div>
+                                </div>
+
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-route fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Smart Routing</h5>
+                                        <p class="mb-0 opacity-75">Optimize product transfers and logistics</p>
+                                    </div>
+                                </div>
+
+                                <div class="feature-item">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-chart-line fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">Real-time Analytics</h5>
+                                        <p class="mb-0 opacity-75">Get insights with powerful reporting tools</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="login-right">
+                        <form asp-action="Login" method="post">
+                            <h2 class="mb-1">Welcome Back!</h2>
+                            <p class="text-muted mb-4">Please sign in to your account</p>
+
+                            @if (!ViewData.ModelState.IsValid)
+                            {
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    @Html.ValidationSummary(false, "", new { @class = "" })
+                                </div>
+                            }
+
+                            <div class="form-floating mb-3">
+                                <i class="fas fa-user input-icon"></i>
+                                <input asp-for="Username" class="form-control" placeholder="Username" autofocus>
+                                <label asp-for="Username">Username</label>
+                                <span asp-validation-for="Username" class="text-danger small"></span>
+                            </div>
+
+                            <div class="form-floating mb-3">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input asp-for="Password" class="form-control" type="password" placeholder="Password">
+                                <label asp-for="Password">Password</label>
+                                <span asp-validation-for="Password" class="text-danger small"></span>
+                            </div>
+
+                            <div class="d-flex justify-content-between mb-4">
+                                <div class="form-check">
+                                    <input asp-for="RememberMe" class="form-check-input">
+                                    <label asp-for="RememberMe" class="form-check-label">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="#" class="text-decoration-none">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-login">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </button>
+
+                            <hr class="my-4">
+
+                            <div class="text-center">
+                                <p class="text-muted">
+                                    Don't have an account?
+                                    <a href="/Account/Register" class="text-decoration-none">Sign up</a>
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-        }
-
-        <form asp-action="Login" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-            <div class="mb-3">
-                <label asp-for="Username" class="form-label">
-                    <i class="fas fa-user"></i> Username
-                </label>
-                <input asp-for="Username" class="form-control" placeholder="Enter your username" autofocus />
-                <span asp-validation-for="Username" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label">
-                    <i class="fas fa-lock"></i> Password
-                </label>
-                <input asp-for="Password" class="form-control" placeholder="Enter your password" />
-                <span asp-validation-for="Password" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3 form-check">
-                <input asp-for="RememberMe" class="form-check-input" />
-                <label asp-for="RememberMe" class="form-check-label">
-                    Remember me
-                </label>
-            </div>
-
-            <div class="d-grid">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Sign In
-                </button>
-            </div>
-        </form>
-
-        <div class="text-center mt-3">
-            <a href="#" class="text-decoration-none">Forgot your password?</a>
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
 </body>
 </html>

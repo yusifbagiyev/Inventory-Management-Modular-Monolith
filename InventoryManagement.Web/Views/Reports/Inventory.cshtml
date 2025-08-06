@@ -4,91 +4,523 @@
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Inventory Report</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Inventory Analytics Dashboard</h1>
+            <p class="text-muted mb-0">Comprehensive inventory insights and reporting</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="refreshReport()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-primary" onclick="exportReport()">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <button class="btn btn-success" onclick="showEmailModal()">
+                <i class="fas fa-envelope"></i> Email Report
+            </button>
+        </div>
+    </div>
 
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary">
-                <div class="card-body">
-                    <h5 class="card-title">Total Assets</h5>
-                    <h2>@Model.TotalProducts</h2>
+    <!-- Date Range Filter -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Date Range</label>
+                    <input type="text" id="dateRange" class="form-control"
+                           placeholder="Select date range">
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success">
-                <div class="card-body">
-                    <h5 class="card-title">Working Items</h5>
-                    <h2>@Model.WorkingItems</h2>
+                <div class="col-md-3">
+                    <label class="form-label">Department Filter</label>
+                    <select id="departmentFilter" class="form-select">
+                        <option value="">All Departments</option>
+                        @foreach (var dept in Model.DepartmentReports)
+                        {
+                            <option value="@dept.DepartmentName">@dept.DepartmentName</option>
+                        }
+                    </select>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning">
-                <div class="card-body">
-                    <h5 class="card-title">Under Repair</h5>
-                    <h2>@Model.NotWorkingItems</h2>
+                <div class="col-md-3">
+                    <label class="form-label">Category Filter</label>
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">All Categories</option>
+                        @foreach (var cat in Model.CategoryReports)
+                        {
+                            <option value="@cat.CategoryName">@cat.CategoryName</option>
+                        }
+                    </select>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-info">
-                <div class="card-body">
-                    <h5 class="card-title">New Items</h5>
-                    <h2>@Model.NewItems</h2>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        Apply Filters
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs">
-                <li class="nav-item">
-                    <a class="nav-link active" data-bs-toggle="tab" href="#byDepartment">By Department</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#byCategory">By Category</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="tab" href="#byWorker">By Worker</a>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body">
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="byDepartment">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Department</th>
-                                <th>Total Items</th>
-                                <th>Working</th>
-                                <th>Not Working</th>
-                                <th>Utilization %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var dept in Model.DepartmentReports)
-                            {
-                                <tr>
-                                    <td>@dept.DepartmentName</td>
-                                    <td>@dept.TotalItems</td>
-                                    <td>@dept.WorkingItems</td>
-                                    <td>@dept.NotWorkingItems</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar" style="width: @dept.UtilizationPercentage%">
-                                                @dept.UtilizationPercentage%
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Assets</h6>
+                            <h2 class="mb-0 text-primary">@Model.TotalProducts</h2>
+                            <small class="text-success">
+                                <i class="fas fa-arrow-up"></i> 12% from last month
+                            </small>
+                        </div>
+                        <div class="icon-shape bg-primary-soft text-primary rounded-circle p-3">
+                            <i class="fas fa-boxes fa-2x"></i>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Working Items</h6>
+                            <h2 class="mb-0 text-success">@Model.WorkingItems</h2>
+                            <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar bg-success"
+                                     style="width: @((Model.WorkingItems * 100.0 / Model.TotalProducts).ToString("F0"))%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="icon-shape bg-success-soft text-success rounded-circle p-3">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">Not Working</h6>
+                            <h2 class="mb-0 text-danger">@Model.NotWorkingItems</h2>
+                            <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar bg-danger"
+                                     style="width: @((Model.NotWorkingItems * 100.0 / Model.TotalProducts).ToString("F0"))%">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="icon-shape bg-danger-soft text-danger rounded-circle p-3">
+                            <i class="fas fa-times-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-2">New Items</h6>
+                            <h2 class="mb-0 text-info">@Model.NewItems</h2>
+                            <small class="text-muted">
+                                This month
+                            </small>
+                        </div>
+                        <div class="icon-shape bg-info-soft text-info rounded-circle p-3">
+                            <i class="fas fa-sparkles fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Department Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="departmentChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Category Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoryPieChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Details Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Department Performance Details</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Department</th>
+                            <th class="text-center">Total Items</th>
+                            <th class="text-center">Working</th>
+                            <th class="text-center">Not Working</th>
+                            <th class="text-center">Utilization</th>
+                            <th>Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dept in Model.DepartmentReports)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@dept.DepartmentName</td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill px-3">
+                                        @dept.TotalItems
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success rounded-pill px-3">
+                                        @dept.WorkingItems
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger rounded-pill px-3">
+                                        @dept.NotWorkingItems
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <strong>@dept.UtilizationPercentage%</strong>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar @(dept.UtilizationPercentage >= 80 ? "bg-success" : dept.UtilizationPercentage >= 60 ? "bg-warning" : "bg-danger")"
+                                             style="width: @dept.UtilizationPercentage%">
+                                            @dept.UtilizationPercentage%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Recipients</label>
+                    <select id="emailRecipients" class="form-select" multiple>
+                        <!-- This will be populated via AJAX -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Additional Message (Optional)</label>
+                    <textarea id="emailMessage" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendReport()">
+                    <i class="fas fa-paper-plane"></i> Send Report
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        let departmentChart, categoryChart;
+
+        $(document).ready(function() {
+            // Initialize date range picker
+            $('#dateRange').daterangepicker({
+                autoUpdateInput: false,
+                locale: {
+                    cancelLabel: 'Clear',
+                    format: 'MM/DD/YYYY'
+                },
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'This Week': [moment().startOf('week'), moment().endOf('week')],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'),
+                                  moment().subtract(1, 'month').endOf('month')],
+                    'This Year': [moment().startOf('year'), moment().endOf('year')]
+                }
+            });
+
+            $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' +
+                           picker.endDate.format('MM/DD/YYYY'));
+            });
+
+            $('#dateRange').on('cancel.daterangepicker', function() {
+                $(this).val('');
+            });
+
+            // Initialize charts
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            // Department Chart
+            const deptCtx = document.getElementById('departmentChart').getContext('2d');
+            departmentChart = new Chart(deptCtx, {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.DepartmentReports.Select(d => d.DepartmentName))),
+                    datasets: [{
+                        label: 'Working Items',
+                        data: @Html.Raw(Json.Serialize(Model.DepartmentReports.Select(d => d.WorkingItems))),
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Not Working Items',
+                        data: @Html.Raw(Json.Serialize(Model.DepartmentReports.Select(d => d.NotWorkingItems))),
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Category Pie Chart
+            const catCtx = document.getElementById('categoryPieChart').getContext('2d');
+            categoryChart = new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.CategoryReports.Select(c => c.CategoryName))),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.CategoryReports.Select(c => c.ItemCount))),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#FF6384', '#36A2EB'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function applyFilters() {
+            showSpinner();
+
+            const dateRange = $('#dateRange').val();
+            const department = $('#departmentFilter').val();
+            const category = $('#categoryFilter').val();
+
+            // Make AJAX call to get filtered data
+            $.ajax({
+                url: '/Reports/GetFilteredInventoryData',
+                data: {
+                    dateRange: dateRange,
+                    department: department,
+                    category: category
+                },
+                success: function(data) {
+                    updateCharts(data);
+                    hideSpinner();
+                },
+                error: function() {
+                    showToast('Error loading filtered data', 'error');
+                    hideSpinner();
+                }
+            });
+        }
+
+        function refreshReport() {
+            location.reload();
+        }
+
+        function exportReport() {
+            showSpinner();
+
+            const filters = {
+                dateRange: $('#dateRange').val(),
+                department: $('#departmentFilter').val(),
+                category: $('#categoryFilter').val()
+            };
+
+            // Create form and submit
+            const form = $('<form>', {
+                method: 'POST',
+                action: '/Reports/ExportInventoryPDF'
+            });
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: 'filters',
+                value: JSON.stringify(filters)
+            }));
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: '__RequestVerificationToken',
+                value: $('input[name="__RequestVerificationToken"]').val()
+            }));
+
+            $('body').append(form);
+            form.submit();
+
+            setTimeout(() => hideSpinner(), 2000);
+        }
+
+        function showEmailModal() {
+            // Load users for email selection
+            $.get('/api/auth/users', function(users) {
+                const select = $('#emailRecipients');
+                select.empty();
+
+                users.forEach(user => {
+                    select.append($('<option>', {
+                        value: user.email,
+                        text: `${user.firstName} ${user.lastName} (${user.email})`
+                    }));
+                });
+
+                // Initialize select2 for better multi-select
+                select.select2({
+                    placeholder: 'Select recipients',
+                    allowClear: true
+                });
+            });
+
+            $('#emailModal').modal('show');
+        }
+
+        function sendReport() {
+            const recipients = $('#emailRecipients').val();
+            if (!recipients || recipients.length === 0) {
+                showToast('Please select at least one recipient', 'warning');
+                return;
+            }
+
+            showSpinner();
+
+            const data = {
+                recipients: recipients,
+                message: $('#emailMessage').val(),
+                filters: {
+                    dateRange: $('#dateRange').val(),
+                    department: $('#departmentFilter').val(),
+                    category: $('#categoryFilter').val()
+                }
+            };
+
+            $.ajax({
+                url: '/Reports/EmailInventoryReport',
+                type: 'POST',
+                data: JSON.stringify(data),
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function() {
+                    hideSpinner();
+                    $('#emailModal').modal('hide');
+                    showToast('Report sent successfully!', 'success');
+                },
+                error: function() {
+                    hideSpinner();
+                    showToast('Failed to send report', 'error');
+                }
+            });
+        }
+    </script>
+
+    <style>
+        .icon-shape {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bg-primary-soft {
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+
+        .bg-success-soft {
+            background-color: rgba(25, 135, 84, 0.1);
+        }
+
+        .bg-danger-soft {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .bg-info-soft {
+            background-color: rgba(13, 202, 240, 0.1);
+        }
+
+        .card {
+            transition: transform 0.2s;
+        }
+
+            .card:hover {
+                transform: translateY(-2px);
+            }
+
+        .progress {
+            background-color: #e9ecef;
+        }
+
+        .table th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+        }
+    </style>
+}

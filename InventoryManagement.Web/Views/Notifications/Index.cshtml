@@ -99,17 +99,20 @@
 @section Scripts {
     <script>
         function markAsRead(notificationId) {
-            $.ajax({
+             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
-                data: { notificationId: notificationId }, // Send as form data, not JSON
+                data: JSON.stringify(notificationId),
+                contentType: 'application/json',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val(),
+                    'Content-Type': 'application/json'
                 },
                 success: function() {
                     $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
                     $(`.notification-item[data-id="${notificationId}"] .btn`).remove();
                     updateNotificationCount();
+                    showToast('Notification marked as read', 'success');
                 },
                 error: function(xhr) {
                     console.error('Failed to mark as read:', xhr);

@@ -214,6 +214,13 @@
     </script>
     <script>
         $(document).ready(function() {
+            // Make product images clickable
+            $(document).on('click','.img-thumbnail',function() {
+                const fullUrl=$(this).attr('src');
+                const productName=$(this).attr('alt');
+                showImageModal(fullUrl,productName);
+            });
+
             // Double-click to edit inventory code
             $('.inventory-code-display').on('dblclick', function() {
                 const id = $(this).data('id');
@@ -288,10 +295,30 @@
             });
         });
 
-        function showImageModal(imageUrl, title) {
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
+         function showImageModal(imageUrl, title) {
+            // Check if modal exists, if not create it
+            if ($('#productImageModal').length === 0) {
+                const modalHtml = `
+                    <div class="modal fade" id="productImageModal" tabindex="-1">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Product Image</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center p-0">
+                                    <img id="modalProductImage" class="img-fluid" style="max-height: 80vh;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $('body').append(modalHtml);
+            }
+
+            $('#modalProductImage').attr('src', imageUrl);
+            $('#productImageModal .modal-title').text(title || 'Product Image');
+            $('#productImageModal').modal('show');
         }
 
                                 function exportProductsToPDF() {

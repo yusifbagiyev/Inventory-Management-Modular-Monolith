@@ -1,66 +1,148 @@
-﻿<div class="bg-dark text-white" id="sidebar-wrapper">
-    <div class="sidebar-heading text-center py-4 primary-text fs-4 fw-bold text-uppercase border-bottom">
-        <i class="fas fa-warehouse"></i> Inventory
+﻿<aside class="modern-sidebar" id="sidebar-wrapper">
+    <div class="sidebar-header">
+        <img src="/inventory.png" alt="Logo" height="40">
+        <h5 class="mb-0 ms-2">Inventory Pro</h5>
     </div>
-    <div class="list-group list-group-flush my-3">
-        <a asp-controller="Home" asp-action="Dashboard"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
-            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-        </a>
-        <a asp-controller="Products" asp-action="Index"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Products" ? "active" : "")">
-            <i class="fas fa-boxes me-2"></i>Products
-        </a>
-        <a asp-controller="Routes" asp-action="Index"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Routes" ? "active" : "")">
-            <i class="fas fa-route me-2"></i>Routes
-        </a>
 
-        @if (User.IsInRole("Admin"))
-        {
-            <a asp-controller="Categories" asp-action="Index"
-               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
-                <i class="fas fa-tags me-2"></i>Categories
-            </a>
-            <a asp-controller="Departments" asp-action="Index"
-               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Departments" ? "active" : "")">
-                <i class="fas fa-building me-2"></i>Departments
-            </a>
-            <div class="sidebar-heading text-white text-uppercase mt-4 mb-2 px-3 small">
-                Administration
+    <div class="sidebar-content">
+        <ul class="sidebar-nav">
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a href="/Home/Dashboard"
+                   class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
+                    <div class="nav-icon">
+                        <i class="fas fa-th-large"></i>
+                    </div>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+
+            <!-- Main Menu -->
+            <li class="nav-section">
+                <span>MAIN MENU</span>
+            </li>
+
+            <li class="nav-item">
+                <a href="/Products"
+                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Products" ? "active" : "")">
+                    <div class="nav-icon">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <span class="nav-text">Products</span>
+                    <span class="badge bg-primary ms-auto">@ViewBag.ProductCount</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/Routes"
+                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Routes" ? "active" : "")">
+                    <div class="nav-icon">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <span class="nav-text">Routes</span>
+                    <span class="badge bg-warning ms-auto" id="pendingRoutesCount"></span>
+                </a>
+            </li>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <li class="nav-section">
+                    <span>MANAGEMENT</span>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/Categories"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
+                        <div class="nav-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <span class="nav-text">Categories</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/Departments"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Departments" ? "active" : "")">
+                        <div class="nav-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <span class="nav-text">Departments</span>
+                    </a>
+                </li>
+
+                <li class="nav-section">
+                    <span>ADMINISTRATION</span>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/Approvals"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Approvals" ? "active" : "")">
+                        <div class="nav-icon">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <span class="nav-text">Approvals</span>
+                        <span class="badge bg-danger ms-auto" id="sidebarPendingCount"></span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="/UserManagement"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "UserManagement" ? "active" : "")">
+                        <div class="nav-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <span class="nav-text">Users</span>
+                    </a>
+                </li>
+            }
+            else
+            {
+                <li class="nav-item">
+                    <a href="/MyRequests"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyRequests" ? "active" : "")">
+                        <div class="nav-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <span class="nav-text">My Requests</span>
+                    </a>
+                </li>
+            }
+
+            <li class="nav-item">
+                <a href="/Notifications"
+                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notifications" ? "active" : "")">
+                    <div class="nav-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <span class="nav-text">Notifications</span>
+                    <span class="badge bg-info ms-auto" id="sidebarUnreadCount"></span>
+                </a>
+            </li>
+
+            <li class="nav-section">
+                <span>REPORTS</span>
+            </li>
+
+            <li class="nav-item">
+                <a href="/Reports/Inventory" class="nav-link">
+                    <div class="nav-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <span class="nav-text">Inventory Report</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="storage-info">
+            <div class="d-flex justify-content-between mb-1">
+                <small>Storage Used</small>
+                <small>75%</small>
             </div>
-            <a asp-controller="Approvals" asp-action="Index"
-               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Approvals" ? "active" : "")">
-                <i class="fas fa-check-circle me-2"></i>Approvals
-                <span class="badge bg-warning float-end" id="sidebarPendingCount"></span>
-            </a>
-            <a asp-controller="UserManagement" asp-action="Index"
-               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "UserManagement" ? "active" : "")">
-                <i class="fas fa-user me-2"></i>User Management
-            </a>
-        }
-        else
-        {
-            <a asp-controller="MyRequests" asp-action="Index"
-               class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyRequests" ? "active" : "")">
-                <i class="fas fa-clock me-2"></i>My Requests
-            </a>
-        } 
-
-        <a asp-controller="Notifications" asp-action="Index"
-           class="list-group-item list-group-item-action bg-transparent text-white @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notifications" ? "active" : "")">
-            <i class="fas fa-bell me-2"></i>Notifications
-            <span class="badge bg-danger float-end" id="sidebarUnreadCount"></span>
-        </a>
-
-        <div class="sidebar-heading text-white text-uppercase mt-4 mb-2 px-3 small">
-            Reports
+            <div class="progress" style="height: 4px;">
+                <div class="progress-bar" style="width: 75%"></div>
+            </div>
         </div>
-        <a href="/Reports/Inventory" class="list-group-item list-group-item-action bg-transparent text-white">
-            <i class="fas fa-chart-bar me-2"></i>Inventory Report
-        </a>
-        <a href="/Reports/Transfers" class="list-group-item list-group-item-action bg-transparent text-white">
-            <i class="fas fa-exchange-alt me-2"></i>Transfer History
-        </a>
     </div>
-</div>
+</aside>

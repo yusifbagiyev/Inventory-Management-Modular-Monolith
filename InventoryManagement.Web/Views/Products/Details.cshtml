@@ -36,10 +36,10 @@
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
                                 <div class="image-container">
-                                    <img src="@Model.FullImageUrl" 
-                                    class="img-fluid rounded image-zoom zoomable-image" 
-                                    alt="Product Image" 
-                                    style="cursor:zoom-in;"/>
+                                        <img src="@Model.FullImageUrl"
+                                         class="img-fluid rounded cursor-pointer"
+                                         style="max-width: 400px; cursor: pointer;" alt="Product Image"
+                                         onclick="showImageModal('@Model.FullImageUrl','@Model.CategoryName') />
                                 </div>
                                 <div class="text-center mt-2">
                                 </div>
@@ -166,6 +166,13 @@
 
 @section Scripts {
     <script>
+                 function showImageModal(imageUrl, title) {
+            // Use the global image modal from _Layout
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
+
         function confirmDelete(id) {
             $('#deleteModal').modal('show');
         }

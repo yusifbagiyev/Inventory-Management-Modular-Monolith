@@ -1,11 +1,12 @@
-﻿@* InventoryManagement.Web/Views/Shared/_Layout.cshtml *@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Inventory Management</title>
+    <title>@ViewData["Title"] - Inventory Pro</title>
 
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -14,145 +15,183 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/modern-ui.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <div class="d-flex" id="wrapper">
+    <div class="layout-wrapper" id="wrapper">
         <!-- Sidebar -->
         @if (User.Identity?.IsAuthenticated ?? false)
         {
             <partial name="_Sidebar" />
+            <!-- Overlay for mobile -->
+            <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
         }
 
-        <!-- Page Content -->
-        <div id="page-content-wrapper" class="@(User.Identity?.IsAuthenticated ?? false ? "" : "w-100")">
-            <!-- Top Navigation -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
-                <div class="container-fluid">
-                    @if (User.Identity?.IsAuthenticated ?? false)
-                    {
-                        <button class="btn btn-primary" id="menu-toggle">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                    }
+        <!-- Main Content -->
+        <div class="main-content" id="page-content-wrapper">
+            <!-- Modern Top Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light top-navbar">
+                <div class="container-fluid px-4">
+                    <div class="d-flex align-items-center">
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <button class="btn btn-link sidebar-toggle" id="menu-toggle">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                        }
 
-                    <a class="navbar-brand ms-3" href="/">
-                        <i class="fas fa-warehouse text-primary"></i> Inventory Management
-                    </a>
+                        <div class="navbar-brand-wrapper">
+                            <a class="navbar-brand" href="/">
+                                <img src="/inventory.png" alt="Logo" height="32" class="me-2" />
+                                <span class="brand-text">Inventory Pro</span>
+                            </a>
+                        </div>
+                    </div>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#navbarSupportedContent">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
+                    <div class="navbar-nav ms-auto d-flex align-items-center">
+                        @if (User.Identity?.IsAuthenticated ?? false)
+                        {
+                            <!-- Search Bar -->
+                            <div class="search-wrapper me-3 d-none d-md-block">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-transparent border-0">
+                                        <i class="fas fa-search text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-0"
+                                           placeholder="Search inventory...">
+                                </div>
+                            </div>
 
-                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                        <ul class="navbar-nav ms-auto mt-2 mt-lg-0">
-                            @if (User.Identity?.IsAuthenticated ?? false)
-                            {
-                                <!-- Notification Bell -->
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link position-relative" href="#" id="notificationIcon"
-                                       data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-bell"></i>
-                                        <span id="notificationBadge" class="notification-badge" style="display:none;">0</span>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end notification-dropdown"
-                                         id="notificationDropdown">
-                                        <div class="dropdown-header d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">Notifications</h6>
-                                            <a href="/Notifications" class="text-decoration-none small text-primary">View All</a>
-                                        </div>
-                                        <div id="notificationList" class="notification-list">
-                                            <div class="text-center py-3">
-                                                <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
-                                                </div>
+                            <div class="nav-item dropdown me-3">
+                                <a class="nav-link notification-toggle" href="#" id="notificationIcon"
+                                   data-bs-toggle="dropdown">
+                                    <div class="icon-badge">
+                                        <i class="far fa-bell"></i>
+                                        <span id="notificationBadge" class="badge-dot" style="display:none;"></span>
+                                    </div>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end notification-dropdown modern-dropdown">
+                                    <div class="dropdown-header">
+                                        <h6 class="mb-0">Notifications</h6>
+                                        <a href="/Notifications" class="text-primary">View All</a>
+                                    </div>
+                                    <div id="notificationList" class="notification-list">
+                                        <div class="text-center py-3">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </div>
-                                        <div class="dropdown-footer">
-                                            <a href="#" id="markAllAsRead">Mark all as read</a>
-                                        </div>
                                     </div>
-                                </li>
+                                    <div class="dropdown-footer">
+                                        <a href="#" id="markAllAsRead" class="text-muted">
+                                            Mark all as read
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
 
-                                <!-- User Dropdown (NO USER ICON - JUST TEXT) -->
-                                <li class="nav-item dropdown ms-3">
-                                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown"
-                                       role="button" data-bs-toggle="dropdown">
-                                        @User.Identity.Name
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
+                            <!-- User Menu -->
+                            <div class="nav-item dropdown">
+                                <a class="nav-link user-menu-toggle" href="#" id="userDropdown"
+                                   data-bs-toggle="dropdown">
+                                    <div class="user-avatar">
+                                        <span>@User.Identity.Name?.Substring(0, 1).ToUpper()</span>
+                                    </div>
+                                    <span class="user-name d-none d-md-inline ms-2">@User.Identity.Name</span>
+                                    <i class="fas fa-chevron-down ms-1 small"></i>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
+                                    <li class="dropdown-header">
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                <span>@User.Identity.Name?.Substring(0, 1).ToUpper()</span>
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">@User.Identity.Name</div>
+                                                <small class="text-muted">@User.FindFirst("email")?.Value</small>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="/Account/Profile">
+                                            <i class="fas fa-user-circle me-2"></i> My Profile
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="/Account/Settings">
+                                            <i class="fas fa-cog me-2"></i> Settings
+                                        </a>
+                                    </li>
+                                    @if (User.IsInRole("Admin"))
+                                    {
                                         <li>
-                                            <a class="dropdown-item" href="/Account/Profile">
-                                                <i class="fas fa-user"></i> Profile
+                                            <a class="dropdown-item" href="/Approvals">
+                                                <i class="fas fa-check-circle me-2"></i> Approvals
+                                                <span class="badge bg-warning ms-auto" id="pendingApprovalsCount"></span>
                                             </a>
                                         </li>
-                                        @if (User.IsInRole("Admin"))
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" href="/Approvals">
-                                                    <i class="fas fa-check-circle"></i> Approvals
-                                                    <span class="badge bg-warning ms-2" id="pendingApprovalsCount"></span>
-                                                </a>
-                                            </li>
-                                        }
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <form asp-controller="Account" asp-action="Logout" method="post">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="dropdown-item">
-                                                    <i class="fas fa-sign-out-alt"></i> Logout
-                                                </button>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </li>
-                            }
-                        </ul>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="fas fa-sign-out-alt me-2"></i> Sign Out
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
                     </div>
                 </div>
             </nav>
 
             <!-- Page Content -->
-            <div class="container-fluid px-4">
-                @if (TempData["Info"] != null)
-                {
-                    <div class="alert alert-info alert-dismissible fade show mt-3" role="alert">
-                        <i class="fas fa-info-circle"></i> @TempData["Info"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-                @if (TempData["SuccessMessage"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                        <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-                @if (TempData["Success"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                        <i class="fas fa-check-circle"></i> @TempData["Success"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-                @if (TempData["ErrorMessage"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                        <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
-                @if (TempData["Error"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-                        <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                }
+            <div class="page-content">
+                <!-- Alert Messages -->
+                <div class="container-fluid">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show modern-alert" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["Success"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show modern-alert" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    @if (TempData["Info"] != null)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show modern-alert" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            @TempData["Info"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                </div>
 
                 @RenderBody()
             </div>
+
+            <!-- Modern Footer -->
+            <footer class="modern-footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <span class="text-muted">© @DateTime.Today.Year Inventory Pro. All rights reserved.</span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     </div>
 
@@ -162,13 +201,13 @@
 
     <!-- Global Image Modal -->
     <div class="modal fade" id="globalImageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Image Preview</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center">
+                <div class="modal-body text-center p-0">
                     <img id="globalModalImage" class="img-fluid" alt="Preview">
                 </div>
             </div>
@@ -184,9 +223,13 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script src="~/js/modern-ui.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/errorHandler.js" asp-append-version="true"></script>
     <script>
+                function toggleSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
         // Global notification variables
         let notificationConnection = null;
         let reconnectAttempts = 0;
@@ -216,28 +259,48 @@
             }
         });
 
-        function playNotificationSound() 
-        {
+        function playNotificationSound() {
             try {
-                // Create a new audio instance each time to ensure it plays
-                    const audio = new Audio('/sounds/notify.mp3');
-                    audio.volume = 0.5;
+                // First, ensure the sound file exists
+                const audioUrl = '/sounds/notify.mp3';
 
-                    // Reset the audio to beginning before playing
-                    audio.currentTime = 0;
-                    // Use a promise chain to handle play completion
-                    audio.play().then(() =>
-                    {
-                        console.log('Notification sound played successfully');
-                    })
-                    .catch(err => {
-                        console.log('Could not play notification sound:', err);
-                    });
+                // Create a promise to handle the audio loading
+                const audio = new Audio();
+                audio.volume = 0.5;
+
+                // Add error handling for missing file
+                audio.addEventListener('error', function(e) {
+                    console.error('Audio file error:', e);
+                    // Fallback to a data URI beep sound if file is missing
+                    const beepSound = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE';
+                    audio.src = beepSound;
+                    audio.play().catch(err => console.log('Fallback sound failed:', err));
+                });
+
+                // Set the source and attempt to play
+                audio.src = audioUrl;
+
+                // Use a more robust play mechanism
+                const playPromise = audio.play();
+
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Notification sound played successfully');
+                        })
+                        .catch(error => {
+                            console.error('Error playing notification sound:', error);
+                            // Try to play after user interaction if autoplay is blocked
+                            document.addEventListener('click', function playOnce() {
+                                audio.play().catch(e => console.log('Still cannot play:', e));
+                                document.removeEventListener('click', playOnce);
+                            });
+                        });
                 }
-                catch (error) {
-                    console.error('Error playing notification sound:', error);
-                }
-         }
+            } catch (error) {
+                console.error('Error in playNotificationSound:', error);
+            }
+        }
 
 
         function initializeNotifications() {
@@ -450,7 +513,8 @@
                 data: JSON.stringify(notificationId),
                 contentType: 'application/json',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val(),
+                    'Content-Type': 'application/json'
                 },
                 success: function(response) {
                         $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
@@ -488,14 +552,17 @@
             });
         }
 
-        function updateNotificationBadge(count) {
+                function updateNotificationBadge(count) {
             const $badge = $('#notificationBadge');
+            const $sidebarBadge = $('#sidebarUnreadCount');
             count = parseInt(count) || 0;
 
             if (count > 0) {
                 $badge.text(count > 99 ? '99+' : count).show();
+                $sidebarBadge.text(count > 99 ? '99+' : count).show();
             } else {
                 $badge.hide();
+                $sidebarBadge.hide();
             }
         }
 
