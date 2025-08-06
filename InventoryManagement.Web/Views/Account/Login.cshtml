@@ -21,7 +21,7 @@
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content :center;
         }
 
         .login-container {
@@ -182,17 +182,17 @@
                                 </div>
                             }
 
-                            <div class="form-floating mb-3">
-                                <i class="fas fa-user input-icon"></i>
-                                <input asp-for="Username" class="form-control" placeholder="Username" autofocus>
-                                <label asp-for="Username">Username</label>
+                            <div class="form-floating mb-3 position-relative">
+                                <input asp-for="Username" class="form-control ps-5" placeholder="Username" autofocus>
+                                <label asp-for="Username" class="ps-5">Username</label>
+                                <i class="fas fa-user position-absolute" style="left: 15px; top: 50%; transform: translateY(-50%); z-index: 10;"></i>
                                 <span asp-validation-for="Username" class="text-danger small"></span>
                             </div>
 
-                            <div class="form-floating mb-3">
-                                <i class="fas fa-lock input-icon"></i>
-                                <input asp-for="Password" class="form-control" type="password" placeholder="Password">
-                                <label asp-for="Password">Password</label>
+                            <div class="form-floating mb-3 position-relative">
+                                <input asp-for="Password" class="form-control ps-5" type="password" placeholder="Password">
+                                <label asp-for="Password" class="ps-5">Password</label>
+                                <i class="fas fa-lock position-absolute" style="left: 15px; top: 50%; transform: translateY(-50%); z-index: 10;"></i>
                                 <span asp-validation-for="Password" class="text-danger small"></span>
                             </div>
 
@@ -203,7 +203,6 @@
                                         Remember me
                                     </label>
                                 </div>
-                                <a href="#" class="text-decoration-none">Forgot password?</a>
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-login">
@@ -211,13 +210,6 @@
                             </button>
 
                             <hr class="my-4">
-
-                            <div class="text-center">
-                                <p class="text-muted">
-                                    Don't have an account?
-                                    <a href="/Account/Register" class="text-decoration-none">Sign up</a>
-                                </p>
-                            </div>
                         </form>
                     </div>
                 </div>

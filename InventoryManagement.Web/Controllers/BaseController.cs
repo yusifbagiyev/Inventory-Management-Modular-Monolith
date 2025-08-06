@@ -21,8 +21,7 @@ namespace InventoryManagement.Web.Controllers
         /// </summary>
         protected bool IsAjaxRequest()
         {
-            return Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
-                   Request.ContentType?.Contains("multipart/form-data") == true;
+            return Request.Headers["X-Requested-With"] == "XMLHttpRequest";
         }
 
 
@@ -30,44 +29,32 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>
         /// Handles API responses uniformly for both AJAX and traditional requests
         /// </summary>
-        protected IActionResult HandleApiResponse<T>(ApiResponse<T> response,
-            string successRedirectAction = "Index",
-            string? successRedirectController = null,
-            object? routeValues = null)
+        protected IActionResult HandleApiResponse<T>(ApiResponse<T> response, string redirectAction)
         {
-            if (IsAjaxRequest())
+            if (response.IsSuccess)
             {
-                return Json(new
+                // Only set TempData for non-AJAX requests
+                if (!IsAjaxRequest())
                 {
-                    isSuccess = response.IsSuccess,
-                    isApprovalRequest = response.IsApprovalRequest,
-                    approvalRequestId = response.ApprovalRequestId,
-                    message = response.Message,
-                    data = response.Data
-                });
+                    TempData["Success"] = response.Message ?? "Operation completed successfully";
+                }
+                return RedirectToAction(redirectAction);
             }
 
-            // Traditional form submission
             if (response.IsApprovalRequest)
             {
-                TempData["Info"] = response.Message ?? "Request submitted for approval";
+                if (!IsAjaxRequest())
+                {
+                    TempData["Info"] = response.Message ?? "Request submitted for approval";
+                }
+                return RedirectToAction(redirectAction);
             }
-            else if (response.IsSuccess)
-            {
-                TempData["Success"] = response.Message ?? "Operation completed successfully";
-            }
-            else
+
+            if (!IsAjaxRequest())
             {
                 TempData["Error"] = response.Message ?? "Operation failed";
-                return View();
             }
-
-            if (string.IsNullOrEmpty(successRedirectController))
-            {
-                return RedirectToAction(successRedirectAction, routeValues);
-            }
-
-            return RedirectToAction(successRedirectAction, successRedirectController, routeValues);
+            return RedirectToAction(redirectAction);
         }
 
         /// <summary>

@@ -122,5 +122,46 @@ namespace InventoryManagement.Web.Controllers
 
             return BadRequest("Unsupported format");
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetFilteredInventoryData(
+            string dateRange,
+            string department,
+            string category)
+        {
+            try
+            {
+                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+
+                // Apply filters
+                if (!string.IsNullOrEmpty(department))
+                {
+                    products = products?.Where(p => p.DepartmentName == department).ToList();
+                }
+
+                if (!string.IsNullOrEmpty(category))
+                {
+                    products = products?.Where(p => p.CategoryName == category).ToList();
+                }
+
+                // Prepare response data
+                var filteredData = new
+                {
+                    TotalProducts = products?.Count,
+                    WorkingItems = products?.Count(p => p.IsWorking),
+                    NotWorkingItems = products?.Count(p => !p.IsWorking),
+                    DepartmentData = products?.GroupBy(p => p.DepartmentName)
+                        .Select(g => new { Name = g.Key, Count = g.Count() }),
+                    CategoryData = products?.GroupBy(p => p.CategoryName)
+                        .Select(g => new { Name = g.Key, Count = g.Count() })
+                };
+
+                return Json(filteredData);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
     }
 }

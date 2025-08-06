@@ -88,9 +88,6 @@
                         <table class="table table-hover mb-0" id="routesTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 40px;">
-                                        <input type="checkbox" id="selectAll" class="form-check-input" />
-                                    </th>
                                     <th style="width: 80px;">Image</th>
                                     <th>Date</th>
                                     <th>Type</th>
@@ -366,33 +363,39 @@
             params.set('pageNumber', page);
             window.location.href = '/Routes?' + params.toString();
         }
+
         function exportData()
-         {
+        {
              exportRoutesToPDF();
         }
+
         function showImageModal(imageUrl, title) {
                     $('#modalImage').attr('src', imageUrl);
                     $('#imageModalTitle').text(title);
                     $('#imageModal').modal('show');
-                }
-        function completeRoute(id)
-                {
-                    if (confirm('Are you sure you want to mark this route as completed?')) {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/Routes/Complete/' + id;
+        }
 
-                        const token = document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value;
-                        const tokenInput = document.createElement('input');
-                        tokenInput.type = 'hidden';
-                        tokenInput.name = '__RequestVerificationToken';
-                        tokenInput.value = token;
-
-                        form.appendChild(tokenInput);
-                        document.body.appendChild(form);
-                        form.submit();
+        function completeRoute(id) {
+            if (confirm('Are you sure you want to mark this route as completed?')) {
+                $.ajax({
+                    url: '/Routes/Complete/' + id,
+                    type: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value
+                    },
+                    success: function(response) {
+                        // Reload after a short delay
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    },
+                    error: function(xhr) {
+                        const errorMsg = ErrorHandler.parseErrorMessage(xhr, 'Failed to complete route');
+                        showToast(errorMsg, 'error');
                     }
-                }
+                });
+            }
+        }
         function deleteRoute(id) {
                     if (confirm('Are you sure you want to delete this route?')) {
                         const form = document.createElement('form');

@@ -257,3 +257,17 @@ body {
 .fade-in {
     animation: slideIn 0.3s ease;
 }
+.nav-link.notification-toggle,
+.nav-link.user-menu-toggle {
+    color: #374151 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.user-name {
+    color: #374151 !important;
+}
+
+.search-wrapper {
+    display: none; /* Remove non-functional search */
+}

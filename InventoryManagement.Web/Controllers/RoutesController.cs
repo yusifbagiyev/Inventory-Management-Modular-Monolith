@@ -19,25 +19,35 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        public async Task<IActionResult> Index(int? pageNumber = 1, int? pageSize = 20, bool? isCompleted = null)
+        public async Task<IActionResult> Index(
+            int? pageNumber = 1,
+            int? pageSize = 20,
+            bool? isCompleted = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null)
         {
             try
             {
-                var queryString = isCompleted.HasValue ? $"&isCompleted={isCompleted.Value}" : "";
+                var queryString = new StringBuilder($"?pageNumber={pageNumber}&pageSize={pageSize}");
+
+                if (isCompleted.HasValue)
+                    queryString.Append($"&isCompleted={isCompleted.Value}");
+
+                if (startDate.HasValue)
+                    queryString.Append($"&startDate={startDate.Value:yyyy-MM-dd}");
+
+                if (endDate.HasValue)
+                    queryString.Append($"&endDate={endDate.Value:yyyy-MM-dd}");
 
                 // Add ordering to show pending first
-                queryString += "&orderBy=IsCompleted&ascending=true";
+                queryString.Append("&orderBy=IsCompleted&ascending=true");
 
                 var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
-                    $"api/inventoryroutes?pageNumber={pageNumber}&pageSize={pageSize}{queryString}");
-
-                // If API doesn't support ordering, sort client-side
-                if (routes != null && routes.Items.Any())
-                {
-                    routes.Items = routes.Items.OrderBy(r => r.IsCompleted).ThenByDescending(r => r.CreatedAt).ToList();
-                }
+                    $"api/inventoryroutes{queryString}");
 
                 ViewBag.CurrentFilter = isCompleted;
+                ViewBag.StartDate = startDate;
+                ViewBag.EndDate = endDate;
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 20;
 

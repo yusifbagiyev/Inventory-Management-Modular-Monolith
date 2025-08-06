@@ -416,24 +416,21 @@
             setTimeout(() => hideSpinner(), 2000);
         }
 
-        function showEmailModal() {
-            // Load users for email selection
-            $.get('/api/auth/users', function(users) {
-                const select = $('#emailRecipients');
-                select.empty();
+                function showEmailModal() {
+            // Hardcode some recipients for now or load from a different endpoint
+            const recipients = [
+                { email: 'yusifbv24@gmail.com', name: 'Yusif Bagiyev' },
+                {email: 'kenan.ahadzade@gmail.com' ,name:'Kənan Əhədzadə'}
+            ];
 
-                users.forEach(user => {
-                    select.append($('<option>', {
-                        value: user.email,
-                        text: `${user.firstName} ${user.lastName} (${user.email})`
-                    }));
-                });
+            const select = $('#emailRecipients');
+            select.empty();
 
-                // Initialize select2 for better multi-select
-                select.select2({
-                    placeholder: 'Select recipients',
-                    allowClear: true
-                });
+            recipients.forEach(user => {
+                select.append($('<option>', {
+                    value: user.email,
+                    text: `${user.name} (${user.email})`
+                }));
             });
 
             $('#emailModal').modal('show');

@@ -240,10 +240,18 @@
 
         $(document).ready(function() {
             // Sidebar toggle
-            $('#menu-toggle').click(function(e) {
-                e.preventDefault();
-                $('#wrapper').toggleClass('toggled');
-            });
+                    $('#menu-toggle').click(function(e) {
+            e.preventDefault();
+            $('body').toggleClass('sidebar-toggled');
+            $('#wrapper').toggleClass('toggled');
+
+            // Adjust main content margin
+            if ($('#wrapper').hasClass('toggled')) {
+                $('.main-content').css('margin-left', '0');
+            } else {
+                $('.main-content').css('margin-left', 'var(--sidebar-width)');
+            }
+        });
 
             // Only initialize notifications if user is authenticated
             if ($('#jwtToken').val()) {
