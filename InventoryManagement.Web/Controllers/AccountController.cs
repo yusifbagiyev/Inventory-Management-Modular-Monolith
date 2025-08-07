@@ -167,6 +167,8 @@ namespace InventoryManagement.Web.Controllers
             return View();
         }
 
+
+
         [HttpGet]
         public IActionResult Profile()
         {
@@ -184,6 +186,8 @@ namespace InventoryManagement.Web.Controllers
             var userData = JsonConvert.DeserializeObject<User>(userDataJson);
             return View(userData);
         }
+
+
 
         [HttpGet]
         public async Task<IActionResult> RefreshToken()
@@ -215,6 +219,5 @@ namespace InventoryManagement.Web.Controllers
 
             return RedirectToAction("Login");
         }
-
     }
 }

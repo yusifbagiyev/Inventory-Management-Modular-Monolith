@@ -51,35 +51,33 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">To Department <span class="text-danger">*</span></label>
-                                    <select name="ToDepartmentId" class="form-select" required >
-                                        <option value="">-- Select Department --</option>
-                                        @foreach (var dept in ViewBag.Departments as List<SelectListItem>??new List<SelectListItem>())
-                                        {
-											var selected = dept.Value == Model.ToDepartmentId.ToString() ? "selected" : "";
-                                            <option value="@dept.Value" selected>
-                                                @dept.Text
-                                            </option>
-                                        }
-                                    </select>
-                                    <span class="text-danger field-validation-valid" data-valmsg-for="ToDepartmentId"></span>
+                                    <label class="form-label">To Department</label>
+                                    <input type="text" class="form-control" value="@Model.ToDepartmentName" readonly disabled />
+                                    <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">To Worker</label>
-                                    <input type="text" name="ToWorker" class="form-control" value="@Model.ToWorker" 
-                                           placeholder="Enter worker name (optional)" />
+                                    <input type="text" class="form-control" value="@Model.ToWorker" readonly disabled />
+                                    <input type="hidden" name="ToWorker" value="@Model.ToWorker" />
                                 </div>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Current Image</label>
+                            <label class="form-label">Route Image</label>
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
                                 <div id="currentImageContainer" class="mb-3">
-                                    <img src="@Model.FullImageUrl" class="img-thumbnail" style="max-width: 200px;" alt="Route Image" />
+                                    <div class="position-relative d-inline-block">
+                                        <img src="@Model.FullImageUrl" class="img-thumbnail" style="max-width: 200px;" alt="Route Image" />
+                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                                onclick="removeCurrentImage()" title="Remove image">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="RemoveImage" name="RemoveImage" value="false" />
                                 </div>
                             }
                             else
@@ -87,10 +85,12 @@
                                 <p class="text-muted">No image uploaded</p>
                             }
                             
-                            <label class="form-label">Upload New Image (Optional)</label>
-                            <input type="file" name="ImageFile" class="form-control" accept="image/*" 
-                                   onchange="previewImage(this, 'imagePreview')" />
-                            <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                            <div id="newImageUpload" style="@(!string.IsNullOrEmpty(Model.ImageUrl) ? "display:none;" : "")">
+                                <label class="form-label">Upload New Image</label>
+                                <input type="file" name="ImageFile" class="form-control" accept="image/*"
+                                       onchange="previewImage(this, 'imagePreview')" />
+                                <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -186,8 +186,6 @@
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/ajaxHandler.js"></script>
     <script>
-        let routeId = @Model.Id;
-
         function previewImage(input, previewId) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -196,6 +194,11 @@
                 };
                 reader.readAsDataURL(input.files[0]);
             }
+        }
+                function removeCurrentImage() {
+            $('#currentImageContainer').hide();
+            $('#RemoveImage').val('true');
+            $('#newImageUpload').show();
         }
 
         function confirmDelete(id) {

@@ -7,7 +7,7 @@ namespace RouteService.Application.Features.Routes.Queries
 {
     public record GetAllRoutesQuery(
         int? PageNumber = 1,
-        int? PageSize = 20,
+        int? PageSize = 30,
         bool? IsCompleted = null,
         DateTime? StartDate = null,
         DateTime? EndDate = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
@@ -27,7 +27,7 @@ namespace RouteService.Application.Features.Routes.Queries
         {
             var routes = await _repository.GetAllAsync(
                 request.PageNumber ?? 1,
-                request.PageSize ?? 20,
+                request.PageSize ?? 30,
                 request.IsCompleted,
                 request.StartDate,
                 request.EndDate,

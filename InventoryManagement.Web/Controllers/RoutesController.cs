@@ -21,7 +21,7 @@ namespace InventoryManagement.Web.Controllers
 
         public async Task<IActionResult> Index(
             int? pageNumber = 1,
-            int? pageSize = 20,
+            int? pageSize = 30,
             bool? isCompleted = null,
             DateTime? startDate = null,
             DateTime? endDate = null)
@@ -49,7 +49,7 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.StartDate = startDate;
                 ViewBag.EndDate = endDate;
                 ViewBag.PageNumber = pageNumber ?? 1;
-                ViewBag.PageSize = pageSize ?? 20;
+                ViewBag.PageSize = pageSize ?? 30;
 
                 return View(routes ?? new PagedResultDto<RouteViewModel>());
             }

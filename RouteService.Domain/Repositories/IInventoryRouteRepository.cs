@@ -15,7 +15,7 @@ namespace RouteService.Domain.Repositories
         Task<InventoryRoute?> GetLatestRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
         Task<PagedResult<InventoryRoute>> GetAllAsync(
             int pageNumber = 1,
-            int pageSize = 20,
+            int pageSize = 30,
             bool? isCompleted = null,
             DateTime? startDate = null,
             DateTime? endDate = null,

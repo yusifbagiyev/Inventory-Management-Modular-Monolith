@@ -123,9 +123,9 @@ namespace RouteService.API.Controllers
 
         [HttpGet]
         [Permission(AllPermissions.RouteView)]
-        public async Task<ActionResult<PagedResult<InventoryRouteDto>>> GetAllRoutes(
+        public async Task<ActionResult<PagedResultDto<InventoryRouteDto>>> GetAllRoutes(
             [FromQuery] int? pageNumber = 1,
-            [FromQuery] int? pageSize = 20,
+            [FromQuery] int? pageSize = 30,
             [FromQuery] bool? isCompleted = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)

@@ -121,14 +121,13 @@
             });
         }
 
-        function markAllAsRead() {
-            $.post('/Notifications/MarkAllAsRead', function() {
-                $('.notification-item').removeClass('unread');
-                $('.notification-item .btn').remove();
-                updateNotificationCount();
-                showToast('All notifications marked as read', 'success');
-            });
-        }
+       $('#markAllAsReadBtn').on('click', function(e) {
+            e.preventDefault();
+            // Call the global function defined in _Layout
+            if (typeof markAllAsRead === 'function') {
+                markAllAsRead();
+            }
+        });
 
         function applyFilters() {
             const status = $('#statusFilter').val();

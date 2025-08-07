@@ -1,4 +1,5 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+﻿using System.Text;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -16,19 +17,23 @@ namespace InventoryManagement.Web.Controllers
             _apiService = apiService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+            int? pageNumber=1,
+            int? pageSize=30)
         {
             try
             {
-                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
-                return View(products ?? []);
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
+
+                ViewBag.PageNumber = pageNumber ?? 1;
+                ViewBag.PageSize = pageSize ?? 30;
+                return View(products ?? new PagedResultDto<ProductViewModel>());
             }
             catch (Exception ex)
             {
-                return HandleException(ex, new List<ProductViewModel>());
+                return HandleException(ex, new PagedResultDto<ProductViewModel>());
             }
         }
-
 
 
         public async Task<IActionResult> Details(int id)

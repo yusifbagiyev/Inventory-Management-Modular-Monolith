@@ -363,16 +363,23 @@
             // Make AJAX call to get filtered data
             $.ajax({
                 url: '/Reports/GetFilteredInventoryData',
+                type: 'GET',
                 data: {
                     dateRange: dateRange,
                     department: department,
                     category: category
                 },
                 success: function(data) {
+                    if (data.success === false) {
+                        showToast(data.error || 'Error loading data', 'error');
+                        hideSpinner();
+                        return;
+                    }
                     updateCharts(data);
                     hideSpinner();
                 },
-                error: function() {
+                error: function(xhr) {
+                    console.error('Filter error:', xhr);
                     showToast('Error loading filtered data', 'error');
                     hideSpinner();
                 }

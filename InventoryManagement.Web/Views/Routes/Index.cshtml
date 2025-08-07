@@ -56,7 +56,7 @@
         <div class="card-header">
             <div class="row align-items-center">
                 <div class="col">
-                    <partial name="_GmailPagination" model="Model" />
+                    <partial name="_RoutePagination" model="Model" />
                 </div>
                 <div class="col-auto">
                     @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
@@ -244,7 +244,7 @@
                 }
             </div>
             <div class="card-footer">
-                <partial name="_GmailPagination" model="Model" />
+                <partial name="_RoutePagination" model="Model" />
             </div>
 
         </div>

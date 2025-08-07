@@ -2,6 +2,7 @@
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace InventoryManagement.Web.Controllers
@@ -17,50 +18,52 @@ namespace InventoryManagement.Web.Controllers
             _apiService = apiService;
         }
 
+
         public async Task<IActionResult> Inventory()
         {
             var model = new InventoryReportViewModel();
 
-            var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+            var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
             var departments = await _apiService.GetAsync<List<DepartmentViewModel>>("api/departments");
             var categories = await _apiService.GetAsync<List<CategoryViewModel>>("api/categories");
 
             if (products != null)
             {
-                model.TotalProducts = products.Count;
-                model.WorkingItems = products.Count(p => p.IsWorking);
-                model.NotWorkingItems = products.Count(p => !p.IsWorking);
-                model.NewItems = products.Count(p => p.IsNewItem);
+                model.TotalProducts = products.Items.Count();
+                model.WorkingItems = products.Items.Count(p => p.IsWorking);
+                model.NotWorkingItems = products.Items.Count(p => !p.IsWorking);
+                model.NewItems = products.Items.Count(p => p.IsNewItem);
 
                 if(departments != null)
                 {
                     model.DepartmentReports = departments.Select(d => new DepartmentReport
                     {
                         DepartmentName = d.Name,
-                        TotalItems = products.Count(p => p.DepartmentId == d.Id),
-                        WorkingItems = products.Count(p => p.DepartmentId == d.Id && p.IsWorking),
-                        NotWorkingItems = products.Count(p => p.DepartmentId == d.Id && !p.IsWorking),
-                        UtilizationPercentage = products.Any(p => p.DepartmentId == d.Id)
-                            ? (int)((double)products.Count(p => p.DepartmentId == d.Id && p.IsWorking) / products.Count(p => p.DepartmentId == d.Id) * 100)
+                        TotalItems = products.Items.Count(p => p.DepartmentId == d.Id),
+                        WorkingItems = products.Items.Count(p => p.DepartmentId == d.Id && p.IsWorking),
+                        NotWorkingItems = products.Items.Count(p => p.DepartmentId == d.Id && !p.IsWorking),
+                        UtilizationPercentage = products.Items.Any(p => p.DepartmentId == d.Id)
+                            ? (int)((double)products.Items.Count(p => p.DepartmentId == d.Id && p.IsWorking) / products.Items.Count(p => p.DepartmentId == d.Id) * 100)
                             : 0
                     }).OrderByDescending(d => d.TotalItems).ToList();
                 }
 
                 if(categories!= null)
                 {
-                    var totalProducts = products.Count;
+                    var totalProducts = products.Items.Count();
                     model.CategoryReports = categories.Select(c => new CategoryReport
                     {
                         CategoryName = c.Name,
-                        ItemCount = products.Count(p => p.CategoryId == c.Id),
+                        ItemCount = products.Items.Count(p => p.CategoryId == c.Id),
                         Percentage = totalProducts > 0
-                            ? Math.Round((decimal)products.Count(p => p.CategoryId == c.Id) / totalProducts * 100, 2)
+                            ? Math.Round((decimal)products.Items.Count(p => p.CategoryId == c.Id) / totalProducts * 100, 2)
                             : 0
                     }).Where(c => c.ItemCount > 0).OrderByDescending(c => c.ItemCount).ToList();
                 }
             }
             return View(model);
         }
+
 
         public async Task<IActionResult> TransferHistory(DateTime? startDate, DateTime? endDate, int? departmentId)
         {
@@ -102,17 +105,18 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
+
         [HttpGet]
         public async Task<IActionResult> ExportInventory(string format = "csv")
         {
-            var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+            var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
 
             if (format.ToLower() == "csv")
             {
                 var csv = new StringBuilder();
                 csv.AppendLine("InventoryCode,Model,Vendor,Department,Worker,Status,Category");
 
-                foreach (var product in products ?? [])
+                foreach (var product in products?.Items ?? [])
                 {
                     csv.AppendLine($"{product.InventoryCode},{product.Model},{product.Vendor},{product.DepartmentName},{product.Worker},{(product.IsWorking ? "Working" : "Not Working")},{product.CategoryName}");
                 }
@@ -133,7 +137,7 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
 
                 if (products == null)
                 {
@@ -143,27 +147,25 @@ namespace InventoryManagement.Web.Controllers
                 // Apply filters
                 if (!string.IsNullOrEmpty(department))
                 {
-                    products = products.Where(p => p.DepartmentName == department).ToList();
+                    products.Items.Where(p => p.DepartmentName == department);
                 }
 
                 if (!string.IsNullOrEmpty(category))
                 {
-                    products = products.Where(p => p.CategoryName == category).ToList();
+                    products.Items.Where(p => p.CategoryName == category);
                 }
-
-                // Apply date range filter if needed
-                // Note: You'll need to add CreatedAt to ProductViewModel for this to work
 
                 // Prepare response data
                 var filteredData = new
                 {
-                    TotalProducts = products.Count,
-                    WorkingItems = products.Count(p => p.IsWorking),
-                    NotWorkingItems = products.Count(p => !p.IsWorking),
-                    NewItems = products.Count(p => p.IsNewItem),
-                    DepartmentData = products.GroupBy(p => p.DepartmentName)
+                    success=true,
+                    TotalProducts = products.Items.Count(),
+                    WorkingItems = products.Items.Count(p => p.IsWorking),
+                    NotWorkingItems = products.Items.Count(p => !p.IsWorking),
+                    NewItems = products.Items.Count(p => p.IsNewItem),
+                    DepartmentData = products.Items.GroupBy(p => p.DepartmentName)
                         .Select(g => new { Name = g.Key, Count = g.Count() }).ToList(),
-                    CategoryData = products.GroupBy(p => p.CategoryName)
+                    CategoryData = products.Items.GroupBy(p => p.CategoryName)
                         .Select(g => new { Name = g.Key, Count = g.Count() }).ToList()
                 };
 
@@ -176,7 +178,8 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
-        // Add the PDF export endpoint
+
+
         [HttpPost]
         public IActionResult ExportInventoryPDF([FromBody] dynamic filters)
         {

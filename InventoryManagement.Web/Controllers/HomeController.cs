@@ -34,15 +34,15 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 //Fetch dashboard data from API
-                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
                 var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>("api/inventoryroutes?pageNumber=1&pageSize=1000");
                 var departments = await _apiService.GetAsync<List<DepartmentViewModel>>("/api/departments");
                 var categories = await _apiService.GetAsync<List<CategoryViewModel>>("/api/categories");
 
                 if (products != null)
                 {
-                    model.TotalProducts=products.Count;
-                    model.ActiveProducts = products.Count(p => p.IsActive);
+                    model.TotalProducts=products.TotalCount;
+                    model.ActiveProducts = products.Items.Count(p => p.IsActive);
                 }
 
                 if (routes != null)
@@ -67,8 +67,8 @@ namespace InventoryManagement.Web.Controllers
                     model.DepartmentStats = departments.Select(d => new DepartmentStats
                     {
                         DepartmentName = d.Name,
-                        ProductCount = products.Count(p => p.DepartmentId == d.Id),
-                        ActiveWorkers = products.Where(p => p.DepartmentId == d.Id && !string.IsNullOrEmpty(p.Worker))
+                        ProductCount = products.Items.Count(p => p.DepartmentId == d.Id),
+                        ActiveWorkers = products.Items.Where(p => p.DepartmentId == d.Id && !string.IsNullOrEmpty(p.Worker))
                                               .Select(p => p.Worker).Distinct().Count()
                     }).OrderByDescending(d => d.ProductCount).Take(5).ToList();
                 }
@@ -79,7 +79,7 @@ namespace InventoryManagement.Web.Controllers
                     model.CategoryDistributions = categories.Select((c, index) => new CategoryDistribution
                     {
                         CategoryName = c.Name,
-                        Count = products.Count(p => p.CategoryId == c.Id),
+                        Count = products.Items.Count(p => p.CategoryId == c.Id),
                         Color = colors[index % colors.Length]
                     }).Where(c => c.Count > 0).OrderByDescending(c => c.Count).Take(8).ToList();
                 }

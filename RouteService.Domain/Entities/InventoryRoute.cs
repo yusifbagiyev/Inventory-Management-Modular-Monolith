@@ -37,7 +37,7 @@ namespace RouteService.Domain.Entities
             {
                 RouteType = isNewItem ? RouteType.New : RouteType.Existing,
                 ProductSnapshot = productSnapshot,
-                FromDepartmentId=null,
+                FromDepartmentId = null,
                 FromDepartmentName = null,
                 ToDepartmentId = toDepartmentId,
                 ToDepartmentName = toDepartmentName,
@@ -46,7 +46,7 @@ namespace RouteService.Domain.Entities
                 ImageUrl = imageUrl,
                 Notes = notes,
                 IsCompleted = false,
-                CreatedAt = DateTime.UtcNow.AddHours(4),
+                CreatedAt = DateTime.UtcNow
             };
         }
 
@@ -76,7 +76,7 @@ namespace RouteService.Domain.Entities
                 ImageUrl = imageUrl,
                 Notes = notes,
                 IsCompleted = false,
-                CreatedAt = DateTime.UtcNow.AddHours(4)
+                CreatedAt = DateTime.UtcNow
             };
         }
 
@@ -103,7 +103,7 @@ namespace RouteService.Domain.Entities
                 ToWorker = removedBy,
                 Notes = reason,
                 IsCompleted = true,
-                CreatedAt = DateTime.UtcNow.AddHours(4)
+                CreatedAt = DateTime.UtcNow
             };
         }
 
@@ -127,14 +127,14 @@ namespace RouteService.Domain.Entities
                 FromWorker = existingProduct.Worker,
                 ToWorker = worker,
                 Notes = notes,
-                CreatedAt = DateTime.UtcNow.AddHours(4)
+                CreatedAt = DateTime.UtcNow
             };
         }
 
         public void Complete()
         {
             IsCompleted = true;
-            CompletedAt = DateTime.UtcNow.AddHours(4);
+            CompletedAt = DateTime.UtcNow;
         }
 
         public void UpdateImage(string imageUrl)

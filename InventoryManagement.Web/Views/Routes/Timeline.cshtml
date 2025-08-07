@@ -142,75 +142,50 @@
     </div>
 
 @section Scripts {
-     <script src="~/js/pdf-export.js"></script>
+    <script src="~/js/pdf-export.js"></script>
     <script>
+        $(document).ready(function() {
+            // Make timeline images clickable
+            $('.timeline-content img').on('click', function() {
+                const imageUrl = $(this).attr('src');
+                showImageModal(imageUrl, 'Transfer Image');
+            });
+        });
+
+        function showImageModal(imageUrl, title) {
+            // Use the global image modal from _Layout
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
+        }
+
         function exportTimelineToPDF() {
             // Get the timeline element
             const timeline = document.querySelector('.timeline');
             if (!timeline) {
-                showToast('Timeline not found', 'error');
+                alert('Timeline not found');
                 return;
             }
 
-            // Clone the timeline to modify it
-            const timelineClone = timeline.cloneNode(true);
-            
-            // Remove images
-            timelineClone.querySelectorAll('img').forEach(img => img.remove());
-            
-            // Remove action buttons
-            timelineClone.querySelectorAll('.btn').forEach(btn => btn.remove());
-            
-            // Simplify timeline items
-            timelineClone.querySelectorAll('.timeline-item').forEach(item => {
-                const marker = item.querySelector('.timeline-marker');
-                const content = item.querySelector('.timeline-content');
-                
-                // Create simplified HTML
-                item.innerHTML = `
-                    <div style="display: flex; margin-bottom: 15px;">
-                        ${marker.outerHTML}
-                        <div style="flex: 1; margin-left: 15px; border-left: 2px solid #e0e0e0; padding-left: 15px;">
-                            ${content.innerHTML}
-                        </div>
-                    </div>
-                `;
+            // Generate date string
+            const generatedDate = new Date().toLocaleString('en-US', {
+                timeZone: 'Asia/Baku',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
 
-            // Generate HTML for PDF
-            const htmlContent = `
-                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                    <h1 style="text-align: center; color: #1e40af; margin-bottom: 10px;">
-                        Transfer Timeline Report
-                    </h1>
-                    <div style="text-align: center; color: #6b7280; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                        <div>Generated on: ${new Date().toLocaleString('en-US', {
-                            timeZone: 'Asia/Baku',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}</div>
-                        <div>Total Transfers: ${timelineClone.querySelectorAll('.timeline-item').length}</div>
-                    </div>
-                    ${timelineClone.outerHTML}
-                </div>
-            `;
-
+            // Create print window
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <meta charset="UTF-8">
                     <title>Transfer Timeline Report</title>
                     <style>
-                        page { 
-                            size: portrait; 
-                            margin: 1cm;
-                        }
-                        body { 
+                        body {
                             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                             font-size: 10pt;
                             color: #333;
@@ -228,8 +203,6 @@
                             justify-content: center;
                             margin-top: 5px;
                         }
-                        .fa-check-circle { color: #28a745; }
-                        .fa-clock { color: #ffc107; }
                         .timeline-content {
                             background: #f8f9fa;
                             padding: 10px;
@@ -250,101 +223,29 @@
                             margin: 2px 0;
                         }
                         .bg-success { background-color: #28a745; color: white; }
-                        .bg-warning { background-color: #ffc107; color: black; }
                     </style>
                 </head>
                 <body>
-                    ${htmlContent}
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        <h1 style="text-align: center; color: #1e40af; margin-bottom: 10px;">
+                            Transfer Timeline Report
+                        </h1>
+                        <div style="text-align: center; color: #6b7280; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                            <div>Generated on: ${generatedDate}</div>
+                            <div>Total Transfers: ${timeline.querySelectorAll('.timeline-item').length}</div>
+                        </div>
+                        ${timeline.innerHTML}
+                    </div>
                 </body>
                 </html>
             `);
             printWindow.document.close();
 
-            // Wait for content to load then print
-            printWindow.onload = function () {
-                setTimeout(() => {
-                    printWindow.print();
-                    printWindow.onafterprint = function () {
-                        printWindow.close();
-                    };
-                }, 350);
-            };
+            // Print and close after delay
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
         }
     </script>
-    <script>
-        $(document).ready(function()
-        {
-            // Make timeline images clickable
-            $('.timeline-content img').on('click',function(){
-                const imageUrl=$(this).attr('src');
-                showImageModal(imageUrl,'Transfer Image');
-            });
-        });
-                function showImageModal(imageUrl, title) {
-            // Use the global image modal from _Layout
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
-        }
-    </script>
-<style>
-    .timeline {
-        position: relative;
-        padding-left: 30px;
-    }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 9px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #dee2e6;
-        }
-
-    .timeline-item {
-        position: relative;
-        padding-bottom: 30px;
-    }
-
-    .timeline-marker {
-        position: absolute;
-        left: -21px;
-        top: 0;
-        width: 20px;
-        height: 20px;
-        background: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .timeline-content {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #dee2e6;
-    }
-    .card.shadow{
-        border-radius:0.5rem;
-        overflow:hidden;
-    }
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: 1px solid rgba(0,0,0,.125);
-        padding: 1rem 1.25rem;
-        font-weight: 600;
-    }
-    
-    .card-body ul.list-unstyled li {
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #e9ecef;
-    }
-    
-    .card-body ul.list-unstyled li:last-child {
-        border-bottom: none;
-    }
-</style>
 }

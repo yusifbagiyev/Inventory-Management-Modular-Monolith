@@ -1,4 +1,4 @@
-﻿@model dynamic
+﻿@model PagedResultDto<ProductViewModel>
 @{
     var startItem = ((Model.PageNumber - 1) * Model.PageSize) + 1;
     var endItem = Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount);

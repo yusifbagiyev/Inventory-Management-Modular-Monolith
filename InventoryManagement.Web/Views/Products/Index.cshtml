@@ -1,4 +1,4 @@
-﻿@model List<ProductViewModel>
+﻿@model PagedResultDto<ProductViewModel>
 @{
     ViewData["Title"] = "Products";
 }
@@ -12,173 +12,189 @@
 
     <div class="card mb-4 shadow">
         <div class="card-header">
-            <div class="row">
-                <div class="col">
-                    <i class="fas fa-boxes me-1"></i>
-                    Product Inventory
-                </div>
-                <div class="col text-end">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="exportProductsToPDF()">
-                        <i class="fas fa-file-pdf"></i> Export PDF
-                    </button>
-                    @if (User.HasPermission("product.create")||User.HasPermission("product.create.direct"))
-                    {
-                        <a asp-action="Create" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Add Product
-                        </a>
-                    }
+            <div class="row g-3">
+                <div class="col md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" id="searchInput" class="form-control"
+                               placeholder="Search by code, model, vendor..." />
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="card-body">
-            @if (Model.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="productsTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 80px;">Image</th>
-                                <th>Code</th>
-                                <th>Product Details</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th style="width: 120px;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var product in Model)
-                            {
+    </div>
+
+    <div class="card mb-4 shadow">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <partial name="_ProductPagination" model="Model" />
+                </div>
+                <div class="col-auto">
+                    @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
+                    {
+                        <a asp-action="Create" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> New Product
+                        </a>
+                    }
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportData()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (Model.Items.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="productsTable">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(product.ImageUrl))
-                                        {
-                                            <img src="@product.FullImageUrl" class="img-thumbnail"
-                                                 style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
-                                                 onclick="showImageModal('@product.FullImageUrl','@product.CategoryName')"
-                                                 alt="@product.CategoryName">
-                                        }
-                                        else
-                                        {
-                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                                <i class="fas fa-image text-muted"></i>
-                                            </div>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-primary fs-6 inventory-code-display" data-id="@product.Id">
-                                            @product.InventoryCode
-                                        </span>
-                                        <div class="inventory-code-edit d-none" data-id="@product.Id">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control form-control-sm inventory-code-input"
-                                                       value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id">
-                                                <button class="btn btn-success btn-sm save-inventory-code" data-id="@product.Id">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                                <button class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div>
-                                            <strong>@product.Model</strong>
-                                            <small class="text-muted">by @product.Vendor</small>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-tag"></i> @product.CategoryName
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <div>
-                                            <i class="fas fa-building"></i> @product.DepartmentName
-                                        </div>
-                                        @if (!string.IsNullOrEmpty(product.Worker))
-                                        {
-                                            <small class="text-muted">
-                                                <i class="fas fa-user"></i> @product.Worker
-                                            </small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            @if (product.IsWorking)
+                                    <th style="width: 80px;">Image</th>
+                                    <th>Code</th>
+                                    <th>Product Details</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th style="width: 120px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(product.ImageUrl))
                                             {
-                                                <span class="badge bg-success">Working</span>
+                                                <img src="@product.FullImageUrl" class="img-thumbnail"
+                                                     style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
+                                                     onclick="showImageModal('@product.FullImageUrl','@product.CategoryName')"
+                                                     alt="@product.CategoryName">
                                             }
                                             else
                                             {
-                                                <span class="badge bg-danger">Not Working</span>
+                                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                    <i class="fas fa-image text-muted"></i>
+                                                </div>
                                             }
-                                            @if (product.IsNewItem)
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary fs-6 inventory-code-display" data-id="@product.Id">
+                                                @product.InventoryCode
+                                            </span>
+                                            <div class="inventory-code-edit d-none" data-id="@product.Id">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control form-control-sm inventory-code-input"
+                                                           value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id">
+                                                    <button class="btn btn-success btn-sm save-inventory-code" data-id="@product.Id">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>@product.Model</strong>
+                                                <small class="text-muted">by @product.Vendor</small>
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag"></i> @product.CategoryName
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <i class="fas fa-building"></i> @product.DepartmentName
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(product.Worker))
                                             {
-                                                <span class="badge bg-info">New</span>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-user"></i> @product.Worker
+                                                </small>
                                             }
-                                            @if (!product.IsActive)
-                                            {
-                                                <span class="badge bg-secondary">Inactive</span>
-                                            }
-                                            @if (product.HasPendingApproval)
-                                            {
-                                                <span class="badge bg-warning">
-                                                    <i class="fas fa-clock"></i> Pending Approval
-                                                </span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No products found in inventory</p>
-                    <a asp-action="Create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add First Product
-                    </a>
-                </div>
-            }
-        
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                @if (product.IsWorking)
+                                                {
+                                                    <span class="badge bg-success">Working</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Not Working</span>
+                                                }
+                                                @if (product.IsNewItem)
+                                                {
+                                                    <span class="badge bg-info">New</span>
+                                                }
+                                                @if (!product.IsActive)
+                                                {
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                }
+                                                @if (product.HasPendingApproval)
+                                                {
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-clock"></i> Pending Approval
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No products found in inventory</p>
+                        <a asp-action="Create" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add First Product
+                        </a>
+                    </div>
+                }
+
+            </div>
+            <div class="card-footer">
+                <partial name="_ProductPagination" model="Model" />
+            </div>
         </div>
     </div>
-</div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this product?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" style="display: inline;">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this product?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="post" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -187,21 +203,9 @@
 @section Scripts {
     <script src="~/js/pdf-export.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#productsTable').DataTable({
-                pageLength: 100, // Show more items per page for large datasets
-                lengthMenu: [[50, 100, 250, 500, -1], [50, 100, 250, 500, "All"]],
-                responsive: true,
-                ordering:false,
-                deferRender: true, // Improve performance
-                stateSave: true, // Remember user's preferences
-                language: {
-                    search: "Search:",
-                    lengthMenu: "Show _MENU_ products",
-                    info: "Showing _START_ to _END_ of _TOTAL_ products"
-                }
-            });
-        });
+                function changePage(page) {
+            window.location.href = '/Products?pageNumber=' + page + '&pageSize=20';
+        }
 
         function deleteProduct(id) {
             $('#deleteForm').attr('action', '/Products/Delete/' + id);
@@ -215,6 +219,15 @@
                 const fullUrl=$(this).attr('src');
                 const productName=$(this).attr('alt');
                 showImageModal(fullUrl,productName);
+
+                // Real-time search
+                    $('#searchInput').on('input', function() {
+                        const searchTerm = $('#searchInput').val().toLowerCase();
+                        $('#routesTableBody tr').each(function() {
+                            const searchData = $(this).data('search');
+                            $(this).toggle(searchData.includes(searchTerm));
+                        });
+                    });
             });
 
             // Double-click to edit inventory code

@@ -7,6 +7,7 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
+using ProductService.Domain.Common;
 using SharedServices.Authorization;
 using SharedServices.DTOs;
 using SharedServices.Enum;
@@ -33,9 +34,11 @@ namespace ProductService.API.Controllers
 
         [HttpGet]
         [Permission(AllPermissions.ProductView)]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetAll()
+        public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
+            [FromQuery] int? pageNumber = 1,
+            [FromQuery] int? pageSize = 30)
         {
-            var products = await _mediator.Send(new GetAllProductsQuery());
+            var products = await _mediator.Send(new GetAllProductsQuery(pageNumber,pageSize));
             return Ok(products);
         }
 

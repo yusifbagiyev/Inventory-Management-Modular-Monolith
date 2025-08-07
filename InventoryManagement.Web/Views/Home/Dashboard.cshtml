@@ -318,11 +318,21 @@
         // Period switcher
         $('[data-period]').click(function() {
             const period = $(this).data('period');
+                // Don't reload page, update via AJAX
+                    loadDashboardData(period);
             $(this).addClass('active').siblings().removeClass('active');
-
-                // Reload page with period parameter
-            window.location.href = '/Home/Dashboard?period=' + period;
         });
+
+                function loadDashboardData(period) {
+            $.ajax({
+                url: '/Home/GetDashboardData',
+                data: { period: period },
+                success: function(data) {
+                    // Update your charts and metrics
+                    updateDashboard(data);
+                }
+            });
+        }
 
         // Set active button on page load
         $(document).ready(function() {

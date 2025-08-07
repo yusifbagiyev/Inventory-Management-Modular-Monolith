@@ -93,7 +93,8 @@ namespace RouteService.Infrastructure.Repositories
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
-                .OrderByDescending(r => r.CreatedAt)
+                .OrderBy(r=>r.IsCompleted)
+                .ThenByDescending(r => r.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);

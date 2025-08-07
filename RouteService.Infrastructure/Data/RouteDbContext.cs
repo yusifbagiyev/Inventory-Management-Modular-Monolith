@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RouteService.Domain.Entities;
+using SharedServices.Extensions;
 
 namespace RouteService.Infrastructure.Data
 {
@@ -38,6 +40,20 @@ namespace RouteService.Infrastructure.Data
                 entity.HasIndex(e => e.ToDepartmentId).HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
                 entity.HasIndex(e => e.CreatedAt);
             });
+
+
+            foreach(var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach(var property in entityType.GetProperties())
+                {
+                    if(property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetValueConverter(new ValueConverter<DateTime,DateTime>(
+                            v=>DateTime.SpecifyKind(v,DateTimeKind.Utc),
+                            v=>DateTime.SpecifyKind(v,DateTimeKind.Local)));
+                    }
+                }
+            }
         }
     }
 }
