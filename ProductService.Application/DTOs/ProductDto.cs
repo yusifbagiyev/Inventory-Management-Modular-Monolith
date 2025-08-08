@@ -15,5 +15,6 @@
         public string? CategoryName { get; set; }
         public int DepartmentId { get; set; }
         public string? DepartmentName { get; set; }
+        public DateTime? CreatedAt { get; set; }
     }
 }
