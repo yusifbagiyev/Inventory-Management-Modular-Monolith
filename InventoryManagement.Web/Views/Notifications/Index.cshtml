@@ -4,92 +4,130 @@
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Notifications</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item active">Notifications</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-bell me-2"></i>Notifications
+        </h1>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="markAllAsRead()">
+                <i class="fas fa-check-double"></i> Mark All Read
+            </button>
+            <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                <i class="fas fa-redo"></i> Reset Filters
+            </button>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card mb-4 shadow">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="fas fa-bell me-1"></i>
-                        All Notifications
-                    </span>
-                    <button class="btn btn-sm btn-outline-primary" onclick="markAllAsRead()">
-                        <i class="fas fa-check-double"></i> Mark All as Read
-                    </button>
+    <!-- Advanced Filter Section -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-filter me-2"></i>Filter Notifications
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Notifications</option>
+                        <option value="unread">Unread Only</option>
+                        <option value="read">Read Only</option>
+                    </select>
                 </div>
-                <div class="card-body">
-                    <div id="notificationsList">
-                        @foreach (var notification in Model.Notifications)
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="ApprovalRequest">Approval Requests</option>
+                        <option value="ApprovalResponse">Approval Responses</option>
+                        <option value="ProductUpdate">Product Updates</option>
+                        <option value="RouteUpdate">Route Updates</option>
+                        <option value="System">System Messages</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <input type="text" class="form-control" id="dateRangeFilter" placeholder="Select date range">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchFilter" placeholder="Search in notifications...">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <span class="ms-3 text-muted">
+                        Showing <span id="visibleCount">0</span> of <span id="totalCount">@Model.Notifications.Count</span> notifications
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications List with Virtual Scrolling -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div id="notificationsList" class="notifications-container" style="height: 600px; overflow-y: auto;">
+                <div id="notificationsContent">
+                    @if (Model.Notifications.Any())
+                    {
+                        @foreach (var notification in Model.Notifications.Take(50)) // Initial load of 50 items
                         {
                             <div class="notification-item @(notification.IsRead ? "" : "unread")"
-                                 data-id="@notification.Id">
-                                <div class="row align-items-center">
+                                 data-id="@notification.Id"
+                                 data-type="@notification.Type"
+                                 data-date="@notification.CreatedAt.ToString("yyyy-MM-dd")"
+                                 data-read="@(notification.IsRead ? "read" : "unread")">
+                                <div class="row align-items-center p-3">
                                     <div class="col-auto">
-                                        @Html.Raw(GetNotificationIcon(notification.Type))
+                                        <div class="notification-icon-wrapper">
+                                            @Html.Raw(GetNotificationIcon(notification.Type))
+                                        </div>
                                     </div>
                                     <div class="col">
-                                        <h6 class="mb-1">@notification.Title</h6>
-                                        <p class="mb-1">@notification.Message</p>
-                                        <small class="text-muted">
-                                            @notification.CreatedAt.ToString("MMM dd, yyyy HH:mm")
-                                        </small>
+                                        <h6 class="mb-1 fw-semibold">@notification.Title</h6>
+                                        <p class="mb-1 text-muted">@notification.Message</p>
+                                        <div class="d-flex align-items-center">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                @notification.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                                            </small>
+                                            @if (!notification.IsRead)
+                                            {
+                                                <span class="badge bg-primary ms-2">New</span>
+                                            }
+                                        </div>
                                     </div>
                                     <div class="col-auto">
-                                        @if (!notification.IsRead)
-                                        {
-                                            <button class="btn btn-sm btn-outline-secondary"
-                                                    onclick="markAsRead(@notification.Id)">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        }
+                                        <div class="btn-group">
+                                            @if (!notification.IsRead)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" onclick="markAsRead(@notification.Id)">
+                                                    <i class="fas fa-check"></i> Mark Read
+                                                </button>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         }
-                    </div>
-
-                    @if (!Model.Notifications.Any())
+                    }
+                    else
                     {
                         <div class="text-center py-5">
                             <i class="fas fa-bell-slash fa-3x text-muted"></i>
-                            <p class="mt-3 text-muted">No notifications yet</p>
+                            <p class="mt-3 text-muted">No notifications found</p>
                         </div>
                     }
                 </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-filter me-1"></i>
-                    Filters
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="statusFilter">
-                            <option value="">All</option>
-                            <option value="unread">Unread Only</option>
-                            <option value="read">Read Only</option>
-                        </select>
+                <div id="loadMoreTrigger" class="text-center py-3 d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading more...</span>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Type</label>
-                        <select class="form-select" id="typeFilter">
-                            <option value="">All Types</option>
-                            <option value="approval_request">Approval Requests</option>
-                            <option value="approval_processed">Approval Results</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary w-100" onclick="applyFilters()">
-                        <i class="fas fa-search"></i> Apply Filters
-                    </button>
                 </div>
             </div>
         </div>
@@ -97,48 +135,228 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
     <script>
-        function markAsRead(notificationId) {
-             $.ajax({
-                url: '/Notifications/MarkAsRead',
-                type: 'POST',
-                data: JSON.stringify(notificationId),
-                contentType: 'application/json',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val(),
-                    'Content-Type': 'application/json'
-                },
-                success: function() {
-                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
-                    $(`.notification-item[data-id="${notificationId}"] .btn`).remove();
-                    updateNotificationCount();
-                    showToast('Notification marked as read', 'success');
-                },
-                error: function(xhr) {
-                    console.error('Failed to mark as read:', xhr);
-                    showToast('Failed to mark notification as read', 'error');
+        let currentPage = 1;
+        let itemsPerPage = 50;
+        let isLoading = false;
+        let allNotifications = [];
+        let filteredNotifications = [];
+
+        $(document).ready(function() {
+            // Initialize date range picker
+            $('#dateRangeFilter').daterangepicker({
+                autoUpdateInput: false,
+                locale: {
+                    cancelLabel: 'Clear',
+                    format: 'MM/DD/YYYY'
                 }
             });
-        }
 
-       $('#markAllAsReadBtn').on('click', function(e) {
-            e.preventDefault();
-            // Call the global function defined in _Layout
-            if (typeof markAllAsRead === 'function') {
-                markAllAsRead();
-            }
+            $('#dateRangeFilter').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+            });
+
+            $('#dateRangeFilter').on('cancel.daterangepicker', function(ev, picker) {
+                $(this).val('');
+            });
+
+            // Store all notifications for client-side filtering
+            allNotifications = $('.notification-item').toArray();
+            updateCounts();
+
+            // Implement infinite scrolling
+            $('#notificationsList').on('scroll', function() {
+                if ($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 100) {
+                    loadMoreNotifications();
+                }
+            });
+
+            // Real-time search
+            $('#searchFilter').on('input', function() {
+                applyFilters();
+            });
         });
 
         function applyFilters() {
             const status = $('#statusFilter').val();
             const type = $('#typeFilter').val();
-            window.location.href = `/Notifications?status=${status}&type=${type}`;
+            const dateRange = $('#dateRangeFilter').val();
+            const searchTerm = $('#searchFilter').val().toLowerCase();
+
+            filteredNotifications = allNotifications.filter(function(item) {
+                const $item = $(item);
+                let show = true;
+
+                // Status filter
+                if (status && $item.data('read') !== status) {
+                    show = false;
+                }
+
+                // Type filter
+                if (type && $item.data('type') !== type) {
+                    show = false;
+                }
+
+                // Date range filter
+                if (dateRange && dateRange.includes(' - ')) {
+                    const dates = dateRange.split(' - ');
+                    const itemDate = moment($item.data('date'));
+                    const startDate = moment(dates[0], 'MM/DD/YYYY');
+                    const endDate = moment(dates[1], 'MM/DD/YYYY');
+
+                    if (!itemDate.isBetween(startDate, endDate, 'day', '[]')) {
+                        show = false;
+                    }
+                }
+
+                // Search filter
+                if (searchTerm && !$item.text().toLowerCase().includes(searchTerm)) {
+                    show = false;
+                }
+
+                return show;
+            });
+
+            displayFilteredNotifications();
         }
 
-        function updateNotificationCount() {
-            loadNotificationCount(); // From _NotificationScripts
+        function displayFilteredNotifications() {
+            $('#notificationsContent').empty();
+
+            const itemsToShow = filteredNotifications.slice(0, itemsPerPage);
+            itemsToShow.forEach(item => {
+                $('#notificationsContent').append(item);
+            });
+
+            updateCounts();
+            currentPage = 1;
+        }
+
+        function loadMoreNotifications() {
+            if (isLoading) return;
+
+            const totalItems = filteredNotifications.length > 0 ? filteredNotifications.length : allNotifications.length;
+            const startIndex = currentPage * itemsPerPage;
+
+            if (startIndex >= totalItems) return;
+
+            isLoading = true;
+            $('#loadMoreTrigger').removeClass('d-none');
+
+            setTimeout(() => {
+                const items = filteredNotifications.length > 0 ? filteredNotifications : allNotifications;
+                const endIndex = Math.min(startIndex + itemsPerPage, items.length);
+
+                for (let i = startIndex; i < endIndex; i++) {
+                    $('#notificationsContent').append(items[i]);
+                }
+
+                currentPage++;
+                isLoading = false;
+                $('#loadMoreTrigger').addClass('d-none');
+                updateCounts();
+            }, 500);
+        }
+
+        function updateCounts() {
+            const visibleCount = $('#notificationsContent .notification-item').length;
+            const totalCount = filteredNotifications.length > 0 ? filteredNotifications.length : allNotifications.length;
+
+            $('#visibleCount').text(visibleCount);
+            $('#totalCount').text(totalCount);
+        }
+
+        function markAsRead(notificationId) {
+            $.ajax({
+                url: '/Notifications/MarkAsRead',
+                type: 'POST',
+                data: JSON.stringify(notificationId),
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
+                },
+                success: function() {
+                    const $item = $(`.notification-item[data-id="${notificationId}"]`);
+                    $item.removeClass('unread').attr('data-read', 'read');
+                    $item.find('.btn-outline-primary').remove();
+                    $item.find('.badge.bg-primary').remove();
+                    showToast('Notification marked as read', 'success');
+                },
+                error: function() {
+                    showToast('Failed to mark notification as read', 'error');
+                }
+            });
+        }
+
+        function markAllAsRead() {
+            if (!confirm('Are you sure you want to mark all notifications as read?')) return;
+
+            $.ajax({
+                url: '/Notifications/MarkAllAsRead',
+                type: 'POST',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
+                },
+                success: function() {
+                    $('.notification-item').removeClass('unread').attr('data-read', 'read');
+                    $('.notification-item .btn-outline-primary').remove();
+                    $('.notification-item .badge.bg-primary').remove();
+                    showToast('All notifications marked as read', 'success');
+                },
+                error: function() {
+                    showToast('Failed to mark all as read', 'error');
+                }
+            });
+        }
+
+        function clearFilters() {
+            $('#statusFilter').val('');
+            $('#typeFilter').val('');
+            $('#dateRangeFilter').val('');
+            $('#searchFilter').val('');
+            filteredNotifications = [];
+            displayFilteredNotifications();
         }
     </script>
+
+    <style>
+        .notifications-container {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        .notification-item {
+            border-bottom: 1px solid #f1f3f5;
+            transition: background-color 0.2s;
+        }
+
+            .notification-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .notification-item.unread {
+                background-color: #e7f3ff;
+                border-left: 4px solid #0d6efd;
+            }
+
+        .notification-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #f1f3f5;
+        }
+
+        #loadMoreTrigger {
+            background-color: #f8f9fa;
+        }
+    </style>
 }
 
 @functions {
@@ -146,9 +364,12 @@
     {
         return type switch
         {
-            "approval_request" => "<i class='fas fa-clock text-warning fa-2x'></i>",
-            "approval_processed" => "<i class='fas fa-check-circle text-success fa-2x'></i>",
-            _ => "<i class='fas fa-info-circle text-info fa-2x'></i>"
+            "ApprovalRequest" => "<i class='fas fa-clock text-warning fa-lg'></i>",
+            "ApprovalResponse" => "<i class='fas fa-check-circle text-success fa-lg'></i>",
+            "ProductUpdate" => "<i class='fas fa-box text-info fa-lg'></i>",
+            "RouteUpdate" => "<i class='fas fa-route text-primary fa-lg'></i>",
+            "System" => "<i class='fas fa-info-circle text-secondary fa-lg'></i>",
+            _ => "<i class='fas fa-bell text-muted fa-lg'></i>"
         };
     }
 }

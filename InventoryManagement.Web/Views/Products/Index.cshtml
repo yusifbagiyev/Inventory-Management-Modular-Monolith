@@ -246,21 +246,22 @@
                     format:'MM/DD/YYYY'
                 }
             });
-            
-            $('#dateRange').on('apply.daterangepicker',function(ev,picker){
-                $(this).val(picker.startDate.format('MM/DD/YYYY')+' - '+picker.endDate.format('MM/DD/YYYY'));
-            });
-            $('#dateRange').on('cancel.daterangepicker',function(){
-                $(this).val('');
-            });
 
-            // Real time search
-            $('#searchInput').on('input',function(){
-                filterProducts();
-            });
+            $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
+                        $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                    });
+
+            $('#dateRange').on('cancel.daterangepicker', function() {
+                        $(this).val('');
+                    });
+
+             // Real-time search
+             $('#searchInput').on('input', function() {
+                        filterTable();
+                    });
         });
 
-        function filterProducts() {
+        function filterTable() {
             const searchTerm = $('#searchInput').val().toLowerCase();
             $('#productsTable tbody tr').each(function() {
                 const text = $(this).text().toLowerCase();
@@ -288,13 +289,13 @@
             }
 
             const status = $('#statusFilter').val();
-            if (status!='') {
-                params.append('status', status);
+            if (status!=='') {
+                params.append('status', status==='working');
             }
 
             const availability = $('#availabilityFilter').val();
-            if (availability!=''){
-                params.append('availability', availability);
+            if (availability!==''){
+                params.append('availability', availability==='active');
             }
 
             params.append('pageSize', '@Model.PageSize');
@@ -306,15 +307,13 @@
         function changePage(page) {
             const params = new URLSearchParams(window.location.search);
             params.set('pageNumber', page);
-            window.location.href = '/Routes?' + params.toString();
+            window.location.href = '/Products?' + params.toString();
         }
 
         function deleteProduct(id) {
             $('#deleteForm').attr('action', '/Products/Delete/' + id);
             $('#deleteModal').modal('show');
         }
-
-        
 
         function resetProductFilters() {
             $('#searchInput').val('');
@@ -324,44 +323,30 @@
             window.location.href = '/Products';
         }
 
-        
-    </script>
-    <script>
-        $(document).ready(function() {
-            // Make product images clickable
-            $(document).on('click','.img-thumbnail',function() {
-                const fullUrl=$(this).attr('src');
-                const productName=$(this).attr('alt');
-                showImageModal(fullUrl,productName);
-            });
+        // Double-click to edit inventory code functionality
+        $(document).on('dblclick', '.inventory-code-display', function() {
+            const id = $(this).data('id');
+            $(this).addClass('d-none');
+            $(`.inventory-code-edit[data-id="${id}"]`).removeClass('d-none');
+            $(`.inventory-code-input[data-id="${id}"]`).focus().select();
+        });
 
-            // Double-click to edit inventory code
-            $('.inventory-code-display').on('dblclick', function() {
-                const id = $(this).data('id');
-                $(this).addClass('d-none');
-                $(`.inventory-code-edit[data-id="${id}"]`).removeClass('d-none');
-                $(`.inventory-code-input[data-id="${id}"]`).focus().select();
-            });
+        // Save inventory code
+        $(document).on('click', '.save-inventory-code', function() {
+            const id = $(this).data('id');
+            const newCode = $(`.inventory-code-input[data-id="${id}"]`).val();
 
-            // Save inventory code
-            $('.save-inventory-code').on('click', function() {
-                const id = $(this).data('id');
-                const newCode = $(`.inventory-code-input[data-id="${id}"]`).val();
+            if (newCode < 1 || newCode > 9999) {
+                showToast('Inventory code must be between 1 and 9999', 'error');
+                return;
+            }
 
-                if (newCode < 1 || newCode > 9999) {
-                    showToast('Inventory code must be between 1 and 9999', 'error');
-                    return;
-                }
+            const $btn = $(this);
+            const originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
-                // Show loading state
-                const $btn = $(this);
-                const originalHtml = $btn.html();
-                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
-
-
-                // Call API to update only inventory code
             $.ajax({
-                url: `/Products/UpdateInventoryCode`,
+                url: '/Products/UpdateInventoryCode',
                 type: 'POST',
                 data: JSON.stringify({
                     id: id,
@@ -369,19 +354,15 @@
                 }),
                 contentType: 'application/json',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val(),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                 },
-                skipGlobalError: true, // Add this to skip global error handler
                 success: function() {
                     $(`.inventory-code-display[data-id="${id}"]`).text(newCode).removeClass('d-none');
                     $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
                     showToast('Inventory code updated successfully', 'success');
                 },
                 error: function(xhr) {
-                    // Mark as handled to prevent global handler
-                    xhr.errorHandled = true;
-                    const errorMsg = ErrorHandler.parseErrorMessage(xhr, 'Failed to update inventory code');
+                    const errorMsg = xhr.responseJSON?.error || 'Failed to update inventory code';
                     showToast(errorMsg, 'error');
                 },
                 complete: function() {
@@ -390,32 +371,35 @@
             });
         });
 
-            // Cancel edit
-            $('.cancel-inventory-code').on('click', function() {
-                const id = $(this).data('id');
-                $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none');
-                $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
-            });
-
-            // Press Enter to save, Escape to cancel
-            $('.inventory-code-input').on('keypress', function(e) {
-                if (e.which === 13) { // Enter
-                    const id = $(this).data('id');
-                    $(`.save-inventory-code[data-id="${id}"]`).click();
-                } else if (e.which === 27) { // Escape
-                    const id = $(this).data('id');
-                    $(`.cancel-inventory-code[data-id="${id}"]`).click();
-                }
-            });
+        // Cancel inventory code edit
+        $(document).on('click', '.cancel-inventory-code', function() {
+            const id = $(this).data('id');
+            $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none');
+            $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
         });
 
-         function showImageModal(imageUrl, title) {
-                    $('#modalImage').attr('src', imageUrl);
-                    $('#imageModalTitle').text(title);
-                    $('#imageModal').modal('show');
+        // Keyboard shortcuts for inventory code editing
+        $(document).on('keydown', '.inventory-code-input', function(e) {
+            const id = $(this).data('id');
+            if (e.which === 13) { // Enter key
+                e.preventDefault();
+                $(`.save-inventory-code[data-id="${id}"]`).click();
+            } else if (e.which === 27) { // Escape key
+                $(`.cancel-inventory-code[data-id="${id}"]`).click();
+            }
+        });
+
+        function showImageModal(imageUrl, title) {
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
         }
 
-                                function exportProductsToPDF() {
+        function exportData() {
+            exportProductsToPDF();
+        }
+
+        function exportProductsToPDF() {
             const table = document.getElementById('productsTable');
             if (!table) {
                 showToast('Table not found', 'error');

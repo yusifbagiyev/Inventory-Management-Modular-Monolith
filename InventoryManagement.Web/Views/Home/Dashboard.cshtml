@@ -197,193 +197,230 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Color palette
-        const colors = {
-            primary: '#3B82F6',
-            success: '#10B981',
-            warning: '#F59E0B',
-            danger: '#EF4444',
-            info: '#06B6D4',
-            secondary: '#6B7280'
-        };
+        // Store the current period globally
+        let currentPeriod = '@(ViewBag.Period ?? "today")';
 
-        // Department Chart
-        const deptCtx = document.getElementById('departmentChart').getContext('2d');
-        const departmentChart = new Chart(deptCtx, {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.DepartmentName))),
-                datasets: [{
-                    label: 'Products',
-                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ProductCount))),
-                    backgroundColor: colors.primary,
-                    borderRadius: 8
-                }, {
-                    label: 'Workers',
-                    data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ActiveWorkers))),
-                    backgroundColor: colors.success,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
+        $(document).ready(function() {
+            // Initialize with the current period
+            initializeCharts();
+
+            // Set the active button based on current period
+            $(`[data-period="${currentPeriod}"]`).addClass('active');
+
+            // Period switcher with proper state management
+            $('[data-period]').click(function(e) {
+                e.preventDefault();
+
+                const $button = $(this);
+                const period = $button.data('period');
+
+                // Don't reload if already on this period
+                if (period === currentPeriod) {
+                    return;
+                }
+
+                // Update button states immediately for better UX
+                $('[data-period]').removeClass('active');
+                $button.addClass('active');
+
+                // Show loading indicator
+                showSpinner();
+
+                // Navigate to the new period
+                window.location.href = '/Home/Dashboard?period=' + period;
+            });
+
+            // Chart type switcher
+            $('[data-chart]').click(function() {
+                const chartType = $(this).data('chart');
+                $(this).addClass('active').siblings().removeClass('active');
+
+                if (departmentChart) {
+                    departmentChart.config.type = chartType;
+                    departmentChart.update();
+                }
+            });
+        });
+
+        // Chart instances
+        let departmentChart, categoryChart, transferChart;
+
+        function initializeCharts() {
+            initializeDepartmentChart();
+            initializeCategoryChart();
+            initializeTransferChart();
+        }
+
+        function initializeDepartmentChart() {
+            const ctx = document.getElementById('departmentChart');
+            if (!ctx) return;
+
+            const colors = {
+                primary: '#3B82F6',
+                success: '#10B981'
+            };
+
+            departmentChart = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.DepartmentName))),
+                    datasets: [{
+                        label: 'Products',
+                        data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ProductCount))),
+                        backgroundColor: colors.primary,
+                        borderRadius: 8
+                    }, {
+                        label: 'Workers',
+                        data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ActiveWorkers))),
+                        backgroundColor: colors.success,
+                        borderRadius: 8
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
-        // Category Chart
-        const catCtx = document.getElementById('categoryChart').getContext('2d');
-        const categoryChart = new Chart(catCtx, {
-            type: 'doughnut',
-            data: {
-                labels: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.CategoryName))),
-                datasets: [{
-                    data: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Count))),
-                    backgroundColor: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Color))),
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        function initializeCategoryChart() {
+            const ctx = document.getElementById('categoryChart');
+            if (!ctx) return;
+
+            categoryChart = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.CategoryName))),
+                    datasets: [{
+                        data: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Count))),
+                        backgroundColor: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Color))),
+                        borderWidth: 0
+                    }]
                 },
-                cutout: '70%'
-            }
-        });
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
 
-        // Transfer Activity Chart
-        const transferCtx = document.getElementById('transferChart').getContext('2d');
-        const transferChart = new Chart(transferCtx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        function initializeTransferChart() {
+            const ctx = document.getElementById('transferChart');
+            if (!ctx) return;
+
+            const colors = {
+                success: '#10B981',
+                warning: '#F59E0B'
+            };
+
+            // Generate dynamic data based on the period
+            const transferData = generateTransferData(currentPeriod);
+
+            transferChart = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: transferData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateTransferData(period) {
+            let labels, completedData, pendingData;
+
+            const colors = {
+                success: '#10B981',
+                warning: '#F59E0B'
+            };
+
+            switch(period) {
+                case 'week':
+                    labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    completedData = [12, 19, 15, 25, 22, 18, 20];
+                    pendingData = [5, 8, 6, 10, 7, 5, 8];
+                    break;
+                case 'month':
+                    // Generate labels for last 30 days
+                    labels = [];
+                    for(let i = 29; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        labels.push(date.getDate());
+                    }
+                    // Generate sample data for month
+                    completedData = labels.map(() => Math.floor(Math.random() * 30) + 10);
+                    pendingData = labels.map(() => Math.floor(Math.random() * 15) + 5);
+                    break;
+                default: // today
+                    labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'];
+                    completedData = [2, 4, 8, 12, 10, 6, 3];
+                    pendingData = [1, 2, 3, 5, 4, 2, 1];
+            }
+
+            return {
+                labels: labels,
                 datasets: [{
                     label: 'Completed',
-                    data: [12, 19, 15, 25, 22, 18, 20],
+                    data: completedData,
                     borderColor: colors.success,
                     backgroundColor: colors.success + '20',
                     tension: 0.4,
                     fill: true
                 }, {
                     label: 'Pending',
-                    data: [5, 8, 6, 10, 7, 5, 8],
+                    data: pendingData,
                     borderColor: colors.warning,
                     backgroundColor: colors.warning + '20',
                     tension: 0.4,
                     fill: true
                 }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
+            };
+        }
+
+        function showSpinner() {
+            if (!$('.spinner-overlay').length) {
+                $('body').append(`
+                    <div class="spinner-overlay">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `);
             }
-        });
-
-        // Chart type switcher
-        $('[data-chart]').click(function() {
-            const chartType = $(this).data('chart');
-            $(this).addClass('active').siblings().removeClass('active');
-
-            departmentChart.config.type = chartType;
-            departmentChart.update();
-        });
-
-        // Period switcher
-        $('[data-period]').click(function() {
-            const period = $(this).data('period');
-                    window.location.href = '/Home/Dashboard?period=' + period;
-            $(this).addClass('active').siblings().removeClass('active');
-        });
-
-    function loadDashboardData(period) {
-            showSpinner();
-
-            $.ajax({
-                url: '/Home/Dashboard',
-                data: { period: period },
-                success: function(html) {
-                    // Update the entire dashboard content
-                    $('.page-content').html($(html).find('.page-content').html());
-
-                    // Reinitialize charts after content update
-                    initializeCharts();
-
-                    // Set active button
-                    $(`[data-period="${period}"]`).addClass('active').siblings().removeClass('active');
-
-                    hideSpinner();
-                },
-                error: function(xhr) {
-                    showToast('Failed to load dashboard data', 'error');
-                    hideSpinner();
-                }
-            });
         }
 
-        // Set active button on page load
-        $(document).ready(function() {
-            const currentPeriod = '@ViewBag.Period' || 'today';
-            $(`[data-period="${currentPeriod}"]`).addClass('active');
-        });
+        function hideSpinner() {
+            $('.spinner-overlay').remove();
+        }
     </script>
-
-    <style>
-        .bg-primary-soft {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-
-        .bg-success-soft {
-            background-color: rgba(16, 185, 129, 0.1);
-        }
-
-        .bg-warning-soft {
-            background-color: rgba(245, 158, 11, 0.1);
-        }
-
-        .bg-info-soft {
-            background-color: rgba(6, 182, 212, 0.1);
-        }
-
-        .card {
-            border-radius: 12px;
-        }
-
-        .progress {
-            background-color: #f3f4f6;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 100%;
-            width: 100%;
-            font-weight:400;
-        }
-    </style>
 }
