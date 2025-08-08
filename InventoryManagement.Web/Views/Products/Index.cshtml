@@ -311,12 +311,6 @@
         function applyProductFilters() {
             const params = new URLSearchParams();
 
-            // Get search value
-            const search = $('#searchInput').val();
-            if (search) {
-                params.append('search', search);
-            }
-
             // Get date range value
             const dateRange = $('#dateRange').val();
             if (dateRange) {
@@ -345,8 +339,11 @@
             params.append('pageSize', '@Model.PageSize');
             params.append('pageNumber', '1');
 
-            // Navigate to the filtered URL
-            window.location.href = '/Products' + (params.toString() ? '?' + params.toString() : '');
+            // Build the URL property 
+            const queryString = params.toString();
+            const newUrl = '/Products' + (queryString ? '?' + queryString : '?pageSize=@Model.PageSize&pageNumber=1');
+
+            window.location.href = newUrl;
         }
 
         // Reset all filters and reload the page
@@ -355,13 +352,50 @@
             $('#dateRange').val('');
             $('#statusFilter').val('');
             $('#availabilityFilter').val('');
-            window.location.href = '/Products';
+            window.location.href = '/Products?pageSize=@Model.PageSize&pageNumber=1';
+        }
+
+                function restoreFilterValues() {
+            const params = new URLSearchParams(window.location.search);
+
+            // Restore search - this ensures the search box shows the current search term
+            const search = params.get('search');
+            if (search) {
+                $('#searchInput').val(decodeURIComponent(search));
+            }
+
+            // Restore date range
+            const startDate = params.get('startDate');
+            const endDate = params.get('endDate');
+            if (startDate && endDate) {
+                const formattedStart = moment(startDate).format('MM/DD/YYYY');
+                const formattedEnd = moment(endDate).format('MM/DD/YYYY');
+                $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
+            }
+
+            // Restore status filter
+            const status = params.get('status');
+            if (status !== null) {
+                $('#statusFilter').val(status);
+            }
+
+            // Restore availability filter
+            const availability = params.get('availability');
+            if (availability !== null) {
+                $('#availabilityFilter').val(availability);
+            }
         }
 
         // Change page with current filters maintained
-        function changePage(page) {
+                function changePage(page) {
             const params = new URLSearchParams(window.location.search);
             params.set('pageNumber', page);
+
+            // Ensure we always have pageSize
+            if (!params.has('pageSize')) {
+                params.set('pageSize', '@Model.PageSize');
+            }
+
             window.location.href = '/Products?' + params.toString();
         }
 

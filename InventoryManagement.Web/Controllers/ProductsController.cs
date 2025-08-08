@@ -41,7 +41,7 @@ namespace InventoryManagement.Web.Controllers
                 if (availability.HasValue)
                     queryString.Append($"&availability={availability}");
 
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products{queryString}");
 
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
