@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProductService.Application.DTOs;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
@@ -32,7 +33,10 @@ namespace ProductService.Infrastructure.Repositories
             bool? availability,
             CancellationToken cancellationToken = default)
         {
-            var query = _context.Products.AsQueryable();
+            var query = _context.Products
+                .Include(p=>p.Category)
+                .Include(p=>p.Department)
+                .AsQueryable();
 
             if (status.HasValue)
                 query=query.Where(p=>p.IsWorking==status.Value);
