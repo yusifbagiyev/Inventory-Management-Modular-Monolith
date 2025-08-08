@@ -67,7 +67,7 @@ namespace InventoryManagement.Web.Middleware
                         var jwtToken = handler.ReadJwtToken(token);
 
                         // Check if token is expired or expiring soon
-                        if (jwtToken.ValidTo < DateTime.UtcNow.AddHours(4).AddMinutes(5))
+                        if (jwtToken.ValidTo < DateTime.Now.AddMinutes(5))
                         {
                             _logger.LogInformation("JWT token expiring soon, attempting to refresh");
 

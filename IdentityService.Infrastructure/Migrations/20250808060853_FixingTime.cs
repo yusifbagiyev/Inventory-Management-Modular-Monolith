@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class FixingTime : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -39,8 +39,8 @@ namespace IdentityService.Infrastructure.Migrations
                     FirstName = table.Column<string>(type: "text", nullable: false),
                     LastName = table.Column<string>(type: "text", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    LastLoginAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -190,10 +190,10 @@ namespace IdentityService.Infrastructure.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Token = table.Column<string>(type: "text", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     IsRevoked = table.Column<bool>(type: "boolean", nullable: false),
-                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     ReplacedByToken = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
@@ -237,7 +237,7 @@ namespace IdentityService.Infrastructure.Migrations
                 {
                     UserId = table.Column<int>(type: "integer", nullable: false),
                     PermissionId = table.Column<int>(type: "integer", nullable: false),
-                    GrantedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    GrantedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     GrantedBy = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -270,7 +270,7 @@ namespace IdentityService.Infrastructure.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "FirstName", "IsActive", "LastLoginAt", "LastName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "UserName" },
-                values: new object[] { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Utc), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" });
+                values: new object[] { 1, 0, "STATIC_CONCURRENCY_STAMP_123", new DateTime(2025, 8, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "yusifbv24@gmail.com", true, "Yusif", true, null, "Bagiyev", false, null, "YUSIFBV24@GMAIL.COM", "YUSIFBV24", "AQAAAAIAAYagAAAAEBdsDYTjRSp7rXe+WukGaCJhRB9exxLE+qm/liJNTSQIsqWO+prZlpvo6khA0uDi2Q==", null, false, "STATIC_SECURITY_STAMP_123", false, "yusifbv24" });
 
             migrationBuilder.InsertData(
                 table: "Permissions",

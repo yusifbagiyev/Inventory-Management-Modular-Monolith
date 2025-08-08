@@ -328,26 +328,26 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var products = await _apiService.GetAsync<List<ProductDto>>("api/products");
+                var products = await _apiService.GetAsync<PagedResultDto<ProductDto>>("api/products");
                 var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
 
-                model.Products = products?.Select(p => new SelectListItem
+                model.Products = products?.Items.Select(p => new SelectListItem
                 {
                     Value = p.Id.ToString(),
                     Text = $"{p.InventoryCode} - {p.Model} ({p.Vendor})"
-                }).ToList() ?? new List<SelectListItem>();
+                }).ToList() ?? [];
 
                 model.Departments = departments?.Select(d => new SelectListItem
                 {
                     Value = d.Id.ToString(),
                     Text = d.Name
-                }).ToList() ?? new List<SelectListItem>();
+                }).ToList() ?? [];
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to load transfer dropdowns");
-                model.Products = new List<SelectListItem>();
-                model.Departments = new List<SelectListItem>();
+                model.Products = [];
+                model.Departments = [];
             }
         }
     }

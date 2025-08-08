@@ -26,7 +26,7 @@ namespace ProductService.Infrastructure.Services
             var inventoryFolder=Path.Combine(_imagePath,inventoryCode.ToString());
             Directory.CreateDirectory(inventoryFolder);
 
-            var uniqueFileName = $"{DateTime.UtcNow.AddHours(4).Ticks}{Path.GetExtension(fileName)}";
+            var uniqueFileName = $"{DateTime.Now.Ticks}{Path.GetExtension(fileName)}";
             var filePath = Path.Combine(inventoryFolder, uniqueFileName);
 
             using var fileStream = new FileStream(filePath, FileMode.Create);

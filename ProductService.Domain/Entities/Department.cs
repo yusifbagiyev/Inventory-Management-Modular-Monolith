@@ -26,7 +26,7 @@
             Name = name;
             Description = description??string.Empty;
             IsActive = isActive;
-            CreatedAt = DateTime.UtcNow.AddHours(4);
+            CreatedAt = DateTime.Now;
         }
         public void Update(string name, string? description,bool isActive)
         {
@@ -38,17 +38,17 @@
 
             Name = name;
             IsActive = isActive;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void Activate()
         {
             IsActive = true;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void Deactivate()
         {
             IsActive = false;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
     }
 }

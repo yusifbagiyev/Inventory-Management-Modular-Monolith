@@ -21,14 +21,14 @@
             Message= message;
             Data= data;
             IsRead = false;
-            CreatedAt = DateTime.UtcNow.AddHours(4);
+            CreatedAt = DateTime.Now;
         }
         public void MarkAsRead()
         {
             if (!IsRead)
             {
                 IsRead = true;
-                ReadAt= DateTime.UtcNow.AddHours(4);
+                ReadAt= DateTime.Now;
             }
         }
     }

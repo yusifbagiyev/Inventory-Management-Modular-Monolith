@@ -11,6 +11,6 @@
         public int ToDepartmentId { get; init; }
         public string ToDepartmentName { get; init; } = string.Empty;
         public string ToWorker { get; init; } = string.Empty;
-        public DateTime CompletedAt { get; init; } = DateTime.UtcNow.AddHours(4);
+        public DateTime CompletedAt { get; init; } = DateTime.Now;
     }
 }

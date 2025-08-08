@@ -21,6 +21,12 @@ namespace ApprovalService.Infrastructure.Data
                 entity.Property(e => e.ApprovedByName).HasMaxLength(200);
                 entity.Property(e => e.RejectionReason).HasMaxLength(500);
                 entity.Property(e => e.Status).HasConversion<string>();
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.ProcessedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.ExecutedAt)
+                      .HasColumnType("timestamp without time zone");
 
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.RequestedById);

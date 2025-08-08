@@ -60,7 +60,7 @@ namespace ApprovalService.Infrastructure.Services
                     new Claim(ClaimTypes.NameIdentifier, "0"), // System user
                     new Claim(ClaimTypes.Name, "System")
                 ]),
-                Expires = DateTime.UtcNow.AddMinutes(5),
+                Expires = DateTime.Now.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"]

@@ -70,7 +70,7 @@ namespace ProductService.Application.Features.Products.Commands
                             Worker = product.Worker,
                         },
                         Changes = "Inventory code updated",
-                        UpdatedAt = DateTime.UtcNow.AddHours(4)
+                        UpdatedAt = DateTime.Now
                     };
                     await _messagePublisher.PublishAsync(eventMessage,"product.updated", cancellationToken);
                 }

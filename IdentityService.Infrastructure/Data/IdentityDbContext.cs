@@ -22,6 +22,14 @@ namespace IdentityService.Infrastructure.Data
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<User>(entity =>
+            {
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.LastLoginAt)
+                      .HasColumnType("timestamp without time zone");
+            });
+
             // Configure RolePermission many-to-many
             builder.Entity<RolePermission>(entity =>
             {
@@ -39,6 +47,9 @@ namespace IdentityService.Infrastructure.Data
             // Fixed UserPermission configuration
             builder.Entity<UserPermission>(entity =>
             {
+                entity.Property(u => u.GrantedAt)
+                      .HasColumnType("timestamp without time zone");
+
                 entity.HasKey(up => new { up.UserId, up.PermissionId });
 
                 entity.HasOne(up => up.User)
@@ -52,6 +63,13 @@ namespace IdentityService.Infrastructure.Data
 
             builder.Entity<RefreshToken>(entity =>
             {
+                entity.Property(u => u.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(u => u.ExpiresAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(u => u.RevokedAt)
+                      .HasColumnType("timestamp without time zone");
+
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.Token).IsUnique();
 
@@ -83,7 +101,7 @@ namespace IdentityService.Infrastructure.Data
                 LockoutEnabled = false,
                 EmailConfirmed = true,
                 AccessFailedCount = 0,
-                CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0, DateTimeKind.Utc) // Static date
+                CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0) // Static date
             };
 
             builder.Entity<User>().HasData(user);

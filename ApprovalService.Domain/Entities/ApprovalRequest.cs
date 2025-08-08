@@ -36,7 +36,7 @@ namespace ApprovalService.Domain.Entities
             RequestedById = requestedById;
             RequestedByName = requestedByName;
             Status = ApprovalStatus.Pending;
-            CreatedAt = DateTime.UtcNow.AddHours(4);
+            CreatedAt = DateTime.Now;
         }
 
         public void Approve(int approvedById,string approvedByName)
@@ -47,7 +47,7 @@ namespace ApprovalService.Domain.Entities
             ApprovedById = approvedById;
             ApprovedByName = approvedByName;
             Status = ApprovalStatus.Approved;
-            ProcessedAt= DateTime.UtcNow.AddHours(4);
+            ProcessedAt= DateTime.Now;
         }
 
         public void Reject(int rejectedById,string rejectedByName,string reason)
@@ -59,7 +59,7 @@ namespace ApprovalService.Domain.Entities
             ApprovedByName = rejectedByName;
             Status = ApprovalStatus.Rejected;
             RejectionReason = reason;
-            ProcessedAt = DateTime.UtcNow.AddHours(4);
+            ProcessedAt = DateTime.Now;
         }
         public void MarkAsExecuted()
         {
@@ -67,7 +67,7 @@ namespace ApprovalService.Domain.Entities
                 throw new InvalidOperationException("Only approved requests can be marked as executed");
 
             Status = ApprovalStatus.Executed;
-            ExecutedAt = DateTime.UtcNow.AddHours(4);
+            ExecutedAt = DateTime.Now;
         }
         public void MarkAsFailed(string reason)
         {

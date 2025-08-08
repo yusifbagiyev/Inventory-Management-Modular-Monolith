@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RouteService.Domain.Entities;
-using SharedServices.Extensions;
 
 namespace RouteService.Infrastructure.Data
 {
@@ -35,25 +33,15 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.FromWorker).HasMaxLength(100);
                 entity.Property(e => e.ToWorker).HasMaxLength(100);
                 entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e=>e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e=>e.CompletedAt)
+                      .HasColumnType("timestamp without time zone");
 
                 entity.HasIndex(e => e.FromDepartmentId).HasDatabaseName("IX_InventoryRoutes_FromDepartmentId");
                 entity.HasIndex(e => e.ToDepartmentId).HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
                 entity.HasIndex(e => e.CreatedAt);
             });
-
-
-            foreach(var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                foreach(var property in entityType.GetProperties())
-                {
-                    if(property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
-                    {
-                        property.SetValueConverter(new ValueConverter<DateTime,DateTime>(
-                            v=>DateTime.SpecifyKind(v,DateTimeKind.Utc),
-                            v=>DateTime.SpecifyKind(v,DateTimeKind.Local)));
-                    }
-                }
-            }
         }
     }
 }

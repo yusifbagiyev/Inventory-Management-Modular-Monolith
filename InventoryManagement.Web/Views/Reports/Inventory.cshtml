@@ -370,11 +370,12 @@
                     category: category
                 },
                 success: function(data) {
-                    if (data.success === false) {
-                        showToast(data.error || 'Error loading data', 'error');
+                    if (data.error) {
+                        showToast(data.error, 'error');
                         hideSpinner();
                         return;
                     }
+                    updateDashboardMetrics(data);
                     updateCharts(data);
                     hideSpinner();
                 },
@@ -386,41 +387,72 @@
             });
         }
 
+                function updateDashboardMetrics(data) {
+            // Update the metric cards
+            $('.text-primary').first().text(data.TotalProducts);
+            $('.text-success').first().text(data.WorkingItems);
+            $('.text-danger').first().text(data.NotWorkingItems);
+            $('.text-info').first().text(data.NewItems);
+
+            // Update department chart
+            if (departmentChart) {
+                departmentChart.data.labels = data.DepartmentData.map(d => d.Name);
+                departmentChart.data.datasets[0].data = data.DepartmentData.map(d => d.Count);
+                departmentChart.update();
+            }
+
+            // Update category chart
+            if (categoryChart) {
+                categoryChart.data.labels = data.CategoryData.map(c => c.Name);
+                categoryChart.data.datasets[0].data = data.CategoryData.map(c => c.Count);
+                categoryChart.update();
+            }
+        }
+
         function refreshReport() {
             location.reload();
         }
 
         function exportReport() {
-            showSpinner();
-
             const filters = {
                 dateRange: $('#dateRange').val(),
                 department: $('#departmentFilter').val(),
                 category: $('#categoryFilter').val()
             };
 
-            // Create form and submit
+                // Create and submit a form for file download
             const form = $('<form>', {
-                method: 'POST',
-                action: '/Reports/ExportInventoryPDF'
+                method: 'GET',
+                action: '/Reports/ExportInventory'
             });
 
             form.append($('<input>', {
                 type: 'hidden',
-                name: 'filters',
-                value: JSON.stringify(filters)
+                name: 'format',
+                value: 'pdf'
+            }));
+        
+            form.append($('<input>', {
+                type: 'hidden',
+                name: 'dateRange',
+                value: filters.dateRange
             }));
 
             form.append($('<input>', {
                 type: 'hidden',
-                name: '__RequestVerificationToken',
-                value: $('input[name="__RequestVerificationToken"]').val()
+                name: 'department',
+                value: filters.department
+            }));
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: 'category',
+                value: filters.category
             }));
 
             $('body').append(form);
             form.submit();
-
-            setTimeout(() => hideSpinner(), 2000);
+            form.remove();
         }
 
                 function showEmailModal() {
@@ -465,10 +497,9 @@
             $.ajax({
                 url: '/Reports/EmailInventoryReport',
                 type: 'POST',
-                data: JSON.stringify(data),
-                contentType: 'application/json',
+                data: data,
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
                 success: function() {
                     hideSpinner();
@@ -477,7 +508,8 @@
                 },
                 error: function() {
                     hideSpinner();
-                    showToast('Failed to send report', 'error');
+                    const errorMsg = xhr.responseJSON?.message || 'Failed to send report';
+                    showToast(errorMsg, 'error');
                 }
             });
         }

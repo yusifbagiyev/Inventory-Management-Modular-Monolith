@@ -19,6 +19,10 @@ namespace ProductService.Infrastructure.Data
                 entity.HasIndex(e => e.InventoryCode).IsUnique();
                 entity.Property(e => e.Model).HasMaxLength(30);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.UpdatedAt)
+                      .HasColumnType("timestamp without time zone");
 
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Products)
@@ -33,12 +37,20 @@ namespace ProductService.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(20).IsRequired();
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.UpdatedAt)
+                      .HasColumnType("timestamp without time zone");
             });
 
             modelBuilder.Entity<Department>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.CreatedAt)
+                      .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.UpdatedAt)
+                      .HasColumnType("timestamp without time zone");
             });
 
             SeedData(modelBuilder);

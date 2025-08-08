@@ -19,7 +19,7 @@ namespace NotificationService.Application.Services
 
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var userName = Context.User?.Identity?.Name;
             var roles = Context.User?.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
 
@@ -52,7 +52,7 @@ namespace NotificationService.Application.Services
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             _logger.LogInformation($"User disconnecting: ID={userId}, ConnectionId={Context.ConnectionId}");
 
             if (!string.IsNullOrEmpty(userId))

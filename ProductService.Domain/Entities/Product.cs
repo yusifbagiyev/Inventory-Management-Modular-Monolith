@@ -42,7 +42,7 @@
             IsActive = isActive;
             IsWorking = isWorking;
             IsNewItem = isNewItem;
-            CreatedAt = DateTime.UtcNow.AddHours(4);
+            CreatedAt = DateTime.Now;
         }
 
         public void Update(string? model, string? vendor, int categoryId, int departmentId,string? worker, string? imageUrl, string? description)
@@ -59,7 +59,7 @@
             DepartmentId = departmentId;
             ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void UpdateAfterRouting(int departmentId, string? worker)
         {
@@ -67,12 +67,12 @@
                 throw new ArgumentException("Department ID must be greater than zero", nameof(departmentId));
             DepartmentId = departmentId;
             Worker = worker;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void UpdateImage(string imageUrl)
         {
             ImageUrl = imageUrl;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void ChangeInventoryCode(int inventoryCode)
         {
@@ -80,23 +80,23 @@
                 throw new ArgumentException("Inventory Code must be greater than zero", nameof(inventoryCode));
 
             InventoryCode = inventoryCode;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
 
         public void SetActiveStatus(bool isActive)
         {
             IsActive = isActive;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void SetWorkingStatus()
         {
             IsWorking = true;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
         public void SetNotWorkingStatus()
         {
             IsWorking = false;
-            UpdatedAt = DateTime.UtcNow.AddHours(4);
+            UpdatedAt = DateTime.Now;
         }
     }
 }
