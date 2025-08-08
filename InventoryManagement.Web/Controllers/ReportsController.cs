@@ -139,34 +139,58 @@ namespace InventoryManagement.Web.Controllers
             {
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
 
-                if (products == null)
+                if (products == null||products.Items==null)
                 {
                     return Json(new { error = "Failed to load products" });
                 }
 
+                var filteredProducts = products.Items.ToList();
+
                 // Apply filters
                 if (!string.IsNullOrEmpty(department))
                 {
-                    products.Items.Where(p => p.DepartmentName == department);
+                    filteredProducts = filteredProducts
+                        .Where(p => p.DepartmentName == department)
+                        .ToList();
                 }
 
                 if (!string.IsNullOrEmpty(category))
                 {
-                    products.Items.Where(p => p.CategoryName == category);
+                    filteredProducts=filteredProducts
+                        .Where(p=> p.CategoryName == category)
+                        .ToList();
                 }
 
                 // Prepare response data
                 var filteredData = new
                 {
-                    success=true,
+                    success = true,
                     TotalProducts = products.Items.Count(),
                     WorkingItems = products.Items.Count(p => p.IsWorking),
                     NotWorkingItems = products.Items.Count(p => !p.IsWorking),
                     NewItems = products.Items.Count(p => p.IsNewItem),
-                    DepartmentData = products.Items.GroupBy(p => p.DepartmentName)
-                        .Select(g => new { Name = g.Key, Count = g.Count() }).ToList(),
-                    CategoryData = products.Items.GroupBy(p => p.CategoryName)
-                        .Select(g => new { Name = g.Key, Count = g.Count() }).ToList()
+                    DepartmentData = filteredProducts
+                        .GroupBy(p => p.DepartmentName)
+                        .Select(g => new
+                        {
+                            Name = g.Key,
+                            Count = g.Count(),
+                            Working = g.Count(p => p.IsWorking),
+                            NotWorking = g.Count(p => !p.IsWorking)
+                        })
+                        .OrderByDescending(d => d.Count)
+                        .ToList(),
+
+                    CategoryData = filteredProducts
+                        .GroupBy(p=> p.CategoryName)
+                        .Select(g => new
+                        {
+                            Name=g.Key,
+                            Count=g.Count(),
+                            Percentage = Math.Round((decimal)g.Count() / filteredProducts.Count * 100, 2)
+                        })
+                        .OrderByDescending(c=>c.Count)
+                        .ToList()
                 };
 
                 return Json(filteredData);
@@ -174,7 +198,7 @@ namespace InventoryManagement.Web.Controllers
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Error loading filtered data");
-                return Json(new { error = "Error loading filtered data" });
+                return Json(new { error = "Error loading filtered data" ,details=ex.Message});
             }
         }
 

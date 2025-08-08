@@ -387,72 +387,93 @@
             });
         }
 
-                function updateDashboardMetrics(data) {
-            // Update the metric cards
-            $('.text-primary').first().text(data.TotalProducts);
-            $('.text-success').first().text(data.WorkingItems);
-            $('.text-danger').first().text(data.NotWorkingItems);
-            $('.text-info').first().text(data.NewItems);
+                        function updateDashboardMetrics(data) {
+            if (!data.success) {
+                showToast('Failed to update metrics', 'error');
+                return;
+            }
+
+            // Update the metric cards - fix the selectors
+            $('.card-body h2.text-primary').text(data.TotalProducts);
+            $('.card-body h2.text-success').text(data.WorkingItems);
+            $('.card-body h2.text-danger').text(data.NotWorkingItems);
+            $('.card-body h2.text-info').text(data.NewItems);
 
             // Update department chart
-            if (departmentChart) {
+            if (departmentChart && data.DepartmentData) {
                 departmentChart.data.labels = data.DepartmentData.map(d => d.Name);
-                departmentChart.data.datasets[0].data = data.DepartmentData.map(d => d.Count);
+                departmentChart.data.datasets[0].data = data.DepartmentData.map(d => d.Working);
+                departmentChart.data.datasets[1].data = data.DepartmentData.map(d => d.NotWorking);
                 departmentChart.update();
             }
 
             // Update category chart
-            if (categoryChart) {
+            if (categoryChart && data.CategoryData) {
                 categoryChart.data.labels = data.CategoryData.map(c => c.Name);
                 categoryChart.data.datasets[0].data = data.CategoryData.map(c => c.Count);
                 categoryChart.update();
             }
+
+            // Update the department table
+            updateDepartmentTable(data.DepartmentData);
+        }
+
+                function updateDepartmentTable(departmentData) {
+            if (!departmentData || departmentData.length === 0) return;
+
+            let tableHtml = '';
+            departmentData.forEach(dept => {
+                const utilization = dept.Count > 0 ? Math.round((dept.Working / dept.Count) * 100) : 0;
+                const progressClass = utilization >= 80 ? 'bg-success' : utilization >= 60 ? 'bg-warning' : 'bg-danger';
+
+                tableHtml += `
+                    <tr>
+                        <td class="fw-semibold">${dept.Name}</td>
+                        <td class="text-center">
+                            <span class="badge bg-primary rounded-pill px-3">${dept.Count}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success rounded-pill px-3">${dept.Working}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-danger rounded-pill px-3">${dept.NotWorking}</span>
+                        </td>
+                        <td class="text-center">
+                            <strong>${utilization}%</strong>
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar ${progressClass}" style="width: ${utilization}%">
+                                    ${utilization}%
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            $('.table tbody').html(tableHtml);
         }
 
         function refreshReport() {
             location.reload();
         }
 
-        function exportReport() {
+                function exportReport() {
             const filters = {
                 dateRange: $('#dateRange').val(),
                 department: $('#departmentFilter').val(),
                 category: $('#categoryFilter').val()
             };
 
-                // Create and submit a form for file download
-            const form = $('<form>', {
-                method: 'GET',
-                action: '/Reports/ExportInventory'
-            });
+            // Build URL with query parameters
+            let url = '/Reports/ExportInventory?format=csv';
+            if (filters.dateRange) url += '&dateRange=' + encodeURIComponent(filters.dateRange);
+            if (filters.department) url += '&department=' + encodeURIComponent(filters.department);
+            if (filters.category) url += '&category=' + encodeURIComponent(filters.category);
 
-            form.append($('<input>', {
-                type: 'hidden',
-                name: 'format',
-                value: 'pdf'
-            }));
-        
-            form.append($('<input>', {
-                type: 'hidden',
-                name: 'dateRange',
-                value: filters.dateRange
-            }));
-
-            form.append($('<input>', {
-                type: 'hidden',
-                name: 'department',
-                value: filters.department
-            }));
-
-            form.append($('<input>', {
-                type: 'hidden',
-                name: 'category',
-                value: filters.category
-            }));
-
-            $('body').append(form);
-            form.submit();
-            form.remove();
+            // Open in new window for download
+            window.open(url, '_blank');
         }
 
                 function showEmailModal() {

@@ -7,7 +7,11 @@ namespace ProductService.Application.Features.Products.Queries
 {
     public record GetAllProductsQuery(
         int? pageNumber =1,
-        int? PageSize=30) : IRequest<PagedResultDto<ProductDto>>;
+        int? PageSize=30,
+        DateTime? startDate=null,
+        DateTime? endDate=null,
+        bool? status=null,
+        bool? availability=null) : IRequest<PagedResultDto<ProductDto>>;
 
     public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQuery, PagedResultDto<ProductDto>>
     {
@@ -27,6 +31,10 @@ namespace ProductService.Application.Features.Products.Queries
             var products = await _productRepository.GetAllAsync(
                 request.pageNumber?? 1,
                 request.PageSize ?? 30,
+                request.startDate,
+                request.endDate,
+                request.status,
+                request.availability,
                 cancellationToken);
 
             return new PagedResultDto<ProductDto>

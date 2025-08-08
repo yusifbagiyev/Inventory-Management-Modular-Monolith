@@ -19,14 +19,37 @@ namespace InventoryManagement.Web.Controllers
 
         public async Task<IActionResult> Index(
             int? pageNumber=1,
-            int? pageSize=30)
+            int? pageSize=30,
+            DateTime? startDate=null,
+            DateTime? endDate=null,
+            bool? status=null,
+            bool? availability=null)
         {
             try
             {
+                var queryString = new StringBuilder($"?pageNumber={pageNumber}&pageSize={pageSize}");
+
+                if (startDate.HasValue)
+                    queryString.Append($"&startDate={startDate.Value:yyyy-MM-dd}");
+
+                if (endDate.HasValue)
+                    queryString.Append($"&endDate={endDate.Value:yyyy-MM-dd}");
+
+                if (status.HasValue)
+                    queryString.Append($"&status={status}");
+
+                if (availability.HasValue)
+                    queryString.Append($"&availability={availability}");
+
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
 
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
+                ViewBag.CurrentStatus = status;
+                ViewBag.CurrentAvailability = availability;
+                ViewBag.StartDate = startDate;
+                ViewBag.EndDate = endDate;
+
                 return View(products ?? new PagedResultDto<ProductViewModel>());
             }
             catch (Exception ex)

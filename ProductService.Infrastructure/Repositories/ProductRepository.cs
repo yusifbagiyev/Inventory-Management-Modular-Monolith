@@ -25,10 +25,31 @@ namespace ProductService.Infrastructure.Repositories
 
         public async Task<PagedResult<Product>> GetAllAsync(
             int pageNumber,
-            int pageSize, 
+            int pageSize,
+            DateTime? startDate,
+            DateTime? endDate,
+            bool? status,
+            bool? availability,
             CancellationToken cancellationToken = default)
         {
             var query = _context.Products.AsQueryable();
+
+            if (status.HasValue)
+                query=query.Where(p=>p.IsWorking==status.Value);
+
+            if (availability.HasValue)
+                query = query.Where(p => p.IsActive == availability.Value);
+
+            if (startDate.HasValue)
+            {;
+                query = query.Where(r => r.CreatedAt >= startDate);
+            }
+
+            if (endDate.HasValue)
+            {
+                var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
+                query = query.Where(r => r.CreatedAt <= EndDate);
+            }
 
             var totalCount = await query.CountAsync(cancellationToken);
 

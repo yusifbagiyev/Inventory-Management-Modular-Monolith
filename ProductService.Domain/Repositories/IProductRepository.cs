@@ -9,6 +9,10 @@ namespace ProductService.Domain.Repositories
         Task<PagedResult<Product>> GetAllAsync(
             int pageNumber=1,
             int pageSize=30, 
+            DateTime? startDate=null,
+            DateTime? endDate = null,
+            bool? status=null,
+            bool? availability = null,
             CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);

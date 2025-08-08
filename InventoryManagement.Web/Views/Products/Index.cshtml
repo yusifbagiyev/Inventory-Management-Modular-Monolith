@@ -20,6 +20,37 @@
                                placeholder="Search by code, model, vendor..." />
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                        <input type="text" id="dateRange" class="form-control"
+                               placeholder="Select date range" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="working">Working</option>
+                        <option value="notworking">Not Working</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="availabilityFilter" class="form-select">
+                        <option value="">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-primary w-100" onclick="applyProductFilters()">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-outline-secondary w-100" onclick="resetProductFilters()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -201,16 +232,99 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="~/js/pdf-export.js"></script>
     <script>
-                function changePage(page) {
-            window.location.href = '/Products?pageNumber=' + page + '&pageSize=20';
+        $(document).ready(function){
+            // Initialize date range picker
+            $('#dateRange').daterangepicker({
+                autoUpdateInput:false,
+                locale:{
+                    cancelLabel:'Clear',
+                    format:'MM/DD/YYYY'
+                }
+            });
+            
+            $('#dateRange').on('apply.daterangepicker',function(ev,picker){
+                $(this).val(picker.startDate.format('MM/DD/YYYY')+' - '+picker.endDate.format('MM/DD/YYYY'));
+            });
+            $('#dateRange').on('cancel.daterangepicker',function(){
+                $(this).val('');
+            });
+
+            // Real time search
+            $('#searchInput').on('input',function(){
+                filterProducts();
+            });
+        });
+
+        function filterProducts() {
+            const searchTerm = $('#searchInput').val().toLowerCase();
+            $('#productsTable tbody tr').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.includes(searchTerm));
+            });
+        }
+
+        function applyProductFilters() {
+            const params = new URLSearchParams();
+
+            const search = $('#searchInput').val();
+            if (search) params.append('search', search);
+
+            const dateRange = $('#dateRange').val();
+            if (dateRange) {
+                const dates = dateRange.split(' - ');
+                if (dates.length === 2) {
+                    // Parse dates and format them properly for the backend
+                    const startDate = moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD');
+                    const endDate = moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD');
+
+                    params.append('startDate', startDate);
+                    params.append('endDate', endDate);
+                }
+            }
+
+            const status = $('#statusFilter').val();
+            if (status!='') {
+                params.append('status', status);
+            }
+
+            const availability = $('#availabilityFilter').val();
+            if (availability!=''){
+                params.append('availability', availability);
+            }
+
+            params.append('pageSize', '@Model.PageSize');
+            params.append('pageNumber', '1');
+
+            window.location.href = '/Products' + (params.toString() ? '?' + params.toString() : '');
+        }
+
+        function changePage(page) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('pageNumber', page);
+            window.location.href = '/Routes?' + params.toString();
         }
 
         function deleteProduct(id) {
             $('#deleteForm').attr('action', '/Products/Delete/' + id);
             $('#deleteModal').modal('show');
         }
+
+        
+
+        function resetProductFilters() {
+            $('#searchInput').val('');
+            $('#dateRange').val('');
+            $('#statusFilter').val('');
+            $('#availabilityFilter').val('');
+            window.location.href = '/Products';
+        }
+
+        
     </script>
     <script>
         $(document).ready(function() {
@@ -219,15 +333,6 @@
                 const fullUrl=$(this).attr('src');
                 const productName=$(this).attr('alt');
                 showImageModal(fullUrl,productName);
-
-                // Real-time search
-                    $('#searchInput').on('input', function() {
-                        const searchTerm = $('#searchInput').val().toLowerCase();
-                        $('#routesTableBody tr').each(function() {
-                            const searchData = $(this).data('search');
-                            $(this).toggle(searchData.includes(searchTerm));
-                        });
-                    });
             });
 
             // Double-click to edit inventory code
@@ -305,29 +410,9 @@
         });
 
          function showImageModal(imageUrl, title) {
-            // Check if modal exists, if not create it
-            if ($('#productImageModal').length === 0) {
-                const modalHtml = `
-                    <div class="modal fade" id="productImageModal" tabindex="-1">
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Product Image</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body text-center p-0">
-                                    <img id="modalProductImage" class="img-fluid" style="max-height: 80vh;">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                $('body').append(modalHtml);
-            }
-
-            $('#modalProductImage').attr('src', imageUrl);
-            $('#productImageModal .modal-title').text(title || 'Product Image');
-            $('#productImageModal').modal('show');
+                    $('#modalImage').attr('src', imageUrl);
+                    $('#imageModalTitle').text(title);
+                    $('#imageModal').modal('show');
         }
 
                                 function exportProductsToPDF() {

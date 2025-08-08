@@ -36,9 +36,13 @@ namespace ProductService.API.Controllers
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
             [FromQuery] int? pageNumber = 1,
-            [FromQuery] int? pageSize = 30)
+            [FromQuery] int? pageSize = 30,
+            [FromQuery] DateTime? startDate=null,
+            [FromQuery] DateTime? endDate=null,
+            bool? status=null,
+            bool? availability=null)
         {
-            var products = await _mediator.Send(new GetAllProductsQuery(pageNumber,pageSize));
+            var products = await _mediator.Send(new GetAllProductsQuery(pageNumber,pageSize,startDate,endDate,status,availability));
             return Ok(products);
         }
 

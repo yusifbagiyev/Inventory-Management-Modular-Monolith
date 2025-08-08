@@ -80,14 +80,13 @@ namespace RouteService.Infrastructure.Repositories
 
             if (startDate.HasValue)
             {
-                var utcStartDate = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
-                query=query.Where(r=>r.CreatedAt>=utcStartDate);
+                query=query.Where(r=>r.CreatedAt>= startDate);
             }
 
             if (endDate.HasValue)
             {
-                var utcEndDate = DateTime.SpecifyKind(endDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc);
-                query = query.Where(r => r.CreatedAt <= utcEndDate);
+                var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
+                query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
             var totalCount = await query.CountAsync(cancellationToken);
