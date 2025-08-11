@@ -249,6 +249,18 @@
                 }
             });
         });
+        function changePeriod(period) {
+            // Don't reload if already on this period
+            if (period === currentPeriod) {
+                return;
+            }
+
+            // Show loading indicator
+            showSpinner();
+
+            // Navigate to the new period
+            window.location.href = '/Home/Dashboard?period=' + period;
+        }
 
         // Chart instances
         let departmentChart, categoryChart, transferChart;
