@@ -17,6 +17,7 @@
         public string DepartmentName { get; set; }=string.Empty;
         public int ProductCount { get; set; }
         public int ActiveWorkers { get; set; }
+        public int PeriodTransfers { get; set; }
     }
     public class RecentActivity
     {

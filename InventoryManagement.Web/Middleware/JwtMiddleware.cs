@@ -16,12 +16,16 @@ namespace InventoryManagement.Web.Middleware
             _next = next;
             _logger = logger;
         }
+
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
             try
             {
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
+                    var userId = context.User.Identity.Name ?? "Unknown";
+                    var requestPath = context.Request.Path.Value ?? "Unknown";
+
                     string? token = null;
                     string? refreshToken = null;
 
@@ -47,12 +51,16 @@ namespace InventoryManagement.Web.Middleware
                             {
                                 context.Session.SetString("UserData", userData);
                             }
+
+                            _logger.LogInformation("JWT token restored from cookies to session for user {UserId} accessing {RequestPath}",
+                                userId, requestPath);
                         }
                     }
 
                     if (string.IsNullOrEmpty(token))
                     {
-                        _logger.LogInformation("Authenticated user missing JWT tokens, redirecting to login");
+                        _logger.LogWarning("Authenticated user {UserId} missing JWT tokens while accessing {RequestPath}, redirecting to login",
+                            userId, requestPath);
                         await SignOutAndRedirect(context);
                         return;
                     }
@@ -65,17 +73,27 @@ namespace InventoryManagement.Web.Middleware
                     if (handler.CanReadToken(token))
                     {
                         var jwtToken = handler.ReadJwtToken(token);
+                        var tokenExpiry = jwtToken.ValidTo;
+                        var timeUntilExpiry = tokenExpiry - DateTime.UtcNow;
 
-                        // Check if token is expired or expiring soon
-                        if (jwtToken.ValidTo < DateTime.Now.AddMinutes(5))
+                        // Log token status for monitoring
+                        _logger.LogDebug("JWT token for user {UserId} expires at {TokenExpiry} (in {MinutesUntilExpiry} minutes)",
+                            userId, tokenExpiry, timeUntilExpiry.TotalMinutes);
+
+                        // Check if token is expired or expiring soon (within 5 minutes)
+                        if (tokenExpiry < DateTime.UtcNow.AddMinutes(5))
                         {
-                            _logger.LogInformation("JWT token expiring soon, attempting to refresh");
+                            _logger.LogInformation("JWT token expiring soon for user {UserId} (expires at {TokenExpiry}), attempting to refresh",
+                                userId, tokenExpiry);
 
                             if (!string.IsNullOrEmpty(refreshToken))
                             {
                                 try
                                 {
+                                    var refreshStartTime = DateTime.UtcNow;
                                     var result = await authService.RefreshTokenAsync(token, refreshToken);
+                                    var refreshDuration = DateTime.UtcNow - refreshStartTime;
+
                                     if (result != null)
                                     {
                                         // Update tokens everywhere
@@ -101,35 +119,44 @@ namespace InventoryManagement.Web.Middleware
                                             context.Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
                                             context.Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
                                             context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
+
+                                            _logger.LogDebug("Updated authentication cookies for user {UserId} after token refresh", userId);
                                         }
 
-                                        _logger.LogInformation("Token refreshed successfully");
+                                        _logger.LogInformation("Token refreshed successfully for user {UserId} in {RefreshDurationMs}ms",
+                                            userId, refreshDuration.TotalMilliseconds);
                                     }
                                     else
                                     {
-                                        _logger.LogWarning("Token refresh returned null");
+                                        _logger.LogWarning("Token refresh returned null for user {UserId} - signing out", userId);
                                         await SignOutAndRedirect(context);
                                         return;
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, "Token refresh failed");
+                                    _logger.LogError(ex, "Token refresh failed for user {UserId}: {ErrorMessage} - signing out",
+                                        userId, ex.Message);
                                     await SignOutAndRedirect(context);
                                     return;
                                 }
                             }
                             else
                             {
-                                _logger.LogWarning("No refresh token available");
+                                _logger.LogWarning("No refresh token available for user {UserId} - signing out", userId);
                                 await SignOutAndRedirect(context);
                                 return;
                             }
                         }
+                        else
+                        {
+                            _logger.LogDebug("JWT token for user {UserId} is valid (expires in {MinutesUntilExpiry} minutes)",
+                                userId, timeUntilExpiry.TotalMinutes);
+                        }
                     }
                     else
                     {
-                        _logger.LogWarning("Cannot read JWT token");
+                        _logger.LogError("Cannot read JWT token for user {UserId} - token format invalid", userId);
                         await SignOutAndRedirect(context);
                         return;
                     }
@@ -137,7 +164,11 @@ namespace InventoryManagement.Web.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in JWT middleware");
+                var userId = context.User?.Identity?.Name ?? "Unknown";
+                var requestPath = context.Request.Path.Value ?? "Unknown";
+
+                _logger.LogError(ex, "Unexpected error in JWT middleware for user {UserId} accessing {RequestPath}: {ErrorMessage}",
+                    userId, requestPath, ex.Message);
             }
 
             await _next(context);
@@ -145,6 +176,12 @@ namespace InventoryManagement.Web.Middleware
 
         private async Task SignOutAndRedirect(HttpContext context)
         {
+            var userId = context.User?.Identity?.Name ?? "Unknown";
+            var requestPath = context.Request.Path.Value ?? "Unknown";
+
+            _logger.LogInformation("Signing out user {UserId} and redirecting from {RequestPath} to login",
+                userId, requestPath);
+
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             context.Session.Clear();
 
@@ -155,12 +192,17 @@ namespace InventoryManagement.Web.Middleware
                 if (context.Request.Cookies.ContainsKey(cookieName))
                 {
                     context.Response.Cookies.Delete(cookieName);
+                    _logger.LogDebug("Cleared authentication cookie {CookieName} for user {UserId}",
+                        cookieName, userId);
                 }
             }
 
             if (!context.Request.Path.StartsWithSegments("/Account/Login"))
             {
-                context.Response.Redirect($"/Account/Login?returnUrl={context.Request.Path}");
+                var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
+                _logger.LogInformation("Redirecting user {UserId} to login with return URL {ReturnUrl}",
+                    userId, returnUrl);
+                context.Response.Redirect($"/Account/Login?returnUrl={returnUrl}");
             }
         }
     }
