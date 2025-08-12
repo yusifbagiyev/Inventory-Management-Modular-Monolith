@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RouteService.Application.Events;
 using RouteService.Application.Interfaces;
@@ -17,20 +16,17 @@ namespace RouteService.Application.Features.Routes.Commands
             private readonly IInventoryRouteRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMessagePublisher _messagePublisher;
-            private readonly IServiceProvider _serviceProvider;
             private readonly ILogger<Handler> _logger;
 
             public Handler(
                 IInventoryRouteRepository repository, 
                 IUnitOfWork unitOfWork, 
                 IMessagePublisher messagePublisher,
-                IServiceProvider serviceProvider,
                 ILogger<Handler> logger)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _messagePublisher = messagePublisher;
-                _serviceProvider = serviceProvider;
                 _logger = logger;
             }
 
@@ -90,10 +86,15 @@ namespace RouteService.Application.Features.Routes.Commands
                     ProductId = route.ProductSnapshot.ProductId,
                     InventoryCode = route.ProductSnapshot.InventoryCode,
                     Model = route.ProductSnapshot.Model,
+                    Vendor=route.ProductSnapshot.Vendor,
+                    CategoryName= route.ProductSnapshot.CategoryName,
                     FromDepartmentId = route.FromDepartmentId ?? 0,
                     FromDepartmentName = route.FromDepartmentName ?? "",
+                    FromWorker = route.FromWorker,
+                    ToWorker=route.ToWorker?? "",
                     ToDepartmentId = route.ToDepartmentId,
                     ToDepartmentName = route.ToDepartmentName,
+                    Notes = route.Notes,
                     CompletedAt = DateTime.Now
                 };
 

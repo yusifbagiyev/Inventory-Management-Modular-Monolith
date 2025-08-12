@@ -133,7 +133,7 @@ namespace InventoryManagement.Web.Middleware
 
                 var jwtToken = handler.ReadJwtToken(token);
                 var tokenExpiry = jwtToken.ValidTo;
-                var timeUntilExpiry = tokenExpiry - DateTime.No;
+                var timeUntilExpiry = tokenExpiry - DateTime.Now;
 
                 return timeUntilExpiry.TotalMinutes < 5;
             }

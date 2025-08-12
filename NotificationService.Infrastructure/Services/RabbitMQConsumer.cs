@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
+using NotificationService.Application.Events;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Entities;
@@ -63,8 +64,6 @@ namespace NotificationService.Infrastructure.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("RabbitMQ Consumer starting...");
-
             var consumer = new AsyncEventingBasicConsumer(_channel);
 
             consumer.Received += async (sender, ea) =>
@@ -75,12 +74,6 @@ namespace NotificationService.Infrastructure.Services
                     var message = Encoding.UTF8.GetString(body);
                     var routingKey = ea.RoutingKey;
 
-                    _logger.LogInformation($"=== RECEIVED MESSAGE ===");
-                    _logger.LogInformation($"RoutingKey: {routingKey}");
-                    _logger.LogInformation($"Message: {message}");
-                    _logger.LogInformation($"======================");
-
-                    // Handle different event types based on routing key
                     await ProcessMessage(routingKey, message);
 
                     _channel.BasicAck(ea.DeliveryTag, false);
@@ -136,13 +129,10 @@ namespace NotificationService.Infrastructure.Services
                 var approvalEvent = JsonSerializer.Deserialize<ApprovalRequestCreatedEvent>(message);
                 if (approvalEvent == null) return;
 
-                _logger.LogInformation($"Processing approval request from {approvalEvent.RequestedByName}");
-
                 // Get all admin users
                 using var scope = _serviceProvider.CreateScope();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
                 var adminUsers = await userService.GetUsersAsync("Admin");
-                _logger.LogInformation($"Found {adminUsers.Count} admin users to notify");
 
                 var readableType = GetReadableRequestType(approvalEvent.RequestType);
                 var actionDescription = GetActionDescription(approvalEvent.RequestType);
@@ -177,8 +167,6 @@ namespace NotificationService.Infrastructure.Services
             {
                 var approvalEvent = JsonSerializer.Deserialize<ApprovalRequestProcessedEvent>(message);
                 if (approvalEvent == null) return;
-
-                _logger.LogInformation($"Processing approval response for user {approvalEvent.RequestedById}");
 
                 var readableType = GetReadableRequestType(approvalEvent.RequestType);
                 var actionDescription = GetActionDescription(approvalEvent.RequestType);
@@ -243,7 +231,7 @@ namespace NotificationService.Infrastructure.Services
                 var productEvent = JsonSerializer.Deserialize<ProductCreatedEvent>(message);
                 if (productEvent == null) return;
 
-                _logger.LogInformation($"Product created: {productEvent.Model} ({productEvent.InventoryCode})");
+                await SendWhatsAppProductNotification(productEvent, "created");
 
                 var allUsers = await GetAllUsersId();
 
@@ -277,8 +265,6 @@ namespace NotificationService.Infrastructure.Services
             {
                 var productEvent = JsonSerializer.Deserialize<ProductDeletedEvent>(message);
                 if (productEvent == null) return;
-
-                _logger.LogInformation($"Product deleted: {productEvent.Model} ({productEvent.InventoryCode})");
 
                 // Notify relevant users
                 var allUsers = await GetAllUsersId();
@@ -314,8 +300,6 @@ namespace NotificationService.Infrastructure.Services
                 var routeEvent = JsonSerializer.Deserialize<RouteCreatedEvent>(message);
                 if (routeEvent == null) return;
 
-                _logger.LogInformation($"Route created for product {routeEvent.Model} to {routeEvent.ToDepartmentName}");
-
                 // Notify destination department
                 var allUsers = await GetAllUsersId();
 
@@ -349,7 +333,7 @@ namespace NotificationService.Infrastructure.Services
                 var routeEvent = JsonSerializer.Deserialize<RouteCompletedEvent>(message);
                 if (routeEvent == null) return;
 
-                _logger.LogInformation($"Route completed: {routeEvent.RouteId}");
+                await SendWhatsAppRouteNotification(routeEvent, "transferred");
 
                 // Notify relevant users
                 var allUsers = await GetAllUsersId();
@@ -389,11 +373,8 @@ namespace NotificationService.Infrastructure.Services
                 await repository.AddAsync(notification);
                 await unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation($"Notification saved to database for user {notification.UserId}");
-
                 // Send via SignalR
                 var groupName = $"user-{notification.UserId}";
-                _logger.LogInformation($"Sending notification to SignalR group: {groupName}");
 
                 await hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", new NotificationDto
                 {
@@ -406,12 +387,133 @@ namespace NotificationService.Infrastructure.Services
                     Data = notification.Data
                 });
 
-                _logger.LogInformation($"Notification sent via SignalR to user {notification.UserId}");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error saving/sending notification for user {notification.UserId}");
                 throw;
+            }
+        }
+
+        private async Task SendWhatsAppProductNotification(ProductCreatedEvent productEvent,string notificationType)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var whatsAppService = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
+                var configuration=scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+                // Check if Whatsapp notifications are enabled
+                var whatsAppEnabled = configuration.GetValue<bool>("Whatsapp:Enabled", true);
+                if(!whatsAppEnabled)
+                {
+                    _logger.LogInformation("Whatsapp notifications are disabled");
+                    return;
+                }
+
+                var groupId = configuration["Whatsapp:DefaultGroupId"];
+                if (string.IsNullOrEmpty(groupId))
+                {
+                    _logger.LogWarning("WhatsApp DefaultGroupId not configured");
+                    return;
+                }
+
+                // Create the notification data
+                var notification = new WhatsAppProductNotification
+                {
+                    ProductId = productEvent.ProductId,
+                    InventoryCode = productEvent.InventoryCode,
+                    Model = productEvent.Model,
+                    Vendor = productEvent.Vendor,
+                    CategoryName=productEvent.CategoryName,
+                    ToDepartmentName = productEvent.DepartmentName,
+                    ToWorker = productEvent.Worker,
+                    CreatedAt = productEvent.CreatedAt,
+                    IsNewItem = productEvent.IsNewItem,
+                    IsWorking = productEvent.IsWorking,
+                    Notes = productEvent.Description,
+                    NotificationType = notificationType
+                };
+
+                // Format the message
+                var message = whatsAppService.FormatProductNotification(notification);
+
+                // Send to Whatsapp group
+                var success=await whatsAppService.SendGroupMessageAsync(groupId,message);
+
+                if (success)
+                {
+                    _logger.LogInformation($"WhatsApp notification sent for product {productEvent.InventoryCode}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Failed to send WhatsApp notification for product {productEvent.InventoryCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending WhatsApp notification");
+            }
+        }
+
+        private async Task SendWhatsAppRouteNotification(RouteCompletedEvent routeEvent, string notificationType)
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var whatsAppService = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
+                var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+                // Check if Whatsapp notifications are enabled
+                var whatsAppEnabled = configuration.GetValue<bool>("Whatsapp:Enabled", true);
+                if (!whatsAppEnabled)
+                {
+                    _logger.LogInformation("Whatsapp notifications are disabled");
+                    return;
+                }
+
+                var groupId = configuration["Whatsapp:DefaultGroupId"];
+                if (string.IsNullOrEmpty(groupId))
+                {
+                    _logger.LogWarning("WhatsApp DefaultGroupId not configured");
+                    return;
+                }
+
+                // Create the notification data
+                var notification = new WhatsAppProductNotification
+                {
+                    ProductId = routeEvent.ProductId,
+                    InventoryCode = routeEvent.InventoryCode,
+                    Model = routeEvent.Model,
+                    Vendor = routeEvent.Vendor,
+                    CategoryName=routeEvent.CategoryName,
+                    FromDepartmentName = routeEvent.FromDepartmentName,
+                    FromWorker = routeEvent.FromWorker,
+                    ToDepartmentName=routeEvent.ToDepartmentName,
+                    ToWorker = routeEvent.ToWorker,
+                    CreatedAt = routeEvent.CompletedAt,
+                    Notes=routeEvent.Notes,
+                    NotificationType = notificationType
+                };
+
+                // Format the message
+                var message = whatsAppService.FormatProductNotification(notification);
+
+                // Send to Whatsapp group
+                var success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+
+                if (success)
+                {
+                    _logger.LogInformation($"WhatsApp notification sent for product {routeEvent.InventoryCode}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Failed to send WhatsApp notification for product {routeEvent.InventoryCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending WhatsApp notification");
             }
         }
 

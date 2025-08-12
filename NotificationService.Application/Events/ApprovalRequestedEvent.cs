@@ -1,4 +1,4 @@
-﻿namespace NotificationService.Domain.Events
+﻿namespace NotificationService.Application.Events
 {
     public record ApprovalRequestedEvent
     {

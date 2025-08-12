@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Repositories;
@@ -37,7 +38,9 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+
 builder.Services.AddSignalR();
+
 
 builder.Services.AddCors(options =>
 {
@@ -50,6 +53,7 @@ builder.Services.AddCors(options =>
               .SetIsOriginAllowed(_=>true);
     });
 });
+
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -80,16 +84,37 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+
 builder.Services.AddDbContext<NotificationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 builder.Services.AddSingleton<IConnectionManager, ConnectionManager>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<INotificationSender, NotificationSender>();
+
+
 builder.Services.AddHttpClient<IUserService, UserService>();
+builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
+{
+    var apiUrl = builder.Configuration["Whatsapp:ApiUrl"] ?? "https://7103.api.greenapi.com";
+    client.BaseAddress = new Uri(apiUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+})
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        // Configure handler for better reliability
+        MaxConnectionsPerServer = 10,
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+    });
+
+
 builder.Services.AddSingleton<RabbitMQConsumer>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
+
+builder.Services.Configure<WhatsAppSettings>(builder.Configuration.GetSection("WhatsApp"));
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())

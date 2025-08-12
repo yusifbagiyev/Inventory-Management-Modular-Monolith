@@ -108,6 +108,7 @@ namespace ProductService.Application.Features.Products.Commands
                         DepartmentId = createdProduct.DepartmentId,
                         DepartmentName = createdProduct.Department!.Name,
                         Worker = createdProduct.Worker ?? string.Empty,
+                        Description=createdProduct.Description,
                         IsWorking = createdProduct.IsWorking,
                         ImageUrl = createdProduct.ImageUrl,
                         CreatedAt = createdProduct.CreatedAt,
