@@ -6,24 +6,31 @@ using Serilog;
 using Serilog.Events;
 
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting",LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore",LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .CreateBootstrapLogger();
+    .WriteTo.Seq("http://localhost:5342")
+    .CreateLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.Logging.ClearProviders();
+
     builder.Host.UseSerilog((context, services, configuration) => configuration
            .ReadFrom.Configuration(context.Configuration)
            .ReadFrom.Services(services)
            .Enrich.FromLogContext()
+           .Enrich.WithProperty("ApplicationName","InventoryManagement.Web")
+           .Enrich.WithProperty("Environment",context.HostingEnvironment.EnvironmentName)
            .WriteTo.Seq(
                serverUrl: context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
                restrictedToMinimumLevel: LogEventLevel.Information));
 
     Log.Information("Starting InventoryManagement.Web application");
-
 
     builder.Services.AddControllersWithViews()
         .AddRazorRuntimeCompilation();
@@ -108,18 +115,33 @@ try
         options.MessageTemplate = "Handled {RequestPath} ({RequestMethod}) in {Elapsed:0.0000} ms with status {StatusCode}";
 
         // Emit debug-level events instead of the defaults
-        options.GetLevel = (httpContext, elapsed, ex) => ex != null
-            ? LogEventLevel.Error
-            : httpContext.Response.StatusCode > 499
-                ? LogEventLevel.Error
-                : LogEventLevel.Information;
+        options.GetLevel = (httpContext, elapsed, ex) =>
+        {
+            if (ex != null) return LogEventLevel.Error;
+            if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Error;
+            if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Warning;
+            if (elapsed > 1000) return LogEventLevel.Warning;
+
+            var path = httpContext.Request.Path.Value?.ToLower() ?? "";
+            if (path.Contains("_vs/browserlink") ||
+                path.Contains("_framework/aspnetcore-browser-refresh") ||
+                path.EndsWith(".css") ||
+                path.EndsWith(".js") ||
+                path.EndsWith(".png") ||
+                path.EndsWith(".jpg"))
+            {
+                return LogEventLevel.Verbose;
+            }
+
+            return LogEventLevel.Information;
+        };
 
         // Attach additional properties to the request completion event
         options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
         {
             diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-            diagnosticContext.Set("UserAgent", httpContext?.Request?.Headers["User-Agent"].FirstOrDefault()!);
+            diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown");
+            diagnosticContext.Set("UserId", httpContext.User?.Identity?.Name ?? "Anonymous");
         };
     });
 
