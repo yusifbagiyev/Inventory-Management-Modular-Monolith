@@ -1,4 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -10,168 +11,215 @@ namespace InventoryManagement.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public JwtMiddleware(RequestDelegate next, ILogger<JwtMiddleware> logger)
+        public JwtMiddleware(
+            RequestDelegate next, 
+            ILogger<JwtMiddleware> logger, 
+            IWebHostEnvironment webHostEnvironment)
         {
             _next = next;
             _logger = logger;
+            _environment = webHostEnvironment;
         }
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
             try
             {
-                if (context.User.Identity?.IsAuthenticated == true)
+                // Skip processing for static files and non-authenticated requests
+                if (IsStaticFileRequest(context) || !context.User.Identity?.IsAuthenticated == true)
                 {
-                    var userId = context.User.Identity.Name ?? "Unknown";
-                    var requestPath = context.Request.Path.Value ?? "Unknown";
+                    await _next(context);
+                    return;
+                }
 
-                    string? token = null;
-                    string? refreshToken = null;
+                var userId = context.User.Identity?.Name ?? "Unknown";
 
-                    // Try to get tokens from session first (always available for logged-in users)
-                    token = context.Session.GetString("JwtToken");
-                    refreshToken = context.Session.GetString("RefreshToken");
+                // Retrieve tokens with proper fallback chain
+                var tokenInfo = GetTokenInfo(context);
 
-                    // If not in session, try cookies (for Remember Me scenarios after session expires)
-                    if (string.IsNullOrEmpty(token))
-                    {
-                        token = context.Request.Cookies["jwt_token"];
-                        refreshToken = context.Request.Cookies["refresh_token"];
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken))
+                {
+                    _logger.LogWarning(
+                        "Authenticated user {UserId} missing JWT tokens, signing out",
+                        userId);
+                    await SignOutAndRedirect(context);
+                    return;
+                }
 
-                        // If found in cookies, restore to session for this request
-                        if (!string.IsNullOrEmpty(token))
-                        {
-                            context.Session.SetString("JwtToken", token);
-                            context.Session.SetString("RefreshToken", refreshToken ?? "");
+                // Store tokens for current request 
+                context.Items["JwtToken"] = tokenInfo.AccessToken;
+                context.Items["RefreshToken"] = tokenInfo.RefreshToken;
 
-                            // Also restore user data if available
-                            var userData = context.Request.Cookies["user_data"];
-                            if (!string.IsNullOrEmpty(userData))
-                            {
-                                context.Session.SetString("UserData", userData);
-                            }
-
-                            _logger.LogInformation("JWT token restored from cookies to session for user {UserId} accessing {RequestPath}",
-                                userId, requestPath);
-                        }
-                    }
-
-                    if (string.IsNullOrEmpty(token))
-                    {
-                        _logger.LogWarning("Authenticated user {UserId} missing JWT tokens while accessing {RequestPath}, redirecting to login",
-                            userId, requestPath);
-                        await SignOutAndRedirect(context);
-                        return;
-                    }
-
-                    // Store token in HttpContext.Items for this request
-                    context.Items["JwtToken"] = token;
-                    context.Items["RefreshToken"] = refreshToken;
-
-                    var handler = new JwtSecurityTokenHandler();
-                    if (handler.CanReadToken(token))
-                    {
-                        var jwtToken = handler.ReadJwtToken(token);
-                        var tokenExpiry = jwtToken.ValidTo;
-                        var timeUntilExpiry = tokenExpiry - DateTime.UtcNow;
-
-                        // Log token status for monitoring
-                        _logger.LogDebug("JWT token for user {UserId} expires at {TokenExpiry} (in {MinutesUntilExpiry} minutes)",
-                            userId, tokenExpiry, timeUntilExpiry.TotalMinutes);
-
-                        // Check if token is expired or expiring soon (within 5 minutes)
-                        if (tokenExpiry < DateTime.UtcNow.AddMinutes(5))
-                        {
-                            _logger.LogInformation("JWT token expiring soon for user {UserId} (expires at {TokenExpiry}), attempting to refresh",
-                                userId, tokenExpiry);
-
-                            if (!string.IsNullOrEmpty(refreshToken))
-                            {
-                                try
-                                {
-                                    var refreshStartTime = DateTime.UtcNow;
-                                    var result = await authService.RefreshTokenAsync(token, refreshToken);
-                                    var refreshDuration = DateTime.UtcNow - refreshStartTime;
-
-                                    if (result != null)
-                                    {
-                                        // Update tokens everywhere
-                                        context.Items["JwtToken"] = result.AccessToken;
-                                        context.Items["RefreshToken"] = result.RefreshToken;
-
-                                        // Update session
-                                        context.Session.SetString("JwtToken", result.AccessToken);
-                                        context.Session.SetString("RefreshToken", result.RefreshToken);
-                                        context.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-
-                                        // Update cookies if they exist (Remember Me was used)
-                                        if (context.Request.Cookies.ContainsKey("jwt_token"))
-                                        {
-                                            var cookieOptions = new CookieOptions
-                                            {
-                                                HttpOnly = true,
-                                                Secure = context.Request.IsHttps,
-                                                SameSite = SameSiteMode.Lax,
-                                                Expires = DateTimeOffset.UtcNow.AddDays(30)
-                                            };
-
-                                            context.Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
-                                            context.Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
-                                            context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
-
-                                            _logger.LogDebug("Updated authentication cookies for user {UserId} after token refresh", userId);
-                                        }
-
-                                        _logger.LogInformation("Token refreshed successfully for user {UserId} in {RefreshDurationMs}ms",
-                                            userId, refreshDuration.TotalMilliseconds);
-                                    }
-                                    else
-                                    {
-                                        _logger.LogWarning("Token refresh returned null for user {UserId} - signing out", userId);
-                                        await SignOutAndRedirect(context);
-                                        return;
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Token refresh failed for user {UserId}: {ErrorMessage} - signing out",
-                                        userId, ex.Message);
-                                    await SignOutAndRedirect(context);
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                _logger.LogWarning("No refresh token available for user {UserId} - signing out", userId);
-                                await SignOutAndRedirect(context);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogDebug("JWT token for user {UserId} is valid (expires in {MinutesUntilExpiry} minutes)",
-                                userId, timeUntilExpiry.TotalMinutes);
-                        }
-                    }
-                    else
-                    {
-                        _logger.LogError("Cannot read JWT token for user {UserId} - token format invalid", userId);
-                        await SignOutAndRedirect(context);
-                        return;
-                    }
+                if (ShouldRefreshToken(tokenInfo.AccessToken))
+                {
+                    await RefreshTokenIfNeeded(
+                       context,
+                       authService,
+                       tokenInfo.AccessToken,
+                       tokenInfo.RefreshToken);
                 }
             }
             catch (Exception ex)
             {
-                var userId = context.User?.Identity?.Name ?? "Unknown";
-                var requestPath = context.Request.Path.Value ?? "Unknown";
+                _logger.LogError(ex,
+                    "Error in JWT middleware for user {UserId}: {Message}",
+                    context.User?.Identity?.Name ?? "Unknown",
+                    ex.Message);
 
-                _logger.LogError(ex, "Unexpected error in JWT middleware for user {UserId} accessing {RequestPath}: {ErrorMessage}",
-                    userId, requestPath, ex.Message);
+                // In production, don't expose errors - just continue
+                if (!_environment.IsDevelopment())
+                {
+                    await _next(context);
+                    return;
+                }
+                throw;
             }
-
             await _next(context);
+        }
+
+        private (string AccessToken, string RefreshToken) GetTokenInfo(HttpContext context)
+        {
+            var accessToken = context.Session.GetString("JwtToken");
+            var refreshToken = context.Session.GetString("RefreshToken");
+
+            if(string.IsNullOrEmpty(accessToken))
+            {
+                accessToken = GetSecureCookieValue(context, "jwt-token");
+                refreshToken = GetSecureCookieValue(context, "refresh-token");
+
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Session.SetString("JwtToken", accessToken);
+                    if (!string.IsNullOrEmpty(refreshToken))
+                    {
+                        context.Session.SetString("RefreshToken", refreshToken);
+                    }
+                    RestoreUserDataFromCookies(context);
+                }
+            }
+            return (accessToken ?? "", refreshToken ?? "");
+        }
+
+        private string GetSecureCookieValue(HttpContext context,string cookieName)
+        {
+            // In Production, only accept cookies over HTTPS
+            if(_environment.IsProduction() && !context.Request.IsHttps)
+            {
+                _logger.LogWarning("Attempted to read secure cookie {CookieName} over HTTP", cookieName);
+                return "";
+            }
+            return context.Request.Cookies[cookieName] ?? "";
+        }
+
+        private void RestoreUserDataFromCookies(HttpContext context)
+        {
+            var userData = GetSecureCookieValue(context, "user-data");
+            if(!string.IsNullOrEmpty(userData))
+            {
+                context.Session.SetString("UserData", userData);
+            }
+        }
+
+
+        private bool ShouldRefreshToken(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(token))
+                    return false;
+
+                var jwtToken = handler.ReadJwtToken(token);
+                var tokenExpiry = jwtToken.ValidTo;
+                var timeUntilExpiry = tokenExpiry - DateTime.No;
+
+                return timeUntilExpiry.TotalMinutes < 5;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking token expiration");
+                return true;
+            }
+        }
+
+        private async Task RefreshTokenIfNeeded(
+            HttpContext context,
+            IAuthService authService,
+            string accessToken,
+            string refreshToken)
+        {
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                _logger.LogWarning("Cannot refresh token - missing refresh token");
+                await SignOutAndRedirect(context);
+                return;
+            }
+            try
+            {
+                var result = await authService.RefreshTokenAsync(accessToken, refreshToken);
+                if (result != null)
+                {
+                    UpdateTokensEverywhere(context, result);
+                    _logger.LogInformation("Token refreshed successfully for user {UserId}",
+                        context.User.Identity?.Name);
+                }
+                else
+                {
+                    _logger.LogWarning("Token refresh failed - signing out user");
+                    await SignOutAndRedirect(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                await SignOutAndRedirect(context);
+            }
+        }
+
+
+        private void UpdateTokensEverywhere(HttpContext context, TokenDto tokenDto)
+        {
+            // Update in current request context
+            context.Items["JwtToken"] = tokenDto.AccessToken;
+            context.Items["RefreshToken"] = tokenDto.RefreshToken;
+
+            // Update session
+            context.Session.SetString("JwtToken", tokenDto.AccessToken);
+            context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
+            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
+
+            // Update cookies if Remember Me was used
+            if (context.Request.Cookies.ContainsKey("jwt_token"))
+            {
+                var cookieOptions = CreateSecureCookieOptions(context);
+
+                context.Response.Cookies.Append("jwt_token", tokenDto.AccessToken, cookieOptions);
+                context.Response.Cookies.Append("refresh_token", tokenDto.RefreshToken, cookieOptions);
+                context.Response.Cookies.Append("user_data",
+                    JsonConvert.SerializeObject(tokenDto.User), cookieOptions);
+            }
+        }
+
+        private CookieOptions CreateSecureCookieOptions(HttpContext context)
+        {
+            return new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = _environment.IsProduction() || context.Request.IsHttps,
+                SameSite = _environment.IsProduction() ? SameSiteMode.Strict : SameSiteMode.Lax,
+                Expires = DateTimeOffset.Now.AddDays(30),
+                Domain = _environment.IsProduction() ? ".yourdomain.com" : null
+            };
+        }
+
+        private bool IsStaticFileRequest(HttpContext context)
+        {
+            var path = context.Request.Path.Value?.ToLower() ?? "";
+            return path.Contains(".css") || path.Contains(".js") ||
+                   path.Contains(".png") || path.Contains(".jpg") ||
+                   path.Contains(".ico") || path.Contains(".woff");
         }
 
         private async Task SignOutAndRedirect(HttpContext context)

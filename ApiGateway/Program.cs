@@ -1,6 +1,7 @@
 using System.Text;
 using ApiGateway;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
@@ -45,7 +46,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddOcelot();
 
 var app = builder.Build();
-app.UseCors("AllowWebApp");
+
+// Add forwarded headers support for proxy
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowWebApp");
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

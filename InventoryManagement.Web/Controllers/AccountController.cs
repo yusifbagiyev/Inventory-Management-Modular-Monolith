@@ -75,7 +75,7 @@ namespace InventoryManagement.Web.Controllers
                                 // Only require HTTPS in production
                                 Secure = HttpContext.Request.IsHttps,
                                 SameSite = SameSiteMode.Lax, // Changed from Strict to allow OAuth flows
-                                Expires = DateTimeOffset.UtcNow.AddDays(30)
+                                Expires = DateTimeOffset.Now.AddDays(30)
                             };
 
                             Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
@@ -108,8 +108,8 @@ namespace InventoryManagement.Web.Controllers
                         {
                             IsPersistent = model.RememberMe,
                             ExpiresUtc = model.RememberMe ?
-                                DateTimeOffset.UtcNow.AddDays(30) :
-                                DateTimeOffset.UtcNow.AddHours(8)
+                                DateTimeOffset.Now.AddDays(30) :
+                                DateTimeOffset.Now.AddHours(8)
                         };
 
                         await HttpContext.SignInAsync(

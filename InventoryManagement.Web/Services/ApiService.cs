@@ -89,7 +89,7 @@ namespace InventoryManagement.Web.Services
                     HttpOnly = true,
                     Secure = context.Request.IsHttps,
                     SameSite = SameSiteMode.Lax,
-                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                    Expires = DateTimeOffset.Now.AddDays(30)
                 };
 
                 context.Response.Cookies.Append("jwt_token",tokenDto.AccessToken, cookieOptions);

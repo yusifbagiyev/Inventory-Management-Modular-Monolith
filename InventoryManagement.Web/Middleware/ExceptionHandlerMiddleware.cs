@@ -50,7 +50,7 @@ namespace InventoryManagement.Web.Middleware
             var errorResponse = new ErrorResponse
             {
                 TraceId = context.TraceIdentifier,
-                Timestamp = DateTime.UtcNow, // Use UTC for consistency
+                Timestamp = DateTime.Now, // Use UTC for consistency
                 RequestPath = requestPath,
                 RequestMethod = requestMethod
             };

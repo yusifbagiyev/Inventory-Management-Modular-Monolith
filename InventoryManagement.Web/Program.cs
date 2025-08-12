@@ -1,6 +1,7 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -17,6 +18,26 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+
+    // Configure Kestrel for HTTPS in production
+    if (builder.Environment.IsProduction())
+    {
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.ListenAnyIP(80, listenOptions =>
+            {
+                // HTTP port that redirects to HTTPS
+                listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+            });
+
+            options.ListenAnyIP(443, listenOptions =>
+            {
+                // HTTPS port with certificate
+                listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+                listenOptions.UseHttps(); // Certificate will be configured via environment
+            });
+        });
+    }
 
     builder.Logging.ClearProviders();
 
@@ -40,25 +61,41 @@ try
         {
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(
+                builder.Configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 480));
             options.SlidingExpiration = true;
             options.Cookie.Name = ".InventoryManagement.Auth";
             options.Cookie.HttpOnly = true;
             options.Cookie.IsEssential = true;
 
-            options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-                ? CookieSecurePolicy.SameAsRequest
-                : CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Lax;
+            // Proper security settings based on environment
+            if (builder.Environment.IsProduction())
+            {
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.Cookie.Domain = ".inventory.local"; // Set your domain
+            }
+            else
+            {
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+            }
         });
 
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromHours(8);
+        options.IdleTimeout = TimeSpan.FromMinutes(
+            builder.Configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 480));
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.Name = ".InventoryManagement.Session";
+
+        if (builder.Environment.IsProduction())
+        {
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+        }
     });
 
 
@@ -92,6 +129,31 @@ try
     });
 
 
+    // Configure CORS properly for production
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Production", policy =>
+        {
+            policy.WithOrigins(
+                    "https://inventory.local",
+                    "https://www.inventory.local",
+                    "https://api.inventory.local")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+
+        options.AddPolicy("Development", policy =>
+        {
+            policy.WithOrigins(
+                    "http://localhost:5051",
+                    "https://localhost:7171")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+    });
+
     builder.Services.AddHttpClient();
     builder.Services.AddHttpContextAccessor();
 
@@ -103,10 +165,17 @@ try
 
     var app = builder.Build();
 
-    if (!app.Environment.IsDevelopment())
+    if (app.Environment.IsProduction())
     {
         app.UseExceptionHandler("/Home/Error");
-        app.UseHsts();
+        app.UseHsts(); // Adds HSTS header for security
+        app.UseHttpsRedirection(); // Force HTTPS in production
+        app.UseCors("Production");
+    }
+    else
+    {
+        app.UseDeveloperExceptionPage();
+        app.UseCors("Development");
     }
 
     app.UseSerilogRequestLogging(options =>
