@@ -10,7 +10,6 @@ using NotificationService.Application.Events;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Entities;
-using NotificationService.Domain.Events;
 using NotificationService.Domain.Repositories;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -432,14 +431,39 @@ namespace NotificationService.Infrastructure.Services
                     IsNewItem = productEvent.IsNewItem,
                     IsWorking = productEvent.IsWorking,
                     Notes = productEvent.Description,
-                    NotificationType = notificationType
+                    NotificationType = notificationType,
+                    ImageUrl = productEvent.ImageUrl,
+                    ImageData = productEvent.ImageData,
+                    ImageFileName = productEvent.ImageFileName
                 };
 
                 // Format the message
                 var message = whatsAppService.FormatProductNotification(notification);
 
-                // Send to Whatsapp group
-                var success=await whatsAppService.SendGroupMessageAsync(groupId,message);
+                bool success;
+
+                // Determine how to send based on available image data
+                if (string.IsNullOrEmpty(productEvent.ImageUrl))
+                {
+                    // If we have an image URL, construct the full URL
+                    var baseUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
+                    var fullImageUrl = $"{baseUrl}{productEvent.ImageUrl}";
+                    success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                }
+                else if (productEvent.ImageData != null && productEvent.ImageData.Length > 0)
+                {
+                    // If we have image data, send it directly
+                    success = await whatsAppService.SendGroupMessageWithImageDataAsync(
+                        groupId,
+                        message,
+                        productEvent.ImageData,
+                        productEvent.ImageFileName ?? $"product_{productEvent.InventoryCode}.jpg");
+                }
+                else
+                {
+                    // No image available, send text only
+                    success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                }
 
                 if (success)
                 {

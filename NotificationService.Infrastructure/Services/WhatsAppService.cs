@@ -65,6 +65,49 @@ namespace NotificationService.Infrastructure.Services
         }
 
 
+        public async Task<bool> SendGroupMessageWithImageDataAsync(string groupId, string message, byte[] imageData, string fileName)
+        {
+            try
+            {
+                // Ensure group Id is in the correct format
+                if (!groupId.EndsWith("@g.us"))
+                    groupId = $"{groupId}@g.us";
+
+                // Convert image data to base64 for sending
+                var base64Image = Convert.ToBase64String(imageData);
+
+                // Green API expects the file in a specific format
+                var payload = new
+                {
+                    chatId = groupId,
+                    caption = message,
+                    file = $"data:image/jpeg;base64,{base64Image}",
+                    fileName = fileName ?? "image.jpg"
+                };
+
+                // Use sendFileByUpload endpoint for sending base64 encoded images
+                var endpoint = $"/waInstance{_settings.IdInstance}/sendFileByUpload/{_settings.ApiTokenInstance}";
+
+                var response = await SendRequestAsync(endpoint, payload);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation($"WhatsApp message with embedded image sent successfully to group {groupId}");
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Failed to send WhatsApp message with embedded image. Status: {response.StatusCode}, Error: {errorContent}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending WhatsApp message with embedded image to group {groupId}");
+                return false;
+            }
+        }
+
+
         public string FormatProductNotification(WhatsAppProductNotification notification)
         {
             var message = new StringBuilder();

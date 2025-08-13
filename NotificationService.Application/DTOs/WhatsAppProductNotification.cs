@@ -16,5 +16,9 @@
         public bool IsWorking { get; set; } = true;
         public string? Notes { get; set; }=string.Empty;
         public string NotificationType { get; set; } = string.Empty;
+
+        public string? ImageUrl { get; set; }
+        public byte[]? ImageData { get; set; }
+        public string? ImageFileName { get; set; }
     }
 }

@@ -14,6 +14,9 @@
         public bool IsNewItem { get; set; }
         public bool IsWorking { get; set; } = true;
         public DateTime CreatedAt { get; set; }
+        public string? ImageUrl { get; set; }
+        public byte[]? ImageData { get; set; }
+        public string? ImageFileName { get; set; }
     }
 
     public record ProductDeletedEvent
