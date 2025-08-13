@@ -98,8 +98,6 @@ builder.Services.AddScoped<INotificationSender, NotificationSender>();
 builder.Services.AddHttpClient<IUserService, UserService>();
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
 {
-    var apiUrl = builder.Configuration["Whatsapp:ApiUrl"] ?? "https://7103.api.greenapi.com";
-    client.BaseAddress = new Uri(apiUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 })

@@ -24,7 +24,7 @@ namespace NotificationService.Infrastructure.Services
             _settings = configuration.GetSection("Whatsapp").Get<WhatsAppSettings>()
                 ?? throw new InvalidOperationException("Whatsapp settings not found in configuration");
 
-            _httpClient.BaseAddress = new Uri(_settings.MediaUrl);
+            _httpClient.BaseAddress = new Uri(_settings.ApiUrl);
         }
 
         public async Task<bool> SendGroupMessageAsync(string groupId,string message)
@@ -64,7 +64,6 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-
         public async Task<bool> SendGroupMessageWithImageDataAsync(string groupId, string message, byte[] imageData, string fileName)
         {
             try
@@ -72,6 +71,13 @@ namespace NotificationService.Infrastructure.Services
                 // Ensure group Id is in the correct format
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
+
+                // Truncate caption if too long
+                if (message.Length > 2048)
+                {
+                    _logger.LogWarning("Caption exceeds 2048 characters. Truncating...");
+                    message = message.Substring(0, 2045) + "...";
+                }
 
                 // Check image size before attempting to send
                 var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
@@ -84,21 +90,36 @@ namespace NotificationService.Infrastructure.Services
                 }
 
                 // Convert image data to base64 for sending
+                var mimeType = GetMimeType(imageData,fileName);
                 var base64Image = Convert.ToBase64String(imageData);
+
+                string finalFileName = fileName;
+
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    var ext = mimeType.Split('/')[1] switch
+                    {
+                        "jpeg" => "jpg",
+                        "png" => "png",
+                        "gif" => "gif",
+                        "bmp" => "bmp",
+                        "webp" => "webp",
+                        _ => "jpg"
+                    };
+                    finalFileName = $"image.{ext}";
+                }
 
                 var payload = new
                 {
                     chatId = groupId,
                     caption = message,
-                    file = $"data:image/jpeg;base64,{base64Image}",
-                    fileName = fileName ?? "image.jpg"
+                    file = $"data:{mimeType};base64,{base64Image}",
+                    fileName = finalFileName
                 };
 
                 var endpoint = $"/waInstance{_settings.IdInstance}/sendFileByUpload/{_settings.ApiTokenInstance}";
 
                 var response = await SendRequestAsync(endpoint, payload);
-
-                // Read the response content for debugging
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -112,9 +133,67 @@ namespace NotificationService.Infrastructure.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error sending WhatsApp message with embedded image to group {groupId}");
-                return false;
+                _logger.LogError(ex, $"Error sending WhatsApp message with image to group {groupId}");
+
+                // Fallback to text-only message
+                try
+                {
+                    return await SendGroupMessageAsync(groupId, message);
+                }
+                catch
+                {
+                    return false;
+                }
             }
+        }
+
+        private string GetMimeType(byte[] imageData,string fileName)
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                var extension = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
+                return extension switch
+                {
+                    ".jpg" or ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".bmp" => "image/bmp",
+                    ".webp" => "image/webp",
+                    _ => DetectMimeTypeFromData(imageData) // Fallback to data detection
+                };
+            }
+            return DetectMimeTypeFromData(imageData);
+        }
+
+        private string DetectMimeTypeFromData(byte[] imageData)
+        {
+            if (imageData.Length < 4) return "image/jpeg";
+
+            // PNG detection
+            if (imageData[0] == 0x89 && imageData[1] == 0x50 && imageData[2] == 0x4E && imageData[3] == 0x47)
+                return "image/png";
+
+            // JPEG detection
+            if (imageData[0] == 0xFF && imageData[1] == 0xD8 && imageData[2] == 0xFF)
+                return "image/jpeg";
+
+            // GIF detection
+            if (imageData[0] == 0x47 && imageData[1] == 0x49 && imageData[2] == 0x46)
+                return "image/gif";
+
+            // BMP detection
+            if (imageData[0] == 0x42 && imageData[1] == 0x4D)
+                return "image/bmp";
+
+            // WEBP detection
+            if (imageData.Length > 12 &&
+                imageData[0] == 0x52 && imageData[1] == 0x49 &&
+                imageData[2] == 0x46 && imageData[3] == 0x46 &&
+                imageData[8] == 0x57 && imageData[9] == 0x45 &&
+                imageData[10] == 0x42 && imageData[11] == 0x50)
+                return "image/webp";
+
+            return "image/jpeg"; // Default
         }
 
         public string FormatProductNotification(WhatsAppProductNotification notification)
@@ -193,8 +272,11 @@ namespace NotificationService.Infrastructure.Services
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _logger.LogDebug($"Sending request to: {endpoint}");
-            _logger.LogDebug($"Payload: {json}");
+            _logger.LogDebug($"Sending request to: {_httpClient.BaseAddress}{endpoint}");
+
+            // Log first 100 chars of payload for debugging (be careful not to log sensitive data)
+            var payloadPreview = json.Length > 100 ? json.Substring(0, 100) + "..." : json;
+            _logger.LogDebug($"Payload preview: {payloadPreview}");
 
             return await _httpClient.PostAsync(endpoint, content);
         }
