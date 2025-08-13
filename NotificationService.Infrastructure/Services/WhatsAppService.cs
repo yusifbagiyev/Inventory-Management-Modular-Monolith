@@ -24,7 +24,7 @@ namespace NotificationService.Infrastructure.Services
             _settings = configuration.GetSection("Whatsapp").Get<WhatsAppSettings>()
                 ?? throw new InvalidOperationException("Whatsapp settings not found in configuration");
 
-            _httpClient.BaseAddress = new Uri(_settings.ApiUrl);
+            _httpClient.BaseAddress = new Uri(_settings.MediaUrl);
         }
 
         public async Task<bool> SendGroupMessageAsync(string groupId,string message)
@@ -73,10 +73,19 @@ namespace NotificationService.Infrastructure.Services
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
 
+                // Check image size before attempting to send
+                var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
+                _logger.LogInformation($"Image size: {imageSizeInMB:F2} MB for file: {fileName}");
+
+                if (imageSizeInMB > 10) // Green API typically has a 10MB limit
+                {
+                    _logger.LogWarning($"Image size {imageSizeInMB:F2}MB exceeds limit. Sending text only.");
+                    return await SendGroupMessageAsync(groupId, message);
+                }
+
                 // Convert image data to base64 for sending
                 var base64Image = Convert.ToBase64String(imageData);
 
-                // Green API expects the file in a specific format
                 var payload = new
                 {
                     chatId = groupId,
@@ -85,10 +94,12 @@ namespace NotificationService.Infrastructure.Services
                     fileName = fileName ?? "image.jpg"
                 };
 
-                // Use sendFileByUpload endpoint for sending base64 encoded images
                 var endpoint = $"/waInstance{_settings.IdInstance}/sendFileByUpload/{_settings.ApiTokenInstance}";
 
                 var response = await SendRequestAsync(endpoint, payload);
+
+                // Read the response content for debugging
+                var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -96,9 +107,8 @@ namespace NotificationService.Infrastructure.Services
                     return true;
                 }
 
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError($"Failed to send WhatsApp message with embedded image. Status: {response.StatusCode}, Error: {errorContent}");
-                return false;
+                _logger.LogError($"Failed to send WhatsApp message with embedded image. Status: {response.StatusCode}, Error: {responseContent}");
+                return await SendGroupMessageAsync(groupId, message);
             }
             catch (Exception ex)
             {
@@ -106,7 +116,6 @@ namespace NotificationService.Infrastructure.Services
                 return false;
             }
         }
-
 
         public string FormatProductNotification(WhatsAppProductNotification notification)
         {

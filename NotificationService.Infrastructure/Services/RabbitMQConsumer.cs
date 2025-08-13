@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -443,21 +444,37 @@ namespace NotificationService.Infrastructure.Services
                 bool success;
 
                 // Determine how to send based on available image data
-                if (string.IsNullOrEmpty(productEvent.ImageUrl))
+                if (productEvent.ImageUrl!=null&&productEvent.ImageData?.Length>0)
                 {
-                    // If we have an image URL, construct the full URL
-                    var baseUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
-                    var fullImageUrl = $"{baseUrl}{productEvent.ImageUrl}";
-                    success = await whatsAppService.SendGroupMessageAsync(groupId, message);
-                }
-                else if (productEvent.ImageData != null && productEvent.ImageData.Length > 0)
-                {
-                    // If we have image data, send it directly
                     success = await whatsAppService.SendGroupMessageWithImageDataAsync(
                         groupId,
                         message,
                         productEvent.ImageData,
                         productEvent.ImageFileName ?? $"product_{productEvent.InventoryCode}.jpg");
+                }
+                else if (!string.IsNullOrEmpty(productEvent.ImageUrl))
+                {
+                    try
+                    {
+                        // Fetch the image from the ProductService
+                        var baseUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
+                        var fullImageUrl=$"{baseUrl}{productEvent.ImageUrl}";
+
+                        using var client=new HttpClient();
+                        var imageBytes = await client.GetByteArrayAsync(fullImageUrl);
+
+                        _logger.LogInformation($"Fetched image from URL for product {productEvent.InventoryCode}, sending to WhatsApp");
+                        success = await whatsAppService.SendGroupMessageWithImageDataAsync(
+                            groupId,
+                            message,
+                            imageBytes,
+                            Path.GetFileName(productEvent.ImageUrl) ?? $"product_{productEvent.InventoryCode}.jpg");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogInformation($"No image available for product {productEvent.InventoryCode}, sending text only");
+                        success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                    }
                 }
                 else
                 {
@@ -487,6 +504,7 @@ namespace NotificationService.Infrastructure.Services
                 using var scope = _serviceProvider.CreateScope();
                 var whatsAppService = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
                 var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                var httpClientFactory = scope.ServiceProvider.GetService<IHttpClientFactory>();
 
                 // Check if Whatsapp notifications are enabled
                 var whatsAppEnabled = configuration.GetValue<bool>("Whatsapp:Enabled", true);
@@ -523,21 +541,69 @@ namespace NotificationService.Infrastructure.Services
                 // Format the message
                 var message = whatsAppService.FormatProductNotification(notification);
 
-                // Send to Whatsapp group
-                var success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                bool success;
+
+                // Try to fetch the product image from ProductService
+                try
+                {
+                    var productServiceUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
+                    using var httpClient = httpClientFactory?.CreateClient() ?? new HttpClient();
+
+                    // First, get product details to find the image URL
+                    var productResponse = await httpClient.GetAsync($"{productServiceUrl}/api/products/{routeEvent.ProductId}");
+                    if (productResponse.IsSuccessStatusCode)
+                    {
+                        var productJson=await productResponse.Content.ReadAsStringAsync();
+                        var productData = JsonSerializer.Deserialize<JsonElement>(productJson);
+
+                        if (productData.TryGetProperty("imageUrl",out var imageUrlElement))
+                        {
+                            var imageUrl = imageUrlElement.GetString();
+                            if (!string.IsNullOrEmpty(imageUrl))
+                            {
+                                // Fetch the actual image
+                                var fullImageUrl =$"{productServiceUrl}{imageUrl}";
+                                var imageBytes = await httpClient.GetByteArrayAsync(fullImageUrl);
+                                _logger.LogInformation($"Sending WhatsApp transfer notification with image for product {routeEvent.InventoryCode}");
+                                success = await whatsAppService.SendGroupMessageWithImageDataAsync(
+                                    groupId,
+                                    message,
+                                    imageBytes,
+                                    $"transfer_{routeEvent.InventoryCode}.jpg");
+                            }
+                            else
+                            {
+                                success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                            }
+                        }
+                        else
+                        {
+                            success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                        }
+                    }
+                    else
+                    {
+                        success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to fetch product image for transfer notification, sending text only");
+                    success = await whatsAppService.SendGroupMessageAsync(groupId, message);
+                }
 
                 if (success)
                 {
-                    _logger.LogInformation($"WhatsApp notification sent for product {routeEvent.InventoryCode}");
+                    _logger.LogInformation($"WhatsApp transfer notification sent for product {routeEvent.InventoryCode}");
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to send WhatsApp notification for product {routeEvent.InventoryCode}");
+                    _logger.LogWarning($"Failed to send WhatsApp transfer notification for product {routeEvent.InventoryCode}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending WhatsApp notification");
+                _logger.LogError(ex, "Error sending WhatsApp route notification");
             }
         }
 
