@@ -88,7 +88,7 @@ namespace NotificationService.API.Controllers
                     NotificationType = "created"
                 };
 
-                var message = _whatsAppService.FormatProductNotification(testNotification);
+                var message = _whatsAppService.FormatNotification(testNotification);
                 var success = await _whatsAppService.SendGroupMessageAsync(groupId, message);
 
                 if (success)

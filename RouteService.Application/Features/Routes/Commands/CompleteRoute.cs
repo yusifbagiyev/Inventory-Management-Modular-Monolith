@@ -86,15 +86,18 @@ namespace RouteService.Application.Features.Routes.Commands
                     ProductId = route.ProductSnapshot.ProductId,
                     InventoryCode = route.ProductSnapshot.InventoryCode,
                     Model = route.ProductSnapshot.Model,
-                    Vendor=route.ProductSnapshot.Vendor,
-                    CategoryName= route.ProductSnapshot.CategoryName,
+                    Vendor = route.ProductSnapshot.Vendor,
+                    CategoryName = route.ProductSnapshot.CategoryName,
                     FromDepartmentId = route.FromDepartmentId ?? 0,
                     FromDepartmentName = route.FromDepartmentName ?? "",
                     FromWorker = route.FromWorker,
-                    ToWorker=route.ToWorker?? "",
+                    ToWorker = route.ToWorker ?? "",
                     ToDepartmentId = route.ToDepartmentId,
                     ToDepartmentName = route.ToDepartmentName,
                     Notes = route.Notes,
+                    ImageUrl = route.ImageUrl,
+                    ImageData = imageData,
+                    ImageFileName=imageFileName,
                     CompletedAt = DateTime.Now
                 };
 

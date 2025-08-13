@@ -15,6 +15,9 @@
         public string? FromWorker { get; set; } = string.Empty;
         public string ToWorker { get; init; } = string.Empty;
         public string? Notes { get; set; } = string.Empty;
+        public string? ImageUrl { get; set; }
+        public byte[]? ImageData { get; set; }
+        public string? ImageFileName { get; set; }
         public DateTime CompletedAt { get; init; }
     }
 }

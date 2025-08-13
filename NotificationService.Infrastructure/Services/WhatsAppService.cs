@@ -1,9 +1,10 @@
-﻿using System.Text;
-using System.Text.Json;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace NotificationService.Infrastructure.Services
 {
@@ -90,113 +91,69 @@ namespace NotificationService.Infrastructure.Services
                 }
 
                 // Convert image data to base64 for sending
-                var mimeType = GetMimeType(imageData,fileName);
-                var base64Image = Convert.ToBase64String(imageData);
-
-                string finalFileName = fileName;
-
-                if (string.IsNullOrEmpty(fileName))
-                {
-                    var ext = mimeType.Split('/')[1] switch
-                    {
-                        "jpeg" => "jpg",
-                        "png" => "png",
-                        "gif" => "gif",
-                        "bmp" => "bmp",
-                        "webp" => "webp",
-                        _ => "jpg"
-                    };
-                    finalFileName = $"image.{ext}";
-                }
-
-                var payload = new
-                {
-                    chatId = groupId,
-                    caption = message,
-                    file = $"data:{mimeType};base64,{base64Image}",
-                    fileName = finalFileName
-                };
-
+                var mimeType = GetMimeType(fileName);
                 var endpoint = $"/waInstance{_settings.IdInstance}/sendFileByUpload/{_settings.ApiTokenInstance}";
 
-                var response = await SendRequestAsync(endpoint, payload);
+                // Create multipart form data
+                using var formData = new MultipartFormDataContent();
+                formData.Add(new StringContent(groupId), "chatId");
+                formData.Add(new StringContent(message), "caption");
+
+                // Create file content with proper encoding
+                var fileContent = new ByteArrayContent(imageData);
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+
+                // Sanitize filename and add to form
+                var sanitizedFileName = SanitizeFileName(fileName ?? $"image.{mimeType.Split('/')[1]}");
+                formData.Add(fileContent, "file", sanitizedFileName);
+
+                _logger.LogDebug($"Sending file to: {_httpClient.BaseAddress}{endpoint}");
+                _logger.LogDebug($"File size: {imageData.Length} bytes, MIME: {mimeType}, Name: {sanitizedFileName}");
+
+                var response = await _httpClient.PostAsync(endpoint, formData);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation($"WhatsApp message with embedded image sent successfully to group {groupId}");
+                    _logger.LogInformation($"WhatsApp image sent to group {groupId}");
                     return true;
                 }
 
-                _logger.LogError($"Failed to send WhatsApp message with embedded image. Status: {response.StatusCode}, Error: {responseContent}");
+                _logger.LogError($"Failed to upload file. Status: {response.StatusCode}, Error: {responseContent}");
                 return await SendGroupMessageAsync(groupId, message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error sending WhatsApp message with image to group {groupId}");
-
-                // Fallback to text-only message
-                try
-                {
-                    return await SendGroupMessageAsync(groupId, message);
-                }
-                catch
-                {
-                    return false;
-                }
+                _logger.LogError(ex, $"Error sending image to group {groupId}");
+                return await SendGroupMessageAsync(groupId, message);
             }
         }
 
-        private string GetMimeType(byte[] imageData,string fileName)
+        private string GetMimeType(string fileName)
         {
-            if (!string.IsNullOrEmpty(fileName))
+            var extension = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
+            return extension switch
             {
-                var extension = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
-                return extension switch
-                {
-                    ".jpg" or ".jpeg" => "image/jpeg",
-                    ".png" => "image/png",
-                    ".gif" => "image/gif",
-                    ".bmp" => "image/bmp",
-                    ".webp" => "image/webp",
-                    _ => DetectMimeTypeFromData(imageData) // Fallback to data detection
-                };
-            }
-            return DetectMimeTypeFromData(imageData);
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _=> "image/jpeg"
+            };
         }
-
-        private string DetectMimeTypeFromData(byte[] imageData)
+        private string SanitizeFileName(string fileName)
         {
-            if (imageData.Length < 4) return "image/jpeg";
+            // Remove problematic characters
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var cleanName = new string(fileName
+                .Where(ch => !invalidChars.Contains(ch))
+                .ToArray());
 
-            // PNG detection
-            if (imageData[0] == 0x89 && imageData[1] == 0x50 && imageData[2] == 0x4E && imageData[3] == 0x47)
-                return "image/png";
-
-            // JPEG detection
-            if (imageData[0] == 0xFF && imageData[1] == 0xD8 && imageData[2] == 0xFF)
-                return "image/jpeg";
-
-            // GIF detection
-            if (imageData[0] == 0x47 && imageData[1] == 0x49 && imageData[2] == 0x46)
-                return "image/gif";
-
-            // BMP detection
-            if (imageData[0] == 0x42 && imageData[1] == 0x4D)
-                return "image/bmp";
-
-            // WEBP detection
-            if (imageData.Length > 12 &&
-                imageData[0] == 0x52 && imageData[1] == 0x49 &&
-                imageData[2] == 0x46 && imageData[3] == 0x46 &&
-                imageData[8] == 0x57 && imageData[9] == 0x45 &&
-                imageData[10] == 0x42 && imageData[11] == 0x50)
-                return "image/webp";
-
-            return "image/jpeg"; // Default
+            // Ensure proper extension
+            return Path.GetExtension(cleanName) == ""
+                ? $"{cleanName}.jpg"
+                : cleanName;
         }
 
-        public string FormatProductNotification(WhatsAppProductNotification notification)
+        public string FormatNotification(WhatsAppProductNotification notification)
         {
             var message = new StringBuilder();
 
@@ -214,6 +171,7 @@ namespace NotificationService.Infrastructure.Services
             // Add product details
             message.AppendLine($"📦 *Product Details:*");
             message.AppendLine($"• *Inventory Code:* {notification.InventoryCode}");
+            message.AppendLine($"• *Category:* {notification.CategoryName}");
             message.AppendLine($"• *Vendor:* {notification.Vendor}");
             message.AppendLine($"• *Model:* {notification.Model}");
             if (notification.NotificationType == "created")
@@ -229,6 +187,7 @@ namespace NotificationService.Infrastructure.Services
                 {
                     message.AppendLine($"• *Status:* 🆕 New Item");
                 }
+
                 if(!notification.IsWorking)
                 {
                     message.AppendLine($"• *Status:* ❌ Not Working");
@@ -258,11 +217,6 @@ namespace NotificationService.Infrastructure.Services
 
             message.AppendLine();
             message.AppendLine($"⏰ *Time:* {notification.CreatedAt:dd/MM/yyyy HH:mm}");
-
-            // Add footer
-            message.AppendLine();
-            message.AppendLine("_This is an automated notification from 166 Logistics Inventory System_");
-
             return message.ToString();
         }
 

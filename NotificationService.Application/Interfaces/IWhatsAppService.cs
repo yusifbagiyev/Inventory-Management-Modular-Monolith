@@ -6,6 +6,6 @@ namespace NotificationService.Application.Interfaces
     {
         Task<bool> SendGroupMessageAsync(string groupId, string message);
         Task<bool> SendGroupMessageWithImageDataAsync(string groupId, string message, byte[] imageData, string fileName);
-        string FormatProductNotification(WhatsAppProductNotification notification);
+        string FormatNotification(WhatsAppProductNotification notification);
     }
 }

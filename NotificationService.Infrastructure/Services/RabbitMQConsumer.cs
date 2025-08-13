@@ -439,7 +439,7 @@ namespace NotificationService.Infrastructure.Services
                 };
 
                 // Format the message
-                var message = whatsAppService.FormatProductNotification(notification);
+                var message = whatsAppService.FormatNotification(notification);
 
                 bool success;
 
@@ -528,82 +528,69 @@ namespace NotificationService.Infrastructure.Services
                     InventoryCode = routeEvent.InventoryCode,
                     Model = routeEvent.Model,
                     Vendor = routeEvent.Vendor,
-                    CategoryName=routeEvent.CategoryName,
+                    CategoryName = routeEvent.CategoryName,
                     FromDepartmentName = routeEvent.FromDepartmentName,
                     FromWorker = routeEvent.FromWorker,
-                    ToDepartmentName=routeEvent.ToDepartmentName,
+                    ToDepartmentName = routeEvent.ToDepartmentName,
                     ToWorker = routeEvent.ToWorker,
                     CreatedAt = routeEvent.CompletedAt,
-                    Notes=routeEvent.Notes,
+                    Notes = routeEvent.Notes,
                     NotificationType = notificationType
                 };
 
                 // Format the message
-                var message = whatsAppService.FormatProductNotification(notification);
+                var message = whatsAppService.FormatNotification(notification);
 
                 bool success;
 
-                // Try to fetch the product image from ProductService
-                try
+                if (routeEvent.ImageUrl != null & routeEvent.ImageData?.Length > 0)
                 {
-                    var productServiceUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
-                    using var httpClient = httpClientFactory?.CreateClient() ?? new HttpClient();
-
-                    // First, get product details to find the image URL
-                    var productResponse = await httpClient.GetAsync($"{productServiceUrl}/api/products/{routeEvent.ProductId}");
-                    if (productResponse.IsSuccessStatusCode)
+                    success = await whatsAppService.SendGroupMessageWithImageDataAsync(
+                        groupId,
+                        message,
+                        routeEvent.ImageData!,
+                        routeEvent.ImageFileName ?? $"route_{routeEvent.InventoryCode}.jpg");
+                }
+                else if (!string.IsNullOrEmpty(routeEvent.ImageUrl))
+                {
+                    try
                     {
-                        var productJson=await productResponse.Content.ReadAsStringAsync();
-                        var productData = JsonSerializer.Deserialize<JsonElement>(productJson);
+                        var baseUrl = configuration["Services:RouteServiceUrl"] ?? "http://localhost:5002";
+                        var fullImageUrl = $"{baseUrl}{routeEvent.ImageUrl}";
 
-                        if (productData.TryGetProperty("imageUrl",out var imageUrlElement))
-                        {
-                            var imageUrl = imageUrlElement.GetString();
-                            if (!string.IsNullOrEmpty(imageUrl))
-                            {
-                                // Fetch the actual image
-                                var fullImageUrl =$"{productServiceUrl}{imageUrl}";
-                                var imageBytes = await httpClient.GetByteArrayAsync(fullImageUrl);
-                                _logger.LogInformation($"Sending WhatsApp transfer notification with image for product {routeEvent.InventoryCode}");
-                                success = await whatsAppService.SendGroupMessageWithImageDataAsync(
-                                    groupId,
-                                    message,
-                                    imageBytes,
-                                    $"transfer_{routeEvent.InventoryCode}.jpg");
-                            }
-                            else
-                            {
-                                success = await whatsAppService.SendGroupMessageAsync(groupId, message);
-                            }
-                        }
-                        else
-                        {
-                            success = await whatsAppService.SendGroupMessageAsync(groupId, message);
-                        }
+                        using var client = new HttpClient();
+                        var imageBytes = await client.GetByteArrayAsync(fullImageUrl);
+
+                        _logger.LogInformation($"Fetched image from URL for route {routeEvent.InventoryCode}, sending to WhatsApp");
+                        success = await whatsAppService.SendGroupMessageWithImageDataAsync(
+                            groupId,
+                            message,
+                            imageBytes,
+                            Path.GetFileName(routeEvent.ImageUrl) ?? $"route_{routeEvent.InventoryCode}.jpg");
                     }
-                    else
+                    catch (Exception ex)
                     {
+                        _logger.LogInformation($"No image available for route {routeEvent.InventoryCode}, sending text only");
                         success = await whatsAppService.SendGroupMessageAsync(groupId, message);
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogWarning(ex, "Failed to fetch product image for transfer notification, sending text only");
+                    // No image available, send text only
                     success = await whatsAppService.SendGroupMessageAsync(groupId, message);
                 }
-
                 if (success)
                 {
-                    _logger.LogInformation($"WhatsApp transfer notification sent for product {routeEvent.InventoryCode}");
+                    _logger.LogInformation($"WhatsApp notification sent for route {routeEvent.InventoryCode}");
                 }
                 else
                 {
-                    _logger.LogWarning($"Failed to send WhatsApp transfer notification for product {routeEvent.InventoryCode}");
+                    _logger.LogWarning($"Failed to send WhatsApp notification for route {routeEvent.InventoryCode}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending WhatsApp route notification");
+                _logger.LogError(ex, "Error sending WhatsApp notification");
             }
         }
 
