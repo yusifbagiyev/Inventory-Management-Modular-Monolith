@@ -31,4 +31,8 @@
     <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="nginx\ssl\" />
+  </ItemGroup>
+
 </Project>

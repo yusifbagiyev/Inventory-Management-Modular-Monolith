@@ -28,3 +28,9 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
+.env
+.env.production
+*.key
+*.crt
+*.pem
+ssl/
