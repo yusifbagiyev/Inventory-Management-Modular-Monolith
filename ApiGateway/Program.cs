@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using ApiGateway;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,16 +8,24 @@ using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var environment=builder.Environment.EnvironmentName;
 //Add Ocelot configuration
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile("ocelot.json", optional: true, reloadOnChange: true)
+                     .AddJsonFile($"ocelot.{environment}.json", optional: true, reloadOnChange: true);
+
+var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Program");
+logger.LogInformation($"Loading Ocelot configuration for environment: {environment}");
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5051", "https://localhost:7171") // Add your web app URLs
+            var allowedOrigins = builder.Environment.IsDevelopment()
+            ? new[] { "http://localhost:5051", "https://localhost:7171" }
+            : new[] { "https://inventory166.az", "http://inventory166.az" };
+
+            policy.WithOrigins(allowedOrigins) // Add your web app URLs
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials(); // Important for authentication
@@ -28,7 +37,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer("Bearer",options =>
     {
         // Allow HTTP in development (set to true in production)
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -47,16 +56,13 @@ builder.Services.AddOcelot();
 
 var app = builder.Build();
 
-// Add forwarded headers support for proxy
+// Add forwarded headers support for proxy (important when behind reverse proxy like nginx)
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors("AllowWebApp");
-}
+app.UseCors("AllowWebApp");
 
 app.UseAuthentication();
 app.UseAuthorization();

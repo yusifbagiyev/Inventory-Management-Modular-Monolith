@@ -28,6 +28,8 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Copy the ocelot configuration
-COPY ApiGateway/ocelot.json .
+COPY ocelot.json .
+COPY ocelot.Development.json .
+COPY ocelot.Production.json .
 
 ENTRYPOINT ["dotnet", "ApiGateway.dll"]
