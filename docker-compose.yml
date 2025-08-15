@@ -6,8 +6,8 @@ services:
       - "80:80" 
       - "443:443"
     volumes:
-      - ./nginx/production.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./InventoryManagement.Web/nginx/production.conf:/etc/nginx/nginx.conf:ro
+      - ./InventoryManagement.Web/nginx/ssl:/etc/nginx/ssl:ro
       - nginx_cache:/var/cache/nginx
     depends_on:
       - web
