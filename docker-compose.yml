@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nginx:
     image: nginx:alpine
@@ -8,30 +6,37 @@ services:
       - "80:80" 
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/production.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - nginx_cache:/var/cache/nginx
     depends_on:
-      - api-gateway
       - web
     networks:
       - frontend
-    restart: unless-stopped
+    restart: always
+    logging:
+        driver: "json-file"
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     container_name: inventory_rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-***REMOVED***}
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: "***REMOVED***"
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   postgres_identity:
     image: postgres:15-alpine
@@ -39,12 +44,19 @@ services:
     environment:
       POSTGRES_DB: identity_service
       POSTGRES_USER: identity_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD_IDENTITY:-***REMOVED***}
+      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
     volumes:
       - postgres_identity_data:/var/lib/postgresql/data
+      - ./backups/identity:/backups
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres_product:
     image: postgres:15-alpine
@@ -52,12 +64,19 @@ services:
     environment:
       POSTGRES_DB: product_service
       POSTGRES_USER: product_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD_PRODUCT:-***REMOVED***}
+      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
     volumes:
       - postgres_product_data:/var/lib/postgresql/data
+      - ./backups/product:/backups
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U product_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres_route:
     image: postgres:15-alpine
@@ -65,12 +84,19 @@ services:
     environment:
       POSTGRES_DB: route_service
       POSTGRES_USER: route_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD_ROUTE:-***REMOVED***}
+      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
     volumes:
       - postgres_route_data:/var/lib/postgresql/data
+      - ./backups/route:/backups
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U route_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres_approval:
     image: postgres:15-alpine
@@ -78,12 +104,19 @@ services:
     environment:
       POSTGRES_DB: approval_service
       POSTGRES_USER: approval_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD_APPROVAL:-***REMOVED***}
+      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
     volumes:
       - postgres_approval_data:/var/lib/postgresql/data
+      - ./backups/approval:/backups
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U approval_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres_notification:
     image: postgres:15-alpine
@@ -91,43 +124,63 @@ services:
     environment:
       POSTGRES_DB: notification_service
       POSTGRES_USER: notification_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD_NOTIFICATION:-***REMOVED***}
+      POSTGRES_PASSWORD: "***REMOVED***"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
     volumes:
       - postgres_notification_data:/var/lib/postgresql/data
+      - ./backups/notification:/backups
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   
   identity-service:
-    build:
-      context: ./IdentityService.API
-      dockerfile: Dockerfile
-    container_name: inventory_identity_service
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_identity;Database=identity_service;Username=identity_user;Password=${DB_PASSWORD_IDENTITY:-***REMOVED***}
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
-    depends_on:
-      - postgres_identity
-    networks:
-      - backend
-    restart: unless-stopped
+      image: inventory/identity-service:latest
+      build:
+        context: .
+        dockerfile: IdentityService.API/Dockerfile
+      container_name: inventory_identity_service
+      environment:
+        - ASPNETCORE_ENVIRONMENT=Production
+        - ASPNETCORE_URLS=http://+:80
+        - ConnectionStrings__DefaultConnection=Host=postgres_identity;Database=identity_service;Username=identity_user;Password=***REMOVED***;Pooling=true;Maximum Pool Size=20;
+        - Jwt__Key=***REMOVED***
+        - Jwt__Issuer=166Logistics
+        - Jwt__Audience=InventorySystemUsers
+      depends_on:
+        postgres_identity:
+          condition: service_healthy 
+      networks:
+        - backend
+      restart: always
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
 
   product-service:
+    image: inventory/product-service:latest
     build:
-      context: ./ProductService.API
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ProductService.API/Dockerfile
     container_name: inventory_product_service
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_product;Database=product_service;Username=product_user;Password=${DB_PASSWORD_PRODUCT:-***REMOVED***}
+      - ConnectionStrings__DefaultConnection=Host=postgres_product;Database=product_service;Username=product_user;Password=***REMOVED***;Pooling=true;Maximum Pool Size=20;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-***REMOVED***}
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
+      - RabbitMQ__UserName=admin
+      - RabbitMQ__Password="***REMOVED***"
+      - RabbitMQ__Port=5672
+      - Jwt__Key=***REMOVED***
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
     depends_on:
       - postgres_product
       - rabbitmq
@@ -135,22 +188,30 @@ services:
       - ./storage/images/products:/app/wwwroot/images/products
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   route-service:
+    image: inventory/route-service:latest
     build:
-      context: ./RouteService.API
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: RouteService.API/Dockerfile
     container_name: inventory_route_service
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_route;Database=route_service;Username=route_user;Password=${DB_PASSWORD_ROUTE:-***REMOVED***}
+      - ConnectionStrings__DefaultConnection=Host=postgres_route;Database=route_service;Username=route_user;Password=***REMOVED***;Pooling=true;Maximum Pool Size=20;
       - ProductService__BaseUrl=http://product-service
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-***REMOVED***}
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
+      - RabbitMQ__UserName=admin
+      - RabbitMQ__Password="***REMOVED***"
+      - Jwt__Key=***REMOVED***
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
     depends_on:
       - postgres_route
       - rabbitmq
@@ -159,21 +220,29 @@ services:
       - ./storage/images/routes:/app/wwwroot/images/routes
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   approval-service:
+    image: inventory/approval-service:latest
     build:
-      context: ./ApprovalService.API
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ApprovalService.API/Dockerfile
     container_name: inventory_approval_service
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_approval;Database=approval_service;Username=approval_user;Password=${DB_PASSWORD_APPROVAL:-***REMOVED***}
+      - ConnectionStrings__DefaultConnection=Host=postgres_approval;Database=approval_service;Username=approval_user;Password=***REMOVED***;Pooling=true;Maximum Pool Size=20;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-***REMOVED***}
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
+      - RabbitMQ__UserName=admin
+      - RabbitMQ__Password="***REMOVED***"
+      - Jwt__Key=***REMOVED***
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
       - Services__ProductService=http://api-gateway
       - Services__RouteService=http://api-gateway
     depends_on:
@@ -181,28 +250,45 @@ services:
       - rabbitmq
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   notification-service:
+    image: inventory/notification-service:latest
     build:
-      context: ./NotificationService.API
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: NotificationService.API/Dockerfile
     container_name: inventory_notification_service
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_notification;Database=notification_service;Username=notification_user;Password=${DB_PASSWORD_NOTIFICATION:-***REMOVED***}
+      - ConnectionStrings__DefaultConnection=Host=postgres_notification;Database=notification_service;Username=notification_user;Password=***REMOVED***;Pooling=true;Maximum Pool Size=20;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-***REMOVED***}
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
+      - RabbitMQ__UserName=admin
+      - RabbitMQ__Password="***REMOVED***"
+      - Jwt__Key=***REMOVED***
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
       - Services__IdentityService=http://api-gateway
+      - Services__ProductService=http://product-service
+      - WHATSAPP_ID=7103295570
+      - WHATSAPP_APITOKEN=***REMOVED***
+      - WHATSAPP_GROUPID=120363416701721102@g.us
     depends_on:
       - postgres_notification
       - rabbitmq
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # API Gateway - Internal traffic coordinator
   api-gateway:
@@ -213,7 +299,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - Jwt__Key=${JWT_KEY:-***REMOVED***}
+      - Jwt__Key=***REMOVED***
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
     depends_on:
       - identity-service
       - product-service
@@ -223,13 +311,14 @@ services:
     networks:
       - backend
       - frontend
-    restart: unless-stopped
+    restart: always
 
   # Web Application
   web:
+    image: inventory/web:latest
     build:
-      context: ./InventoryManagement.Web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: InventoryManagement.Web/Dockerfile
     container_name: inventory_web
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
@@ -241,7 +330,9 @@ services:
     networks:
       - frontend
       - backend
-    restart: unless-stopped
+    restart: always
+    volumes:
+      - ./logs/web:/app/logs
 
   # Seq for centralized logging (optional but recommended)
   seq:
@@ -250,12 +341,12 @@ services:
     environment:
       - ACCEPT_EULA=Y
     ports:
-      - "5341:80"
+      - "127.0.0.1:5341:80"
     volumes:
       - seq_data:/data
     networks:
       - backend
-    restart: unless-stopped
+    restart: always
 
 networks:
   frontend:
@@ -263,6 +354,7 @@ networks:
   backend:
     driver: bridge
     internal: true  # This makes the backend network not directly accessible from outside
+
 
 volumes:
   rabbitmq_data:
@@ -272,3 +364,4 @@ volumes:
   postgres_approval_data:
   postgres_notification_data:
   seq_data:
+  nginx_cache:

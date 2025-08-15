@@ -73,7 +73,7 @@ try
             {
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.Domain = ".inventory.local"; // Set your domain
+                options.Cookie.Domain = ".inventory166.az";
             }
             else
             {

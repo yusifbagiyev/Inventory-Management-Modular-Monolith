@@ -34,6 +34,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Ensure the images directory exists and has proper permissions
-RUN chmod -R 755 /app/wwwroot/images/products
 ENTRYPOINT ["dotnet", "ProductService.API.dll"]

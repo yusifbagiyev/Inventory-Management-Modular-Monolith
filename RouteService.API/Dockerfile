@@ -32,7 +32,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Set permissions for images directory
-RUN chmod -R 755 /app/wwwroot/images/routes
-
 ENTRYPOINT ["dotnet", "RouteService.API.dll"]
