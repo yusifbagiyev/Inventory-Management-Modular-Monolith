@@ -72,7 +72,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER}
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,7 +92,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ROUTE_DB_USER}]
+      test: ["CMD-SHELL", "pg_isready -U ${ROUTE_DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -112,7 +112,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APPROVAL_DB_USER}]
+      test: ["CMD-SHELL", "pg_isready -U ${APPROVAL_DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -132,7 +132,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER}]
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
