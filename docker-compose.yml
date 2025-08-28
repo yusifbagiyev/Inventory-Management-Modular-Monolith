@@ -329,7 +329,7 @@ networks:
     driver: bridge
   backend:
     driver: bridge
-    internal: true  # This makes the backend network not directly accessible from outside
+    internal: true
 
 
 volumes:
