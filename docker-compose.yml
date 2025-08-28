@@ -292,7 +292,7 @@ services:
       context: ./src/ApiGateway
       dockerfile: Dockerfile
     container_name: inventory_api_gateway
-     environment:
+    environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
       - Jwt__Key=${JWT_KEY}
