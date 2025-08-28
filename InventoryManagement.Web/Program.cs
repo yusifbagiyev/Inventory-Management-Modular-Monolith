@@ -1,7 +1,6 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -12,32 +11,20 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore.Hosting",LogEventLevel.Information)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore",LogEventLevel.Warning)
     .Enrich.FromLogContext()
+    .WriteTo.Console()
     .WriteTo.Seq("http://localhost:5342")
     .CreateLogger();
 
 try
 {
+    Log.Information("Starting InventoryManagement.Web application");
+
     var builder = WebApplication.CreateBuilder(args);
 
-    // Configure Kestrel for HTTPS in production
-    if (builder.Environment.IsProduction())
-    {
-        builder.WebHost.ConfigureKestrel(options =>
-        {
-            options.ListenAnyIP(80, listenOptions =>
-            {
-                // HTTP port that redirects to HTTPS
-                listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-            });
+    Log.Information("Builder created");
 
-            options.ListenAnyIP(443, listenOptions =>
-            {
-                // HTTPS port with certificate
-                listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
-                listenOptions.UseHttps(); // Certificate will be configured via environment
-            });
-        });
-    }
+    // Add this line to see all configuration values
+    Log.Information("Configuration: {Config}", string.Join(", ", builder.Configuration.AsEnumerable().Select(x => $"{x.Key}={x.Value}")));
 
     builder.Logging.ClearProviders();
 
@@ -73,7 +60,7 @@ try
             {
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.Domain = ".inventory166.az";
+                options.Cookie.Domain = builder.Environment.IsProduction() ? "inventory166.az" : null;
             }
             else
             {

@@ -16,6 +16,7 @@ services:
       - web
     networks:
       - frontend
+      - backend
     restart: always
 
   rabbitmq:
@@ -25,8 +26,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "5672:5672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -52,7 +53,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER} -d identity_service"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,7 +73,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER} -d product_service"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -92,7 +93,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ROUTE_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${ROUTE_DB_USER} -d route_service"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -112,7 +113,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APPROVAL_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${APPROVAL_DB_USER} -d approval_service"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -132,7 +133,7 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d notification_service"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -157,12 +158,7 @@ services:
       networks:
         - backend
       restart: always
-      healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 3
-
+      
   product-service:
     image: inventory/product-service:latest
     build:
@@ -187,11 +183,6 @@ services:
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   route-service:
     image: inventory/route-service:latest
@@ -219,11 +210,6 @@ services:
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   approval-service:
     image: inventory/approval-service:latest
@@ -249,11 +235,6 @@ services:
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   notification-service:
     image: inventory/notification-service:latest
@@ -275,19 +256,17 @@ services:
       - WHATSAPP_APITOKEN=${WHATSAPP_APITOKEN}
       - WHATSAPP_GROUPID=${WHATSAPP_GROUPID}
     depends_on:
-      - postgres_notification
-      - rabbitmq
+      postgres_notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - backend
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # API Gateway - Internal traffic coordinator
   api-gateway:
+    image: inventory-api-gateway:latest
     build:
       context: ./src/ApiGateway
       dockerfile: Dockerfile
@@ -316,10 +295,10 @@ services:
       dockerfile: InventoryManagement.Web/Dockerfile
     container_name: inventory_web
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ApiGateway__BaseUrl=http://api-gateway
-      - ConnectionStrings__Seq=http://seq:5341
+      - ApiGateway__BaseUrl=https://api.inventory166.az
+      - ConnectionStrings__Seq=http://seq:5342
     depends_on:
       - api-gateway
     networks:
@@ -328,6 +307,12 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
+    healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 40s
 
   # Seq for centralized logging (optional but recommended)
   seq:
@@ -335,8 +320,9 @@ services:
     container_name: inventory_seq
     environment:
       - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!
     ports:
-      - "127.0.0.1:5341:80"
+      - "5342:80"
     volumes:
       - seq_data:/data
     networks:
