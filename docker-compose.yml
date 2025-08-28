@@ -307,12 +307,7 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
-    healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 5
-    start_period: 40s
+    
 
   # Seq for centralized logging (optional but recommended)
   seq:
