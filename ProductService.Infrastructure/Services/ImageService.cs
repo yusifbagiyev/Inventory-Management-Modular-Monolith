@@ -10,7 +10,7 @@ namespace ProductService.Infrastructure.Services
 
         public ImageService(IConfiguration configuration)
         {
-            _imagePath = configuration.GetSection("ImageSettings:ImagePath").Value ?? "wwwroot/images/products";
+            _imagePath = configuration.GetSection("ImageSettings:Path").Value ?? "wwwroot/images/products";
             Directory.CreateDirectory(_imagePath);
         }
 
