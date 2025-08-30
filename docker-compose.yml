@@ -1,33 +1,43 @@
 version: '3.8'
 
 services:
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: inventory_nginx
+  # Single PostgreSQL instance for all services
+  # This approach is simpler for small deployments and easier to manage
+  postgres:
+    image: postgres:15-alpine
+    container_name: inventory_postgres_all
+    environment:
+      POSTGRES_DB: postgres  # Default database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ***REMOVED***
+      # Create multiple databases on startup
+      POSTGRES_MULTIPLE_DATABASES: "identity_service,product_service,route_service,approval_service,notification_service"
     ports:
-      - "80:80" 
-      - "443:443"
+      - "5432:5432"  # Expose PostgreSQL to external access
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - web
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+      - ./backups:/backups
     networks:
-      - frontend
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # RabbitMQ Message Broker
+  # Exposed for external monitoring and management
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: inventory_rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -39,144 +49,48 @@ services:
       timeout: 10s
       retries: 5
 
-  postgres_identity:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_identity
-    environment:
-      POSTGRES_DB: identity_service
-      POSTGRES_USER: ${IDENTITY_DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_identity_data:/var/lib/postgresql/data
-      - ./backups/identity:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER} -d identity_service"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres_product:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_product
-    environment:
-      POSTGRES_DB: product_service
-      POSTGRES_USER: ${PRODUCT_DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
-    volumes:
-      - postgres_product_data:/var/lib/postgresql/data
-      - ./backups/product:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER} -d product_service"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres_route:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_route
-    environment:
-      POSTGRES_DB: route_service
-      POSTGRES_USER: ${ROUTE_DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
-    volumes:
-      - postgres_route_data:/var/lib/postgresql/data
-      - ./backups/route:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ROUTE_DB_USER} -d route_service"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres_approval:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_approval
-    environment:
-      POSTGRES_DB: approval_service
-      POSTGRES_USER: ${APPROVAL_DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
-    volumes:
-      - postgres_approval_data:/var/lib/postgresql/data
-      - ./backups/approval:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APPROVAL_DB_USER} -d approval_service"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres_notification:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_notification
-    environment:
-      POSTGRES_DB: notification_service
-      POSTGRES_USER: ${NOTIFICATION_DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
-    volumes:
-      - postgres_notification_data:/var/lib/postgresql/data
-      - ./backups/notification:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d notification_service"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  
+  # Identity Service
   identity-service:
-      image: inventory/identity-service:latest
-      build:
-        context: ./src
-        dockerfile: IdentityService.API/Dockerfile
-      container_name: inventory_identity_service
-      environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+    build:
+      context: ./src
+      dockerfile: IdentityService.API/Dockerfile
+    container_name: inventory_identity_service
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_identity;Database=identity_service;Username=${IDENTITY_DB_USER};Password=${DB_PASSWORD};
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      depends_on:
-        postgres_identity:
-          condition: service_healthy 
-      networks:
-        - backend
-      restart: always
-      
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=postgres;Password=***REMOVED***;
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
+    ports:
+      - "5001:80"  # Direct access for testing/swagger
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: always
+
+  # Product Service
   product-service:
-    image: inventory/product-service:latest
     build:
       context: ./src
       dockerfile: ProductService.API/Dockerfile
     container_name: inventory_product_service
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_product;Database=product_service;Username=${PRODUCT_DB_USER};Password=${DB_PASSWORD};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=***REMOVED***;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
+    ports:
+      - "5002:80"  # Direct access for testing
     depends_on:
-      - postgres_product
+      - postgres
       - rabbitmq
     volumes:
       - ./storage/images/products:/app/wwwroot/images/products
@@ -184,25 +98,27 @@ services:
       - backend
     restart: always
 
+  # Route Service
   route-service:
-    image: inventory/route-service:latest
     build:
       context: ./src
       dockerfile: RouteService.API/Dockerfile
     container_name: inventory_route_service
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_route;Database=route_service;Username=${ROUTE_DB_USER};Password=${DB_PASSWORD};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=postgres;Password=***REMOVED***;
       - ProductService__BaseUrl=http://product-service
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
+    ports:
+      - "5003:80"  # Direct access for testing
     depends_on:
-      - postgres_route
+      - postgres
       - rabbitmq
       - product-service
     volumes:
@@ -211,52 +127,56 @@ services:
       - backend
     restart: always
 
+  # Approval Service
   approval-service:
-    image: inventory/approval-service:latest
     build:
       context: ./src
       dockerfile: ApprovalService.API/Dockerfile
     container_name: inventory_approval_service
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_approval;Database=approval_service;Username=${APPROVAL_DB_USER};Password=${DB_PASSWORD};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=postgres;Password=***REMOVED***;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
       - Services__ProductService=http://api-gateway
       - Services__RouteService=http://api-gateway
+    ports:
+      - "5004:80"  # Direct access for testing
     depends_on:
-      - postgres_approval
+      - postgres
       - rabbitmq
     networks:
       - backend
     restart: always
 
+  # Notification Service
   notification-service:
-    image: inventory/notification-service:latest
     build:
       context: ./src
       dockerfile: NotificationService.API/Dockerfile
     container_name: inventory_notification_service
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres_notification;Database=notification_service;Username=${NOTIFICATION_DB_USER};Password=${DB_PASSWORD};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=postgres;Password=***REMOVED***;
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
-      - WHATSAPP_ID=${WHATSAPP_ID}
-      - WHATSAPP_APITOKEN=${WHATSAPP_APITOKEN}
-      - WHATSAPP_GROUPID=${WHATSAPP_GROUPID}
+      - RabbitMQ__UserName=guest
+      - RabbitMQ__Password=guest
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
+      - WHATSAPP_ID=7103295570
+      - WHATSAPP_APITOKEN=***REMOVED***
+      - WHATSAPP_GROUPID=120363416701721102@g.us
+    ports:
+      - "5005:80"  # Direct access for testing
     depends_on:
-      postgres_notification:
+      postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -264,19 +184,20 @@ services:
       - backend
     restart: always
 
-  # API Gateway - Internal traffic coordinator
+  # API Gateway - Routes requests to appropriate services
   api-gateway:
-    image: inventory-api-gateway:latest
     build:
       context: ./src/ApiGateway
       dockerfile: Dockerfile
     container_name: inventory_api_gateway
     environment:
-      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - Jwt__Key=${JWT_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__Key=***REMOVED***#$$%
+      - Jwt__Issuer=166Logistics
+      - Jwt__Audience=InventorySystemUsers
+    ports:
+      - "5000:80"  # Direct access for API testing
     depends_on:
       - identity-service
       - product-service
@@ -288,7 +209,7 @@ services:
       - frontend
     restart: always
 
-  # Web Application
+  # Web Application - Main user interface
   web:
     build:
       context: ./src
@@ -297,7 +218,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ApiGateway__BaseUrl=https://api.inventory166.az
+      - ApiGateway__BaseUrl=http://api-gateway
       - ConnectionStrings__Seq=http://seq:5342
     depends_on:
       - api-gateway
@@ -307,9 +228,9 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
-    
 
-  # Seq for centralized logging (optional but recommended)
+  # Seq - Centralized logging system
+  # Accessible externally for log monitoring
   seq:
     image: datalust/seq:latest
     container_name: inventory_seq
@@ -317,27 +238,42 @@ services:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!
     ports:
-      - "5342:80"
+      - "5342:80"  # Web interface for viewing logs
     volumes:
       - seq_data:/data
     networks:
       - backend
     restart: always
 
+  # Nginx Reverse Proxy - Handles HTTPS and routes traffic
+  nginx:
+    image: nginx:alpine
+    container_name: inventory_nginx
+    ports:
+      - "80:80"   # HTTP (redirects to HTTPS)
+      - "443:443" # HTTPS
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./logs:/var/log/nginx
+    depends_on:
+      - web
+    networks:
+      - frontend
+      - backend
+    restart: always
+
+# Network definitions
+# Frontend: For public-facing services
+# Backend: For internal service communication
 networks:
   frontend:
     driver: bridge
   backend:
     driver: bridge
-    internal: true
 
-
+# Persistent storage volumes
 volumes:
   rabbitmq_data:
-  postgres_identity_data:
-  postgres_product_data:
-  postgres_route_data:
-  postgres_approval_data:
-  postgres_notification_data:
+  postgres_data:
   seq_data:
-  nginx_logs:

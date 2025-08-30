@@ -5,26 +5,20 @@ using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
 
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting",LogEventLevel.Information)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore",LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.Seq("http://localhost:5342")
-    .CreateLogger();
-
 try
 {
     Log.Information("Starting InventoryManagement.Web application");
 
     var builder = WebApplication.CreateBuilder(args);
 
-    Log.Information("Builder created");
-
-    // Add this line to see all configuration values
-    Log.Information("Configuration: {Config}", string.Join(", ", builder.Configuration.AsEnumerable().Select(x => $"{x.Key}={x.Value}")));
+    Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq")!)
+    .CreateLogger();
 
     builder.Logging.ClearProviders();
 

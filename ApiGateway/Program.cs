@@ -6,8 +6,34 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting", LogEventLevel.Information)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq")!)
+    .CreateLogger();
+
+builder.Logging.ClearProviders();
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+       .ReadFrom.Configuration(context.Configuration)
+       .ReadFrom.Services(services)
+       .Enrich.FromLogContext()
+       .Enrich.WithProperty("ApplicationName", "InventoryManagement.Web")
+       .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+       .WriteTo.Seq(
+           serverUrl: context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
+           restrictedToMinimumLevel: LogEventLevel.Information));
+
+Log.Information("Starting ApiGateway");
+
 var environment=builder.Environment.EnvironmentName;
 //Add Ocelot configuration
 builder.Configuration.AddJsonFile("ocelot.json", optional: true, reloadOnChange: true)
