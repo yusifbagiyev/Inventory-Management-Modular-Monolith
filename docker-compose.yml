@@ -6,6 +6,7 @@ services:
     image: postgres:15-alpine
     container_name: inventory_postgres_all
     environment:
+      - TZ=Asia/Baku
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ***REMOVED***
@@ -254,11 +255,6 @@ services:
     ports:
       - "5000:80"
     depends_on:
-      - identity-service
-      - product-service
-      - route-service
-      - approval-service
-      - notification-service
       - seq
     networks:
       - backend
