@@ -10,12 +10,16 @@ namespace InventoryManagement.Web.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IConfiguration _configuration;
 
-        public NotificationService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor)
+        public NotificationService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("http://localhost:5000"); // Via API Gateway
             _httpContextAccessor = httpContextAccessor;
+            _configuration = configuration;
+
+            var apiGatewayUrl = configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000";
+            _httpClient.BaseAddress = new Uri(apiGatewayUrl);
         }
 
         private void AddAuthorizationHeader()
@@ -32,13 +36,22 @@ namespace InventoryManagement.Web.Services
         {
             AddAuthorizationHeader();
 
-            var response = await _httpClient.GetAsync($"/api/notifications?unreadOnly={unreadOnly}");
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var content = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<List<NotificationDto>>(content) ?? new List<NotificationDto>();
+                var response = await _httpClient.GetAsync($"/api/notifications?unreadOnly={unreadOnly}");
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<List<NotificationDto>>()
+                        ?? new List<NotificationDto>();
+                }
+                return new List<NotificationDto>();
             }
-            return new List<NotificationDto>();
+            catch (Exception ex)
+            {
+                // Log the error but don't throw
+                Console.WriteLine($"Failed to get notifications: {ex.Message}");
+                return new List<NotificationDto>();
+            }
         }
 
         public async Task<int> GetUnreadCountAsync()

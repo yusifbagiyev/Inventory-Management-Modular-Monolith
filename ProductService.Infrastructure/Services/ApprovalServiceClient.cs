@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Queries;
 using ProductService.Application.Features.Departments.Queries;
@@ -17,13 +18,20 @@ namespace ProductService.Infrastructure.Services
         private readonly HttpClient _httpClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMediator _mediator;
+        private readonly IConfiguration _configuration;
 
-        public ApprovalServiceClient(HttpClient httpClient, IHttpContextAccessor httpContextAccessor,IMediator mediator)
+        public ApprovalServiceClient(
+            HttpClient httpClient, 
+            IHttpContextAccessor httpContextAccessor,
+            IMediator mediator,
+            IConfiguration configuration)
         {
             _httpClient = httpClient;
-            _httpClient.BaseAddress = new Uri("http://localhost:5000"); // Via API Gateway
             _httpContextAccessor = httpContextAccessor;
             _mediator = mediator;
+
+            var baseUrl = configuration["Services:ApprovalService"] ?? "http://localhost:5000";
+            _httpClient.BaseAddress = new Uri(baseUrl);
         }
 
         public async Task<ApprovalRequestDto> CreateApprovalRequestAsync(CreateApprovalRequestDto dto, int userId, string userName)
