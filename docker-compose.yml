@@ -6,7 +6,6 @@ services:
     image: postgres:15-alpine
     container_name: inventory_postgres_all
     environment:
-      - TZ=Asia/Baku
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ***REMOVED***
@@ -215,9 +214,9 @@ services:
       - Jwt__Audience=InventorySystemUsers
       - WhatsApp__ApiUrl=https://7103.api.greenapi.com
       - WhatsApp__MediaUrl=https://7103.media.greenapi.com
-      - WhatsApp__IdInstance=${WHATSAPP_ID}
-      - WhatsApp__ApiTokenInstance=${WHATSAPP_APITOKEN}
-      - WhatsApp__DefaultGroupId=${WHATSAPP_GROUPID}
+      - WhatsApp__IdInstance=7103295570
+      - WhatsApp__ApiTokenInstance=***REMOVED***
+      - WhatsApp__DefaultGroupId=120363416701721102@g.us
       - WhatsApp__Enabled=true
       # Serilog configuration
       - Serilog__MinimumLevel__Default=Information
@@ -316,11 +315,11 @@ services:
       - backend
     restart: always
     healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost/api/events/raw"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-    start_period: 40s
+        test: ["CMD", "curl", "-f", "http://localhost/api/events/raw"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
     # Seq should start early since other services depend on it for logging
 
   # Nginx Reverse Proxy
