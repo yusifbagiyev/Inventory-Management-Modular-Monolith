@@ -108,9 +108,12 @@ services:
     ports:
       - "5002:80"
     depends_on:
-      - postgres
-      - rabbitmq
-      - seq
+        postgres:
+            condition: service_healthy
+        rabbitmq:
+            condition: service_healthy
+        seq:
+            condition: service_healthy
     volumes:
       # Note: We're ensuring the container can write to these directories
       - ./storage/images/products:/app/wwwroot/images/products:rw
@@ -210,9 +213,12 @@ services:
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
-      - WHATSAPP_ID=7103295570
-      - WHATSAPP_APITOKEN=***REMOVED***
-      - WHATSAPP_GROUPID=120363416701721102@g.us
+      - WhatsApp__ApiUrl=https://7103.api.greenapi.com
+      - WhatsApp__MediaUrl=https://7103.media.greenapi.com
+      - WhatsApp__IdInstance=${WHATSAPP_ID}
+      - WhatsApp__ApiTokenInstance=${WHATSAPP_APITOKEN}
+      - WhatsApp__DefaultGroupId=${WHATSAPP_GROUPID}
+      - WhatsApp__Enabled=true
       # Serilog configuration
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
@@ -300,6 +306,8 @@ services:
       - TZ=Asia/Baku
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!
+      - SEQ_API_CANONICALURI=http://seq
+      - SEQ_CACHE_SYSTEMRAMTARGET=0.2
     ports:
       - "5342:80"
     volumes:
@@ -307,6 +315,12 @@ services:
     networks:
       - backend
     restart: always
+    healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost/api/events/raw"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 40s
     # Seq should start early since other services depend on it for logging
 
   # Nginx Reverse Proxy
@@ -320,6 +334,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./logs:/var/log/nginx
+      - ./storage/images:/var/www/images:ro
     depends_on:
       - web
     networks:
