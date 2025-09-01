@@ -6,6 +6,9 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 80
 
+# Create directories with proper permissions
+RUN mkdir -p /app/wwwroot/images/routes && \
+    chmod -R 755 /app/wwwroot
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
@@ -31,5 +34,8 @@ RUN dotnet publish "./RouteService.API.csproj" -c $BUILD_CONFIGURATION -o /app/p
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+RUN mkdir -p /app/wwwroot/images/routes && \
+    chmod -R 755 /app/wwwroot
 
 ENTRYPOINT ["dotnet", "RouteService.API.dll"]

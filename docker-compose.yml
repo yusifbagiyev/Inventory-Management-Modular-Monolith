@@ -55,7 +55,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:5342  # This tells the service where to send logs
+      - ConnectionStrings__Seq=http://seq:80 # This tells the service where to send logs
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
@@ -64,13 +64,13 @@ services:
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__MinimumLevel__Override__System=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=IdentityService
     depends_on:
       postgres:
         condition: service_healthy
       seq:
-        condition: service_started
+        condition: service_healthy
     networks:
       - backend
     restart: always
@@ -81,12 +81,13 @@ services:
       context: ./src
       dockerfile: ProductService.API/Dockerfile
     container_name: inventory_product_service
+    user: "root"  # Run as root to ensure write permissions
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__UserName=guest
       - RabbitMQ__Password=guest
@@ -98,7 +99,7 @@ services:
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__MinimumLevel__Override__System=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ProductService
     depends_on:
         postgres:
@@ -108,7 +109,7 @@ services:
         seq:
             condition: service_healthy
     volumes:
-      - ./storage/images/products:/app/wwwroot/images/products:rw
+      - product_images:/app/wwwroot/images/products:rw
     networks:
       - backend
     restart: always
@@ -119,12 +120,13 @@ services:
       context: ./src
       dockerfile: RouteService.API/Dockerfile
     container_name: inventory_route_service
+    user: "root"
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
       - ProductService__BaseUrl=http://product-service
       - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__UserName=guest
@@ -136,7 +138,7 @@ services:
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=RouteService
     depends_on:
       - postgres
@@ -144,7 +146,7 @@ services:
       - product-service
       - seq
     volumes:
-      - ./storage/images/routes:/app/wwwroot/images/routes:rw
+      - route_images:/app/wwwroot/images/routes:rw
     networks:
       - backend
     restart: always
@@ -160,7 +162,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__UserName=guest
       - RabbitMQ__Password=guest
@@ -173,7 +175,7 @@ services:
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ApprovalService
     depends_on:
       - postgres
@@ -194,7 +196,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__UserName=guest
       - RabbitMQ__Password=guest
@@ -211,7 +213,7 @@ services:
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=NotificationService
     depends_on:
       postgres:
@@ -219,7 +221,7 @@ services:
       rabbitmq:
         condition: service_healthy
       seq:
-        condition: service_started
+        condition: service_healthy
     networks:
       - backend
     restart: always
@@ -234,7 +236,7 @@ services:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
@@ -242,7 +244,7 @@ services:
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ApiGateway
     ports:
       - "5000:80"
@@ -264,13 +266,14 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ApiGateway__BaseUrl=http://api-gateway
-      - ConnectionStrings__Seq=http://seq:5342
+      - ConnectionStrings__Seq=http://seq:80
+      - NotificationService__BaseUrl=http://notification-service
       # Enhanced Serilog configuration for the web application
       - Serilog__MinimumLevel__Default=Information
       - Serilog__MinimumLevel__Override__Microsoft=Warning
       - Serilog__MinimumLevel__Override__Microsoft.AspNetCore.Hosting=Information
       - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:5342
+      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__WriteTo__0__Args__restrictedToMinimumLevel=Information
       - Serilog__Properties__ApplicationName=WebApplication
       - Serilog__Properties__Environment=Production
@@ -307,8 +310,6 @@ services:
         timeout: 10s
         retries: 3
         start_period: 40s
-    # Seq should start early since other services depend on it for logging
-
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -320,7 +321,8 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./logs:/var/log/nginx
-      - ./storage/images:/var/www/images:ro
+      - ./storage/images/products:/var/www/images/products:ro
+      - ./storage/images/routes:/var/www/images/routes:ro
     depends_on:
       - web
     networks:
@@ -338,3 +340,5 @@ volumes:
   rabbitmq_data:
   postgres_data:
   seq_data:
+  product_images:
+  route_images:

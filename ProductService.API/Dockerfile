@@ -6,6 +6,9 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 80
 
+# Create directories with proper permissions
+RUN mkdir -p /app/wwwroot/images/products && \
+    chmod -R 755 /app/wwwroot
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
@@ -33,5 +36,9 @@ RUN dotnet publish "./ProductService.API.csproj" -c $BUILD_CONFIGURATION -o /app
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# Ensure directories exist and have proper permissions
+RUN mkdir -p /app/wwwroot/images/products && \
+    chmod -R 755 /app/wwwroot
 
 ENTRYPOINT ["dotnet", "ProductService.API.dll"]
