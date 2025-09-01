@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "ProductService")
+    .Enrich.WithProperty("ApplicationName", "NotificationService")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",

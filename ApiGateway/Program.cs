@@ -12,25 +12,18 @@ using Serilog.Events;
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore.Hosting", LogEventLevel.Information)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Seq(builder.Configuration.GetConnectionString("Seq")!)
+    .Enrich.WithProperty("ApplicationName", "ApiGateway")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
+        restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
 
 builder.Logging.ClearProviders();
 
-builder.Host.UseSerilog((context, services, configuration) => configuration
-       .ReadFrom.Configuration(context.Configuration)
-       .ReadFrom.Services(services)
-       .Enrich.FromLogContext()
-       .Enrich.WithProperty("ApplicationName", "InventoryManagement.Web")
-       .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
-       .WriteTo.Seq(
-           serverUrl: context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
-           restrictedToMinimumLevel: LogEventLevel.Information));
+builder.Host.UseSerilog();
 
 Log.Information("Starting ApiGateway");
 

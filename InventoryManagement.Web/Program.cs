@@ -12,7 +12,7 @@ try
     Log.Logger = new LoggerConfiguration()
         .ReadFrom.Configuration(builder.Configuration)
         .Enrich.FromLogContext()
-        .Enrich.WithProperty("ApplicationName", "ProductService")
+        .Enrich.WithProperty("ApplicationName", "InventoryManagement Web")
         .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
         .WriteTo.Seq(
             serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
@@ -135,6 +135,8 @@ try
 
     builder.Services.AddMemoryCache();
 
+    builder.Services.AddHealthChecks();
+
     var app = builder.Build();
 
     if (app.Environment.IsProduction())
@@ -164,7 +166,9 @@ try
             if (elapsed > 1000) return LogEventLevel.Warning;
 
             var path = httpContext.Request.Path.Value?.ToLower() ?? "";
-            if (path.Contains("_vs/browserlink") ||
+            if (path.Contains(".")&&
+                path.Contains("_vs/browserlink") ||
+                path.Contains(".ico") ||
                 path.Contains("_framework/aspnetcore-browser-refresh") ||
                 path.EndsWith(".css") ||
                 path.EndsWith(".js") ||
@@ -201,6 +205,9 @@ try
     app.MapHub<NotificationHub>("/notificationHub");
 
     app.UseMiddleware<JwtMiddleware>();
+
+    app.MapHealthChecks("/health");
+    app.MapGet("/robots933456.txt", () => "Healthy");
 
     app.MapControllerRoute(
         name: "default",
