@@ -267,11 +267,16 @@
                 return;
 			}
 
+                    // Determine the correct hub URL based on environment
+            const hubUrl = window.location.hostname === 'localhost'
+            ? "http://localhost:5005/notificationHub"
+            : "/notificationHub";  // Use relative path in production
+
             console.log('Initializing SignalR connection...');
 
             // Connect directly to NotificationService bypassing API Gateway for WebSocket
             notificationConnection = new signalR.HubConnectionBuilder()
-                .withUrl("http://localhost:5005/notificationHub", {
+                .withUrl(hubUrl, {
                     accessTokenFactory: () => token,
                     transport: signalR.HttpTransportType.WebSockets |
                               signalR.HttpTransportType.ServerSentEvents |

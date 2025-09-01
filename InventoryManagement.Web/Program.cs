@@ -1,6 +1,8 @@
+using System.Text.Json;
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -154,12 +156,17 @@ try
 
     app.UseSerilogRequestLogging(options =>
     {
-        // Customize the message template
-        options.MessageTemplate = "Handled {RequestPath} ({RequestMethod}) in {Elapsed:0.0000} ms with status {StatusCode}";
+        options.IncludeQueryInRequestPath = false;
 
         // Emit debug-level events instead of the defaults
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
+            // Skip if this is a duplicate log entry
+            if (httpContext.Items.ContainsKey("SerilogRequestLogged"))
+                return LogEventLevel.Verbose;
+
+            httpContext.Items["SerilogRequestLogged"] = true;
+
             if (ex != null) return LogEventLevel.Error;
             if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Error;
             if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Warning;
@@ -206,8 +213,24 @@ try
 
     app.UseMiddleware<JwtMiddleware>();
 
-    app.MapHealthChecks("/health");
-    app.MapGet("/robots933456.txt", () => "Healthy");
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            context.Response.ContentType = "application/json";
+            var result = JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name = e.Key,
+                    status = e.Value.Status.ToString(),
+                    description = e.Value.Description
+                })
+            });
+            await context.Response.WriteAsync(result);
+        }
+    });
 
     app.MapControllerRoute(
         name: "default",

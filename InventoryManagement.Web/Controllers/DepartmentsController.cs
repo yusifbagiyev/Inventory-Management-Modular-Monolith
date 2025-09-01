@@ -41,8 +41,8 @@ namespace InventoryManagement.Web.Controllers
                     return NotFound();
 
                 // Get products for this department
-                var products = await _apiService.GetAsync<List<ProductViewModel>>("api/products");
-                var departmentProducts = products?.Where(p => p.DepartmentId == id).ToList() ?? [];
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
+                var departmentProducts = products?.Items.Where(p => p.DepartmentId == id).ToList() ?? [];
 
                 ViewBag.Products = departmentProducts;
 
