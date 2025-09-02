@@ -67,10 +67,8 @@ services:
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=IdentityService
     depends_on:
-      seq:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
+      - seq
+      - postgres
     networks:
       - backend
     restart: always
@@ -102,12 +100,9 @@ services:
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ProductService
     depends_on:
-        postgres:
-            condition: service_healthy
-        rabbitmq:
-            condition: service_healthy
-        seq:
-            condition: service_healthy
+      - postgres
+      - rabbitmq
+      - seq
     volumes:
       - ./storage/images/products:/app/wwwroot/images/products:rw
     networks:
@@ -216,12 +211,9 @@ services:
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=NotificationService
     depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      seq:
-        condition: service_healthy
+      - postgres
+      - rabbitmq
+      - seq
     networks:
       - backend
     restart: always
@@ -286,6 +278,12 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 40s
 
   # Seq - Centralized logging system (started early so other services can connect)
   seq:
@@ -305,11 +303,12 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 120s
+      
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -324,7 +323,10 @@ services:
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+      api-gateway:
+        condition: service_healthy
     networks:
       - frontend
       - backend

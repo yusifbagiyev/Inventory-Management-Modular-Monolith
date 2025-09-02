@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -140,6 +141,15 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+
+// Configure HTTPS port for production
+if (builder.Environment.IsProduction())
+{
+    builder.Services.Configure<HttpsRedirectionOptions>(options =>
+    {
+        options.HttpsPort = 443;
+    });
 }
 
 app.UseHttpsRedirection();
