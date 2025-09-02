@@ -71,7 +71,7 @@
                                         {
                                             var imageUrl = route.ImageUrl.StartsWith("http")
                                             ? route.ImageUrl
-                                            : $"http://localhost:5000{route.ImageUrl}";
+                                            : $"{route.FullImageUrl}";
                                             <img src="@imageUrl"
                                                  class="img-thumbnail timeline-image-zoom"
                                                  style="max-width: 150px; cursor: pointer;"

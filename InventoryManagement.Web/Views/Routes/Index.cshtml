@@ -105,10 +105,10 @@
                                         <td class="text-center">
                                             @if (!string.IsNullOrEmpty(route.ImageUrl))
                                             {
-                                                <img src="@($"http://localhost:5000{route.ImageUrl}")"
+                                                <img src="@($"{route.FullImageUrl}")"
                                                      class="img-thumbnail route-image"
                                                      style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
-                                                     onclick="showImageModal('@($"http://localhost:5000{route.ImageUrl}")', 'Route @route.Id')"
+                                                     onclick="showImageModal('@($"{route.FullImageUrl}")', 'Route @route.Id')"
                                                      alt="Route Image">
                                             }
                                             else
