@@ -143,15 +143,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Configure HTTPS port for production
-if (builder.Environment.IsProduction())
-{
-    builder.Services.Configure<HttpsRedirectionOptions>(options =>
-    {
-        options.HttpsPort = 443;
-    });
-}
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

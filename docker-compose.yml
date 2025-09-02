@@ -66,6 +66,8 @@ services:
       - Serilog__WriteTo__0__Name=Seq
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=IdentityService
+    ports:
+      - "5003:80"
     depends_on:
       - seq
       - postgres
@@ -99,6 +101,8 @@ services:
       - Serilog__WriteTo__0__Name=Seq
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ProductService
+    ports:
+      - "5001:80"
     depends_on:
       - postgres
       - rabbitmq
@@ -135,6 +139,8 @@ services:
       - Serilog__WriteTo__0__Name=Seq
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=RouteService
+    ports:
+      - "5002:80"
     depends_on:
       - postgres
       - rabbitmq
@@ -172,6 +178,8 @@ services:
       - Serilog__WriteTo__0__Name=Seq
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=ApprovalService
+    ports:
+      - "5004:80"    
     depends_on:
       - postgres
       - rabbitmq
@@ -210,6 +218,8 @@ services:
       - Serilog__WriteTo__0__Name=Seq
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=NotificationService
+    ports:
+      - "5005:80"
     depends_on:
       - postgres
       - rabbitmq
@@ -246,6 +256,12 @@ services:
       - backend
       - frontend
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   # Web Application with enhanced Seq logging
   web:
