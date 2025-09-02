@@ -67,15 +67,12 @@
                                                 <i class="fas fa-sticky-note"></i> @route.Notes
                                             </p>
                                         }
-                                        @if (!string.IsNullOrEmpty(route.ImageUrl))
+                                        @if (!string.IsNullOrEmpty(route.FullImageUrl))
                                         {
-                                            var imageUrl = route.ImageUrl.StartsWith("http")
-                                            ? route.ImageUrl
-                                            : $"{route.FullImageUrl}";
-                                            <img src="@imageUrl"
+                                            <img src="@route.FullImageUrl"
                                                  class="img-thumbnail timeline-image-zoom"
                                                  style="max-width: 150px; cursor: pointer;"
-                                                 onclick="showImageModal('@imageUrl', 'Transfer Image')" />
+                                             onclick="showImageModal('@route.FullImageUrl', 'Transfer Image')" />
                                         }
                                         @if (route.IsCompleted)
                                         {

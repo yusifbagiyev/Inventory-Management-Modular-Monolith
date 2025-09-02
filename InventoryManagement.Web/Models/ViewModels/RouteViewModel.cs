@@ -23,7 +23,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }
         public string? FullImageUrl => !string.IsNullOrEmpty(ImageUrl)
-            ? $"http://inventory166.az{ImageUrl}"
+            ? $"https://inventory166.az{ImageUrl}"
             : null;
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }

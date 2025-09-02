@@ -70,7 +70,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
 
         public string? FullImageUrl => !string.IsNullOrEmpty(ImageUrl)
-            ? $"http://inventory166.az{ImageUrl}"
+            ? $"https://inventory166.az{ImageUrl}"
             : null;
 
         public DateTime? CreatedAt { get; set; }
