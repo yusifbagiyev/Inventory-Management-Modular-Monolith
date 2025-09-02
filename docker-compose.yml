@@ -59,13 +59,6 @@ services:
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
-      # Serilog configuration for structured logging
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__MinimumLevel__Override__System=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=IdentityService
     ports:
       - "5003:80"
     depends_on:
@@ -94,13 +87,6 @@ services:
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
-      # Serilog configuration
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__MinimumLevel__Override__System=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=ProductService
     ports:
       - "5001:80"
     depends_on:
@@ -133,12 +119,6 @@ services:
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
-      # Serilog configuration
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=RouteService
     ports:
       - "5002:80"
     depends_on:
@@ -172,12 +152,6 @@ services:
       - Jwt__Audience=InventorySystemUsers
       - Services__ProductService=http://api-gateway
       - Services__RouteService=http://api-gateway
-      # Serilog configuration
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=ApprovalService
     ports:
       - "5004:80"    
     depends_on:
@@ -212,12 +186,6 @@ services:
       - WhatsApp__ApiTokenInstance=***REMOVED***
       - WhatsApp__DefaultGroupId=120363416701721102@g.us
       - WhatsApp__Enabled=true
-      # Serilog configuration
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=NotificationService
     ports:
       - "5005:80"
     depends_on:
@@ -242,12 +210,6 @@ services:
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
-      # Serilog configuration
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__Properties__ApplicationName=ApiGateway
     ports:
       - "5000:80"
     depends_on:
@@ -256,12 +218,6 @@ services:
       - backend
       - frontend
     restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
 
   # Web Application with enhanced Seq logging
   web:
@@ -276,15 +232,6 @@ services:
       - ApiGateway__BaseUrl=http://api-gateway
       - ConnectionStrings__Seq=http://seq:80
       - NotificationService__BaseUrl=http://notification-service
-      # Enhanced Serilog configuration for the web application
-      - Serilog__MinimumLevel__Default=Information
-      - Serilog__MinimumLevel__Override__Microsoft=Warning
-      - Serilog__MinimumLevel__Override__Microsoft.AspNetCore.Hosting=Information
-      - Serilog__WriteTo__0__Name=Seq
-      - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
-      - Serilog__WriteTo__0__Args__restrictedToMinimumLevel=Information
-      - Serilog__Properties__ApplicationName=WebApplication
-      - Serilog__Properties__Environment=Production
     depends_on:
       - api-gateway
       - seq
@@ -294,12 +241,6 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
-    healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost/health"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-        start_period: 40s
 
   # Seq - Centralized logging system (started early so other services can connect)
   seq:
@@ -339,10 +280,8 @@ services:
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro
     depends_on:
-      web:
-        condition: service_healthy
-      api-gateway:
-        condition: service_healthy
+      - web
+      - api-gateway
     networks:
       - frontend
       - backend

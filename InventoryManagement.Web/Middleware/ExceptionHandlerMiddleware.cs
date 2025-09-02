@@ -31,6 +31,8 @@ namespace InventoryManagement.Web.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
+            context.Items["ExceptionHandled"] = true;
+
             // Enhanced structured logging for better Seq integration
             var userId = context.User?.Identity?.Name ?? "Anonymous";
             var requestPath = context.Request.Path.Value ?? "Unknown";
@@ -38,23 +40,18 @@ namespace InventoryManagement.Web.Middleware
             var userAgent = context.Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown";
             var requestId = context.TraceIdentifier;
 
-            // Log the exception with structured data that Seq can easily query
-            _logger.LogError(exception,
-                "Unhandled exception occurred for {UserId} on {RequestPath} ({RequestMethod}). " +
-                "Request ID: {RequestId}, User Agent: {UserAgent}",
-                userId, requestPath, requestMethod, requestId, userAgent);
-
             var response = context.Response;
             response.ContentType = "application/json";
 
             var errorResponse = new ErrorResponse
             {
                 TraceId = context.TraceIdentifier,
-                Timestamp = DateTime.Now, // Use UTC for consistency
+                Timestamp = DateTime.Now,
                 RequestPath = requestPath,
                 RequestMethod = requestMethod
             };
 
+            // Simplified exception handling with consolidated logging
             switch (exception)
             {
                 case UnauthorizedAccessException:
@@ -62,9 +59,8 @@ namespace InventoryManagement.Web.Middleware
                     errorResponse.Message = "You are not authorized to access this resource";
                     errorResponse.Type = "UnauthorizedAccess";
 
-                    // Log security-related events with additional context
-                    _logger.LogWarning("Unauthorized access attempt by {UserId} to {RequestPath}",
-                        userId, requestPath);
+                    _logger.LogWarning("Unauthorized access: {UserId} to {RequestPath} ({RequestId})",
+                        userId, requestPath, requestId);
                     break;
 
                 case KeyNotFoundException:
@@ -72,8 +68,8 @@ namespace InventoryManagement.Web.Middleware
                     errorResponse.Message = "The requested resource was not found";
                     errorResponse.Type = "NotFound";
 
-                    _logger.LogInformation("Resource not found: {RequestPath} for user {UserId}",
-                        requestPath, userId);
+                    _logger.LogInformation("Resource not found: {RequestPath} for {UserId} ({RequestId})",
+                        requestPath, userId, requestId);
                     break;
 
                 case InvalidOperationException:
@@ -81,8 +77,8 @@ namespace InventoryManagement.Web.Middleware
                     errorResponse.Message = exception.Message;
                     errorResponse.Type = "InvalidOperation";
 
-                    _logger.LogWarning("Invalid operation attempted: {ExceptionMessage} by {UserId} on {RequestPath}",
-                        exception.Message, userId, requestPath);
+                    _logger.LogWarning("Invalid operation: {ExceptionMessage} by {UserId} ({RequestId})",
+                        exception.Message, userId, requestId);
                     break;
 
                 case HttpRequestException:
@@ -90,8 +86,8 @@ namespace InventoryManagement.Web.Middleware
                     errorResponse.Message = "Unable to connect to the service. Please try again later.";
                     errorResponse.Type = "ServiceUnavailable";
 
-                    _logger.LogError("Service unavailable error: {ExceptionMessage} for request {RequestPath}",
-                        exception.Message, requestPath);
+                    _logger.LogError("Service unavailable: {ExceptionMessage} ({RequestId})",
+                        exception.Message, requestId);
                     break;
 
                 case TaskCanceledException:
@@ -99,8 +95,8 @@ namespace InventoryManagement.Web.Middleware
                     errorResponse.Message = "The request timed out. Please try again.";
                     errorResponse.Type = "RequestTimeout";
 
-                    _logger.LogWarning("Request timeout for {RequestPath} by {UserId}",
-                        requestPath, userId);
+                    _logger.LogWarning("Request timeout: {RequestPath} by {UserId} ({RequestId})",
+                        requestPath, userId, requestId);
                     break;
 
                 case ArgumentException:
@@ -110,8 +106,8 @@ namespace InventoryManagement.Web.Middleware
                         : "Invalid request parameters";
                     errorResponse.Type = "BadRequest";
 
-                    _logger.LogWarning("Bad request with argument exception: {ExceptionMessage} for {RequestPath}",
-                        exception.Message, requestPath);
+                    _logger.LogWarning("Bad request: {ExceptionMessage} for {RequestPath} ({RequestId})",
+                        exception.Message, requestPath, requestId);
                     break;
 
                 default:
@@ -121,10 +117,8 @@ namespace InventoryManagement.Web.Middleware
                         : "An error occurred while processing your request";
                     errorResponse.Type = "InternalServerError";
 
-                    // Log critical errors with full context
-                    _logger.LogError("Critical error of type {ExceptionType}: {ExceptionMessage} " +
-                                   "for user {UserId} on {RequestPath}. Stack trace: {StackTrace}",
-                        exception.GetType().Name, exception.Message, userId, requestPath, exception.StackTrace);
+                    _logger.LogError(exception, "Unhandled exception: {ExceptionType} for {UserId} on {RequestPath} ({RequestId})",
+                        exception.GetType().Name, userId, requestPath, requestId);
                     break;
             }
 
@@ -150,10 +144,6 @@ namespace InventoryManagement.Web.Middleware
                 context.Items["ErrorResponse"] = errorResponse;
                 context.Response.Redirect($"/Home/Error?statusCode={response.StatusCode}");
             }
-
-            // Log the completion of error handling
-            _logger.LogInformation("Error response sent for request {RequestId} with status code {StatusCode}",
-                requestId, response.StatusCode);
         }
         private bool IsAjaxRequest(HttpRequest request)
         {

@@ -25,6 +25,11 @@ namespace InventoryManagement.Web.Middleware
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
+            if (context.Items.ContainsKey("JwtMiddlewareProcessed"))
+            {
+                await _next(context);
+                return;
+            }
             try
             {
                 // Skip processing for static files and non-authenticated requests

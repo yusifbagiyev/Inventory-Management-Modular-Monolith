@@ -158,37 +158,33 @@ try
     {
         options.IncludeQueryInRequestPath = false;
 
-        // Emit debug-level events instead of the defaults
+        // Skip static files and health checks entirely
         options.GetLevel = (httpContext, elapsed, ex) =>
         {
-            // Skip if this is a duplicate log entry
-            if (httpContext.Items.ContainsKey("SerilogRequestLogged"))
-                return LogEventLevel.Verbose;
-
-            httpContext.Items["SerilogRequestLogged"] = true;
-
-            if (ex != null) return LogEventLevel.Error;
-            if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Error;
-            if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Warning;
-            if (elapsed > 1000) return LogEventLevel.Warning;
-
             var path = httpContext.Request.Path.Value?.ToLower() ?? "";
-            if (path.Contains(".")&&
-                path.Contains("_vs/browserlink") ||
-                path.Contains(".ico") ||
-                path.Contains("_framework/aspnetcore-browser-refresh") ||
-                path.EndsWith(".css") ||
-                path.EndsWith(".js") ||
-                path.EndsWith(".png") ||
-                path.EndsWith(".jpg"))
+
+            // Skip static files completely
+            if (path.Contains(".css") || path.Contains(".js") || path.Contains(".png") ||
+                path.Contains(".jpg") || path.Contains(".ico") || path.Contains(".woff") ||
+                path.Contains("_vs/browserlink") || path.Contains("_framework/aspnetcore-browser-refresh") ||
+                path.StartsWith("/health"))
             {
-                return LogEventLevel.Verbose;
+                return LogEventLevel.Verbose; // This effectively skips logging
             }
+
+            // Only log errors if they weren't already handled by middleware
+            if (ex != null && !httpContext.Items.ContainsKey("ExceptionHandled"))
+            {
+                return LogEventLevel.Error;
+            }
+
+            if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Warning;
+            if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Information;
+            if (elapsed > 2000) return LogEventLevel.Warning;
 
             return LogEventLevel.Information;
         };
 
-        // Attach additional properties to the request completion event
         options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
         {
             diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
