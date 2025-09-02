@@ -158,6 +158,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 // Configure pipeline

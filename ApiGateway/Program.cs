@@ -74,6 +74,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddOcelot();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 

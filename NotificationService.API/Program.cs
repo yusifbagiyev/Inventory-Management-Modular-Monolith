@@ -61,6 +61,7 @@ builder.Services.AddSwaggerGen(options =>
 
 
 builder.Services.AddSignalR();
+builder.Services.AddHealthChecks();
 
 
 builder.Services.AddCors(options =>

@@ -67,9 +67,9 @@ services:
       - Serilog__WriteTo__0__Args__serverUrl=http://seq:80
       - Serilog__Properties__ApplicationName=IdentityService
     depends_on:
-      postgres:
-        condition: service_healthy
       seq:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - backend
@@ -305,11 +305,11 @@ services:
       - backend
     restart: always
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost/api/events/raw"]
-        interval: 30s
-        timeout: 10s
-        retries: 3
-        start_period: 40s
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
