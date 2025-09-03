@@ -24,7 +24,6 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet]
-        [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetAll()
         {
             var departments = await _mediator.Send(new GetAllDepartmentsQuery());

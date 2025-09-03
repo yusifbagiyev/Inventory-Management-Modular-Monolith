@@ -1,6 +1,5 @@
 ﻿@model DashboardViewModel
 @{
-    ViewData["Title"] = "Dashboard";
     var currentPeriod = ViewContext.HttpContext.Request.Query["period"].ToString();
     if (string.IsNullOrEmpty(currentPeriod))
     {

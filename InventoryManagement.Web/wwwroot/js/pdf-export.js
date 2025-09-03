@@ -49,31 +49,33 @@
                 `;
             }
         }
+    });
+    tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => { // Assuming Location is 4th column
+        const deptText = cell.textContent.trim();
+        const parts = deptText.split('(');
 
-        // Clean up Location column
-        const locationCell = cells[3];
-        if (locationCell) {
-            const dept = locationCell.textContent.trim();
-            locationCell.innerHTML = `<div>${dept}</div>`;
+        if (parts.length > 1) {
+            const department = parts[0].trim();
+            const worker = parts[1].replace(')', '').trim();
+
+            cell.innerHTML = `
+                <div><strong>${department}</strong></div>
+                <div style="font-size: 8pt; color: #666;">${worker}</div>
+            `;
         }
+    });
 
-        // Clean up Status column  
-        const statusCell = cells[4];
-        if (statusCell) {
-            // Remove all the flex containers and just keep badges
-            const badges = statusCell.querySelectorAll('.badge');
-            let statusHTML = '';
-            badges.forEach(badge => {
-                const text = badge.textContent.trim();
-                let bgClass = 'bg-secondary';
-                if (text === 'Working') bgClass = 'bg-success';
-                else if (text === 'Not Working' || text === 'Inactive') bgClass = 'bg-danger';
-                else if (text.includes('Pending')) bgClass = 'bg-warning';
+    // Process Status column (Working + Active in one column)
+    tableClone.querySelectorAll('td:nth-child(5)').forEach(cell => { // Assuming Status is 5th column
+        const badges = cell.querySelectorAll('.badge');
+        let statusHTML = '';
 
-                statusHTML += `<span class="badge ${bgClass}" style="margin-right: 5px;">${text}</span>`;
-            });
-            statusCell.innerHTML = statusHTML;
-        }
+        badges.forEach(badge => {
+            const text = badge.textContent.trim();
+            statusHTML += `<span class="badge" style="display: block; margin: 2px 0;">${text}</span>`;
+        });
+
+        cell.innerHTML = statusHTML;
     });
 
     const customStyles = `
