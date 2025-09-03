@@ -145,15 +145,14 @@
 
     <!-- Global Image Modal -->
     <div class="modal fade" id="globalImageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Image Preview</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center p-0" style="max-height: 70vh; overflow: auto;">
-                    <img id="globalModalImage" class="img-fluid" alt="Preview"
-                         style="max-width: 100%; max-height: 65vh; width: auto; height: auto;">
+                <div class="modal-body text-center p-0">
+                    <img id="globalModalImage" class="img-fluid" alt="Preview">
                 </div>
             </div>
         </div>
@@ -168,7 +167,6 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
-    <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/errorHandler.js" asp-append-version="true"></script>
     <script>
@@ -268,15 +266,30 @@
                 console.log('SignalR already connected');
                 return;
 			}
-            console.log('Connecting to SignalR hub at:',AppConfig.signalR.notificationHub);
+
+                    // Determine the correct hub URL based on environment
+            const hubUrl = window.location.hostname === 'localhost'
+            ? "http://localhost:5005/notificationHub"
+            : "/notificationHub";  // Use relative path in production
+
+            console.log('Initializing SignalR connection...');
 
             // Connect directly to NotificationService bypassing API Gateway for WebSocket
             notificationConnection = new signalR.HubConnectionBuilder()
-                .withUrl(AppConfig.signalR.notificationHub,{
-                    accessTokenFactory:()=> token,
-                    ...AppConfig.signalR.options
+                .withUrl(hubUrl, {
+                    accessTokenFactory: () => token,
+                    transport: signalR.HttpTransportType.WebSockets |
+                              signalR.HttpTransportType.ServerSentEvents |
+                              signalR.HttpTransportType.LongPolling
                 })
-                .withAutomaticReconnect()
+                .withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: retryContext => {
+                        if (retryContext.previousRetryCount >= maxReconnectAttempts) {
+                            return null; // Stop reconnecting
+                        }
+                        return Math.min(retryContext.previousRetryCount * 2000, 30000);
+                    }
+                })
                 .configureLogging(signalR.LogLevel.Information)
                 .build();
 
@@ -532,12 +545,10 @@
 
         @if (User.IsInRole("Admin"))
         {
-            <text>
+                <text>
                 function loadPendingApprovalsCount() {
-                    const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
-
                     $.ajax({
-                        url: apiUrl,
+                        url: 'http://localhost:5000/api/approvalrequests?pageNumber=1&pageSize=1',
                         type: 'GET',
                         headers: {
                             'Authorization': 'Bearer ' + $('#jwtToken').val()
@@ -546,15 +557,8 @@
                             const count = data.totalCount || 0;
                             updatePendingApprovalsCount(count);
                         },
-                           error: function(xhr, status, error) {
-                            console.error('Failed to load pending approvals:', error);
-                            // In production, don't show technical errors to users
-                            if (AppConfig.environment === 'production') {
-                                console.log('Service temporarily unavailable');
-                            } else {
-                                console.error('API URL:', apiUrl);
-                                console.error('Response:', xhr.responseText);
-                            }
+                        error: function(xhr, status, error) {
+                            console.error('Failed to load pending approvals count:', error);
                         }
                     });
                 }
