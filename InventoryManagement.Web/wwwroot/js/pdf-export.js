@@ -8,26 +8,72 @@
     // Clone and prepare table
     const tableClone = table.cloneNode(true);
 
-    // Remove image and action columns
+    // Find headers to remove (Image and Actions columns)
     const headers = tableClone.querySelectorAll('th');
     const imageColIndex = 0;  // Image column
     const actionColIndex = headers.length - 1;  // Actions column
 
     // Remove headers
     if (headers[imageColIndex]) headers[imageColIndex].remove();
-    if (headers[actionColIndex - 1]) headers[actionColIndex - 1].remove();
+    if (headers[actionColIndex]) headers[actionColIndex].remove();
 
-    // Remove corresponding cells
+    // Process each row
     tableClone.querySelectorAll('tbody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
-        if (cells[imageColIndex]) cells[imageColIndex].remove();
-        if (cells[actionColIndex - 1]) cells[actionColIndex - 1].remove();
-    });
 
-    // Clean up content
-    tableClone.querySelectorAll('.badge').forEach(badge => {
-        badge.style.display = 'inline-block';
-        badge.style.padding = '3px 7px';
+        // Remove image column
+        if (cells[imageColIndex]) cells[imageColIndex].remove();
+
+        // Remove actions column (now at index -1 after removing image)
+        if (cells[cells.length - 1]) cells[cells.length - 1].remove();
+
+        // Clean up the Code column (now first column)
+        const codeCell = cells[1]; // After removing image, code is at index 0
+        if (codeCell) {
+            const badge = codeCell.querySelector('.badge');
+            if (badge) {
+                // Keep just the code number with better formatting
+                codeCell.innerHTML = `<strong style="color: #1e40af;">${badge.textContent.trim()}</strong>`;
+            }
+        }
+
+        // Clean up Product Details column
+        const detailsCell = cells[2];
+        if (detailsCell) {
+            const strong = detailsCell.querySelector('strong');
+            const small = detailsCell.querySelector('small');
+            if (strong && small) {
+                detailsCell.innerHTML = `
+                    <div><strong>${strong.textContent}</strong></div>
+                    <div style="font-size: 9pt; color: #666;">${small.textContent}</div>
+                `;
+            }
+        }
+
+        // Clean up Location column
+        const locationCell = cells[3];
+        if (locationCell) {
+            const dept = locationCell.textContent.trim();
+            locationCell.innerHTML = `<div>${dept}</div>`;
+        }
+
+        // Clean up Status column  
+        const statusCell = cells[4];
+        if (statusCell) {
+            // Remove all the flex containers and just keep badges
+            const badges = statusCell.querySelectorAll('.badge');
+            let statusHTML = '';
+            badges.forEach(badge => {
+                const text = badge.textContent.trim();
+                let bgClass = 'bg-secondary';
+                if (text === 'Working') bgClass = 'bg-success';
+                else if (text === 'Not Working' || text === 'Inactive') bgClass = 'bg-danger';
+                else if (text.includes('Pending')) bgClass = 'bg-warning';
+
+                statusHTML += `<span class="badge ${bgClass}" style="margin-right: 5px;">${text}</span>`;
+            });
+            statusCell.innerHTML = statusHTML;
+        }
     });
 
     const customStyles = `
@@ -35,15 +81,22 @@
             table-layout: fixed;
             width: 100%;
         }
-        #productsPdfTable th:nth-child(1) { width: 15%; }  /* Code */
+        #productsPdfTable th:nth-child(1) { width: 12%; }  /* Code */
         #productsPdfTable th:nth-child(2) { width: 30%; }  /* Product Details */
         #productsPdfTable th:nth-child(3) { width: 25%; }  /* Location */
-        #productsPdfTable th:nth-child(4) { width: 30%; }  /* Status */
+        #productsPdfTable th:nth-child(4) { width: 33%; }  /* Status */
+        
+        #productsPdfTable td {
+            vertical-align: top;
+            padding: 8px 5px;
+        }
+        
+        .badge {
+            white-space: nowrap;
+        }
     `;
 
     tableClone.id = 'productsPdfTable';
-
-    // Generate the PDF
     exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Products Report', customStyles);
 }
 

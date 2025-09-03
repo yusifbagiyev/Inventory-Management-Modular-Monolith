@@ -7,9 +7,8 @@ window.AppConfig = (function () {
     // Detect the current environment based on the hostname
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const isDevelopment = isLocalhost;
-    const isProduction = !isDevelopment;
+    const isProduction = hostname.includes('inventory166.az') || hostname.includes('www.inventory166.az');
+    const isDevelopment = !isProduction;
 
     // Create the base configuration
     const config = {
@@ -19,17 +18,9 @@ window.AppConfig = (function () {
 
         // API endpoints configuration
         api: {
-            // In production, everything goes through nginx proxy
-            // In development, we connect directly to services
+            // In production, everything goes through relative paths
             baseUrl: isDevelopment ? 'http://localhost:5000' : '',
-
-            // Individual service endpoints
             gateway: isDevelopment ? 'http://localhost:5000' : '/api',
-            identity: isDevelopment ? 'http://localhost:5003' : '/api/auth',
-            product: isDevelopment ? 'http://localhost:5001' : '/api/products',
-            route: isDevelopment ? 'http://localhost:5002' : '/api/inventoryroutes',
-            approval: isDevelopment ? 'http://localhost:5004' : '/api/approvalrequests',
-            notification: isDevelopment ? 'http://localhost:5005' : '/api/notifications'
         },
 
         // SignalR hub configuration
@@ -56,17 +47,6 @@ window.AppConfig = (function () {
                 ? 'http://localhost:5002/images/routes'
                 : '/images/routes'
         },
-
-        // Timeouts and retry configuration
-        timeouts: {
-            ajax: 30000,  // 30 seconds
-            signalR: 60000  // 60 seconds
-        },
-
-        retries: {
-            max: 3,
-            delay: 1000  // 1 second
-        }
     };
 
     // Helper function to build API URLs
@@ -82,27 +62,6 @@ window.AppConfig = (function () {
         // In development, use full URLs
         return `${this.api.gateway}/api/${endpoint}`;
     };
-
-    // Helper function to get service-specific URL
-    config.getServiceUrl = function (service, endpoint) {
-        const serviceUrls = {
-            'identity': this.api.identity,
-            'product': this.api.product,
-            'route': this.api.route,
-            'approval': this.api.approval,
-            'notification': this.api.notification
-        };
-
-        const baseUrl = serviceUrls[service] || this.api.gateway;
-        endpoint = endpoint.replace(/^\//, '');
-
-        return `${baseUrl}/${endpoint}`;
-    };
-
-    // Log configuration in development
-    if (isDevelopment) {
-        console.log('App Configuration:', config);
-    }
 
     return config;
 })();

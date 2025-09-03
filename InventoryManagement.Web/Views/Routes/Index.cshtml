@@ -250,21 +250,6 @@
         </div>
     </div>
 
-    <!-- Image Modal -->
-    <div class="modal fade" id="imageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="imageModalTitle">Route Image</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body text-center">
-                    <img id="modalImage" class="img-fluid" alt="Route Image">
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Hidden form for CSRF token -->
     <form id="csrfForm" style="display: none;">
         @Html.AntiForgeryToken()
@@ -373,9 +358,9 @@
         }
 
         function showImageModal(imageUrl, title) {
-                    $('#modalImage').attr('src', imageUrl);
-                    $('#imageModalTitle').text(title);
-                    $('#imageModal').modal('show');
+            $('#globalModalImage').attr('src', imageUrl);
+            $('#globalImageModal .modal-title').text(title || 'Image Preview');
+            $('#globalImageModal').modal('show');
         }
 
         function completeRoute(id) {

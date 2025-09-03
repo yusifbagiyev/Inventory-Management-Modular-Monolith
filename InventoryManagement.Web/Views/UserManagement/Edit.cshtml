@@ -293,29 +293,29 @@
             const message = `Are you sure you want to ${action} the "${permissionName}" permission?`;
 
             if (confirm(message)) {
+            // Use the app configuration for proper URL
+            const apiUrl = AppConfig.buildApiUrl('auth/users/@Model.Id/' + (isGranting ? 'grant-permission' : 'revoke-permission'));
+
                 $.ajax({
-                    url: '@Url.Action("TogglePermission", new { id = Model.Id })',
+                    url: apiUrl,
                     type: 'POST',
                     data: JSON.stringify({
-                        permissionName: permissionName,
-                        isGranting: isGranting
+                        permissionName: permissionName
                     }),
                     contentType: 'application/json',
                     headers: {
+                        'Authorization': 'Bearer ' + $('#jwtToken').val(),
                         'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                     },
                     success: function(response) {
-                        if (response.success) {
-                            showToast(`Permission ${action}ed successfully`, 'success');
-                            loadUserPermissions(); // Reload
-                        } else {
-                            showToast(`Failed to ${action} permission`, 'error');
-                        }
-                    },
-                    error: function() {
-                        showToast('Error updating permission', 'error');
-                    }
-                });
+                    showToast(`Permission ${action}ed successfully`, 'success');
+                    loadUserPermissions();
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || `Failed to ${action} permission`;
+                    showToast(errorMsg, 'error');
+                }
+             });
             }
         }
     </script>
