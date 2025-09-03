@@ -145,14 +145,15 @@
 
     <!-- Global Image Modal -->
     <div class="modal fade" id="globalImageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Image Preview</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center p-0">
-                    <img id="globalModalImage" class="img-fluid" alt="Preview">
+                <div class="modal-body text-center p-0" style="max-height: 70vh; overflow: auto;">
+                    <img id="globalModalImage" class="img-fluid" alt="Preview"
+                         style="max-width: 100%; max-height: 65vh; width: auto; height: auto;">
                 </div>
             </div>
         </div>
@@ -169,6 +170,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/errorHandler.js" asp-append-version="true"></script>
+    <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script>
                 function toggleSidebar() {
             document.body.classList.toggle('sidebar-open');
@@ -267,29 +269,14 @@
                 return;
 			}
 
-                    // Determine the correct hub URL based on environment
-            const hubUrl = window.location.hostname === 'localhost'
-            ? "http://localhost:5005/notificationHub"
-            : "/notificationHub";  // Use relative path in production
+                console.log('Connecting to SignalR hub at:', AppConfig.signalR.notificationHub);
 
-            console.log('Initializing SignalR connection...');
-
-            // Connect directly to NotificationService bypassing API Gateway for WebSocket
             notificationConnection = new signalR.HubConnectionBuilder()
-                .withUrl(hubUrl, {
+                .withUrl(AppConfig.signalR.notificationHub, {
                     accessTokenFactory: () => token,
-                    transport: signalR.HttpTransportType.WebSockets |
-                              signalR.HttpTransportType.ServerSentEvents |
-                              signalR.HttpTransportType.LongPolling
+                    ...AppConfig.signalR.options
                 })
-                .withAutomaticReconnect({
-                    nextRetryDelayInMilliseconds: retryContext => {
-                        if (retryContext.previousRetryCount >= maxReconnectAttempts) {
-                            return null; // Stop reconnecting
-                        }
-                        return Math.min(retryContext.previousRetryCount * 2000, 30000);
-                    }
-                })
+                .withAutomaticReconnect()
                 .configureLogging(signalR.LogLevel.Information)
                 .build();
 
@@ -349,6 +336,7 @@
             // Start the connection
             startConnection();
         }
+            
 
             function startConnection() {
             if (notificationConnection && notificationConnection.state === signalR.HubConnectionState.Disconnected) {
@@ -362,6 +350,56 @@
                     });
             }
         }
+            @if (User.IsInRole("Admin"))
+                    {
+                                    <text>
+                                                function loadPendingApprovalsCount() {
+                                                    // Use the configuration to build the correct URL
+                                                    const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
+
+                                                    $.ajax({
+                                                        url: apiUrl,
+                                                        type: 'GET',
+                                                        headers: {
+                                                            'Authorization': 'Bearer ' + $('#jwtToken').val()
+                                                        },
+                                                        success: function(data) {
+                                                            const count = data.totalCount || 0;
+                                                            updatePendingApprovalsCount(count);
+                                                        },
+                                                        error: function(xhr, status, error) {
+                                                            console.error('Failed to load pending approvals:', error);
+                                                            // In production, don't show technical errors to users
+                                                            if (AppConfig.environment === 'production') {
+                                                                console.log('Service temporarily unavailable');
+                                                            } else {
+                                                                console.error('API URL:', apiUrl);
+                                                                console.error('Response:', xhr.responseText);
+                                                            }
+                                                        }
+                                                    });
+                                                }
+
+                                                function updatePendingApprovalsCount(count) {
+                                                    const $badge = $('#pendingApprovalsCount');
+                                                    if (count > 0) {
+                                                        $badge.text(count).show();
+                                                    } else {
+                                                        $badge.hide();
+                                                    }
+
+                                                    // Also update sidebar badge if exists
+                                                    const $sidebarBadge = $('#sidebarPendingCount');
+                                                    if ($sidebarBadge.length) {
+                                                        if (count > 0) {
+                                                            $sidebarBadge.text(count).show();
+                                                        } else {
+                                                            $sidebarBadge.hide();
+                                                        }
+                                                    }
+                                                }
+                                                </text>
+                        }
 
         function setupNotificationHandlers() {
             // Notification bell click handler
@@ -541,47 +579,6 @@
             if (current > 0) {
                 updateNotificationBadge(current - 1);
             }
-        }
-
-        @if (User.IsInRole("Admin"))
-        {
-                <text>
-                function loadPendingApprovalsCount() {
-                    $.ajax({
-                        url: 'http://localhost:5000/api/approvalrequests?pageNumber=1&pageSize=1',
-                        type: 'GET',
-                        headers: {
-                            'Authorization': 'Bearer ' + $('#jwtToken').val()
-                        },
-                        success: function(data) {
-                            const count = data.totalCount || 0;
-                            updatePendingApprovalsCount(count);
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Failed to load pending approvals count:', error);
-                        }
-                    });
-                }
-
-                function updatePendingApprovalsCount(count) {
-                    const $badge = $('#pendingApprovalsCount');
-                    if (count > 0) {
-                        $badge.text(count).show();
-                    } else {
-                        $badge.hide();
-                    }
-
-                    // Also update sidebar badge if exists
-                    const $sidebarBadge = $('#sidebarPendingCount');
-                    if ($sidebarBadge.length) {
-                        if (count > 0) {
-                            $sidebarBadge.text(count).show();
-                        } else {
-                            $sidebarBadge.hide();
-                        }
-                    }
-                }
-                </text>
         }
 
         // Helper functions

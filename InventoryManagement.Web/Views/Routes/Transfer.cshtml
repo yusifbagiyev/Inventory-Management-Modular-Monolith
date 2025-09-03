@@ -157,6 +157,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/app-config.js"></script>
     <script>
         // Declare variables in higher scope
         let searchTimeout;
@@ -283,8 +284,10 @@
         // Moved searchProduct function to global scope
         function searchProduct(inventoryCode) {
             $('.route-warning').remove();
+            const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
+
             $.ajax({
-                url: '@Configuration["ApiGateway:BaseUrl"]' + '/api/products/search/inventory-code/' + inventoryCode,
+                url: apiUrl,
                 type: 'GET',
                 headers: {
                     'Authorization': 'Bearer @ViewBag.JwtToken'
@@ -296,8 +299,6 @@
                         currentProductId = product.id;
                         displayProductInfo(product);
                         $('#productId').val(product.id);
-
-                        // Check for pending routes
                         checkPendingRoutes(product.id);
                     } else {
                         currentProductId = null;
@@ -309,27 +310,15 @@
                 error: function(xhr) {
                     hideSearching();
                     currentProductId = null;
-                    let errorMessage = '';
 
+                    let errorMessage = 'Error searching for product';
                     if (xhr.status === 404) {
                         errorMessage = `Product not found with code: ${inventoryCode}`;
-                    }
-                    else if (xhr.status === 401) {
+                    } else if (xhr.status === 401) {
                         errorMessage = 'Session expired. Redirecting to login...';
                         setTimeout(() => {
                             window.location.href = '/Account/Login?returnUrl=' + window.location.pathname;
                         }, 2000);
-                    }
-                    else {
-                        // Parse error message more carefully
-                        errorMessage = 'Error searching for product. Please try again.';
-
-                        // Don't show raw JSON errors
-                        if (xhr.responseJSON && xhr.responseJSON.error) {
-                            errorMessage = xhr.responseJSON.error;
-                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                        }
                     }
 
                     showError(errorMessage);
@@ -344,8 +333,10 @@
                 // Remove any existing warnings first
                 $('.route-warning').remove();
 
+             const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
+
             $.ajax({
-                url:'@Configuration["ApiGateway:BaseUrl"]'+'/api/inventoryroutes/product/'+productId,
+                url: apiUrl,
                 type:'GET',
                 headers:{
                     'Authorization':'Bearer @ViewBag.JwtToken'
