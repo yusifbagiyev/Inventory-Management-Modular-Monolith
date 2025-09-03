@@ -1,29 +1,31 @@
+version: '3.8'
+
 services:
-  # Single PostgreSQL instance for all services
+  # PostgreSQL Database - The foundation of your data layer
   postgres:
     image: postgres:15-alpine
-    container_name: inventory_postgres_all
+    container_name: inventory_postgres
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ***REMOVED***
+      # This creates all databases at startup
       POSTGRES_MULTIPLE_DATABASES: "identity_service,product_service,route_service,approval_service,notification_service"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
-      - ./backups:/backups
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # RabbitMQ Message Broker
+  # RabbitMQ - Message broker for async communication
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: inventory_rabbitmq
@@ -31,195 +33,176 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - backend
-    restart: always
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    restart: unless-stopped
 
-  # Identity Service with Seq logging
+  # Identity Service - Authentication and authorization
   identity-service:
     build:
       context: ./src
       dockerfile: IdentityService.API/Dockerfile
-    container_name: inventory_identity_service
+    container_name: inventory_identity
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:80 # This tells the service where to send logs
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
+      # Simple console logging instead of Seq
+      - Logging__LogLevel__Default=Information
     ports:
       - "5003:80"
     depends_on:
-      - seq
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
 
-  # Product Service with Seq logging and fixed file permissions
+  # Product Service - Product management
   product-service:
     build:
       context: ./src
       dockerfile: ProductService.API/Dockerfile
-    container_name: inventory_product_service
-    user: "root"  # Run as root to ensure write permissions
+    container_name: inventory_product
+    user: "root"  # Required for file write permissions
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
+      - Logging__LogLevel__Default=Information
     ports:
       - "5001:80"
     depends_on:
       - postgres
       - rabbitmq
-      - seq
     volumes:
       - ./storage/images/products:/app/wwwroot/images/products:rw
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
 
-  # Route Service with Seq logging
+  # Route Service - Transfer management
   route-service:
     build:
       context: ./src
       dockerfile: RouteService.API/Dockerfile
-    container_name: inventory_route_service
+    container_name: inventory_route
     user: "root"
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:80
       - ProductService__BaseUrl=http://product-service
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
+      - Logging__LogLevel__Default=Information
     ports:
       - "5002:80"
     depends_on:
       - postgres
       - rabbitmq
       - product-service
-      - seq
     volumes:
       - ./storage/images/routes:/app/wwwroot/images/routes:rw
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
 
-  # Approval Service with Seq logging
+  # Approval Service - Workflow management
   approval-service:
     build:
       context: ./src
       dockerfile: ApprovalService.API/Dockerfile
-    container_name: inventory_approval_service
+    container_name: inventory_approval
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
       - Services__ProductService=http://api-gateway
       - Services__RouteService=http://api-gateway
+      - Logging__LogLevel__Default=Information
     ports:
       - "5004:80"    
     depends_on:
       - postgres
       - rabbitmq
-      - seq
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
 
-  # Notification Service with Seq logging
+  # Notification Service - Real-time notifications
   notification-service:
     build:
       context: ./src
       dockerfile: NotificationService.API/Dockerfile
-    container_name: inventory_notification_service
+    container_name: inventory_notification
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=postgres;Password=***REMOVED***;
-      - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
+      - WhatsApp__Enabled=true
       - WhatsApp__ApiUrl=https://7103.api.greenapi.com
-      - WhatsApp__MediaUrl=https://7103.media.greenapi.com
       - WhatsApp__IdInstance=7103295570
       - WhatsApp__ApiTokenInstance=***REMOVED***
       - WhatsApp__DefaultGroupId=120363416701721102@g.us
-      - WhatsApp__Enabled=true
+      - Logging__LogLevel__Default=Information
     ports:
       - "5005:80"
     depends_on:
       - postgres
       - rabbitmq
-      - seq
     networks:
       - backend
-    restart: always
+    restart: unless-stopped
 
-  # API Gateway with Seq logging
+  # API Gateway - Central routing
   api-gateway:
     build:
       context: ./src/ApiGateway
       dockerfile: Dockerfile
-    container_name: inventory_api_gateway
+    container_name: inventory_gateway
     environment:
       - TZ=Asia/Baku
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__Seq=http://seq:80
       - Jwt__Key=***REMOVED***#$$%
       - Jwt__Issuer=166Logistics
       - Jwt__Audience=InventorySystemUsers
+      - Logging__LogLevel__Default=Information
     ports:
       - "5000:80"
-    depends_on:
-      - seq
     networks:
       - backend
       - frontend
-    restart: always
+    restart: unless-stopped
 
-  # Web Application with enhanced Seq logging
+  # Web Application - User interface
   web:
     build:
       context: ./src
@@ -230,43 +213,16 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ApiGateway__BaseUrl=http://api-gateway
-      - ConnectionStrings__Seq=http://seq:80
       - NotificationService__BaseUrl=http://notification-service
+      - Logging__LogLevel__Default=Information
     depends_on:
       - api-gateway
-      - seq
     networks:
       - frontend
       - backend
-    restart: always
-    volumes:
-      - ./logs/web:/app/logs
+    restart: unless-stopped
 
-  # Seq - Centralized logging system (started early so other services can connect)
-  seq:
-    image: datalust/seq:latest
-    container_name: inventory_seq
-    environment:
-      - TZ=Asia/Baku
-      - ACCEPT_EULA=Y
-      - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!
-      - SEQ_API_CANONICALURI=http://seq
-      - SEQ_CACHE_SYSTEMRAMTARGET=0.2
-    ports:
-      - "5342:80"
-    volumes:
-      - seq_data:/data
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
-      
-  # Nginx Reverse Proxy
+  # Nginx - Reverse proxy and load balancer
   nginx:
     image: nginx:alpine
     container_name: inventory_nginx
@@ -276,7 +232,6 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
-      - ./logs:/var/log/nginx
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro
     depends_on:
@@ -285,7 +240,58 @@ services:
     networks:
       - frontend
       - backend
-    restart: always
+    restart: unless-stopped
+
+  # Monitoring Services
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: inventory_prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: inventory_grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=Admin123!
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # Portainer - Docker management UI
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: inventory_portainer
+    ports:
+      - "9443:9443"
+      - "8001:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - backend
+    restart: unless-stopped
 
 networks:
   frontend:
@@ -294,8 +300,8 @@ networks:
     driver: bridge
 
 volumes:
-  rabbitmq_data:
   postgres_data:
-  seq_data:
-  product_images:
-  route_images:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+  portainer_data:

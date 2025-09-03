@@ -1,4 +1,52 @@
-﻿function exportRoutesToPDF() {
+﻿function exportProductsToPDF() {
+    const table = document.getElementById('productsTable');
+    if (!table) {
+        showToast('Products table not found', 'error');
+        return;
+    }
+
+    // Clone and prepare table
+    const tableClone = table.cloneNode(true);
+
+    // Remove image and action columns
+    const headers = tableClone.querySelectorAll('th');
+    const imageColIndex = 0;  // Image column
+    const actionColIndex = headers.length - 1;  // Actions column
+
+    // Remove headers
+    if (headers[imageColIndex]) headers[imageColIndex].remove();
+    if (headers[actionColIndex - 1]) headers[actionColIndex - 1].remove();
+
+    // Remove corresponding cells
+    tableClone.querySelectorAll('tbody tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells[imageColIndex]) cells[imageColIndex].remove();
+        if (cells[actionColIndex - 1]) cells[actionColIndex - 1].remove();
+    });
+
+    // Clean up content
+    tableClone.querySelectorAll('.badge').forEach(badge => {
+        badge.style.display = 'inline-block';
+        badge.style.padding = '3px 7px';
+    });
+
+    const customStyles = `
+        #productsPdfTable {
+            table-layout: fixed;
+            width: 100%;
+        }
+        #productsPdfTable th:nth-child(1) { width: 15%; }  /* Code */
+        #productsPdfTable th:nth-child(2) { width: 30%; }  /* Product Details */
+        #productsPdfTable th:nth-child(3) { width: 25%; }  /* Location */
+        #productsPdfTable th:nth-child(4) { width: 30%; }  /* Status */
+    `;
+
+    tableClone.id = 'productsPdfTable';
+
+    // Generate the PDF
+    exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Products Report', customStyles);
+}
+function exportRoutesToPDF() {
     const table = document.getElementById('routesTable');
     if (!table) {
         showToast('Routes table not found', 'error');

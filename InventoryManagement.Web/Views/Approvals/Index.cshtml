@@ -182,12 +182,27 @@
 @section Scripts {
     <script>
         let currentRequestId = null;
+        // Get the API base URL based on environment
+        function getApiBaseUrl(){
+			const hostname=window.location.hostname;
+            const isProduction=hostname!=='localhost'&& !hostname.startsWith('127.0.0.1');
+            if(isProduction){
+                // In production, use relative URLs that will be proxied by nginx
+                return '/api';
+            } else{
+                // In development, use localhost
+				return 'http://localhost:5000/api';
+            }
+        }
 
         $(document).ready(function() {
             $('#approvalsTable').DataTable({
                 order: [[0, 'desc']],
                 pageLength: 25
             });
+
+            // Load pending approvals count with proper URL
+            loadPendingApprovalsCount();
 
             // Parse and display summaries
             $('.request-summary').each(function() {
@@ -203,6 +218,25 @@
                 }
             });
         });
+
+        function loadPendingApprovalsCount(){
+            const apiUrl=getApiBaseUrl();
+
+            $.ajax({
+                url: apiUrl+'/approvalrequests?pageNumber=1&pageSize=1',
+                type: 'GET',
+                headers:{
+                    'Authorization': 'Bearer' + $('#jwtToken').val()
+                },
+                success: function(data){
+                    const count=data.totalCount || 0;
+                    updatePendingApprovalsCount(count);
+                },
+                error: function(xhr, status, error){
+                    console.error('Failed to load pending approvals count:', error);
+				}
+            });
+        }
 
         function getRequestSummary(requestType, actionData) {
             try {
