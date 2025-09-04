@@ -1,6 +1,8 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using NotificationService.Application.Services;
@@ -44,41 +46,86 @@ try
         {
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(
-                builder.Configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 480));
+            options.ExpireTimeSpan = TimeSpan.FromDays(
+                builder.Configuration.GetValue<int>("Authentication:CookieExpiratioDays", 7));
             options.SlidingExpiration = true;
-            options.Cookie.Name = ".InventoryManagement.Auth";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.IsEssential = true;
+            // Add custom logic to refresh JWT before cookie expires
+            options.Events.OnValidatePrincipal = async context =>
+            {
+                var jwtToken = context.HttpContext.Session.GetString("JwtToken");
+                var refreshToken = context.HttpContext.Session.GetString("RefreshToken");
 
-            // Proper security settings based on environment
-            if (builder.Environment.IsProduction())
-            {
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.Domain = builder.Environment.IsProduction() ? "inventory166.az" : null;
-            }
-            else
-            {
-                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                options.Cookie.SameSite = SameSiteMode.Lax;
-            }
+                // If we don't have tokens, check cookies
+                if (string.IsNullOrEmpty(jwtToken))
+                {
+                    jwtToken = context.Request.Cookies["jwt_token"];
+                    refreshToken = context.Request.Cookies["refresh_token"];
+                }
+
+                if (!string.IsNullOrEmpty(jwtToken) && !string.IsNullOrEmpty(refreshToken))
+                {
+                    // Check if token needs refresh
+                    var handler = new JwtSecurityTokenHandler();
+                    if (handler.CanReadToken(jwtToken))
+                    {
+                        var jsonToken = handler.ReadJwtToken(jwtToken);
+                        var expiry = jsonToken.ValidTo;
+
+                        // If token expires within 30 minutes, refresh it
+                        if (expiry < DateTime.UtcNow.AddMinutes(30))
+                        {
+                            var authService = context.HttpContext.RequestServices
+                                .GetRequiredService<IAuthService>();
+
+                            try
+                            {
+                                var newTokens = await authService.RefreshTokenAsync(
+                                    jwtToken, refreshToken);
+
+                                if (newTokens != null)
+                                {
+                                    // Update everywhere
+                                    context.HttpContext.Session.SetString("JwtToken",
+                                        newTokens.AccessToken);
+                                    context.HttpContext.Session.SetString("RefreshToken",
+                                        newTokens.RefreshToken);
+
+                                    // Update cookies if Remember Me was used
+                                    if (context.Request.Cookies.ContainsKey("jwt_token"))
+                                    {
+                                        var cookieOptions = new CookieOptions
+                                        {
+                                            HttpOnly = true,
+                                            Secure = true,
+                                            SameSite = SameSiteMode.Lax,
+                                            Expires = DateTimeOffset.Now.AddDays(30)
+                                        };
+
+                                        context.Response.Cookies.Append("jwt_token",
+                                            newTokens.AccessToken, cookieOptions);
+                                        context.Response.Cookies.Append("refresh_token",
+                                            newTokens.RefreshToken, cookieOptions);
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // If refresh fails, sign out
+                                context.RejectPrincipal();
+                            }
+                        }
+                    }
+                }
+            };
         });
 
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromMinutes(
-            builder.Configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 480));
+        options.IdleTimeout = TimeSpan.FromDays(
+            builder.Configuration.GetValue<int>("Authentication:CookieExpirationDays", 7));
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
-        options.Cookie.Name = ".InventoryManagement.Session";
-
-        if (builder.Environment.IsProduction())
-        {
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Strict;
-        }
     });
 
 
