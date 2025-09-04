@@ -1,11 +1,10 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using InventoryManagement.Web.Models.DTOs;
+﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace InventoryManagement.Web.Services
 {
@@ -31,94 +30,58 @@ namespace InventoryManagement.Web.Services
             _logger = logger;
         }
 
-        private async Task<string?> GetValidTokenAsync()
+
+        private void AddAuthorizationHeader()
         {
-            var context = _httpContextAccessor.HttpContext;
-            if (context == null) return null;
+            // Clear any existing authorization header
+            _httpClient.DefaultRequestHeaders.Authorization = null;
 
-            // Try to get token from session first, then cookies
-            var token = context.Session.GetString("JwtToken")
-                ?? context.Request.Cookies["jwt_token"];
+            // First try to get token from HttpContext.Items (set by middleware)
+            var token = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
 
-            if (string.IsNullOrEmpty(token))
-                return null;
-
-            // Check if token needs refresh
-            if (ShouldRefreshToken(token))
+            if (!string.IsNullOrEmpty(token))
             {
-                var refreshToken = context.Session.GetString("RefreshToken")
-                    ?? context.Request.Cookies["refresh_token"];
-
-                if (!string.IsNullOrEmpty(refreshToken))
-                {
-                    var newToken = await RefreshTokenAsync(token, refreshToken);
-                    if (!string.IsNullOrEmpty(newToken))
-                    {
-                        UpdateStoredTokens(newToken, refreshToken);
-                        return newToken;
-                    }
-                }
-
-                return null; // Token expired and couldn't refresh
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                _logger.LogDebug("Authorization header set with token");
             }
-
-            return token;
-        }
-
-        private bool ShouldRefreshToken(string token)
-        {
-            try
+            else
             {
-                var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(token))
-                    return true;
-
-                var jwtToken = handler.ReadJwtToken(token);
-                var timeUntilExpiry = jwtToken.ValidTo - DateTime.UtcNow;
-
-                return timeUntilExpiry.TotalMinutes < 5;
-            }
-            catch
-            {
-                return true;
+                _logger.LogWarning("No JWT token found for authorization header");
             }
         }
 
-        private async Task<string?> RefreshTokenAsync(string accessToken, string refreshToken)
+
+        private string? GetCurrentAccessToken()
         {
-            try
-            {
-                var refreshDto = new { AccessToken = accessToken, RefreshToken = refreshToken };
-                var json = JsonConvert.SerializeObject(refreshDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync("api/auth/refresh", content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var tokenResponse = JsonConvert.DeserializeObject<TokenDto>(responseContent);
-                    return tokenResponse?.AccessToken;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing token");
-            }
-
-            return null;
+            return _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
         }
 
-        private void UpdateStoredTokens(string accessToken, string refreshToken)
+        private string? GetCurrentRefreshToken()
         {
-            var context = _httpContextAccessor.HttpContext;
+            return _httpContextAccessor.HttpContext?.Items["RefreshToken"] as string
+                ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken")
+                ?? _httpContextAccessor.HttpContext?.Request.Cookies["refresh_token"];
+        }
+
+        private void StoreTokens(TokenDto tokenDto)
+        {
+            var context=_httpContextAccessor.HttpContext;
             if (context == null) return;
 
-            // Update session
-            context.Session.SetString("JwtToken", accessToken);
-            context.Session.SetString("RefreshToken", refreshToken);
+            // Update in HttpContext.Items for immediate use
+            context.Items["JwtToken"]=tokenDto.AccessToken;
+            context.Items["RefreshToken"]= tokenDto.RefreshToken;
 
-            // Update cookies if they exist
+            // Update in session
+            context.Session.SetString("JwtToken",tokenDto.AccessToken);
+            context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
+            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
+
+            // Update cookies if they exists (Remember me)
             if (context.Request.Cookies.ContainsKey("jwt_token"))
             {
                 var cookieOptions = new CookieOptions
@@ -129,32 +92,65 @@ namespace InventoryManagement.Web.Services
                     Expires = DateTimeOffset.Now.AddDays(30)
                 };
 
-                context.Response.Cookies.Append("jwt_token", accessToken, cookieOptions);
-                context.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
+                context.Response.Cookies.Append("jwt_token",tokenDto.AccessToken, cookieOptions);
+                context.Response.Cookies.Append("refresh_token",tokenDto.RefreshToken,cookieOptions);
+                context.Response.Cookies.Append("user_data",JsonConvert.SerializeObject(tokenDto.User),cookieOptions);
             }
         }
 
-        private async Task AddAuthorizationHeaderAsync()
+        private async Task<bool> TryRefreshTokenAsync()
         {
-            _httpClient.DefaultRequestHeaders.Authorization = null;
+            var accessToken = GetCurrentAccessToken();
 
-            var token = await GetValidTokenAsync();
-            if (!string.IsNullOrEmpty(token))
+            var refreshToken = GetCurrentRefreshToken();
+
+            if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
             {
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                _logger.LogWarning("Cannot refresh token - missing access or refresh token");
+                return false;
             }
-            else
+
+            try
             {
-                // Token is invalid and couldn't be refreshed - user needs to login again
-                throw new UnauthorizedAccessException("Authentication token is invalid. Please login again.");
+                var tokenDto = await _authService.RefreshTokenAsync(accessToken, refreshToken);
+
+                if (tokenDto != null && !string.IsNullOrEmpty(tokenDto.AccessToken))
+                {
+                    StoreTokens(tokenDto);
+                    _logger.LogInformation("Token refreshed successfully in ApiService");
+                    return true;
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token in ApiService");
+            }
+
+            return false;
         }
+
 
         public async Task<T?> GetAsync<T>(string endpoint)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             var response = await _httpClient.GetAsync(endpoint);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _logger.LogInformation("Received 401, attempting token refresh for GET {Endpoint}", endpoint);
+
+                if (await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.GetAsync(endpoint);
+                }
+                else
+                {
+                    // Let the middleware handle this as unauthorized
+                    throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
+                }
+            }
 
             if (response.IsSuccessStatusCode)
             {
@@ -162,23 +158,67 @@ namespace InventoryManagement.Web.Services
                 return JsonConvert.DeserializeObject<T>(content);
             }
 
-            await HandleErrorResponse(response);
-            return default;
+            // Log error response
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError("API request failed: {StatusCode} - {ErrorContent} for endpoint: {Endpoint}",
+            response.StatusCode, errorContent, endpoint);
+
+            // Let the middleware handle non-success status codes
+            await ThrowHttpRequestException(response, errorContent);
+            return default; // This line won't be reached but satisfies compiler
         }
 
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync(endpoint, content);
 
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                if (await TryRefreshTokenAsync())
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
+                else
+                {
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = false,
+                        Message = "Authentication failed - please login again"
+                    };
+                }
+            }
+
             var responseContent = await response.Content.ReadAsStringAsync();
 
-            return await ProcessResponse<TResponse>(response, responseContent);
+            if (response.IsSuccessStatusCode)
+            {
+                // Check if response indicates approval even with 200 OK
+                if (IsApprovalResponse(responseContent))
+                {
+                    return HandleApprovalResponse<TResponse>(responseContent);
+                }
+
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = true,
+                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                };
+            }
+
+            // For non-success responses, return structured error
+            return new ApiResponse<TResponse>
+            {
+                IsSuccess = false,
+                Message = ParseErrorMessage(responseContent, response.StatusCode),
+                Data = default
+            };
         }
 
 
@@ -187,12 +227,17 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto=null)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             using var content = BuildMultipartContent(form, dataDto);
 
             var response = await _httpClient.PostAsync(endpoint, content);
 
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+            {
+                AddAuthorizationHeader();
+                response = await _httpClient.PostAsync(endpoint, content);
+            }
 
             var responseContent = await response.Content.ReadAsStringAsync();
 
@@ -202,12 +247,18 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PutAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+            {
+                AddAuthorizationHeader();
+                response = await _httpClient.PutAsync(endpoint, content);
+            }
 
             var responseContent = await response.Content.ReadAsStringAsync();
 
@@ -220,11 +271,18 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto = null)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             using var content = BuildMultipartContent(form, dataDto);
 
             var response = await _httpClient.PutAsync(endpoint, content);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+            {
+                AddAuthorizationHeader();
+                response = await _httpClient.PutAsync(endpoint, content);
+            }
+
             var responseContent = await response.Content.ReadAsStringAsync();
 
             return await ProcessResponse<TResponse>(response, responseContent);
@@ -233,9 +291,15 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
         {
-            await AddAuthorizationHeaderAsync();
+            AddAuthorizationHeader();
 
             var response = await _httpClient.DeleteAsync(endpoint);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized && await TryRefreshTokenAsync())
+            {
+                AddAuthorizationHeader();
+                response = await _httpClient.DeleteAsync(endpoint);
+            }
 
             if (response.StatusCode == HttpStatusCode.Accepted)
             {
@@ -301,6 +365,7 @@ namespace InventoryManagement.Web.Services
             }
             return content;
         }
+
 
         private async Task<ApiResponse<T>> ProcessResponse<T>(HttpResponseMessage response, string responseContent)
         {
@@ -432,9 +497,8 @@ namespace InventoryManagement.Web.Services
         }
 
         // Throw appropriate exception based on HTTP status
-        private async Task HandleErrorResponse(HttpResponseMessage response)
+        private Task ThrowHttpRequestException(HttpResponseMessage response, string content)
         {
-            var content = await response.Content.ReadAsStringAsync();
             var message = ParseErrorMessage(content, response.StatusCode);
 
             switch (response.StatusCode)

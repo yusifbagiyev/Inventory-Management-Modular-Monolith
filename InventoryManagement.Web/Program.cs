@@ -1,13 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Text;
 using System.Text.Json;
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.IdentityModel.Tokens;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -44,77 +41,83 @@ try
     builder.Services.AddControllersWithViews()
         .AddRazorRuntimeCompilation();
 
-    builder.Services.AddAuthentication(options =>
-    {
-        // Set JWT Bearer as the default scheme for everything
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-   .AddJwtBearer(options =>
-   {
-       options.TokenValidationParameters = new TokenValidationParameters
-       {
-           ValidateIssuer = true,
-           ValidateAudience = true,
-           ValidateLifetime = true,
-           ValidateIssuerSigningKey = true,
-           ValidIssuer = builder.Configuration["Jwt:Issuer"],
-           ValidAudience = builder.Configuration["Jwt:Audience"],
-           IssuerSigningKey = new SymmetricSecurityKey(
-               Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
-       };
+    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.LoginPath = "/Account/Login";
+            options.LogoutPath = "/Account/Logout";
+            options.ExpireTimeSpan = TimeSpan.FromDays(
+                builder.Configuration.GetValue<int>("Authentication:CookieExpiratioDays", 7));
+            options.SlidingExpiration = true;
+            // Add custom logic to refresh JWT before cookie expires
+            options.Events.OnValidatePrincipal = async context =>
+            {
+                var jwtToken = context.HttpContext.Session.GetString("JwtToken");
+                var refreshToken = context.HttpContext.Session.GetString("RefreshToken");
 
-       // Handle tokens from multiple sources for flexibility
-       options.Events = new JwtBearerEvents
-       {
-           OnMessageReceived = context =>
-           {
-               // For SignalR connections, get token from query string
-               var accessToken = context.Request.Query["access_token"];
-               var path = context.HttpContext.Request.Path;
+                // If we don't have tokens, check cookies
+                if (string.IsNullOrEmpty(jwtToken))
+                {
+                    jwtToken = context.Request.Cookies["jwt_token"];
+                    refreshToken = context.Request.Cookies["refresh_token"];
+                }
 
-               if (!string.IsNullOrEmpty(accessToken) &&
-                   path.StartsWithSegments("/notificationHub"))
-               {
-                   context.Token = accessToken;
-               }
+                if (!string.IsNullOrEmpty(jwtToken) && !string.IsNullOrEmpty(refreshToken))
+                {
+                    // Check if token needs refresh
+                    var handler = new JwtSecurityTokenHandler();
+                    if (handler.CanReadToken(jwtToken))
+                    {
+                        var jsonToken = handler.ReadJwtToken(jwtToken);
+                        var expiry = jsonToken.ValidTo;
 
-               // Also check for token in session/cookies as fallback
-               if (string.IsNullOrEmpty(context.Token))
-               {
-                   context.Token = context.HttpContext.Session.GetString("JwtToken")
-                                ?? context.Request.Cookies["jwt_token"];
-               }
+                        // If token expires within 30 minutes, refresh it
+                        if (expiry < DateTime.UtcNow.AddMinutes(30))
+                        {
+                            var authService = context.HttpContext.RequestServices
+                                .GetRequiredService<IAuthService>();
 
-               return Task.CompletedTask;
-           },
+                            try
+                            {
+                                var newTokens = await authService.RefreshTokenAsync(
+                                    jwtToken, refreshToken);
 
-           // Handle authentication challenges (when user is not authenticated)
-           OnChallenge = context =>
-           {
-               context.HandleResponse();
+                                if (newTokens != null)
+                                {
+                                    // Update everywhere
+                                    context.HttpContext.Session.SetString("JwtToken",
+                                        newTokens.AccessToken);
+                                    context.HttpContext.Session.SetString("RefreshToken",
+                                        newTokens.RefreshToken);
 
-               // For AJAX requests, return 401 instead of redirecting
-               if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-               {
-                   context.Response.StatusCode = 401;
-                   context.Response.ContentType = "application/json";
-                   return context.Response.WriteAsync(JsonSerializer.Serialize(new
-                   {
-                       error = "Unauthorized",
-                       message = "Please login to access this resource"
-                   }));
-               }
+                                    // Update cookies if Remember Me was used
+                                    if (context.Request.Cookies.ContainsKey("jwt_token"))
+                                    {
+                                        var cookieOptions = new CookieOptions
+                                        {
+                                            HttpOnly = true,
+                                            Secure = true,
+                                            SameSite = SameSiteMode.Lax,
+                                            Expires = DateTimeOffset.Now.AddDays(30)
+                                        };
 
-               // For regular requests, redirect to login
-               var returnUrl = context.Request.Path + context.Request.QueryString;
-               context.Response.Redirect($"/Account/Login?returnUrl={Uri.EscapeDataString(returnUrl)}");
-               return Task.CompletedTask;
-           }
-       };
-   });
-
+                                        context.Response.Cookies.Append("jwt_token",
+                                            newTokens.AccessToken, cookieOptions);
+                                        context.Response.Cookies.Append("refresh_token",
+                                            newTokens.RefreshToken, cookieOptions);
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                // If refresh fails, sign out
+                                context.RejectPrincipal();
+                            }
+                        }
+                    }
+                }
+            };
+        });
 
 
     builder.Services.AddSession(options =>
@@ -123,21 +126,58 @@ try
             builder.Configuration.GetValue<int>("Authentication:CookieExpirationDays", 7));
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-           ? CookieSecurePolicy.SameAsRequest
-           : CookieSecurePolicy.Always;
     });
+
+
+    builder.Services.ConfigureApplicationCookie(options =>
+    {
+        options.Events.OnRedirectToLogin = context =>
+        {
+            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                context.Response.StatusCode = 401;
+            }
+            else
+            {
+                context.Response.Redirect(context.RedirectUri);
+            }
+            return Task.CompletedTask;
+        };
+
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                context.Response.StatusCode = 403;
+            }
+            else
+            {
+                context.Response.Redirect(context.RedirectUri);
+            }
+            return Task.CompletedTask;
+        };
+    });
+
 
     // Configure CORS properly for production
     builder.Services.AddCors(options =>
     {
-        options.AddPolicy("AllowedOrigins", policy =>
+        options.AddPolicy("Production", policy =>
         {
-            var allowedOrigins = builder.Environment.IsDevelopment()
-                ? new[] { "http://localhost:5051", "https://localhost:7171" }
-                : new[] { "https://inventory166.az", "http://inventory166.az" };
+            policy.WithOrigins(
+                    "https://inventory.local",
+                    "https://www.inventory.local",
+                    "https://api.inventory.local")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
 
-            policy.WithOrigins(allowedOrigins)
+        options.AddPolicy("Development", policy =>
+        {
+            policy.WithOrigins(
+                    "http://localhost:5051",
+                    "https://localhost:7171")
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();
@@ -162,12 +202,12 @@ try
         app.UseExceptionHandler("/Home/Error");
         app.UseHsts(); // Adds HSTS header for security
         app.UseHttpsRedirection(); // Force HTTPS in production
-        app.UseCors("AllowedOrigins");
+        app.UseCors("Production");
     }
     else
     {
         app.UseDeveloperExceptionPage();
-        app.UseCors("AllowedOrigins");
+        app.UseCors("Development");
     }
 
     app.UseHttpsRedirection();
@@ -182,6 +222,8 @@ try
     app.UseAuthorization();
 
     app.MapHub<NotificationHub>("/notificationHub");
+
+    app.UseMiddleware<JwtMiddleware>();
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {

@@ -1,10 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
+﻿using Microsoft.AspNetCore.Mvc;
 using InventoryManagement.Web.Models.DTOs;
-using InventoryManagement.Web.Services.Interfaces;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -12,109 +9,12 @@ namespace InventoryManagement.Web.Controllers
     public abstract class BaseController : Controller
     {
         protected readonly ILogger<BaseController>? _logger;
-        private readonly IServiceProvider? _serviceProvider;
 
-        protected BaseController(ILogger<BaseController>? logger = null, IServiceProvider? serviceProvider = null)
+        protected BaseController(ILogger<BaseController>? logger = null)
         {
             _logger = logger;
-            _serviceProvider = serviceProvider ?? HttpContext?.RequestServices;
         }
 
-
-        /// <summary>
-        /// Gets the current JWT token, refreshing it if necessary
-        /// </summary>
-        protected async Task<string?> GetValidJwtTokenAsync()
-        {
-            var token = GetStoredToken();
-
-            if (string.IsNullOrEmpty(token))
-                return null;
-
-            // Check if token needs refresh
-            if (ShouldRefreshToken(token))
-            {
-                var refreshed = await RefreshTokenAsync();
-                return refreshed ? GetStoredToken() : null;
-            }
-
-            return token;
-        }
-
-        private string? GetStoredToken()
-        {
-            // Try session first, then cookies
-            return HttpContext.Session.GetString("JwtToken")
-                ?? Request.Cookies["jwt_token"];
-        }
-
-        private bool ShouldRefreshToken(string token)
-        {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(token))
-                    return true;
-
-                var jwtToken = handler.ReadJwtToken(token);
-                var timeUntilExpiry = jwtToken.ValidTo - DateTime.UtcNow;
-
-                return timeUntilExpiry.TotalMinutes < 5; // Refresh if less than 5 minutes remaining
-            }
-            catch
-            {
-                return true;
-            }
-        }
-        private async Task<bool> RefreshTokenAsync()
-        {
-            try
-            {
-                var authService = _serviceProvider?.GetService<IAuthService>();
-                if (authService == null)
-                    return false;
-
-                var currentToken = GetStoredToken();
-                var refreshToken = HttpContext.Session.GetString("RefreshToken")
-                    ?? Request.Cookies["refresh_token"];
-
-                if (string.IsNullOrEmpty(currentToken) || string.IsNullOrEmpty(refreshToken))
-                    return false;
-
-                var result = await authService.RefreshTokenAsync(currentToken, refreshToken);
-
-                if (result != null && !string.IsNullOrEmpty(result.AccessToken))
-                {
-                    // Update session
-                    HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                    HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                    HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-
-                    // Update cookies if they existed
-                    if (Request.Cookies.ContainsKey("jwt_token"))
-                    {
-                        var cookieOptions = new CookieOptions
-                        {
-                            HttpOnly = true,
-                            Secure = HttpContext.Request.IsHttps,
-                            SameSite = SameSiteMode.Lax,
-                            Expires = DateTimeOffset.Now.AddDays(30)
-                        };
-
-                        Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
-                        Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
-                    }
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error refreshing token");
-            }
-
-            return false;
-        }
 
         /// <summary>
         /// Checks if the current request is an AJAX request
@@ -226,22 +126,7 @@ namespace InventoryManagement.Web.Controllers
             return HandleError(userFriendlyMessage, model);
         }
 
-        /// <summary>
-        /// Helper to get current user ID
-        /// </summary>
-        protected int GetCurrentUserId()
-        {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(userIdClaim, out var userId) ? userId : 0;
-        }
 
-        /// <summary>
-        /// Helper to get current username
-        /// </summary>
-        protected string GetCurrentUserName()
-        {
-            return User.Identity?.Name ?? "Unknown";
-        }
 
         /// <summary>
         /// Handles validation errors from ModelState
@@ -341,6 +226,27 @@ namespace InventoryManagement.Web.Controllers
                 data,
                 errors
             });
+        }
+
+
+
+        /// <summary>
+        /// Helper to get current user ID
+        /// </summary>
+        protected int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return int.TryParse(userIdClaim, out var userId) ? userId : 0;
+        }
+
+
+
+        /// <summary>
+        /// Helper to get current username
+        /// </summary>
+        protected string GetCurrentUserName()
+        {
+            return User.Identity?.Name ?? "Unknown";
         }
     }
 }
