@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,14 @@ namespace InventoryManagement.Web.Controllers
     public class RoutesController : BaseController
     {
         private readonly IApiService _apiService;
-        public RoutesController(IApiService apiService, ILogger<RoutesController> logger)
-            : base(logger)
+        private readonly IUrlService _urlService;
+        public RoutesController(
+            IApiService apiService, 
+            IUrlService urlService)
+            : base()
         {
-            _apiService= apiService;
+            _apiService = apiService;
+            _urlService = urlService;
         }
 
 
@@ -44,6 +49,17 @@ namespace InventoryManagement.Web.Controllers
 
                 var routes = await _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
                     $"api/inventoryroutes{queryString}");
+
+                if (routes != null)
+                {
+                    foreach (var route in routes.Items)
+                    {
+                        if (!string.IsNullOrEmpty(route.ImageUrl))
+                        {
+                            route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
+                        }
+                    }
+                }
 
                 ViewBag.CurrentFilter = isCompleted;
                 ViewBag.StartDate = startDate;
@@ -79,6 +95,14 @@ namespace InventoryManagement.Web.Controllers
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
                     return NotFound();
+
+                if (route != null)
+                {
+                    if (!string.IsNullOrEmpty(route.ImageUrl))
+                    {
+                        route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
+                    }
+                }
 
                 // Load departments for dropdown
                 var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
@@ -192,6 +216,17 @@ namespace InventoryManagement.Web.Controllers
             {
                 var routes = await _apiService.GetAsync<List<RouteViewModel>>($"api/inventoryroutes/product/{productId}");
                 ViewBag.ProductId = productId;
+
+                if (routes != null)
+                {
+                    foreach(var route in routes)
+                    {
+                        if (!string.IsNullOrEmpty(route.ImageUrl))
+                        {
+                            route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
+                        }
+                    }
+                }
                 return View(routes ?? []);
             }
             catch (Exception ex)
@@ -209,6 +244,13 @@ namespace InventoryManagement.Web.Controllers
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
                     return NotFound();
+                if (route != null)
+                {
+                    if(!string.IsNullOrEmpty(route.ImageUrl))
+                    {
+                        route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
+                    }
+                }
 
                 return View(route);
             }

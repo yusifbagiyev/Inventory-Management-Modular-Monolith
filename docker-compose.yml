@@ -1,35 +1,11 @@
 services:
-  # Single PostgreSQL instance for all services
-  postgres:
-    image: postgres:15-alpine
-    container_name: inventory_postgres_all
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ***REMOVED***
-      POSTGRES_MULTIPLE_DATABASES: "identity_service,product_service,route_service,approval_service,notification_service"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
-      - ./backups:/backups
-    networks:
-      - backend
-    restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # RabbitMQ Message Broker
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: inventory_rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -51,22 +27,22 @@ services:
       dockerfile: IdentityService.API/Dockerfile
     container_name: inventory_identity_service
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=postgres;Password=***REMOVED***;
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=identity_service;Username=${DB_USER_PASSWORD};Password=${POSTGRES_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80 # This tells the service where to send logs
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
-    ports:
-      - "5003:80"
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
     depends_on:
       - seq
-      - postgres
+      - host.docker.internal
     networks:
       - backend
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Product Service with Seq logging and fixed file permissions
   product-service:
@@ -76,21 +52,19 @@ services:
     container_name: inventory_product_service
     user: "root"  # Run as root to ensure write permissions
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=postgres;Password=***REMOVED***;
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=product_service;Username=${DB_USER_PASSWORD};Password=${POSTGRES_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
-    ports:
-      - "5001:80"
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
     depends_on:
-      - postgres
+      - host.docker.internal
       - rabbitmq
       - seq
     volumes:
@@ -98,6 +72,8 @@ services:
     networks:
       - backend
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Route Service with Seq logging
   route-service:
@@ -107,22 +83,19 @@ services:
     container_name: inventory_route_service
     user: "root"
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=postgres;Password=***REMOVED***;
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=route_service;Username=${DB_USER_PASSWORD};Password=${POSTGRES_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - ProductService__BaseUrl=http://product-service
-      - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
-    ports:
-      - "5002:80"
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
     depends_on:
-      - postgres
+      - host.docker.internal
       - rabbitmq
       - product-service
       - seq
@@ -131,6 +104,8 @@ services:
     networks:
       - backend
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Approval Service with Seq logging
   approval-service:
@@ -139,21 +114,19 @@ services:
       dockerfile: ApprovalService.API/Dockerfile
     container_name: inventory_approval_service
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=postgres;Password=***REMOVED***;
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=approval_service;Username=${DB_USER_PASSWORD};Password=${POSTGRES_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
       - Services__ProductService=http://api-gateway
       - Services__RouteService=http://api-gateway
-    ports:
-      - "5004:80"    
     depends_on:
       - postgres
       - rabbitmq
@@ -161,6 +134,8 @@ services:
     networks:
       - backend
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Notification Service with Seq logging
   notification-service:
@@ -169,32 +144,31 @@ services:
       dockerfile: NotificationService.API/Dockerfile
     container_name: inventory_notification_service
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=postgres;Password=***REMOVED***;
+      - ConnectionStrings__DefaultConnection=Host=host.docker.internal;Database=notification_service;Username=${DB_USER_PASSWORD};Password=${POSTGRES_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=guest
-      - RabbitMQ__Password=guest
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
       - WhatsApp__ApiUrl=https://7103.api.greenapi.com
       - WhatsApp__MediaUrl=https://7103.media.greenapi.com
-      - WhatsApp__IdInstance=7103295570
-      - WhatsApp__ApiTokenInstance=***REMOVED***
-      - WhatsApp__DefaultGroupId=120363416701721102@g.us
+      - WhatsApp__IdInstance=${WHATSAPP_INSTANCE_ID}
+      - WhatsApp__ApiTokenInstance=${WHATSAPP_API_TOKEN}
+      - WhatsApp__DefaultGroupId=${WHATSAPP_GROUP_ID}
       - WhatsApp__Enabled=true
-    ports:
-      - "5005:80"
     depends_on:
-      - postgres
+      - host.docker.internal
       - rabbitmq
       - seq
     networks:
       - backend
     restart: always
+
 
   # API Gateway with Seq logging
   api-gateway:
@@ -203,13 +177,13 @@ services:
       dockerfile: Dockerfile
     container_name: inventory_api_gateway
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__Seq=http://seq:80
-      - Jwt__Key=***REMOVED***#$$%
-      - Jwt__Issuer=166Logistics
-      - Jwt__Audience=InventorySystemUsers
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
     ports:
       - "5000:80"
     depends_on:
@@ -226,8 +200,8 @@ services:
       dockerfile: InventoryManagement.Web/Dockerfile
     container_name: inventory_web
     environment:
-      - TZ=Asia/Baku
-      - ASPNETCORE_ENVIRONMENT=Production
+      - TZ=${TZ}
+      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT}
       - ASPNETCORE_URLS=http://+:80
       - ApiGateway__BaseUrl=http://api-gateway
       - ConnectionStrings__Seq=http://seq:80
@@ -247,9 +221,9 @@ services:
     image: datalust/seq:latest
     container_name: inventory_seq
     environment:
-      - TZ=Asia/Baku
+      - TZ=${TZ}
       - ACCEPT_EULA=Y
-      - SEQ_FIRSTRUN_ADMINPASSWORD=Admin123!
+      - SEQ_FIRSTRUN_ADMINPASSWORD=${SEQ_ADMIN_PASSWORD}
       - SEQ_API_CANONICALURI=http://seq
       - SEQ_CACHE_SYSTEMRAMTARGET=0.2
     ports:
@@ -295,7 +269,6 @@ networks:
 
 volumes:
   rabbitmq_data:
-  postgres_data:
   seq_data:
   product_images:
   route_images:

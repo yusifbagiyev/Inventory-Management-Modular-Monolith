@@ -33,6 +33,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet]
+        [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
             [FromQuery] int? pageNumber = 1,
             [FromQuery] int? pageSize = 30,

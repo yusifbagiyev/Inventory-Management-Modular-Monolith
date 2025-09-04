@@ -69,9 +69,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<SelectListItem>? Departments { get; set; }
 
 
-        public string? FullImageUrl => !string.IsNullOrEmpty(ImageUrl)
-            ? $"https://inventory166.az{ImageUrl}"
-            : null;
+        public string? FullImageUrl { get; set; }
 
         public DateTime? CreatedAt { get; set; }
     }

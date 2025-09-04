@@ -18,6 +18,7 @@ namespace InventoryManagement.Web.Extensions
 
             // Add other services
             services.AddScoped<IApiService, ApiService>();
+            services.AddScoped<IUrlService, UrlService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IApprovalService, ApprovalService>();
             services.AddScoped<INotificationService, Services.NotificationService>();

@@ -12,9 +12,14 @@ namespace InventoryManagement.Web.Controllers
     public class ProductsController : BaseController
     {
         private readonly IApiService _apiService;
-        public ProductsController(IApiService apiService,ILogger<ProductsController> logger): base(logger)
+        private readonly IUrlService _urlService;
+        public ProductsController(
+            IApiService apiService,
+            IUrlService urlService) 
+            : base()
         {
             _apiService = apiService;
+            _urlService = urlService;
         }
 
         public async Task<IActionResult> Index(
@@ -43,6 +48,17 @@ namespace InventoryManagement.Web.Controllers
 
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products{queryString}");
 
+                if(products != null)
+                {
+                    foreach (var product in products.Items)
+                    {
+                        if (!string.IsNullOrEmpty(product.ImageUrl))
+                        {
+                            product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                        }
+                    }
+                }
+
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
                 ViewBag.CurrentStatus = status;
@@ -66,6 +82,14 @@ namespace InventoryManagement.Web.Controllers
                 var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
                 if (product == null)
                     return NotFound();
+
+                if (product != null)
+                {
+                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    {
+                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                    }
+                }
 
                 return View(product);
             }
@@ -132,6 +156,14 @@ namespace InventoryManagement.Web.Controllers
                 var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
                 if (product == null)
                     return NotFound();
+
+                if (product != null)
+                {
+                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    {
+                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                    }
+                }
 
                 await LoadDropdowns(product);
                 return View(product);

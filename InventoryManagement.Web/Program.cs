@@ -10,18 +10,27 @@ using Serilog.Events;
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    builder.Logging.ClearProviders();
 
     Log.Logger = new LoggerConfiguration()
-        .ReadFrom.Configuration(builder.Configuration)
-        .Enrich.FromLogContext()
-        .Enrich.WithProperty("ApplicationName", "InventoryManagement Web")
-        .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("ApplicationName", "ProductService")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .Enrich.WithProperty("MachineName", Environment.MachineName)
+    .Enrich.WithProperty("ProcessId", Environment.ProcessId)
+    // Filter out framework noise that causes duplicate-looking logs
+    .Filter.ByExcluding(logEvent =>
+        logEvent.Properties.ContainsKey("SourceContext") &&
+        logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Hosting.Diagnostics"))
+    .Filter.ByExcluding(logEvent =>
+        logEvent.Properties.ContainsKey("SourceContext") &&
+        logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Routing"))
+    // Only write to Seq to prevent console/file duplication
         .WriteTo.Seq(
             serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
             restrictedToMinimumLevel: LogEventLevel.Information)
         .CreateLogger();
-
-    builder.Logging.ClearProviders();
 
     builder.Host.UseSerilog();
 
@@ -153,46 +162,6 @@ try
         app.UseDeveloperExceptionPage();
         app.UseCors("Development");
     }
-
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.IncludeQueryInRequestPath = false;
-
-        // Skip static files and health checks entirely
-        options.GetLevel = (httpContext, elapsed, ex) =>
-        {
-            var path = httpContext.Request.Path.Value?.ToLower() ?? "";
-
-            // Skip static files completely
-            if (path.Contains(".css") || path.Contains(".js") || path.Contains(".png") ||
-                path.Contains(".jpg") || path.Contains(".ico") || path.Contains(".woff") ||
-                path.Contains("_vs/browserlink") || path.Contains("_framework/aspnetcore-browser-refresh") ||
-                path.StartsWith("/health"))
-            {
-                return LogEventLevel.Verbose; // This effectively skips logging
-            }
-
-            // Only log errors if they weren't already handled by middleware
-            if (ex != null && !httpContext.Items.ContainsKey("ExceptionHandled"))
-            {
-                return LogEventLevel.Error;
-            }
-
-            if (httpContext.Response.StatusCode >= 500) return LogEventLevel.Warning;
-            if (httpContext.Response.StatusCode >= 400) return LogEventLevel.Information;
-            if (elapsed > 2000) return LogEventLevel.Warning;
-
-            return LogEventLevel.Information;
-        };
-
-        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-        {
-            diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown");
-            diagnosticContext.Set("UserId", httpContext.User?.Identity?.Name ?? "Anonymous");
-        };
-    });
-
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();

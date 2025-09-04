@@ -17,17 +17,27 @@ using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.ClearProviders();
+
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "NotificationService")
-    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+.ReadFrom.Configuration(builder.Configuration)
+.Enrich.FromLogContext()
+.Enrich.WithProperty("ApplicationName", "ProductService")
+.Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+.Enrich.WithProperty("MachineName", Environment.MachineName)
+.Enrich.WithProperty("ProcessId", Environment.ProcessId)
+// Filter out framework noise that causes duplicate-looking logs
+.Filter.ByExcluding(logEvent =>
+    logEvent.Properties.ContainsKey("SourceContext") &&
+    logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Hosting.Diagnostics"))
+.Filter.ByExcluding(logEvent =>
+    logEvent.Properties.ContainsKey("SourceContext") &&
+    logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Routing"))
+    // Only write to Seq to prevent console/file duplication
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
         restrictedToMinimumLevel: LogEventLevel.Information)
     .CreateLogger();
-
-builder.Logging.ClearProviders();
 
 builder.Host.UseSerilog();
 

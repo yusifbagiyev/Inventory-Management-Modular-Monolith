@@ -377,18 +377,30 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                // Get current user permissions first
+                var currentPermissions = await _apiService.GetAsync<List<string>>($"/api/auth/users/{id}/direct-permissions");
+
                 var url = model.IsGranting
                     ? $"/api/auth/users/{id}/grant-permission"
                     : $"/api/auth/users/{id}/revoke-permission";
 
-                var result = await _apiService.PostAsync<object, bool>(url,
-                    new { permissionName = model.PermissionName });
+                var requestData = new { permissionName = model.PermissionName };
+                var result = await _apiService.PostAsync<object, bool>(url, requestData);
 
-                return Json(new { success = result });
+                if (result.IsSuccess)
+                {
+                    return Json(new { success = true });
+                }
+                else
+                {
+                    return Json(new { success = false, message = result.Message });
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                return Json(new { success = false });
+                _logger.LogError(ex, "Error toggling permission {Permission} for user {UserId}",
+                    model.PermissionName, id);
+                return Json(new { success = false, message = "Permission change failed" });
             }
         }
 
