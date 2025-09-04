@@ -46,8 +46,8 @@ try
         {
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromDays(
-                builder.Configuration.GetValue<int>("Authentication:CookieExpiratioDays", 7));
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(
+                builder.Configuration.GetValue<int>("Authentication:CookieExpirationInMinutes", 480));
             options.SlidingExpiration = true;
             // Add custom logic to refresh JWT before cookie expires
             options.Events.OnValidatePrincipal = async context =>
@@ -123,7 +123,7 @@ try
     builder.Services.AddSession(options =>
     {
         options.IdleTimeout = TimeSpan.FromDays(
-            builder.Configuration.GetValue<int>("Authentication:CookieExpirationDays", 7));
+            builder.Configuration.GetValue<int>("Authentication:CookieExpirationInMinutes", 480));
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
     });
