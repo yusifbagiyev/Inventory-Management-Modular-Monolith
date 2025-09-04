@@ -46,8 +46,7 @@ try
         {
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(
-                builder.Configuration.GetValue<int>("Authentication:CookieExpirationInMinutes", 480));
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
             options.SlidingExpiration = true;
             // Add custom logic to refresh JWT before cookie expires
             options.Events.OnValidatePrincipal = async context =>
@@ -58,8 +57,13 @@ try
                 // If we don't have tokens, check cookies
                 if (string.IsNullOrEmpty(jwtToken))
                 {
+                    // Try to get from cookies
                     jwtToken = context.Request.Cookies["jwt_token"];
-                    refreshToken = context.Request.Cookies["refresh_token"];
+                    if (!string.IsNullOrEmpty(jwtToken))
+                    {
+                        // Restore to session
+                        context.HttpContext.Session.SetString("JwtToken", jwtToken);
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(jwtToken) && !string.IsNullOrEmpty(refreshToken))
@@ -122,8 +126,7 @@ try
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromMinutes(
-            builder.Configuration.GetValue<int>("Authentication:CookieExpirationInMinutes", 480));
+        options.IdleTimeout = TimeSpan.FromDays(1);
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
     });

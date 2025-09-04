@@ -16,15 +16,25 @@ namespace SharedServices.Authorization
             AuthorizationHandlerContext context, 
             PermissionRequirement requirement)
         {
-            // Allow system user with Admin role to bypass permission checks
-            if (context.User.IsInRole("Admin"))
+            // Check if user is authenticated
+            if (!context.User.Identity?.IsAuthenticated ?? true)
             {
-                context.Succeed(requirement);
                 return Task.CompletedTask;
             }
 
-            // Regular permission check for other users
-            if (context.User.HasClaim("permission", requirement.Permission))
+            // Check for the permission claim - this is the key fix
+            // The claim type should be "permission" (lowercase) to match what's in your JWT
+            var hasPermission = context.User.Claims.Any(c =>
+                c.Type.Equals("permission", StringComparison.OrdinalIgnoreCase) &&
+                c.Value.Equals(requirement.Permission, StringComparison.OrdinalIgnoreCase));
+
+            if (hasPermission)
+            {
+                context.Succeed(requirement);
+            }
+
+            // Also check if user is in Admin role (Admins bypass permission checks)
+            else if (context.User.IsInRole("Admin"))
             {
                 context.Succeed(requirement);
             }

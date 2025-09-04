@@ -22,6 +22,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpGet]
+        [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
         {
             var categories = await _mediator.Send(new GetAllCategoriesQuery());

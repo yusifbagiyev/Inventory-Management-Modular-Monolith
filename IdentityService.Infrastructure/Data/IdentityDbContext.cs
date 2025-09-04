@@ -172,7 +172,7 @@ namespace IdentityService.Infrastructure.Data
             rolePermissions.AddRange(new[]
             {
                 new RolePermission { RoleId = 3, PermissionId = 1 }, // RouteView
-                new RolePermission { RoleId = 3, PermissionId = 8 }  // ProductView
+                new RolePermission { RoleId = 3, PermissionId = 9 }  // ProductView
             });
 
             builder.Entity<RolePermission>().HasData(rolePermissions);

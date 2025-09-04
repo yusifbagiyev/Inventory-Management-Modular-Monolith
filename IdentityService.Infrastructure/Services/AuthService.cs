@@ -82,7 +82,8 @@ namespace IdentityService.Infrastructure.Services
                 Email = dto.Email,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                IsActive= true
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);

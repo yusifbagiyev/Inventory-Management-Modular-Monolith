@@ -11,47 +11,82 @@ namespace InventoryManagement.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
-        private readonly IWebHostEnvironment _environment;
 
         public JwtMiddleware(
             RequestDelegate next, 
-            ILogger<JwtMiddleware> logger, 
-            IWebHostEnvironment webHostEnvironment)
+            ILogger<JwtMiddleware> logger)
         {
             _next = next;
             _logger = logger;
-            _environment = webHostEnvironment;
         }
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
-            // Skip if already processed or static file
-            if (context.Items.ContainsKey("JwtMiddlewareProcessed") || IsStaticFileRequest(context))
+            // Skip for static files or if already processed
+            if (IsStaticFileRequest(context) ||
+                context.Items.ContainsKey("JwtMiddlewareProcessed"))
             {
                 await _next(context);
                 return;
             }
-
-            var tokenInfo = GetTokenInfo(context);
-            if (!string.IsNullOrEmpty(tokenInfo.AccessToken) && ShouldRefreshToken(tokenInfo.AccessToken))
-            {
-                await RefreshTokenIfNeeded(context, authService, tokenInfo.AccessToken, tokenInfo.RefreshToken);
-            }
-
             context.Items["JwtMiddlewareProcessed"] = true;
+
+            // Skip for login/logout paths
+            if (context.Request.Path.StartsWithSegments("/Account/Login") ||
+                context.Request.Path.StartsWithSegments("/Account/Logout"))
+            {
+                await _next(context);
+                return;
+            }
+            // Try to refresh token if needed
+            await TryRefreshTokenIfNeeded(context, authService);
+
             await _next(context);
         }
+        private async Task TryRefreshTokenIfNeeded(HttpContext context, IAuthService authService)
+        {
+            try
+            {
+                var tokenInfo = GetTokenInfo(context);
 
-        private (string AccessToken, string RefreshToken) GetTokenInfo(HttpContext context)
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken))
+                    return;
+
+                // Check if token needs refresh (expires within 2 minutes)
+                if (IsTokenExpiringSoon(tokenInfo.AccessToken, 2))
+                {
+                    _logger.LogInformation("Token expiring soon, attempting refresh");
+
+                    if (!string.IsNullOrEmpty(tokenInfo.RefreshToken))
+                    {
+                        await RefreshToken(context, authService, tokenInfo.AccessToken, tokenInfo.RefreshToken);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No refresh token available for renewal");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in token refresh check");
+            }
+        }
+
+        private (string AccessToken, string RefreshToken,bool RememberMe) GetTokenInfo(HttpContext context)
         {
             var accessToken = context.Session.GetString("JwtToken");
             var refreshToken = context.Session.GetString("RefreshToken");
+            var rememberMe = false;
 
-            if(string.IsNullOrEmpty(accessToken))
+            // If not in session, check cookies
+            if (string.IsNullOrEmpty(accessToken))
             {
-                accessToken = GetSecureCookieValue(context, "jwt-token");
-                refreshToken = GetSecureCookieValue(context, "refresh-token");
+                accessToken = context.Request.Cookies["jwt_token"];
+                refreshToken = context.Request.Cookies["refresh_token"];
+                rememberMe = !string.IsNullOrEmpty(accessToken);
 
+                // Restore to session from cookies
                 if (!string.IsNullOrEmpty(accessToken))
                 {
                     context.Session.SetString("JwtToken", accessToken);
@@ -59,44 +94,30 @@ namespace InventoryManagement.Web.Middleware
                     {
                         context.Session.SetString("RefreshToken", refreshToken);
                     }
-                    RestoreUserDataFromCookies(context);
+                    var userData = context.Request.Cookies["user_data"];
+                    if (!string.IsNullOrEmpty(userData))
+                    {
+                        context.Session.SetString("UserData", userData);
+                    }
                 }
             }
-            return (accessToken ?? "", refreshToken ?? "");
-        }
-
-        private string GetSecureCookieValue(HttpContext context,string cookieName)
-        {
-            // In Production, only accept cookies over HTTPS
-            if(_environment.IsProduction() && !context.Request.IsHttps)
-            {
-                _logger.LogWarning("Attempted to read secure cookie {CookieName} over HTTP", cookieName);
-                return "";
-            }
-            return context.Request.Cookies[cookieName] ?? "";
-        }
-
-        private void RestoreUserDataFromCookies(HttpContext context)
-        {
-            var userData = GetSecureCookieValue(context, "user-data");
-            if(!string.IsNullOrEmpty(userData))
-            {
-                context.Session.SetString("UserData", userData);
-            }
+            return (accessToken ?? "", refreshToken ?? "",rememberMe);
         }
 
 
-        private bool ShouldRefreshToken(string token)
+        private bool IsTokenExpiringSoon(string token, int minutesBeforeExpiry)
         {
             try
             {
                 var handler = new JwtSecurityTokenHandler();
                 if (!handler.CanReadToken(token))
-                    return false;
+                    return true;
 
                 var jwtToken = handler.ReadJwtToken(token);
-                var tokenExpiry = jwtToken.ValidTo;
-                return tokenExpiry < DateTime.UtcNow.AddMinutes(5);
+                var expiry = jwtToken.ValidTo;
+                var timeUntilExpiry = expiry - DateTime.UtcNow;
+
+                return timeUntilExpiry.TotalMinutes <= minutesBeforeExpiry;
             }
             catch (Exception ex)
             {
@@ -105,114 +126,70 @@ namespace InventoryManagement.Web.Middleware
             }
         }
 
-        private async Task RefreshTokenIfNeeded(
+        private async Task RefreshToken(
             HttpContext context,
             IAuthService authService,
             string accessToken,
             string refreshToken)
         {
-            if (string.IsNullOrEmpty(refreshToken))
-            {
-                _logger.LogWarning("Cannot refresh token - missing refresh token");
-                await SignOutAndRedirect(context);
-                return;
-            }
             try
             {
                 var result = await authService.RefreshTokenAsync(accessToken, refreshToken);
-                if (result != null)
+
+                if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                 {
                     UpdateTokensEverywhere(context, result);
-                    _logger.LogInformation("Token refreshed successfully for user {UserId}",
-                        context.User.Identity?.Name);
+                    _logger.LogInformation("Token refreshed successfully for user {User}",
+                        result.User?.Username ?? "Unknown");
                 }
                 else
                 {
-                    _logger.LogWarning("Token refresh failed - signing out user");
-                    await SignOutAndRedirect(context);
+                    _logger.LogWarning("Token refresh failed - null result");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing token");
-                await SignOutAndRedirect(context);
             }
         }
 
 
         private void UpdateTokensEverywhere(HttpContext context, TokenDto tokenDto)
         {
-            // Update in current request context
-            context.Items["JwtToken"] = tokenDto.AccessToken;
-            context.Items["RefreshToken"] = tokenDto.RefreshToken;
-
             // Update session
             context.Session.SetString("JwtToken", tokenDto.AccessToken);
             context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
             context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
 
-            // Update cookies if Remember Me was used
+            // Update cookies if Remember Me was used (check for existing cookies)
             if (context.Request.Cookies.ContainsKey("jwt_token"))
             {
-                var cookieOptions = CreateSecureCookieOptions(context);
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = context.Request.IsHttps,
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTimeOffset.Now.AddDays(30)  // 30-day cookie
+                };
 
                 context.Response.Cookies.Append("jwt_token", tokenDto.AccessToken, cookieOptions);
                 context.Response.Cookies.Append("refresh_token", tokenDto.RefreshToken, cookieOptions);
                 context.Response.Cookies.Append("user_data",
                     JsonConvert.SerializeObject(tokenDto.User), cookieOptions);
             }
-        }
 
-        private CookieOptions CreateSecureCookieOptions(HttpContext context)
-        {
-            return new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = _environment.IsProduction() || context.Request.IsHttps,
-                SameSite = _environment.IsProduction() ? SameSiteMode.Strict : SameSiteMode.Lax,
-                Expires = DateTimeOffset.Now.AddDays(30),
-                Domain = _environment.IsProduction() ? ".yourdomain.com" : null
-            };
+            // Update HttpContext.Items for immediate use
+            context.Items["JwtToken"] = tokenDto.AccessToken;
+            context.Items["RefreshToken"] = tokenDto.RefreshToken;
         }
 
         private bool IsStaticFileRequest(HttpContext context)
         {
             var path = context.Request.Path.Value?.ToLower() ?? "";
-            return path.Contains(".css") || path.Contains(".js") ||
-                   path.Contains(".png") || path.Contains(".jpg") ||
-                   path.Contains(".ico") || path.Contains(".woff");
+            var staticExtensions = new[] { ".css", ".js", ".png", ".jpg", ".jpeg",
+                                          ".gif", ".ico", ".woff", ".woff2", ".ttf", ".svg" };
+            return staticExtensions.Any(ext => path.EndsWith(ext));
         }
 
-        private async Task SignOutAndRedirect(HttpContext context)
-        {
-            var userId = context.User?.Identity?.Name ?? "Unknown";
-            var requestPath = context.Request.Path.Value ?? "Unknown";
-
-            _logger.LogInformation("Signing out user {UserId} and redirecting from {RequestPath} to login",
-                userId, requestPath);
-
-            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            context.Session.Clear();
-
-            // Clear cookies if they exist
-            var cookiesToClear = new[] { "jwt_token", "refresh_token", "user_data" };
-            foreach (var cookieName in cookiesToClear)
-            {
-                if (context.Request.Cookies.ContainsKey(cookieName))
-                {
-                    context.Response.Cookies.Delete(cookieName);
-                    _logger.LogDebug("Cleared authentication cookie {CookieName} for user {UserId}",
-                        cookieName, userId);
-                }
-            }
-
-            if (!context.Request.Path.StartsWithSegments("/Account/Login"))
-            {
-                var returnUrl = $"{context.Request.Path}{context.Request.QueryString}";
-                _logger.LogInformation("Redirecting user {UserId} to login with return URL {ReturnUrl}",
-                    userId, returnUrl);
-                context.Response.Redirect($"/Account/Login?returnUrl={returnUrl}");
-            }
-        }
     }
 }
