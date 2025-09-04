@@ -122,7 +122,7 @@ try
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromDays(
+        options.IdleTimeout = TimeSpan.FromMinutes(
             builder.Configuration.GetValue<int>("Authentication:CookieExpirationInMinutes", 480));
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
@@ -217,13 +217,13 @@ try
     app.UseSession();
 
     app.UseMiddleware<ExceptionHandlerMiddleware>();
+    app.UseMiddleware<JwtMiddleware>();
 
     app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapHub<NotificationHub>("/notificationHub");
 
-    app.UseMiddleware<JwtMiddleware>();
 
     app.MapHealthChecks("/health", new HealthCheckOptions
     {

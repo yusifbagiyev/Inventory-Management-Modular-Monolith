@@ -25,62 +25,20 @@ namespace InventoryManagement.Web.Middleware
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
-            if (context.Items.ContainsKey("JwtMiddlewareProcessed"))
+            // Skip if already processed or static file
+            if (context.Items.ContainsKey("JwtMiddlewareProcessed") || IsStaticFileRequest(context))
             {
                 await _next(context);
                 return;
             }
-            try
+
+            var tokenInfo = GetTokenInfo(context);
+            if (!string.IsNullOrEmpty(tokenInfo.AccessToken) && ShouldRefreshToken(tokenInfo.AccessToken))
             {
-                // Skip processing for static files and non-authenticated requests
-                if (IsStaticFileRequest(context) || !context.User.Identity?.IsAuthenticated == true)
-                {
-                    await _next(context);
-                    return;
-                }
-
-                var userId = context.User.Identity?.Name ?? "Unknown";
-
-                // Retrieve tokens with proper fallback chain
-                var tokenInfo = GetTokenInfo(context);
-
-                if (string.IsNullOrEmpty(tokenInfo.AccessToken))
-                {
-                    _logger.LogWarning(
-                        "Authenticated user {UserId} missing JWT tokens, signing out",
-                        userId);
-                    await SignOutAndRedirect(context);
-                    return;
-                }
-
-                // Store tokens for current request 
-                context.Items["JwtToken"] = tokenInfo.AccessToken;
-                context.Items["RefreshToken"] = tokenInfo.RefreshToken;
-
-                if (ShouldRefreshToken(tokenInfo.AccessToken))
-                {
-                    await RefreshTokenIfNeeded(
-                       context,
-                       authService,
-                       tokenInfo.AccessToken,
-                       tokenInfo.RefreshToken);
-                }
+                await RefreshTokenIfNeeded(context, authService, tokenInfo.AccessToken, tokenInfo.RefreshToken);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Error in JWT middleware for user {UserId}: {Message}",
-                    context.User?.Identity?.Name ?? "Unknown",
-                    ex.Message);
 
-                // In production, don't expose errors - just continue
-                if (!_environment.IsDevelopment())
-                {
-                    await _next(context);
-                    return;
-                }
-                throw;
-            }
+            context.Items["JwtMiddlewareProcessed"] = true;
             await _next(context);
         }
 
@@ -138,9 +96,7 @@ namespace InventoryManagement.Web.Middleware
 
                 var jwtToken = handler.ReadJwtToken(token);
                 var tokenExpiry = jwtToken.ValidTo;
-                var timeUntilExpiry = tokenExpiry - DateTime.Now;
-
-                return timeUntilExpiry.TotalMinutes < 5;
+                return tokenExpiry < DateTime.UtcNow.AddMinutes(5);
             }
             catch (Exception ex)
             {
