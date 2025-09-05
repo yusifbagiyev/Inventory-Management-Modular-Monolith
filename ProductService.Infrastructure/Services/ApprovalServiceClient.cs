@@ -28,6 +28,7 @@ namespace ProductService.Infrastructure.Services
         {
             _httpClient = httpClient;
             _httpContextAccessor = httpContextAccessor;
+            _configuration = configuration;
             _mediator = mediator;
 
             var baseUrl = configuration["Services:ApprovalService"] ?? "http://localhost:5000";

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using ApiGateway.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -8,9 +9,11 @@ using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Serilog;
 using Serilog.Events;
+using SharedServices.Logging;
+using SharedServices.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 builder.Logging.ClearProviders();
 
 Log.Logger = new LoggerConfiguration()
@@ -36,6 +39,16 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 Log.Information("Starting ApiGateway");
 
+var environmentName = builder.Environment.EnvironmentName;
+
+builder.Services.AddCustomRateLimiting();
+
+// Add security services
+builder.Services.AddSingleton<IWafRuleEngine, WafRuleEngine>();
+builder.Services.AddSingleton<IRequestThrottler, RequestThrottler>();
+
+
+
 var environment=builder.Environment.EnvironmentName;
 //Add Ocelot configuration
 builder.Configuration.AddJsonFile("ocelot.json", optional: true, reloadOnChange: true)
@@ -51,7 +64,7 @@ builder.Services.AddCors(options =>
         {
             var allowedOrigins = builder.Environment.IsDevelopment()
             ? new[] { "http://localhost:5051", "https://localhost:7171" }
-            : new[] { "https://inventory166.az", "http://inventory166.az" };
+            : new[] { "https://inventory166.az", "https://inventory166.az" };
 
             policy.WithOrigins(allowedOrigins) // Add your web app URLs
                   .AllowAnyMethod()
@@ -79,22 +92,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
-
-builder.Services.AddOcelot();
 builder.Services.AddHealthChecks();
+builder.Services.AddOcelot();
 
 var app = builder.Build();
 
-// Add forwarded headers support for proxy (important when behind reverse proxy like nginx)
+// Add forwarded headers support for proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+app.UseRateLimiter();
 app.UseCors("AllowWebApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
@@ -103,11 +117,14 @@ app.MapHealthChecks("/health", new HealthCheckOptions
         var result = JsonSerializer.Serialize(new
         {
             status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
+            timestamp = DateTime.UtcNow,
+            services = report.Entries.Select(e => new
             {
                 name = e.Key,
                 status = e.Value.Status.ToString(),
-                description = e.Value.Description
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                tags = e.Value.Tags
             })
         });
         await context.Response.WriteAsync(result);

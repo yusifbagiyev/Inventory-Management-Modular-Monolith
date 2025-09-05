@@ -14,10 +14,17 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
+using SharedServices.HealthChecks;
+using SharedServices.RateLimiting;
+using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.ConfigureSanitizedLogging(builder.Configuration);
+
 builder.Logging.ClearProviders();
+
+builder.Services.AddCustomRateLimiting();
 
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
@@ -168,7 +175,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<IdentityDbContext>("database")
+    .AddCheck<CustomHealthCheck>("custom");
 
 var app = builder.Build();
 
@@ -178,6 +187,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseRateLimiter();
 
 app.UseCors("AllowAll");
 
@@ -190,18 +201,35 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     ResponseWriter = async (context, report) =>
     {
         context.Response.ContentType = "application/json";
-        var result = JsonSerializer.Serialize(new
+
+        var response = new
         {
             status = report.Status.ToString(),
-            checks = report.Entries.Select(e => new
+            timestamp = DateTime.UtcNow,
+            duration = report.TotalDuration.TotalMilliseconds,
+            services = report.Entries.Select(e => new
             {
                 name = e.Key,
                 status = e.Value.Status.ToString(),
-                description = e.Value.Description
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                exception = e.Value.Exception?.Message,
+                data = e.Value.Data
             })
-        });
-        await context.Response.WriteAsync(result);
+        };
+
+        await context.Response.WriteAsJsonAsync(response);
     }
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
 });
 
 // Ensure database is created and seeded
