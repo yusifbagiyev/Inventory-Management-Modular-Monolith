@@ -124,7 +124,7 @@ namespace IdentityService.Infrastructure.Services
                 Token = token,
                 UserId = userId,
                 CreatedAt = DateTime.Now,
-                ExpiresAt = DateTime.Now.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "7"))
+                ExpiresAt = DateTime.Now.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "30"))
             };
 
             _dbContext.RefreshTokens.Add(refreshToken);

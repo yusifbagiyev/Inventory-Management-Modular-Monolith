@@ -2,7 +2,6 @@
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Middleware
@@ -22,24 +21,34 @@ namespace InventoryManagement.Web.Middleware
 
         public async Task InvokeAsync(HttpContext context, IAuthService authService)
         {
-            // Skip for static files or if already processed
-            if (IsStaticFileRequest(context) ||
-                context.Items.ContainsKey("JwtMiddlewareProcessed"))
+            // Skip for static files 
+            if (IsStaticFileRequest(context))
+            {
+                await _next(context);
+                return;
+            }
+            // Only process once per request
+            if (context.Items.ContainsKey("JwtMiddlewareProcessed"))
             {
                 await _next(context);
                 return;
             }
             context.Items["JwtMiddlewareProcessed"] = true;
 
-            // Skip for login/logout paths
+            // Skip authentication pages
             if (context.Request.Path.StartsWithSegments("/Account/Login") ||
-                context.Request.Path.StartsWithSegments("/Account/Logout"))
+                context.Request.Path.StartsWithSegments("/Account/Logout") ||
+                context.Request.Path.StartsWithSegments("/Account/AccessDenied"))
             {
                 await _next(context);
                 return;
             }
-            // Try to refresh token if needed
-            await TryRefreshTokenIfNeeded(context, authService);
+
+            // Only check authenticated users
+            if (context.User?.Identity?.IsAuthenticated == true)
+            {
+                await TryRefreshTokenIfNeeded(context, authService);
+            }
 
             await _next(context);
         }
@@ -49,22 +58,45 @@ namespace InventoryManagement.Web.Middleware
             {
                 var tokenInfo = GetTokenInfo(context);
 
-                if (string.IsNullOrEmpty(tokenInfo.AccessToken))
-                    return;
-
-                // Check if token needs refresh (expires within 2 minutes)
-                if (IsTokenExpiringSoon(tokenInfo.AccessToken, 2))
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken) ||
+                    string.IsNullOrEmpty(tokenInfo.RefreshToken))
                 {
-                    _logger.LogInformation("Token expiring soon, attempting refresh");
+                    _logger.LogDebug("No tokens available for refresh check");
+                    return;
+                }
 
-                    if (!string.IsNullOrEmpty(tokenInfo.RefreshToken))
+                // Fix: Check token expiration more accurately
+                var tokenExpiry = GetTokenExpiration(tokenInfo.AccessToken);
+                if (tokenExpiry == null)
+                {
+                    _logger.LogWarning("Could not parse token expiration");
+                    return;
+                }
+
+                var timeUntilExpiry = tokenExpiry.Value - DateTime.UtcNow;
+
+                // Only refresh if token expires in less than 2 minutes
+                if (timeUntilExpiry.TotalMinutes <= 2 && timeUntilExpiry.TotalMinutes > 0)
+                {
+                    _logger.LogInformation("Token expiring in {Minutes:F2} minutes, attempting refresh",
+                        timeUntilExpiry.TotalMinutes);
+
+                    var success = await RefreshToken(context, authService,
+                        tokenInfo.AccessToken, tokenInfo.RefreshToken);
+
+                    if (success)
                     {
-                        await RefreshToken(context, authService, tokenInfo.AccessToken, tokenInfo.RefreshToken);
+                        _logger.LogInformation("Token refreshed successfully");
                     }
                     else
                     {
-                        _logger.LogWarning("No refresh token available for renewal");
+                        _logger.LogWarning("Failed to refresh token");
                     }
+                }
+                else
+                {
+                    _logger.LogDebug("Token still valid for {Minutes:F2} minutes, no refresh needed",
+                        timeUntilExpiry.TotalMinutes);
                 }
             }
             catch (Exception ex)
@@ -72,6 +104,25 @@ namespace InventoryManagement.Web.Middleware
                 _logger.LogError(ex, "Error in token refresh check");
             }
         }
+
+        private DateTime? GetTokenExpiration(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(token))
+                    return null;
+
+                var jwtToken = handler.ReadJwtToken(token);
+                return jwtToken.ValidTo;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing token expiration");
+                return null;
+            }
+        }
+
 
         private (string AccessToken, string RefreshToken,bool RememberMe) GetTokenInfo(HttpContext context)
         {
@@ -105,28 +156,7 @@ namespace InventoryManagement.Web.Middleware
         }
 
 
-        private bool IsTokenExpiringSoon(string token, int minutesBeforeExpiry)
-        {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(token))
-                    return true;
-
-                var jwtToken = handler.ReadJwtToken(token);
-                var expiry = jwtToken.ValidTo;
-                var timeUntilExpiry = expiry - DateTime.UtcNow;
-
-                return timeUntilExpiry.TotalMinutes <= minutesBeforeExpiry;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking token expiration");
-                return true;
-            }
-        }
-
-        private async Task RefreshToken(
+        private async Task<bool> RefreshToken(
             HttpContext context,
             IAuthService authService,
             string accessToken,
@@ -141,15 +171,18 @@ namespace InventoryManagement.Web.Middleware
                     UpdateTokensEverywhere(context, result);
                     _logger.LogInformation("Token refreshed successfully for user {User}",
                         result.User?.Username ?? "Unknown");
+                    return true;
                 }
                 else
                 {
                     _logger.LogWarning("Token refresh failed - null result");
+                    return false;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing token");
+                return false;
             }
         }
 

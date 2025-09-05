@@ -75,8 +75,8 @@ try
                         var jsonToken = handler.ReadJwtToken(jwtToken);
                         var expiry = jsonToken.ValidTo;
 
-                        // If token expires within 30 minutes, refresh it
-                        if (expiry < DateTime.UtcNow.AddMinutes(30))
+                        // If token expires within 2 minutes, refresh it
+                        if (expiry < DateTime.UtcNow.AddMinutes(2))
                         {
                             var authService = context.HttpContext.RequestServices
                                 .GetRequiredService<IAuthService>();
@@ -126,7 +126,7 @@ try
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromDays(1);
+        options.IdleTimeout = TimeSpan.FromDays(30);
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
     });
