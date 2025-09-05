@@ -55,6 +55,11 @@ namespace NotificationService.Application.Services
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             _logger.LogInformation($"User disconnecting: ID={userId}, ConnectionId={Context.ConnectionId}");
 
+            if (exception != null)
+            {
+                _logger.LogWarning($"User {userId} disconnected abnormally: {exception.Message}");
+            }
+            
             if (!string.IsNullOrEmpty(userId))
             {
                 await _connectionManager.RemoveConnection(userId, Context.ConnectionId);

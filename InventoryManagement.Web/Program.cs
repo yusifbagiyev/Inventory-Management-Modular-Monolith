@@ -13,20 +13,15 @@ try
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("ApplicationName", "InventoryManagement.Web")
-    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
-    .Enrich.WithProperty("MachineName", Environment.MachineName)
-    .Enrich.WithProperty("ProcessId", Environment.ProcessId)
-    // Filter out framework noise that causes duplicate-looking logs
     .Filter.ByExcluding(logEvent =>
         logEvent.Properties.ContainsKey("SourceContext") &&
         logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Hosting.Diagnostics"))
-    .Filter.ByExcluding(logEvent =>
-        logEvent.Properties.ContainsKey("SourceContext") &&
-        logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Routing"))
     // Only write to Seq to prevent console/file duplication
         .WriteTo.Seq(
             serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
-            restrictedToMinimumLevel: LogEventLevel.Information)
+            restrictedToMinimumLevel: LogEventLevel.Information,
+            batchPostingLimit: 100,
+            period: TimeSpan.FromSeconds(2))
         .CreateLogger();
 
     builder.Host.UseSerilog();
