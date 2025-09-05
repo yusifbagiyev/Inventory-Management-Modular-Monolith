@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +14,6 @@ using NotificationService.Infrastructure.Services;
 using Serilog;
 using Serilog.Events;
 using SharedServices.HealthChecks;
-using SharedServices.RateLimiting;
 using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,7 +21,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
-builder.Services.AddCustomRateLimiting();
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
 .Enrich.FromLogContext()
@@ -77,7 +74,6 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddSignalR();
 builder.Services.AddHealthChecks();
-
 
 builder.Services.AddCors(options =>
 {
@@ -150,9 +146,6 @@ builder.Services.AddSingleton<RabbitMQConsumer>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
 
 builder.Services.Configure<WhatsAppSettings>(builder.Configuration.GetSection("WhatsApp"));
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<NotificationDbContext>("database")
-    .AddCheck<CustomHealthCheck>("custom");
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -161,48 +154,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRateLimiter();
-
 app.UseCors("AllowWebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/notificationHub");
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-
-        var response = new
-        {
-            status = report.Status.ToString(),
-            timestamp = DateTime.UtcNow,
-            duration = report.TotalDuration.TotalMilliseconds,
-            services = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds,
-                exception = e.Value.Exception?.Message,
-                data = e.Value.Data
-            })
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("live")
-});
 
 using (var scope = app.Services.CreateScope())
 {

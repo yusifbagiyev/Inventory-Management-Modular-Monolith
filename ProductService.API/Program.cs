@@ -16,7 +16,6 @@ using Serilog.Events;
 using SharedServices.Authorization;
 using SharedServices.HealthChecks;
 using SharedServices.Identity;
-using SharedServices.RateLimiting;
 using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,7 +23,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
-builder.Services.AddCustomRateLimiting();
 
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
@@ -147,9 +145,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ProductDbContext>("database")
-    .AddCheck<CustomHealthCheck>("custom");
 
 var app = builder.Build();
 
@@ -159,7 +154,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseRateLimiter();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseHttpsRedirection();
@@ -172,41 +166,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-
-        var response = new
-        {
-            status = report.Status.ToString(),
-            timestamp = DateTime.UtcNow,
-            duration = report.TotalDuration.TotalMilliseconds,
-            services = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds,
-                exception = e.Value.Exception?.Message,
-                data = e.Value.Data
-            })
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("live")
-});
 
 // Apply migrations
 using (var scope = app.Services.CreateScope())

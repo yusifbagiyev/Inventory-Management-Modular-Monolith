@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using ApprovalService.Application;
 using ApprovalService.Infrastructure;
 using ApprovalService.Infrastructure.Data;
@@ -11,7 +10,6 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 using SharedServices.HealthChecks;
-using SharedServices.RateLimiting;
 using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,8 +17,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
-
-builder.Services.AddCustomRateLimiting();
 
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
@@ -108,9 +104,6 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ApprovalDbContext>("database")
-    .AddCheck<CustomHealthCheck>("custom");
 
 var app = builder.Build();
 
@@ -119,49 +112,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseRateLimiter();
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-
-        var response = new
-        {
-            status = report.Status.ToString(),
-            timestamp = DateTime.UtcNow,
-            duration = report.TotalDuration.TotalMilliseconds,
-            services = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds,
-                exception = e.Value.Exception?.Message,
-                data = e.Value.Data
-            })
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("live")
-});
 
 using (var scope = app.Services.CreateScope())
 {

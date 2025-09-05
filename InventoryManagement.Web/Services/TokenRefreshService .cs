@@ -12,7 +12,7 @@ namespace InventoryManagement.Web.Services
         private readonly ILogger<TokenRefreshService> _logger;
         private static readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
         private static DateTime _lastRefreshAttempt = DateTime.MinValue;
-        private static readonly TimeSpan _minRefreshInterval = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan _minRefreshInterval = TimeSpan.FromSeconds(5);
 
         public TokenRefreshService(
             IAuthService authService,
@@ -109,8 +109,8 @@ namespace InventoryManagement.Web.Services
                 var jwtToken = handler.ReadJwtToken(token);
                 var timeUntilExpiry = jwtToken.ValidTo - DateTime.UtcNow;
 
-                // Refresh if token expires in less than 2 minutes
-                return timeUntilExpiry.TotalMinutes <= 2 && timeUntilExpiry.TotalMinutes > 0;
+                // Refresh if token expires in less than 5 minutes
+                return timeUntilExpiry.TotalMinutes <= 5;
             }
             catch (Exception ex)
             {

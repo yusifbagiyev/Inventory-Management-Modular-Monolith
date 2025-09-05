@@ -48,14 +48,18 @@ try
 
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromDays(30);
+        options.IdleTimeout = TimeSpan.FromDays(2);
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
 
     builder.Services.ConfigureApplicationCookie(options =>
     {
+        options.ExpireTimeSpan = TimeSpan.FromHours(2);
+        options.SlidingExpiration = true;
+
         options.Events.OnRedirectToLogin = context =>
         {
             if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -118,8 +122,6 @@ try
 
     builder.Services.AddMemoryCache();
 
-    builder.Services.AddHealthChecks();
-
     var app = builder.Build();
 
     if (app.Environment.IsProduction())
@@ -149,25 +151,6 @@ try
 
     app.MapHub<NotificationHub>("/notificationHub");
 
-
-    app.MapHealthChecks("/health", new HealthCheckOptions
-    {
-        ResponseWriter = async (context, report) =>
-        {
-            context.Response.ContentType = "application/json";
-            var result = JsonSerializer.Serialize(new
-            {
-                status = report.Status.ToString(),
-                checks = report.Entries.Select(e => new
-                {
-                    name = e.Key,
-                    status = e.Value.Status.ToString(),
-                    description = e.Value.Description
-                })
-            });
-            await context.Response.WriteAsync(result);
-        }
-    });
 
     app.MapControllerRoute(
         name: "default",

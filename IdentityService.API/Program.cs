@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using System.Threading.RateLimiting;
 using IdentityService.Application.Services;
 using IdentityService.Domain.Entities;
@@ -172,10 +171,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<IdentityDbContext>("database")
-    .AddCheck<CustomHealthCheck>("custom");
-
 var app = builder.Build();
 
 // Configure pipeline
@@ -193,41 +188,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
-    {
-        context.Response.ContentType = "application/json";
-
-        var response = new
-        {
-            status = report.Status.ToString(),
-            timestamp = DateTime.UtcNow,
-            duration = report.TotalDuration.TotalMilliseconds,
-            services = report.Entries.Select(e => new
-            {
-                name = e.Key,
-                status = e.Value.Status.ToString(),
-                description = e.Value.Description,
-                duration = e.Value.Duration.TotalMilliseconds,
-                exception = e.Value.Exception?.Message,
-                data = e.Value.Data
-            })
-        };
-
-        await context.Response.WriteAsJsonAsync(response);
-    }
-});
-
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("ready")
-});
-
-app.MapHealthChecks("/health/live", new HealthCheckOptions
-{
-    Predicate = check => check.Tags.Contains("live")
-});
 
 // Ensure database is created and seeded
 using (var scope = app.Services.CreateScope())
