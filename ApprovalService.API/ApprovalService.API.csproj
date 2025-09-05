@@ -27,7 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ApprovalService.Application\ApprovalService.Application.csproj" />
     <ProjectReference Include="..\ApprovalService.Infrastructure\ApprovalService.Infrastructure.csproj" />
-    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>

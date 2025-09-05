@@ -1,6 +1,5 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -13,12 +12,8 @@ using NotificationService.Infrastructure.Repositories;
 using NotificationService.Infrastructure.Services;
 using Serilog;
 using Serilog.Events;
-using SharedServices.HealthChecks;
-using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
 Log.Logger = new LoggerConfiguration()

@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -12,13 +11,9 @@ using RouteService.Infrastructure.Data;
 using Serilog;
 using Serilog.Events;
 using SharedServices.Authorization;
-using SharedServices.HealthChecks;
 using SharedServices.Identity;
-using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
 

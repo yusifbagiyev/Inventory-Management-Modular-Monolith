@@ -5,7 +5,6 @@ using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Data;
 using IdentityService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -13,12 +12,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
-using SharedServices.HealthChecks;
-using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
 

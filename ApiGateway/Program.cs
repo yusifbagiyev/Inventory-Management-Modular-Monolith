@@ -7,10 +7,8 @@ using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using Serilog;
 using Serilog.Events;
-using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 builder.Logging.ClearProviders();
 
 Log.Logger = new LoggerConfiguration()

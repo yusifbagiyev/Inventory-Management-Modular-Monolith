@@ -1,21 +1,13 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
-using InventoryManagement.Web.Services.Interfaces;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
-using SharedServices.Logging;
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
     builder.Logging.ClearProviders();
-
-    builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
     Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)

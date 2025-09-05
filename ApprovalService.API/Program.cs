@@ -3,18 +3,13 @@ using ApprovalService.Application;
 using ApprovalService.Infrastructure;
 using ApprovalService.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
-using SharedServices.HealthChecks;
-using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
 

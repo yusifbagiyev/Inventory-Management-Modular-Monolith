@@ -30,7 +30,6 @@
     <ProjectReference Include="..\IdentityService.Domain\IdentityService.Domain.csproj" />
     <ProjectReference Include="..\RouteService.Application\RouteService.Application.csproj" />
     <ProjectReference Include="..\RouteService.Infrastructure\RouteService.Infrastructure.csproj" />
-    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>
