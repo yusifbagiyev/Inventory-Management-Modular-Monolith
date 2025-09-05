@@ -58,11 +58,11 @@ namespace SharedServices.RateLimiting
                         factory: _ => new SlidingWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 60,
+                            PermitLimit = 30,
                             Window = TimeSpan.FromMinutes(1),
                             SegmentsPerWindow = 6,
                             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                            QueueLimit = 20
+                            QueueLimit = 10
                         }));
 
                 // Critical operations rate limiting

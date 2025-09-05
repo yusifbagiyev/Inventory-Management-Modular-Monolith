@@ -19,15 +19,16 @@ namespace InventoryManagement.Web.Middleware
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context, IAuthService authService)
+        public async Task InvokeAsync(HttpContext context, ITokenRefreshService tokenRefreshService)
         {
-            // Skip for static files 
-            if (IsStaticFileRequest(context))
+            // Skip for static files and auth pages
+            if (IsStaticFileRequest(context) || IsAuthPage(context))
             {
                 await _next(context);
                 return;
             }
-            // Only process once per request
+
+            // Prevent multiple processing
             if (context.Items.ContainsKey("JwtMiddlewareProcessed"))
             {
                 await _next(context);
@@ -35,19 +36,17 @@ namespace InventoryManagement.Web.Middleware
             }
             context.Items["JwtMiddlewareProcessed"] = true;
 
-            // Skip authentication pages
-            if (context.Request.Path.StartsWithSegments("/Account/Login") ||
-                context.Request.Path.StartsWithSegments("/Account/Logout") ||
-                context.Request.Path.StartsWithSegments("/Account/AccessDenied"))
-            {
-                await _next(context);
-                return;
-            }
-
             // Only check authenticated users
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                await TryRefreshTokenIfNeeded(context, authService);
+                try
+                {
+                    await tokenRefreshService.RefreshTokenIfNeededAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in JWT middleware token refresh");
+                }
             }
 
             await _next(context);
@@ -222,6 +221,12 @@ namespace InventoryManagement.Web.Middleware
             var staticExtensions = new[] { ".css", ".js", ".png", ".jpg", ".jpeg",
                                           ".gif", ".ico", ".woff", ".woff2", ".ttf", ".svg" };
             return staticExtensions.Any(ext => path.EndsWith(ext));
+        }
+        private bool IsAuthPage(HttpContext context)
+        {
+            return context.Request.Path.StartsWithSegments("/Account/Login") ||
+                   context.Request.Path.StartsWithSegments("/Account/Logout") ||
+                   context.Request.Path.StartsWithSegments("/Account/AccessDenied");
         }
 
     }

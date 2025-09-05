@@ -23,6 +23,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddScoped<IApprovalService, ApprovalService>();
             services.AddScoped<INotificationService, Services.NotificationService>();
             services.AddScoped<IUserManagementService, UserManagementService>();
+            services.AddScoped<ITokenRefreshService, TokenRefreshService>();
 
             return services;
         }

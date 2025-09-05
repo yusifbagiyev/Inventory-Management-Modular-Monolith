@@ -20,7 +20,7 @@ try
     Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "ProductService")
+    .Enrich.WithProperty("ApplicationName", "InventoryManagement.Web")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .Enrich.WithProperty("MachineName", Environment.MachineName)
     .Enrich.WithProperty("ProcessId", Environment.ProcessId)
@@ -44,88 +44,7 @@ try
     builder.Services.AddControllersWithViews()
         .AddRazorRuntimeCompilation();
 
-    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-        .AddCookie(options =>
-        {
-            options.LoginPath = "/Account/Login";
-            options.LogoutPath = "/Account/Logout";
-            options.ExpireTimeSpan = TimeSpan.FromDays(30);
-            options.SlidingExpiration = true;
-            // Add custom logic to refresh JWT before cookie expires
-            options.Events.OnValidatePrincipal = async context =>
-            {
-                var jwtToken = context.HttpContext.Session.GetString("JwtToken");
-                var refreshToken = context.HttpContext.Session.GetString("RefreshToken");
-
-                // If we don't have tokens, check cookies
-                if (string.IsNullOrEmpty(jwtToken))
-                {
-                    // Try to get from cookies
-                    jwtToken = context.Request.Cookies["jwt_token"];
-                    if (!string.IsNullOrEmpty(jwtToken))
-                    {
-                        // Restore to session
-                        context.HttpContext.Session.SetString("JwtToken", jwtToken);
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(jwtToken) && !string.IsNullOrEmpty(refreshToken))
-                {
-                    // Check if token needs refresh
-                    var handler = new JwtSecurityTokenHandler();
-                    if (handler.CanReadToken(jwtToken))
-                    {
-                        var jsonToken = handler.ReadJwtToken(jwtToken);
-                        var expiry = jsonToken.ValidTo;
-
-                        // If token expires within 2 minutes, refresh it
-                        if (expiry < DateTime.UtcNow.AddMinutes(2))
-                        {
-                            var authService = context.HttpContext.RequestServices
-                                .GetRequiredService<IAuthService>();
-
-                            try
-                            {
-                                var newTokens = await authService.RefreshTokenAsync(
-                                    jwtToken, refreshToken);
-
-                                if (newTokens != null)
-                                {
-                                    // Update everywhere
-                                    context.HttpContext.Session.SetString("JwtToken",
-                                        newTokens.AccessToken);
-                                    context.HttpContext.Session.SetString("RefreshToken",
-                                        newTokens.RefreshToken);
-
-                                    // Update cookies if Remember Me was used
-                                    if (context.Request.Cookies.ContainsKey("jwt_token"))
-                                    {
-                                        var cookieOptions = new CookieOptions
-                                        {
-                                            HttpOnly = true,
-                                            Secure = true,
-                                            SameSite = SameSiteMode.Lax,
-                                            Expires = DateTimeOffset.Now.AddDays(30)
-                                        };
-
-                                        context.Response.Cookies.Append("jwt_token",
-                                            newTokens.AccessToken, cookieOptions);
-                                        context.Response.Cookies.Append("refresh_token",
-                                            newTokens.RefreshToken, cookieOptions);
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                // If refresh fails, sign out
-                                context.RejectPrincipal();
-                            }
-                        }
-                    }
-                }
-            };
-        });
-
+    builder.Services.AddCustomAuthentication(builder.Configuration);
 
     builder.Services.AddSession(options =>
     {

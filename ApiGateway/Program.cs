@@ -19,7 +19,7 @@ builder.Logging.ClearProviders();
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
 .Enrich.FromLogContext()
-.Enrich.WithProperty("ApplicationName", "ProductService")
+.Enrich.WithProperty("ApplicationName", "ApiGateway")
 .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
 .Enrich.WithProperty("MachineName", Environment.MachineName)
 .Enrich.WithProperty("ProcessId", Environment.ProcessId)

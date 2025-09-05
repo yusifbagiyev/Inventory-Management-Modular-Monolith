@@ -27,7 +27,7 @@ builder.Services.AddCustomRateLimiting();
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
 .Enrich.FromLogContext()
-.Enrich.WithProperty("ApplicationName", "ProductService")
+.Enrich.WithProperty("ApplicationName", "NotificationService")
 .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
 .Enrich.WithProperty("MachineName", Environment.MachineName)
 .Enrich.WithProperty("ProcessId", Environment.ProcessId)

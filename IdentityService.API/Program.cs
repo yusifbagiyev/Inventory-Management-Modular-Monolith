@@ -15,7 +15,6 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 using SharedServices.HealthChecks;
-using SharedServices.RateLimiting;
 using SharedServices.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,12 +23,10 @@ builder.Host.ConfigureSanitizedLogging(builder.Configuration);
 
 builder.Logging.ClearProviders();
 
-builder.Services.AddCustomRateLimiting();
-
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
 .Enrich.FromLogContext()
-.Enrich.WithProperty("ApplicationName", "ProductService")
+.Enrich.WithProperty("ApplicationName", "IdentityService")
 .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
 .Enrich.WithProperty("MachineName", Environment.MachineName)
 .Enrich.WithProperty("ProcessId", Environment.ProcessId)

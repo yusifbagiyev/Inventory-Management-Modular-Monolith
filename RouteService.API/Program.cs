@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -29,7 +28,7 @@ builder.Services.AddCustomRateLimiting();
 Log.Logger = new LoggerConfiguration()
 .ReadFrom.Configuration(builder.Configuration)
 .Enrich.FromLogContext()
-.Enrich.WithProperty("ApplicationName", "ProductService")
+.Enrich.WithProperty("ApplicationName", "RouteService")
 .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
 .Enrich.WithProperty("MachineName", Environment.MachineName)
 .Enrich.WithProperty("ProcessId", Environment.ProcessId)
