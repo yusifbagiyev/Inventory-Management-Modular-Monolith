@@ -217,7 +217,7 @@ services:
     environment:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
-      - ASPNETCORE_URLS=http+:80
+      - ASPNETCORE_URLS=http://+:80
       - ApiGateway__BaseUrl=http://api-gateway
       - ConnectionStrings__Seq=http://seq:80
       - NotificationService__BaseUrl=http://notification-service

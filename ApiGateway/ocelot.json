@@ -168,20 +168,32 @@
       }
     },
     {
-      "DownstreamPathTemplate": "/api/products/{id}/approved",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5001
+        "DownstreamPathTemplate": "/api/products/{id}/approved",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+            {
+                "Host": "localhost",
+                "Port": 5001
+            }
+        ],
+        "UpstreamPathTemplate": "/api/products/{id}/approved",
+        "UpstreamHttpMethod": [ "PUT", "DELETE" ],
+        "AuthenticationOptions": {
+            "AuthenticationProviderKey": "Bearer",
+            "AllowedScopes": []
         }
-      ],
-      "UpstreamPathTemplate": "/api/products/{id}/approved",
-      "UpstreamHttpMethod": [ "PUT", "DELETE" ],
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer",
-        "AllowedScopes": []
-      }
+    },
+    {
+        "DownstreamPathTemplate": "/notificationHub",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+            {
+                "Host": "notification-service",
+                "Port": 80
+            }
+        ],
+        "UpstreamPathTemplate": "/notificationHub",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
     }
   ],
   "GlobalConfiguration": {
