@@ -10,19 +10,17 @@ try
     builder.Logging.ClearProviders();
 
     Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "InventoryManagement.Web")
-    .Filter.ByExcluding(logEvent =>
-        logEvent.Properties.ContainsKey("SourceContext") &&
-        logEvent.Properties["SourceContext"].ToString().Contains("Microsoft.AspNetCore.Hosting.Diagnostics"))
-    // Only write to Seq to prevent console/file duplication
-        .WriteTo.Seq(
-            serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://localhost:5342",
-            restrictedToMinimumLevel: LogEventLevel.Information,
-            batchPostingLimit: 100,
-            period: TimeSpan.FromSeconds(2))
-        .CreateLogger();
+    .Enrich.WithProperty("ApplicationName", "ServiceName")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Seq(
+        serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",
+        restrictedToMinimumLevel: LogEventLevel.Information)
+    .CreateLogger();
 
     builder.Host.UseSerilog();
 

@@ -2,6 +2,7 @@
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using NotificationService.Application.Services;
 
 namespace InventoryManagement.Web.Extensions
 {
@@ -25,6 +26,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<ITokenRefreshService, TokenRefreshService>();
 
+            services.AddSingleton<IConnectionManager, ConnectionManager>();
             return services;
         }
 
