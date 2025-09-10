@@ -17,7 +17,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "ServiceName")
+    .Enrich.WithProperty("ApplicationName", "Api Gateway")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",

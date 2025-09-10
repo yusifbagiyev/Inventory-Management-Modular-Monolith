@@ -213,48 +213,6 @@
             }
         });
 
-        function playNotificationSound() {
-            try {
-                // First, ensure the sound file exists
-                const audioUrl = '/sounds/notify.mp3';
-
-                // Create a promise to handle the audio loading
-                const audio = new Audio();
-                audio.volume = 0.5;
-
-                // Add error handling for missing file
-                audio.addEventListener('error', function(e) {
-                    console.error('Audio file error:', e);
-                    // Fallback to a data URI beep sound if file is missing
-                    const beepSound = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE';
-                    audio.src = beepSound;
-                    audio.play().catch(err => console.log('Fallback sound failed:', err));
-                });
-
-                // Set the source and attempt to play
-                audio.src = audioUrl;
-
-                // Use a more robust play mechanism
-                const playPromise = audio.play();
-
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('Notification sound played successfully');
-                        })
-                        .catch(error => {
-                            console.error('Error playing notification sound:', error);
-                            // Try to play after user interaction if autoplay is blocked
-                            document.addEventListener('click', function playOnce() {
-                                audio.play().catch(e => console.log('Still cannot play:', e));
-                                document.removeEventListener('click', playOnce);
-                            });
-                        });
-                }
-            } catch (error) {
-                console.error('Error in playNotificationSound:', error);
-            }
-        }
 
 
         function initializeNotifications() {
@@ -270,75 +228,78 @@
                 return;
 			}
 
-                console.log('Connecting to SignalR hub at:', AppConfig.signalR.notificationHub);
+
+         const hubUrl = window.location.origin + '/notificationHub';
+                    console.log('Connecting to SignalR hub at:', hubUrl);
 
             notificationConnection = new signalR.HubConnectionBuilder()
-                .withUrl(AppConfig.signalR.notificationHub, {
+                .withUrl(hubUrl, {
                     accessTokenFactory: () => token,
-                    ...AppConfig.signalR.options
+                    transport: signalR.HttpTransportType.WebSockets |
+                              signalR.HttpTransportType.ServerSentEvents |
+                              signalR.HttpTransportType.LongPolling
                 })
-                .withAutomaticReconnect()
+                .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
                 .configureLogging(signalR.LogLevel.Information)
                 .build();
 
             // Handle connection events
-            notificationConnection.onreconnecting((error) => {
-                console.warn('SignalR reconnecting...', error);
-            });
+            if(notificationConnection){
+                    notificationConnection.onreconnecting((error) => {
+                    console.warn('SignalR reconnecting...', error);
+                });
 
-            notificationConnection.onreconnected((connectionId) => {
-                console.log('SignalR reconnected:', connectionId);
-                reconnectAttempts = 0;
-                loadNotificationCount(); // Refresh count after reconnection
-            });
+                    notificationConnection.onreconnected((connectionId) => {
+                    console.log('SignalR reconnected:', connectionId);
+                    reconnectAttempts = 0;
+                    loadNotificationCount(); // Refresh count after reconnection
+                });
 
-            notificationConnection.onclose((error) => {
-                console.error('SignalR connection closed:', error);
+                notificationConnection.onclose((error) => {
+                    console.error('SignalR connection closed:', error);
 
-                // Try manual reconnection after delay
-                if (reconnectAttempts < maxReconnectAttempts) {
-                    reconnectAttempts++;
-                    setTimeout(() => {
-                        console.log(`Attempting manual reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
-                        startConnection();
-                    }, 5000 * reconnectAttempts);
-                }
-            });
-
-            // Handle incoming notifications
-            notificationConnection.on("ReceiveNotification", function(notification) {
-                console.log('Notification received:', notification);
-
-                // Show toast notification
-                showToast(`${notification.title}: ${notification.message}`, getNotificationType(notification.type));
-
-                // Update notification count
-                incrementNotificationCount();
-
-                // Refresh notification dropdown if open
-                if ($('#notificationDropdown').hasClass('show')) {
-                    loadRecentNotifications();
-                }
-
-                // Play notification sound
-                playNotificationSound();
-
-                // If admin and approval request, update pending count
-                if (isAdmin && notification.type === 'ApprovalRequest') {
-                loadPendingApprovalsCount();
+                    // Try manual reconnection after delay
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        setTimeout(() => {
+                            console.log(`Attempting manual reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                            startConnection();
+                        }, 5000 * reconnectAttempts);
                     }
-            });
+                });
 
-            // Handle connection confirmation
-            notificationConnection.on("Connected", function(data) {
-                console.log('Connection confirmed:', data);
-            });
+                // Handle incoming notifications
+                notificationConnection.on("ReceiveNotification", function(notification) {
+                    console.log('Notification received:', notification);
 
+                    // Show toast notification
+                    showToast(`${notification.title}: ${notification.message}`, getNotificationType(notification.type));
+
+                    // Update notification count
+                    incrementNotificationCount();
+
+                    // Refresh notification dropdown if open
+                    if ($('#notificationDropdown').hasClass('show')) {
+                        loadRecentNotifications();
+                    }
+
+                    // Play notification sound
+                    playNotificationSound();
+
+                    // If admin and approval request, update pending count
+                    if (isAdmin && notification.type === 'ApprovalRequest') {
+                    loadPendingApprovalsCount();
+                        }
+                });
+
+                // Handle connection confirmation
+                notificationConnection.on("Connected", function(data) {
+                    console.log('Connection confirmed:', data);
+                });
+            }
             // Start the connection
             startConnection();
-        }
-            
-
+            }
             function startConnection() {
             if (notificationConnection && notificationConnection.state === signalR.HubConnectionState.Disconnected) {
                 notificationConnection.start()
@@ -351,6 +312,49 @@
                     });
             }
         }
+            function playNotificationSound() {
+                try {
+                    // First, ensure the sound file exists
+                    const audioUrl = '/sounds/notify.mp3';
+
+                    // Create a promise to handle the audio loading
+                    const audio = new Audio();
+                    audio.volume = 0.5;
+
+                    // Add error handling for missing file
+                    audio.addEventListener('error', function(e) {
+                        console.error('Audio file error:', e);
+                        // Fallback to a data URI beep sound if file is missing
+                        const beepSound = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZURE';
+                        audio.src = beepSound;
+                        audio.play().catch(err => console.log('Fallback sound failed:', err));
+                    });
+
+                    // Set the source and attempt to play
+                    audio.src = audioUrl;
+
+                    // Use a more robust play mechanism
+                    const playPromise = audio.play();
+
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                console.log('Notification sound played successfully');
+                            })
+                            .catch(error => {
+                                console.error('Error playing notification sound:', error);
+                                // Try to play after user interaction if autoplay is blocked
+                                document.addEventListener('click', function playOnce() {
+                                    audio.play().catch(e => console.log('Still cannot play:', e));
+                                    document.removeEventListener('click', playOnce);
+                                });
+                            });
+                    }
+                } catch (error) {
+                    console.error('Error in playNotificationSound:', error);
+                }
+            }
+
             @if (User.IsInRole("Admin"))
                     {
                                     <text>

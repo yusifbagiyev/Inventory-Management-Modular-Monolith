@@ -6,8 +6,8 @@ services:
     image: postgres:15-alpine
     container_name: inventory_postgres
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
@@ -28,8 +28,8 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: inventory_rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -54,7 +54,7 @@ services:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=identity_service;Username=${DB_USER};Password=${DB_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
@@ -77,11 +77,11 @@ services:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=product_service;Username=${DB_USER};Password=${DB_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-inventory_admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-rabbitmq_password}
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
@@ -106,11 +106,12 @@ services:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=route_service;Username=${DB_USER};Password=${DB_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
+      - RabbitMQ__HostName=rabbitmq
       - ProductService__BaseUrl=http://product-service
-      - RabbitMQ__UserName=${RABBITMQ_USER:-inventory_admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-rabbitmq_password}
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
@@ -135,11 +136,11 @@ services:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=approval_service;Username=${DB_USER};Password=${DB_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-inventory_admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-rabbitmq_password}
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
@@ -163,11 +164,11 @@ services:
       - TZ=${TZ:-UTC}
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres};
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=notification_service;Username=${DB_USER};Password=${DB_PASSWORD};
       - ConnectionStrings__Seq=http://seq:80
       - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__UserName=${RABBITMQ_USER:-inventory_admin}
-      - RabbitMQ__Password=${RABBITMQ_PASSWORD:-rabbitmq_password}
+      - RabbitMQ__UserName=${RABBITMQ_USER}
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
