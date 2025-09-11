@@ -1,12 +1,12 @@
 ﻿// Global site functionality
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize tooltips
+    // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Auto-hide alerts after 5 seconds
+    // Auto-hide alerts after 5 seconds (excluding permanent alerts)
     setTimeout(function () {
         const alerts = document.querySelectorAll('.alert:not(.alert-permanent):not(#productInfo):not(#errorInfo)');
         alerts.forEach(function (alert) {
@@ -14,42 +14,18 @@ document.addEventListener('DOMContentLoaded', function () {
             bsAlert.close();
         });
     }, 5000);
-
-    // Add loading spinner for forms
-    const forms = document.querySelectorAll('form:not(.no-spinner)');
-    forms.forEach(function (form) {
-        form.addEventListener('submit', function () {
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-            }
-        });
-    });
 });
-
-// AJAX helper functions
-function showSpinner() {
-    const spinner = document.createElement('div');
-    spinner.className = 'spinner-overlay';
-    spinner.innerHTML = '<div class="spinner-border text-light" style="width: 3rem; height: 3rem;"></div>';
-    document.body.appendChild(spinner);
-}
-
-function hideSpinner() {
-    const spinner = document.querySelector('.spinner-overlay');
-    if (spinner) {
-        spinner.remove();
-    }
-}
 
 // Image preview for file inputs
 function previewImage(input, previewId) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function (e) {
-            document.getElementById(previewId).src = e.target.result;
-            document.getElementById(previewId).style.display = 'block';
+            const preview = document.getElementById(previewId);
+            if (preview) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
         };
         reader.readAsDataURL(input.files[0]);
     }
@@ -57,43 +33,54 @@ function previewImage(input, previewId) {
 
 // Format date helper
 function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    const options = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
     return new Date(dateString).toLocaleDateString('en-US', options);
 }
 
-// Copy to clipboard
+// Copy to clipboard functionality
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(function () {
         showToast('Copied to clipboard!', 'success');
+    }).catch(function (err) {
+        console.error('Failed to copy:', err);
+        showToast('Failed to copy to clipboard', 'error');
     });
 }
 
-// Toast notification
+// Toast notification system
 function showToast(message, type = 'info', duration = 5000) {
-    // Ensure we have a valid type
+    // Validate and normalize type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
     if (!validTypes.includes(type)) {
         type = 'info';
     }
 
-    // Map error to danger for Bootstrap compatibility
+    // Map error to danger for Bootstrap
     if (type === 'error') {
         type = 'danger';
     }
 
-    // Create toast HTML with proper styling
+    // Generate unique toast ID
     const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-
     const icon = getToastIcon(type);
+    const textClass = (type === 'warning' || type === 'info') ? 'text-dark' : 'text-white';
+    const closeButtonClass = (type === 'warning' || type === 'info') ? '' : 'btn-close-white';
 
+    // Create toast HTML
     const toastHtml = `
         <div id="${toastId}" class="toast align-items-center bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
-                <div class="toast-body ${type === 'warning' || type === 'info' ? 'text-dark' : 'text-white'}">
+                <div class="toast-body ${textClass}">
                     <i class="fas fa-${icon} me-2"></i>
                     ${escapeHtml(message)}
                 </div>
-                <button type="button" class="btn-close ${type === 'warning' || type === 'info' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
         </div>
     `;
@@ -119,13 +106,13 @@ function showToast(message, type = 'info', duration = 5000) {
     });
     toast.show();
 
-    // Remove element after it's hidden
+    // Clean up after hiding
     toastElement.addEventListener('hidden.bs.toast', function () {
         toastElement.remove();
     });
 }
 
-// Helper function to get toast icon
+// Helper function to get appropriate icon for toast type
 function getToastIcon(type) {
     const icons = {
         'success': 'check-circle',
@@ -137,113 +124,45 @@ function getToastIcon(type) {
     return icons[type] || 'info-circle';
 }
 
-// Helper function to get toast title
-function getToastTitle(type) {
-    const titles = {
-        'success': 'Success',
-        'danger': 'Error',
-        'warning': 'Warning',
-        'info': 'Information',
-        'secondary': 'Notice'
-    };
-    return titles[type] || 'Notice';
-}
-
-// Helper function to escape HTML
+// Helper function to escape HTML to prevent XSS
 function escapeHtml(unsafe) {
-    return unsafe.replace(/&/g, "&amp;")
-                 .replace(/</g, "&lt;")
-                 .replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;")
-                 .replace(/'/g, "&#039;");
+    if (typeof unsafe !== 'string') return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
-
-// Global function to reset form state
-function resetFormState(fromElement){
-    // Find all submit buttons in the form
-    const submitButtons = fromElement.querySelectorAll('button[type="submit"]');
-
-    submitButtons.forEach(button => {
-        // Reset button state
-        button.disabled = false;
-
-        // Restore original text (store it first if not already)
-        if (button.dataset.originalText) {
-            button.innerHTML = button.dataset.originalText;
-        } else {
-            // Remove spinner if present
-            const spinner = button.querySelector('.spinner-border');
-            if (spinner) {
-                spinner.remove();
-            }
-            // Remove "Processing..." text
-            button.innerHTML = button.innerHTML.replace('Processing...', 'Submit');
-        }
-    });
-}
-function loadRecentNotifications() {
-    $('#notificationList').html(`
-        <div class="text-center py-3">
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    `);
-
-    $.ajax({
-        url: '/Notifications/GetRecentNotifications',
-        type: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + $('#jwtToken').val()
-        },
-        success: function (notifications) {
-            renderNotifications(notifications);
-        },
-        error: function (xhr, status, error) {
-            console.error('Failed to load notifications:', error);
-            $('#notificationList').html(`
-                <div class="dropdown-item text-center py-3 text-danger">
-                    <i class="fas fa-exclamation-circle"></i> Failed to load notifications
-                </div>
-            `);
-        }
-    });
-}
+// Global loader functions
 function showLoader() {
-    if (!$('.loader-overlay').length) {
-        $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
+    if (!document.querySelector('.loader-overlay')) {
+        const loader = document.createElement('div');
+        loader.className = 'loader-overlay';
+        loader.innerHTML = '<div class="spinner-border text-primary" role="status"></div>';
+        document.body.appendChild(loader);
     }
 }
 
 function hideLoader() {
-    $('.loader-overlay').remove();
+    const loader = document.querySelector('.loader-overlay');
+    if (loader) {
+        loader.remove();
+    }
 }
 
-// Update AJAX calls to show/hide loader
-$.ajaxSetup({
-    beforeSend: function () {
-        showLoader();
-    },
-    complete: function () {
-        hideLoader();
-    }
-});
+// Handle approval responses consistently
 function handleApprovalResponse(response, entityType, successRedirect) {
-    // Debug logging
-    console.log('Response type:', typeof response);
-    console.log('Response:', response);
-
     let isApprovalRequest = false;
     let message = '';
 
-    // Handle different response formats
+    // Parse string responses
     if (typeof response === 'string') {
         try {
-            const parsed = JSON.parse(response);
-            response = parsed;
+            response = JSON.parse(response);
         } catch (e) {
-            // If not JSON, assume direct success
+            // Not JSON, assume direct success
             showToast(`${entityType} created successfully!`, 'success');
             setTimeout(() => window.location.href = successRedirect, 1500);
             return;
@@ -256,19 +175,21 @@ function handleApprovalResponse(response, entityType, successRedirect) {
             response.Status === 'PendingApproval' ||
             response.approvalRequestId ||
             response.ApprovalRequestId ||
-            response.message?.includes('approval') ||
-            response.Message?.includes('approval')) {
+            (response.message && response.message.includes('approval')) ||
+            (response.Message && response.Message.includes('approval'))) {
             isApprovalRequest = true;
             message = response.message || response.Message ||
-                `Your ${entityType.toLowerCase()} request has been submitted for approval. You will be notified once it's processed.`;
+                `Your ${entityType.toLowerCase()} request has been submitted for approval.`;
         }
     }
 
+    // Show appropriate message
     if (isApprovalRequest) {
         showToast(message, 'info');
     } else {
         showToast(`${entityType} operation completed successfully!`, 'success');
     }
 
+    // Redirect after delay
     setTimeout(() => window.location.href = successRedirect, 2000);
 }

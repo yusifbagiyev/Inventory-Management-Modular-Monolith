@@ -17,7 +17,7 @@ namespace ProductService.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.InventoryCode).IsUnique();
-                entity.Property(e => e.Model).HasMaxLength(30);
+                entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");

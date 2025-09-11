@@ -19,29 +19,65 @@ namespace RouteService.Infrastructure.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<RabbitMQConsumer> _logger;
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
+        private readonly IConfiguration _configuration;
+        private IConnection? _connection;
+        private IModel? _channel;
         private readonly string _queueName = "route-product-created";
 
         public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<RabbitMQConsumer> logger)
         {
             _serviceProvider = serviceProvider;
+            _configuration = configuration;
             _logger = logger;
+            InitializeRabbitMQ();
+        }
 
-            var factory = new ConnectionFactory
+        private void InitializeRabbitMQ()
+        {
+            try
             {
-                HostName = configuration["RabbitMQ:HostName"] ?? "localhost",
-                UserName = configuration["RabbitMQ:UserName"] ?? "guest",
-                Password = configuration["RabbitMQ:Password"] ?? "guest",
-                Port = int.Parse(configuration["RabbitMQ:Port"] ?? "5672")
-            };
+                var hostname = _configuration["RabbitMQ:HostName"] ??
+                                              Environment.GetEnvironmentVariable("RabbitMQ__HostName") ??
+                                              "localhost";
 
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+                var username = _configuration["RabbitMQ:UserName"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__UserName") ??
+                              "guest";
 
-            _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
-            _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
-            _channel.QueueBind(_queueName, "inventory-events", "product.created");
+                var password = _configuration["RabbitMQ:Password"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__Password") ??
+                              "guest";
+
+                var port = int.Parse(_configuration["RabbitMQ:Port"] ??
+                                    Environment.GetEnvironmentVariable("RabbitMQ__Port") ??
+                                    "5672");
+
+                _logger.LogInformation($"Connecting RabbitMQ Consumer to {hostname}:{port} with user {username}");
+
+                var factory = new ConnectionFactory
+                {
+                    HostName = hostname,
+                    UserName = username,
+                    Password = password,
+                    Port = port,
+                    AutomaticRecoveryEnabled = true,
+                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+                };
+
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+
+                _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
+                _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
+                _channel.QueueBind(_queueName, "inventory-events", "product.created");
+
+                _logger.LogInformation("RabbitMQ Consumer successfully connected");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize RabbitMQ connection");
+                throw;
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -67,14 +103,14 @@ namespace RouteService.Infrastructure.Services
                         if (deletedEvent != null)
                             await ProcessProductDeleted(deletedEvent);
                     }
-                    else if(ea.RoutingKey == "product.updated")
+                    else if (ea.RoutingKey == "product.updated")
                     {
                         var updatedEvent = JsonSerializer.Deserialize<ProductUpdatedEvent>(message);
                         if (updatedEvent != null)
                             await ProcessProductUpdated(updatedEvent);
                     }
 
-                        _channel.BasicAck(ea.DeliveryTag, false);
+                    _channel.BasicAck(ea.DeliveryTag, false);
                 }
                 catch (FluentValidation.ValidationException ex)
                 {
@@ -109,12 +145,12 @@ namespace RouteService.Infrastructure.Services
             string? imageUrl = null;
 
             // Upload image if data is provided
-            if(productCreatedEvent.ImageData!=null&& productCreatedEvent.ImageData.Length > 0)
+            if (productCreatedEvent.ImageData != null && productCreatedEvent.ImageData.Length > 0)
             {
-                using var stream= new MemoryStream(productCreatedEvent.ImageData);
-                imageUrl=await imageService.UploadImageAsync(
+                using var stream = new MemoryStream(productCreatedEvent.ImageData);
+                imageUrl = await imageService.UploadImageAsync(
                     stream,
-                    productCreatedEvent.ImageFileName ?? $"image-{DateTime.Now}.jpg", 
+                    productCreatedEvent.ImageFileName ?? $"image-{DateTime.Now}.jpg",
                     productCreatedEvent.InventoryCode);
             }
             var productSnapshot = new ProductSnapshot(
@@ -133,7 +169,7 @@ namespace RouteService.Infrastructure.Services
                 productCreatedEvent.IsNewItem,
                 imageUrl,
                 $"Auto-created from product service");
-            
+
             await repository.AddAsync(route);
             route.Complete();
             await unitOfWork.SaveChangesAsync();
@@ -148,7 +184,7 @@ namespace RouteService.Infrastructure.Services
             var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
-            var productSnapshot= new ProductSnapshot(
+            var productSnapshot = new ProductSnapshot(
                 productDeletedEvent.ProductId,
                 productDeletedEvent.InventoryCode,
                 productDeletedEvent.Model ?? "No Name",
@@ -174,7 +210,7 @@ namespace RouteService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-            var productClient= scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
+            var productClient = scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
 
             // Get current product details
             var product = await productClient.GetProductByIdAsync(existingProduct.Product.ProductId);

@@ -1,9 +1,6 @@
 ﻿window.AjaxHandler = (function () {
     'use strict';
 
-    // Store original button states
-    const buttonStates = new WeakMap();
-
     function handleForm(formSelector, options) {
         const defaults = {
             validateBeforeSubmit: true,
@@ -29,6 +26,11 @@
             const form = this;
             const $submitBtn = $(form).find('button[type="submit"]');
 
+            if ($submitBtn.length && !$submitBtn.data('original-html')) {
+                $submitBtn.data('original-html', $submitBtn.html());
+                $submitBtn.data('original-disabled', $submitBtn.prop('disabled') || false);
+            }
+
             // Validate form first
             if (settings.validateBeforeSubmit) {
                 if (!form.checkValidity()) {
@@ -36,22 +38,9 @@
                     return false;
                 }
 
+                // Check jQuery validation if available
                 if ($.validator && !$(form).valid()) {
                     return false;
-                }
-            }
-
-            // Store original button state
-            if ($submitBtn.length) {
-                if (!buttonStates.has($submitBtn[0])) {
-                    buttonStates.set($submitBtn[0], {
-                        html: $submitBtn.html(),
-                        disabled: $submitBtn.prop('disabled')
-                    });
-                }
-                if ($submitBtn.data('original-html') === undefined) {
-                    $submitBtn.data('original-html', $submitBtn.html());
-                    $submitBtn.data('original-disabled', $submitBtn.prop('disabled'));
                 }
             }
 
@@ -76,37 +65,39 @@
                 processData: false,
                 contentType: false,
                 success: function (response, textStatus, xhr) {
-                    // If the server returned HTML (often a full view on ModelState invalid),
-                    // detect it and inject / rebind if desired.
-                    const ct = (xhr.getResponseHeader && xhr.getResponseHeader('content-type')) || '';
-                    if (typeof response === 'string' && ct.indexOf('text/html') !== -1) {
-                        // Example: replace form container with server HTML (adjust selector as needed)
-                        const $container = $(form).closest('.card-body');
-                        if ($container.length) {
-                            $container.html(response);
-                            // Re-bind AjaxHandler for the new form element inside container
-                            const $newForm = $container.find('form');
-                            if ($newForm.length) {
-                                // re-run handler on the new form
-                                AjaxHandler.handleForm($newForm);
-                            }
-                            // ensure old submit button reset attempt happens (new DOM has restored default)
-                            return;
-                        }
+                    // Check if server returned HTML (validation errors from server-side)
+                    const contentType = xhr.getResponseHeader('content-type') || '';
+                    if (typeof response === 'string' && contentType.indexOf('text/html') !== -1) {
+                        // Server returned HTML, likely validation errors
+                        handleServerValidationHTML(response, form, $submitBtn, settings);
+                        return;
                     }
 
-                    // Normal JSON flow
+                    // Normal JSON response handling
                     handleSuccess(response, form, $submitBtn, settings);
                 },
                 error: function (xhr, status, error) {
                     handleError(xhr, form, $submitBtn, settings);
-                },
-                complete: function () {
-                    // Always attempt to reset the button (safety net)
-                    resetButton($submitBtn);
                 }
             });
         });
+    }
+
+    function handleServerValidationHTML(html, form, $submitBtn, settings) {
+        // Reset button immediately when we get HTML back (server-side validation failed)
+        resetButton($submitBtn);
+
+        // Replace form content with server response if container exists
+        const $container = $(form).closest('.card-body');
+        if ($container.length) {
+            $container.html(html);
+
+            // Re-bind the handler to the new form
+            const $newForm = $container.find('form');
+            if ($newForm.length) {
+                AjaxHandler.handleForm($newForm, settings);
+            }
+        }
     }
 
     function handleSuccess(response, form, $submitBtn, settings) {
@@ -213,14 +204,23 @@
     }
 
     function resetButton($submitBtn) {
-        const originalState = buttonStates.get($submitBtn[0]);
-        if (originalState) {
-            $submitBtn.prop('disabled', originalState.disabled)
-                .html(originalState.html);
+        if (!$submitBtn || !$submitBtn.length) return;
+
+        // Try to get the stored original HTML first
+        const originalHtml = $submitBtn.data('original-html');
+        const originalDisabled = $submitBtn.data('original-disabled');
+
+        if (originalHtml !== undefined) {
+            // Restore from data attributes (most reliable)
+            $submitBtn.html(originalHtml);
+            $submitBtn.prop('disabled', originalDisabled || false);
         } else {
-            // Fallback if no original state stored
-            $submitBtn.prop('disabled', false)
-                .html($submitBtn.text().replace('Processing...', 'Submit'));
+            // Fallback: Remove spinner and restore generic text
+            $submitBtn.find('.spinner-border').remove();
+            const currentHtml = $submitBtn.html();
+            const cleanedHtml = currentHtml.replace('Processing...', 'Submit');
+            $submitBtn.html(cleanedHtml);
+            $submitBtn.prop('disabled', false);
         }
     }
 
@@ -235,9 +235,9 @@
     }
 
     function displayValidationErrors(form, errors) {
-        // Clear previous validation errors
-        $(form).find('.field-validation-error').removeClass('field-validation-error');
-        $(form).find('.validation-message').remove();
+        // Clear all previous validation errors
+        $(form).find('.is-invalid').removeClass('is-invalid');
+        $(form).find('.invalid-feedback, .validation-message').remove();
 
         if (typeof errors === 'object') {
             for (const field in errors) {
@@ -246,8 +246,7 @@
                     $field.addClass('is-invalid');
                     const messages = Array.isArray(errors[field]) ?
                         errors[field] : [errors[field]];
-                    const errorHtml = `<span class="text-danger validation-message">
-                                        ${messages.join(', ')}</span>`;
+                    const errorHtml = `<div class="invalid-feedback">${messages.join(', ')}</div>`;
                     $field.after(errorHtml);
                 }
             }

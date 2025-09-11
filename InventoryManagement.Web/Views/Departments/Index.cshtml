@@ -297,11 +297,18 @@
 
             let visibleItems = allDepartments.filter(item => {
                 const $item = $(item);
+                // Fixed: Ensure data-name exists and search properly
+                const nameData = $item.attr('data-name') || '';
+                const nameText = $item.find('.fw-semibold').text().toLowerCase();
+                const descriptionText = $item.find('.text-truncate').text().toLowerCase();
+
                 const matchesSearch = searchTerm === '' ||
-                    $item.data('name').includes(searchTerm) ||
-                    $item.find('.fw-semibold').text().toLowerCase().includes(searchTerm);
+                    nameData.includes(searchTerm) ||
+                    nameText.includes(searchTerm) ||
+                    descriptionText.includes(searchTerm);
+
                 const matchesStatus = statusFilter === '' ||
-                    $item.data('status') === statusFilter;
+                    $item.attr('data-status') === statusFilter;
 
                 return matchesSearch && matchesStatus;
             });

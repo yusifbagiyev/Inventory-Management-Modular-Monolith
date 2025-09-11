@@ -1,5 +1,4 @@
-﻿using System.Net.Http;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
@@ -21,45 +20,72 @@ namespace NotificationService.Infrastructure.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<RabbitMQConsumer> _logger;
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
+        private IConnection? _connection;
+        private IModel? _channel;
+        private readonly IConfiguration _configuration;
         private readonly string _queueName = "notification-queue";
 
         public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<RabbitMQConsumer> logger)
         {
             _serviceProvider = serviceProvider;
+            _configuration = configuration;
             _logger = logger;
 
-            var factory = new ConnectionFactory
+            InitializeRabbitMQ();
+        }
+        private void InitializeRabbitMQ()
+        {
+            try
             {
-                HostName = configuration["RabbitMQ:HostName"] ?? "localhost",
-                UserName = configuration["RabbitMQ:UserName"] ?? "guest",
-                Password = configuration["RabbitMQ:Password"] ?? "guest",
-                DispatchConsumersAsync = true,
-                AutomaticRecoveryEnabled = true,
-                NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
-            };
+                var hostname = _configuration["RabbitMQ:HostName"] ??
+                                              Environment.GetEnvironmentVariable("RabbitMQ__HostName") ??
+                                              "localhost";
 
-            _connection = factory.CreateConnection("NotificationService");
-            _channel = _connection.CreateModel();
+                var username = _configuration["RabbitMQ:UserName"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__UserName") ??
+                              "guest";
 
-            // Set QoS
-            _channel.BasicQos(prefetchSize:0, prefetchCount: 1, global: false);
+                var password = _configuration["RabbitMQ:Password"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__Password") ??
+                              "guest";
 
+                var port = int.Parse(_configuration["RabbitMQ:Port"] ??
+                                    Environment.GetEnvironmentVariable("RabbitMQ__Port") ??
+                                    "5672");
 
-            // Declare exchange and queue
-            _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
-            _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
+                _logger.LogInformation($"Connecting RabbitMQ Consumer to {hostname}:{port} with user {username}");
 
+                var factory = new ConnectionFactory
+                {
+                    HostName = hostname,
+                    UserName = username,
+                    Password = password,
+                    Port = port,
+                    AutomaticRecoveryEnabled = true,
+                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+                };
 
-            // Bind all event types we want to listen to
-            _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
-            _channel.QueueBind(_queueName, "inventory-events", "approval.request.processed");
-            _channel.QueueBind(_queueName, "inventory-events", "product.created");
-            _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
-            _channel.QueueBind(_queueName, "inventory-events", "product.updated");
-            _channel.QueueBind(_queueName, "inventory-events", "route.created");
-            _channel.QueueBind(_queueName, "inventory-events", "route.completed");
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+
+                _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
+                _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
+                // Bind all event types we want to listen to
+                _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
+                _channel.QueueBind(_queueName, "inventory-events", "approval.request.processed");
+                _channel.QueueBind(_queueName, "inventory-events", "product.created");
+                _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
+                _channel.QueueBind(_queueName, "inventory-events", "product.updated");
+                _channel.QueueBind(_queueName, "inventory-events", "route.created");
+                _channel.QueueBind(_queueName, "inventory-events", "route.completed");
+
+                _logger.LogInformation("RabbitMQ Consumer successfully connected");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize RabbitMQ connection");
+                throw;
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -280,7 +306,7 @@ namespace NotificationService.Infrastructure.Services
                         {
                             productId = productEvent.ProductId,
                             inventoryCode = productEvent.InventoryCode,
-                            departmentName=productEvent.DepartmentName
+                            departmentName = productEvent.DepartmentName
                         })
                     );
 
@@ -395,17 +421,17 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        private async Task SendWhatsAppProductNotification(ProductCreatedEvent productEvent,string notificationType)
+        private async Task SendWhatsAppProductNotification(ProductCreatedEvent productEvent, string notificationType)
         {
             try
             {
                 using var scope = _serviceProvider.CreateScope();
                 var whatsAppService = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
-                var configuration=scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
                 // Check if Whatsapp notifications are enabled
                 var whatsAppEnabled = configuration.GetValue<bool>("Whatsapp:Enabled", true);
-                if(!whatsAppEnabled)
+                if (!whatsAppEnabled)
                 {
                     _logger.LogInformation("Whatsapp notifications are disabled");
                     return;
@@ -425,7 +451,7 @@ namespace NotificationService.Infrastructure.Services
                     InventoryCode = productEvent.InventoryCode,
                     Model = productEvent.Model,
                     Vendor = productEvent.Vendor,
-                    CategoryName=productEvent.CategoryName,
+                    CategoryName = productEvent.CategoryName,
                     ToDepartmentName = productEvent.DepartmentName,
                     ToWorker = productEvent.Worker,
                     CreatedAt = productEvent.CreatedAt,
@@ -444,7 +470,7 @@ namespace NotificationService.Infrastructure.Services
                 bool success;
 
                 // Determine how to send based on available image data
-                if (productEvent.ImageUrl!=null&&productEvent.ImageData?.Length>0)
+                if (productEvent.ImageUrl != null && productEvent.ImageData?.Length > 0)
                 {
                     success = await whatsAppService.SendGroupMessageWithImageDataAsync(
                         groupId,
@@ -458,9 +484,9 @@ namespace NotificationService.Infrastructure.Services
                     {
                         // Fetch the image from the ProductService
                         var baseUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
-                        var fullImageUrl=$"{baseUrl}{productEvent.ImageUrl}";
+                        var fullImageUrl = $"{baseUrl}{productEvent.ImageUrl}";
 
-                        using var client=new HttpClient();
+                        using var client = new HttpClient();
                         var imageBytes = await client.GetByteArrayAsync(fullImageUrl);
 
                         _logger.LogInformation($"Fetched image from URL for product {productEvent.InventoryCode}, sending to WhatsApp");

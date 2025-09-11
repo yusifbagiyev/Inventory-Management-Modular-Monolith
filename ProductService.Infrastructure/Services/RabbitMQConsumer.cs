@@ -16,29 +16,67 @@ namespace ProductService.Infrastructure.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<RabbitMQConsumer> _logger;
-        private readonly IConnection _connection;
-        private readonly IModel _channel;
+        private IConnection? _connection;
+        private IModel? _channel;
         private readonly string _queueName = "product-transfers";
+        private readonly IConfiguration _configuration;
 
         public RabbitMQConsumer(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<RabbitMQConsumer> logger)
         {
             _serviceProvider = serviceProvider;
+            _configuration = configuration;
             _logger = logger;
 
-            var factory = new ConnectionFactory
+            InitializeRabbitMQ();
+        }
+
+        private void InitializeRabbitMQ()
+        {
+            try
             {
-                HostName = configuration["RabbitMQ:HostName"] ?? "localhost",
-                UserName = configuration["RabbitMQ:UserName"] ?? "guest",
-                Password = configuration["RabbitMQ:Password"] ?? "guest",
-                Port = int.Parse(configuration["RabbitMQ:Port"] ?? "5672")
-            };
+                var hostname = _configuration["RabbitMQ:HostName"] ??
+                                              Environment.GetEnvironmentVariable("RabbitMQ__HostName") ??
+                                              "localhost";
 
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+                var username = _configuration["RabbitMQ:UserName"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__UserName") ??
+                              "guest";
 
-            _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
-            _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
-            _channel.QueueBind(_queueName, "inventory-events", "product.image.updated");
+                var password = _configuration["RabbitMQ:Password"] ??
+                              Environment.GetEnvironmentVariable("RabbitMQ__Password") ??
+                              "guest";
+
+                var port = int.Parse(_configuration["RabbitMQ:Port"] ??
+                                    Environment.GetEnvironmentVariable("RabbitMQ__Port") ??
+                                    "5672");
+
+                _logger.LogInformation($"Connecting RabbitMQ Consumer to {hostname}:{port} with user {username}");
+
+                var factory = new ConnectionFactory
+                {
+                    HostName = hostname,
+                    UserName = username,
+                    Password = password,
+                    Port = port,
+                    AutomaticRecoveryEnabled = true,
+                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+                };
+
+                _connection = factory.CreateConnection();
+                _channel = _connection.CreateModel();
+
+                _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
+                _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
+                _channel.QueueBind(_queueName, "inventory-events", "product.image.updated");
+                _channel.QueueBind(_queueName, "inventory-events", "product.transferred");
+
+                _logger.LogInformation("RabbitMQ Consumer successfully connected");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initialize RabbitMQ connection");
+                throw;
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,7 +101,6 @@ namespace ProductService.Infrastructure.Services
                     _channel.BasicNack(ea.DeliveryTag, false, true);
                 }
             };
-            _channel.QueueBind(_queueName, "inventory-events", "product.transferred");
             _channel.BasicConsume(_queueName, false, consumer);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -86,7 +123,7 @@ namespace ProductService.Infrastructure.Services
             product.UpdateAfterRouting(transferEvent.ToDepartmentId, transferEvent.ToWorker);
 
             // Update image if provided
-            if(transferEvent.ImageData != null && transferEvent.ImageData.Length > 0)
+            if (transferEvent.ImageData != null && transferEvent.ImageData.Length > 0)
             {
                 // Delete old image
                 if (!string.IsNullOrEmpty(product.ImageUrl))
