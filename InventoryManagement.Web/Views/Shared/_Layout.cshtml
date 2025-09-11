@@ -251,31 +251,29 @@
             window.notificationConnection.on("ReceiveNotification", function(notification) {
                 console.log('Notification received:', notification);
 
-                // Display toast notification with appropriate type
-                const notificationType = getNotificationType(notification.type);
-                showToast(`${notification.title}: ${notification.message}`, notificationType);
+                    // Update UI immediately
+                showToast(`${notification.title}: ${notification.message}`,
+                getNotificationType(notification.type));
 
                 // Update notification count badge
                 incrementNotificationCount();
 
-                // Refresh notification dropdown if it's currently open
-                if ($('#notificationDropdown').hasClass('show')) {
-                    loadRecentNotifications();
-                }
-
-                // Play notification sound
-                playNotificationSound();
+                loadRecentNotifications(); // Refresh the dropdown
 
                 // Update pending approvals count for admin users
-                if (isAdmin && notification.type === 'ApprovalRequest') {
+                if (isAdmin && (notification.type === 'ApprovalRequest' ||
+                    notification.type === 'ApprovalResponse')) {
                     loadPendingApprovalsCount();
                 }
             });
-
-            // Handle connection confirmation
             window.notificationConnection.on("Connected", function(data) {
-                console.log('SignalR connection confirmed:', data);
-            });
+            console.log('Connected to SignalR:', data);
+            // Join user-specific group for targeted notifications
+            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
+                window.notificationConnection.invoke("JoinUserGroup")
+                    .catch(err => console.error('Failed to join user group:', err));
+            }
+        });
         }
 
         // Start SignalR connection

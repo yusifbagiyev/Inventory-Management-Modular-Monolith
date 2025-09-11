@@ -34,6 +34,11 @@ namespace InventoryManagement.Web.Controllers
         {
             if (IsAjaxRequest())
             {
+                // Return JSON with proper status code
+                if (!response.IsSuccess && !response.IsApprovalRequest)
+                {
+                    Response.StatusCode = 400; // Set proper error status
+                }
                 // For AJAX requests, return JSON
                 return Json(new
                 {
@@ -140,6 +145,8 @@ namespace InventoryManagement.Web.Controllers
         {
             if (IsAjaxRequest())
             {
+                Response.StatusCode = 400; // Important: Set error status code
+
                 var errors = ModelState
                     .Where(x => x.Value?.Errors.Count > 0)
                     .ToDictionary(
