@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Text.Json;
 using InventoryManagement.Web.Models.DTOs;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -31,28 +32,32 @@ namespace InventoryManagement.Web.Controllers
         /// </summary>
         protected IActionResult HandleApiResponse<T>(ApiResponse<T> response, string redirectAction)
         {
+            if (IsAjaxRequest())
+            {
+                // For AJAX requests, return JSON
+                return Json(new
+                {
+                    isSuccess = response.IsSuccess,
+                    isApprovalRequest = response.IsApprovalRequest,
+                    approvalRequestId = response.ApprovalRequestId,
+                    message = response.Message,
+                    data = response.Data
+                });
+            }
             if (response.IsSuccess)
             {
-                // Only set TempData for non-AJAX requests
-                if (!IsAjaxRequest())
-                {
-                    TempData["Success"] = response.Message ?? "Operation completed successfully";
-                }
-                return RedirectToAction(redirectAction);
+                TempData["Success"] = response.Message ?? "Operation completed successfully";
             }
 
-            if (response.IsApprovalRequest)
+            else if (response.IsApprovalRequest)
             {
-                if (!IsAjaxRequest())
-                {
-                    TempData["Info"] = response.Message ?? "Request submitted for approval";
-                }
-                return RedirectToAction(redirectAction);
+                TempData["Info"] = response.Message ?? "Request submitted for approval";
             }
 
-            if (!IsAjaxRequest())
+            else
             {
                 TempData["Error"] = response.Message ?? "Operation failed";
+
             }
             return RedirectToAction(redirectAction);
         }

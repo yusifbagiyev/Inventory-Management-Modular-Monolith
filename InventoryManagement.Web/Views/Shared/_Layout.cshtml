@@ -221,16 +221,8 @@
                 return;
             }
 
-            // Add check for existing connection
-            if (window.notificationConnection &&
-                window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                console.log('SignalR already connected');
-                return;
-            }
+            const hubUrl = window.location.protocol + '//' + window.location.host + '/notificationHub';
 
-
-            const hubUrl = window.location.origin + '/notificationHub';
-            console.log('Connecting to SignalR hub at:', hubUrl);
 
             window.notificationConnection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
@@ -240,48 +232,16 @@
                               signalR.HttpTransportType.LongPolling
                 })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-                .configureLogging(signalR.LogLevel.Information)
+                .configureLogging(signalR.LogLevel.Debug)
                 .build();
 
-            // Setup connection event handlers
-            setupConnectionEventHandlers();
-
-            // Setup message handlers
+                // Set up handlers before starting
             setupMessageHandlers();
 
-            // Start the connection
-            startConnection();
-         }
-
-        function setupConnectionEventHandlers() {
-            if (!window.notificationConnection) return;
-
-            window.notificationConnection.onreconnecting((error) => {
-                console.warn('SignalR reconnecting...', error);
-                showToast('Connection lost. Reconnecting...', 'warning');
-            });
-
-            window.notificationConnection.onreconnected((connectionId) => {
-                console.log('SignalR reconnected:', connectionId);
-                reconnectAttempts = 0;
-                showToast('Connection restored', 'success');
-                loadNotificationCount(); // Refresh count after reconnection
-            });
-
-            window.notificationConnection.onclose((error) => {
-                console.error('SignalR connection closed:', error);
-
-                // Attempt manual reconnection with exponential backoff
-                if (reconnectAttempts < maxReconnectAttempts) {
-                    reconnectAttempts++;
-                    const delay = Math.min(5000 * reconnectAttempts, 30000);
-                    setTimeout(() => {
-                        console.log(`Manual reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
-                        startConnection();
-                    }, delay);
-                }
-            });
+            // Start connection with retry logic
+            startConnectionWithRetry();
         }
+
 
         // Setup SignalR message handlers
         function setupMessageHandlers() {
@@ -319,19 +279,31 @@
         }
 
         // Start SignalR connection
-        function startConnection() {
-            if (window.notificationConnection &&
-                window.notificationConnection.state === signalR.HubConnectionState.Disconnected) {
+        function startConnectionWithRetry(retryCount = 0) {
+            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
+                console.log('SignalR already connected');
+                return;
+            }
 
-                window.notificationConnection.start()
-                    .then(() => {
-                        console.log('SignalR connected successfully');
-                        reconnectAttempts = 0;
-                    })
-                    .catch(err => {
-                        console.error('SignalR connection error:', err);
-                        showToast('Failed to connect to notification service', 'error');
-                    });
+            window.notificationConnection.start()
+                .then(() => {
+                    console.log('SignalR connected successfully');
+                    reconnectAttempts = 0;
+                    // Test the connection
+                    testSignalRConnection();
+                })
+                .catch(err => {
+                    console.error('SignalR connection error:', err);
+                    if (retryCount < 3) {
+                        setTimeout(() => startConnectionWithRetry(retryCount + 1), 3000);
+                    }
+                });
+        }
+
+       function testSignalRConnection() {
+            // Send a test message to verify connection
+            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
+                console.log('SignalR connection test: Connected');
             }
         }
 
