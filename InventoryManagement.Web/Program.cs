@@ -17,6 +17,7 @@ try
     .Enrich.FromLogContext()
     .Enrich.WithProperty("ApplicationName", "Inventory Web")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console()
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",
         restrictedToMinimumLevel: LogEventLevel.Information)

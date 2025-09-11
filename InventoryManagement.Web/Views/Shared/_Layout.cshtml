@@ -170,12 +170,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    <script src="~/js/errorHandler.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
+    @if (User.IsInRole("Admin"))
+    {
+        <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
+    }
     <script>
-                function toggleSidebar() {
-            document.body.classList.toggle('sidebar-open');
-        }
         // Global notification variables
         let notificationConnection = null;
         let reconnectAttempts = 0;
@@ -186,7 +186,7 @@
 
         $(document).ready(function() {
             // Sidebar toggle
-                    $('#menu-toggle').click(function(e) {
+            $('#menu-toggle').click(function(e) {
             e.preventDefault();
             $('body').toggleClass('sidebar-toggled');
             $('#wrapper').toggleClass('toggled');
@@ -200,7 +200,8 @@
         });
 
             // Only initialize notifications if user is authenticated
-            if ($('#jwtToken').val()) {
+        const jwtToken=$('#jwtToken').val();
+            if (jwtToken) {
                 initializeNotifications();
                 setupNotificationHandlers();
                 loadNotificationCount();
@@ -208,12 +209,10 @@
 
                 // Check for pending approvals if admin
                 if (isAdmin) {
-                loadPendingApprovalsCount();
+                    loadPendingApprovalsCount();
                 }
-            }
+            }   
         });
-
-
 
         function initializeNotifications() {
             const token = $('#jwtToken').val();
@@ -223,16 +222,17 @@
             }
 
             // Add check for existing connection
-            if(notificationConnection&&notificationConnection.state === signalR.HubConnectionState.Connected) {
+            if (window.notificationConnection &&
+                window.notificationConnection.state === signalR.HubConnectionState.Connected) {
                 console.log('SignalR already connected');
                 return;
-			}
+            }
 
 
-         const hubUrl = window.location.origin + '/notificationHub';
-                    console.log('Connecting to SignalR hub at:', hubUrl);
+            const hubUrl = window.location.origin + '/notificationHub';
+            console.log('Connecting to SignalR hub at:', hubUrl);
 
-            notificationConnection = new signalR.HubConnectionBuilder()
+            window.notificationConnection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
                     accessTokenFactory: () => token,
                     transport: signalR.HttpTransportType.WebSockets |
@@ -243,76 +243,99 @@
                 .configureLogging(signalR.LogLevel.Information)
                 .build();
 
-            // Handle connection events
-            if(notificationConnection){
-                    notificationConnection.onreconnecting((error) => {
-                    console.warn('SignalR reconnecting...', error);
-                });
+            // Setup connection event handlers
+            setupConnectionEventHandlers();
 
-                    notificationConnection.onreconnected((connectionId) => {
-                    console.log('SignalR reconnected:', connectionId);
-                    reconnectAttempts = 0;
-                    loadNotificationCount(); // Refresh count after reconnection
-                });
+            // Setup message handlers
+            setupMessageHandlers();
 
-                notificationConnection.onclose((error) => {
-                    console.error('SignalR connection closed:', error);
-
-                    // Try manual reconnection after delay
-                    if (reconnectAttempts < maxReconnectAttempts) {
-                        reconnectAttempts++;
-                        setTimeout(() => {
-                            console.log(`Attempting manual reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
-                            startConnection();
-                        }, 5000 * reconnectAttempts);
-                    }
-                });
-
-                // Handle incoming notifications
-                notificationConnection.on("ReceiveNotification", function(notification) {
-                    console.log('Notification received:', notification);
-
-                    // Show toast notification
-                    showToast(`${notification.title}: ${notification.message}`, getNotificationType(notification.type));
-
-                    // Update notification count
-                    incrementNotificationCount();
-
-                    // Refresh notification dropdown if open
-                    if ($('#notificationDropdown').hasClass('show')) {
-                        loadRecentNotifications();
-                    }
-
-                    // Play notification sound
-                    playNotificationSound();
-
-                    // If admin and approval request, update pending count
-                    if (isAdmin && notification.type === 'ApprovalRequest') {
-                    loadPendingApprovalsCount();
-                        }
-                });
-
-                // Handle connection confirmation
-                notificationConnection.on("Connected", function(data) {
-                    console.log('Connection confirmed:', data);
-                });
-            }
             // Start the connection
             startConnection();
-            }
-            function startConnection() {
-            if (notificationConnection && notificationConnection.state === signalR.HubConnectionState.Disconnected) {
-                notificationConnection.start()
+         }
+
+        function setupConnectionEventHandlers() {
+            if (!window.notificationConnection) return;
+
+            window.notificationConnection.onreconnecting((error) => {
+                console.warn('SignalR reconnecting...', error);
+                showToast('Connection lost. Reconnecting...', 'warning');
+            });
+
+            window.notificationConnection.onreconnected((connectionId) => {
+                console.log('SignalR reconnected:', connectionId);
+                reconnectAttempts = 0;
+                showToast('Connection restored', 'success');
+                loadNotificationCount(); // Refresh count after reconnection
+            });
+
+            window.notificationConnection.onclose((error) => {
+                console.error('SignalR connection closed:', error);
+
+                // Attempt manual reconnection with exponential backoff
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = Math.min(5000 * reconnectAttempts, 30000);
+                    setTimeout(() => {
+                        console.log(`Manual reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+                        startConnection();
+                    }, delay);
+                }
+            });
+        }
+
+        // Setup SignalR message handlers
+        function setupMessageHandlers() {
+            if (!window.notificationConnection) return;
+
+            // Handle incoming notifications
+            window.notificationConnection.on("ReceiveNotification", function(notification) {
+                console.log('Notification received:', notification);
+
+                // Display toast notification with appropriate type
+                const notificationType = getNotificationType(notification.type);
+                showToast(`${notification.title}: ${notification.message}`, notificationType);
+
+                // Update notification count badge
+                incrementNotificationCount();
+
+                // Refresh notification dropdown if it's currently open
+                if ($('#notificationDropdown').hasClass('show')) {
+                    loadRecentNotifications();
+                }
+
+                // Play notification sound
+                playNotificationSound();
+
+                // Update pending approvals count for admin users
+                if (isAdmin && notification.type === 'ApprovalRequest') {
+                    loadPendingApprovalsCount();
+                }
+            });
+
+            // Handle connection confirmation
+            window.notificationConnection.on("Connected", function(data) {
+                console.log('SignalR connection confirmed:', data);
+            });
+        }
+
+        // Start SignalR connection
+        function startConnection() {
+            if (window.notificationConnection &&
+                window.notificationConnection.state === signalR.HubConnectionState.Disconnected) {
+
+                window.notificationConnection.start()
                     .then(() => {
                         console.log('SignalR connected successfully');
                         reconnectAttempts = 0;
                     })
                     .catch(err => {
                         console.error('SignalR connection error:', err);
+                        showToast('Failed to connect to notification service', 'error');
                     });
             }
         }
-            function playNotificationSound() {
+
+        function playNotificationSound() {
                 try {
                     // First, ensure the sound file exists
                     const audioUrl = '/sounds/notify.mp3';
@@ -354,57 +377,6 @@
                     console.error('Error in playNotificationSound:', error);
                 }
             }
-
-            @if (User.IsInRole("Admin"))
-                    {
-                                    <text>
-                                                function loadPendingApprovalsCount() {
-                                                    // Use the configuration to build the correct URL
-                                                    const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
-
-                                                    $.ajax({
-                                                        url: apiUrl,
-                                                        type: 'GET',
-                                                        headers: {
-                                                            'Authorization': 'Bearer ' + $('#jwtToken').val()
-                                                        },
-                                                        success: function(data) {
-                                                            const count = data.totalCount || 0;
-                                                            updatePendingApprovalsCount(count);
-                                                        },
-                                                        error: function(xhr, status, error) {
-                                                            console.error('Failed to load pending approvals:', error);
-                                                            // In production, don't show technical errors to users
-                                                            if (AppConfig.environment === 'production') {
-                                                                console.log('Service temporarily unavailable');
-                                                            } else {
-                                                                console.error('API URL:', apiUrl);
-                                                                console.error('Response:', xhr.responseText);
-                                                            }
-                                                        }
-                                                    });
-                                                }
-
-                                                function updatePendingApprovalsCount(count) {
-                                                    const $badge = $('#pendingApprovalsCount');
-                                                    if (count > 0) {
-                                                        $badge.text(count).show();
-                                                    } else {
-                                                        $badge.hide();
-                                                    }
-
-                                                    // Also update sidebar badge if exists
-                                                    const $sidebarBadge = $('#sidebarPendingCount');
-                                                    if ($sidebarBadge.length) {
-                                                        if (count > 0) {
-                                                            $sidebarBadge.text(count).show();
-                                                        } else {
-                                                            $sidebarBadge.hide();
-                                                        }
-                                                    }
-                                                }
-                                                </text>
-                        }
 
         function setupNotificationHandlers() {
             // Notification bell click handler
@@ -505,7 +477,7 @@
             `;
         }
 
-    function markAsRead(notificationId) {
+        function markAsRead(notificationId) {
             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
@@ -526,7 +498,7 @@
             });
         }
 
-                function markAllAsRead() {
+        function markAllAsRead() {
                          // Find the first available CSRF token
             var token = $('input[name="__RequestVerificationToken"]').first().val();
                  if (!token) {
@@ -558,7 +530,7 @@
             });
         }
 
-                function updateNotificationBadge(count) {
+        function updateNotificationBadge(count) {
             const $badge = $('#notificationBadge');
             const $sidebarBadge = $('#sidebarUnreadCount');
             count = parseInt(count) || 0;
@@ -657,6 +629,11 @@
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
+
+        function toggleSidebar() {
+              document.body.classList.toggle('sidebar-open');
+         }
+            
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

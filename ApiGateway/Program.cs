@@ -19,6 +19,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("ApplicationName", "Api Gateway")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console()
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",
         restrictedToMinimumLevel: LogEventLevel.Information)
