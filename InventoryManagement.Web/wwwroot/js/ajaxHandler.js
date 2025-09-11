@@ -31,24 +31,28 @@
 
             // Validate form first
             if (settings.validateBeforeSubmit) {
-                // Check HTML5 validation
                 if (!form.checkValidity()) {
                     form.reportValidity();
                     return false;
                 }
 
-                // Check jQuery validation if available
                 if ($.validator && !$(form).valid()) {
                     return false;
                 }
             }
 
             // Store original button state
-            if (!buttonStates.has($submitBtn[0])) {
-                buttonStates.set($submitBtn[0], {
-                    html: $submitBtn.html(),
-                    disabled: $submitBtn.prop('disabled')
-                });
+            if ($submitBtn.length) {
+                if (!buttonStates.has($submitBtn[0])) {
+                    buttonStates.set($submitBtn[0], {
+                        html: $submitBtn.html(),
+                        disabled: $submitBtn.prop('disabled')
+                    });
+                }
+                if ($submitBtn.data('original-html') === undefined) {
+                    $submitBtn.data('original-html', $submitBtn.html());
+                    $submitBtn.data('original-disabled', $submitBtn.prop('disabled'));
+                }
             }
 
             // Call before submit hook
@@ -71,11 +75,35 @@
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function (response) {
+                success: function (response, textStatus, xhr) {
+                    // If the server returned HTML (often a full view on ModelState invalid),
+                    // detect it and inject / rebind if desired.
+                    const ct = (xhr.getResponseHeader && xhr.getResponseHeader('content-type')) || '';
+                    if (typeof response === 'string' && ct.indexOf('text/html') !== -1) {
+                        // Example: replace form container with server HTML (adjust selector as needed)
+                        const $container = $(form).closest('.card-body');
+                        if ($container.length) {
+                            $container.html(response);
+                            // Re-bind AjaxHandler for the new form element inside container
+                            const $newForm = $container.find('form');
+                            if ($newForm.length) {
+                                // re-run handler on the new form
+                                AjaxHandler.handleForm($newForm);
+                            }
+                            // ensure old submit button reset attempt happens (new DOM has restored default)
+                            return;
+                        }
+                    }
+
+                    // Normal JSON flow
                     handleSuccess(response, form, $submitBtn, settings);
                 },
                 error: function (xhr, status, error) {
                     handleError(xhr, form, $submitBtn, settings);
+                },
+                complete: function () {
+                    // Always attempt to reset the button (safety net)
+                    resetButton($submitBtn);
                 }
             });
         });
