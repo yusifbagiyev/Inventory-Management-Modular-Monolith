@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
+using ProductService.Application.Features.Categories.Queries;
 using ProductService.Application.Features.Departments.Commands;
 using ProductService.Application.Features.Departments.Queries;
+using ProductService.Domain.Common;
 using SharedServices.Authorization;
 using SharedServices.Identity;
 
@@ -29,6 +31,18 @@ namespace ProductService.API.Controllers
         {
             var departments = await _mediator.Send(new GetAllDepartmentsQuery());
             return Ok(departments);
+        }
+
+
+        [HttpGet("paged")]
+        [Permission(AllPermissions.ProductView)]
+        public async Task<ActionResult<PagedResult<DepartmentDto>>> GetPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null)
+        {
+            var categories = await _mediator.Send(new GetPagedDepartmentsQuery(pageNumber, pageSize, search));
+            return Ok(categories);
         }
 
 

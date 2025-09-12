@@ -61,6 +61,7 @@ namespace NotificationService.Infrastructure.Services
                     UserName = username,
                     Password = password,
                     Port = port,
+                    DispatchConsumersAsync=true,
                     AutomaticRecoveryEnabled = true,
                     NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
                 };

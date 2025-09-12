@@ -8,6 +8,7 @@ namespace ProductService.Application.Features.Products.Queries
     public record GetAllProductsQuery(
         int? pageNumber =1,
         int? PageSize=30,
+        string? search=null,
         DateTime? startDate=null,
         DateTime? endDate=null,
         bool? status=null,
@@ -31,6 +32,7 @@ namespace ProductService.Application.Features.Products.Queries
             var products = await _productRepository.GetAllAsync(
                 request.pageNumber?? 1,
                 request.PageSize ?? 30,
+                request.search,
                 request.startDate,
                 request.endDate,
                 request.status,

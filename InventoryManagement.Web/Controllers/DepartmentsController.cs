@@ -41,14 +41,20 @@ namespace InventoryManagement.Web.Controllers
                     return NotFound();
 
                 // Get products for this department
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>("api/products");
-                var departmentProducts = products?.Items.Where(p => p.DepartmentId == id).ToList() ?? [];
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
+                             $"api/products?pageSize=1000&departmentId={id}");
+
+                var departmentProducts = products?.Items?? new List<ProductViewModel>();
 
                 ViewBag.Products = departmentProducts;
 
                 // Update counts
-                department.ProductCount = departmentProducts.Count;
-                department.WorkerCount = departmentProducts.Select(p => p.Worker).Where(w => !string.IsNullOrEmpty(w)).Distinct().Count();
+                department.ProductCount = departmentProducts.Count();
+                department.WorkerCount = departmentProducts
+                    .Where(w => !string.IsNullOrEmpty(w.Worker))
+                    .Select(w => w.Worker)
+                    .Distinct()
+                    .Count();
 
                 return View(department);
             }

@@ -128,26 +128,27 @@
 
     <!-- Departments Table -->
     <div class="card shadow-sm">
+        <div class="card-header bg-white border-bottom-0 py-3">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportDepartmentsToPDF()">
+                        <i class="fas fa-file-pdf me-1"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <div class="card-header bg-white border-bottom-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Departments List</h6>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="exportDepartmentsToPDF()">
-                            <i class="fas fa-file-pdf me-1"></i> Export PDF
-                        </button>
-                    </div>
-                </div>
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Department</th>
-                            <th>Description</th>
-                            <th class="text-center">Products</th>
-                            <th class="text-center">Workers</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-center" style="width: 300px;">Department</th>
+                            <th class="text-center" style="width: 30%;">Description</th>
+                            <th class="text-center" style="width: 100px;">Products</th>
+                            <th class="text-center" style="width: 100px;">Workers</th>
+                            <th class="text-center" style="width: 100px;">Status</th>
+                            <th class="text-center" style="width: 100px;">Created</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="departmentsTable">
@@ -170,8 +171,9 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="text-truncate" style="max-width: 250px;">
-                                        @(string.IsNullOrEmpty(department.Description) ? "No description" : department.Description)
+                                    <div class="text-truncate" style="max-width: 400px;" title="@department.Description">
+                                        @(string.IsNullOrEmpty(department.Description) ? "No description" :
+                                         (department.Description.Length > 100 ? department.Description.Substring(0, 100) + "..." : department.Description))
                                     </div>
                                 </td>
                                 <td class="text-center">

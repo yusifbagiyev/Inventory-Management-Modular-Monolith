@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Commands;
 using ProductService.Application.Features.Categories.Queries;
+using ProductService.Domain.Common;
 using SharedServices.Authorization;
 using SharedServices.Identity;
 
@@ -29,6 +30,19 @@ namespace ProductService.API.Controllers
             return Ok(categories);
         }
 
+
+        [HttpGet("paged")]
+        [Permission(AllPermissions.ProductView)]
+        public async Task<ActionResult<PagedResult<CategoryDto>>> GetPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null)
+        {
+            var categories = await _mediator.Send(new GetPagedCategoriesQuery(pageNumber, pageSize, search));
+            return Ok(categories);
+        }
+
+
         [HttpGet("{id}")]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<CategoryDto>> GetById(int id)
@@ -39,6 +53,7 @@ namespace ProductService.API.Controllers
             return Ok(category);
         }
 
+
         [HttpPost]
         [Permission(AllPermissions.ProductCreate)]
         public async Task<ActionResult<CategoryDto>> Create(CreateCategoryDto dto)
@@ -47,6 +62,7 @@ namespace ProductService.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
         }
 
+
         [HttpPut("{id}")]
         [Permission(AllPermissions.ProductUpdate)] 
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
@@ -54,6 +70,7 @@ namespace ProductService.API.Controllers
             await _mediator.Send(new UpdateCategory.Command(id, dto));
             return NoContent();
         }
+
 
         [HttpDelete("{id}")]
         [Permission(AllPermissions.ProductDelete)]

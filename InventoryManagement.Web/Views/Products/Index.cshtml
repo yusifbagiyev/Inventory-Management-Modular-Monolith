@@ -253,11 +253,6 @@
                 $(this).val('');
             });
 
-            // Real-time search functionality
-            $('#searchInput').on('input', function() {
-                filterTable();
-            });
-
             // Restore filter values from query parameters
             restoreFilterValues();
         });
@@ -294,18 +289,14 @@
             }
         }
 
-        // Filter table based on search input
-        function filterTable() {
-            const searchTerm = $('#searchInput').val().toLowerCase();
-            $('#productsTable tbody tr').each(function() {
-                const text = $(this).text().toLowerCase();
-                $(this).toggle(text.includes(searchTerm));
-            });
-        }
-
         // Apply all filters and reload the page with query parameters
         function applyProductFilters() {
             const params = new URLSearchParams();
+
+            const searchTerm = $('#searchInput').val().trim();
+            if (searchTerm) {
+                params.append('search', searchTerm);
+            }
 
             // Get date range value
             const dateRange = $('#dateRange').val();
@@ -335,12 +326,16 @@
             params.append('pageSize', '@Model.PageSize');
             params.append('pageNumber', '1');
 
-            // Build the URL property 
-            const queryString = params.toString();
-            const newUrl = '/Products' + (queryString ? '?' + queryString : '?pageSize=@Model.PageSize&pageNumber=1');
-
-            window.location.href = newUrl;
+            // Build the URL property
+            window.location.href = '/Products?' + params.toString();
         }
+
+        // Make search work on Enter key
+        $('#searchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                applyProductFilters();
+            }
+        });
 
         // Reset all filters and reload the page
         function resetProductFilters() {

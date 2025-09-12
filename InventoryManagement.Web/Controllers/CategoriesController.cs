@@ -17,16 +17,21 @@ namespace InventoryManagement.Web.Controllers
             _apiService = apiService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
         {
             try
             {
-                var categories = await _apiService.GetAsync<List<CategoryViewModel>>("api/categories");
-                return View(categories ?? []);
+                var queryString=$"?pageNumber={pageNumber}&pageSize={pageSize}";
+                if(!string.IsNullOrWhiteSpace(search))
+                    queryString+=$"&search={Uri.EscapeDataString(search)}"; 
+
+                var result=await _apiService.GetAsync<PagedResultDto<CategoryViewModel>>($"api/categories/paged{queryString}");
+                ViewBag.CurrentSearch = search;
+                return View(result ?? new PagedResultDto<CategoryViewModel>());
             }
             catch (Exception ex)
             {
-                return HandleException(ex, new List<CategoryViewModel>());
+                return HandleException(ex, new PagedResultDto<CategoryViewModel>());
             }
         }
 
@@ -40,11 +45,11 @@ namespace InventoryManagement.Web.Controllers
                     return NotFound();
 
                 // Get products for this category
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products");
-                var categoryProducts = products?.Items.Where(p => p.CategoryId == id).ToList() ?? new List<ProductViewModel>();
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products?pageSize=1000&categoryId={id}");
+                var categoryProducts = products?.Items ?? new List<ProductViewModel>();
 
                 ViewBag.Products = categoryProducts;
-                category.ProductCount = categoryProducts.Count;
+                category.ProductCount = categoryProducts.Count();
 
                 return View(category);
             }

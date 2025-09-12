@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
 using ProductService.Infrastructure.Data;
@@ -17,7 +18,8 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<Department?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Departments
-                .FindAsync(new object[] { id }, cancellationToken);
+                .Include(d => d.Products)
+                .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         }
 
         public async Task<IEnumerable<Department>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -26,6 +28,33 @@ namespace ProductService.Infrastructure.Repositories
                 .Include(p=>p.Products)
                 .ToListAsync(cancellationToken);
         }
+
+
+        public async Task<PagedResult<Department>> GetPagedAsync(int pageNumber, int pageSize, string search, CancellationToken cancellationToken = default)
+        {
+
+            var query = _context.Departments.Include(c => c.Products).AsQueryable();
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(c => c.Name.Contains(search) || (c.Description != null && c.Description.Contains(search)));
+            }
+
+            var totalCount = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderBy(n => n.Name)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<Department>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
 
         public async Task<Department> AddAsync(Department department, CancellationToken cancellationToken = default)
         {

@@ -9,6 +9,7 @@ namespace ProductService.Domain.Repositories
         Task<PagedResult<Product>> GetAllAsync(
             int pageNumber=1,
             int pageSize=30, 
+            string? search=null,
             DateTime? startDate=null,
             DateTime? endDate = null,
             bool? status=null,

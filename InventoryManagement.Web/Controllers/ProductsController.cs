@@ -25,6 +25,7 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Index(
             int? pageNumber=1,
             int? pageSize=30,
+            string? search=null,
             DateTime? startDate=null,
             DateTime? endDate=null,
             bool? status=null,
@@ -33,6 +34,9 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var queryString = new StringBuilder($"?pageNumber={pageNumber}&pageSize={pageSize}");
+
+                if (!string.IsNullOrEmpty(search))
+                    queryString.Append($"&search={Uri.EscapeDataString(search)}");
 
                 if (startDate.HasValue)
                     queryString.Append($"&startDate={startDate.Value:yyyy-MM-dd}");
@@ -61,6 +65,7 @@ namespace InventoryManagement.Web.Controllers
 
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
+                ViewBag.CurrentSearch = search;
                 ViewBag.CurrentStatus = status;
                 ViewBag.CurrentAvailability = availability;
                 ViewBag.StartDate = startDate;

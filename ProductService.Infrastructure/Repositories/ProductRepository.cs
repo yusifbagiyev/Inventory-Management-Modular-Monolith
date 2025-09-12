@@ -27,6 +27,7 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<PagedResult<Product>> GetAllAsync(
             int pageNumber,
             int pageSize,
+            string? search,
             DateTime? startDate,
             DateTime? endDate,
             bool? status,
@@ -54,6 +55,22 @@ namespace ProductService.Infrastructure.Repositories
                 var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.Trim().ToLower();
+                query =query.Where(r =>
+                    r.Id.ToString().Contains(search) ||
+                    r.InventoryCode.ToString().Contains(search) ||
+                    r.Vendor.Contains(search) ||
+                    r.Model.Contains(search) ||
+                    r.CreatedAt.ToString("yyyy-MM-dd").Contains(search) ||
+                    r.Worker.Contains(search) ||
+                    r.Category.Name.Contains(search) ||
+                    r.Department.Name.Contains(search)
+                );
+            }
+
 
             var totalCount = await query.CountAsync(cancellationToken);
 

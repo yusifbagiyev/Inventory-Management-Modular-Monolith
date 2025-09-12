@@ -3,7 +3,7 @@
     var currentPeriod = ViewContext.HttpContext.Request.Query["period"].ToString();
     if (string.IsNullOrEmpty(currentPeriod))
     {
-        currentPeriod = "today";
+        currentPeriod = "week";
     }
 }
 
@@ -11,12 +11,12 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Dashboard</h1>
         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod=="today"? "active" : "")"
-                    data-period="today" onclick="changePeriod('today')">Today</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "week" ? "active" : "")"
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod=="week"? "active" : "")"
                     data-period="week" onclick="changePeriod('week')">This Week</button>
             <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "month" ? "active" : "")"
-                    data-period="month" onclick="changePeriod('month')">This Month</button>
+                    data-period="month" onclick="changePeriod('month')">This Week</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "all" ? "active" : "")"
+                    data-period="all" onclick="changePeriod('all')">All time</button>
         </div>
     </div>
 

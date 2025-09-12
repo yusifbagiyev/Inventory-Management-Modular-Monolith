@@ -1,4 +1,5 @@
-﻿@model List<CategoryViewModel>
+﻿@model PagedResultDto<CategoryViewModel>
+
 <div class="container-fluid px-4 py-3">
     <!-- Header with breadcrumb and button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -11,6 +12,9 @@
                 </ol>
             </nav>
         </div>
+        <button class="btn btn-sm btn-outline-secondary me-2" onclick="exportCategoriesToPDF()">
+            <i class="fas fa-file-pdf me-1"></i> Export PDF
+        </button>
         <a asp-action="Create" class="btn btn-primary btn-icon">
             <i class="fas fa-plus me-2"></i>Add Category
         </a>
@@ -24,7 +28,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Total Categories</h6>
-                            <h3 class="mb-0">@Model.Count</h3>
+                            <h3 class="mb-0">@Model.Items.Count()</h3>
                         </div>
                         <div class="icon-shape bg-primary-soft text-primary rounded-3">
                             <i class="fas fa-tags fa-lg"></i>
@@ -40,7 +44,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Active</h6>
-                            <h3 class="mb-0 text-success">@Model.Count(c => c.IsActive)</h3>
+                            <h3 class="mb-0 text-success">@Model.Items.Count(c => c.IsActive)</h3>
                         </div>
                         <div class="icon-shape bg-success-soft text-success rounded-3">
                             <i class="fas fa-check-circle fa-lg"></i>
@@ -56,7 +60,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Inactive</h6>
-                            <h3 class="mb-0 text-secondary">@Model.Count(c => !c.IsActive)</h3>
+                            <h3 class="mb-0 text-secondary">@Model.Items.Count(c => !c.IsActive)</h3>
                         </div>
                         <div class="icon-shape bg-secondary-soft text-secondary rounded-3">
                             <i class="fas fa-times-circle fa-lg"></i>
@@ -72,7 +76,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">With Products</h6>
-                            <h3 class="mb-0">@Model.Sum(c=>c.ProductCount)</h3>
+                            <h3 class="mb-0">@Model.Items.Sum(c=>c.ProductCount)</h3>
                         </div>
                         <div class="icon-shape bg-info-soft text-info rounded-3">
                             <i class="fas fa-boxes fa-lg"></i>
@@ -129,33 +133,34 @@
 
     <!-- Categories Table -->
     <div class="card shadow-sm">
+        <div class="card-header bg-white border-bottom-0 py-3">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportCategoriesToPDF()">
+                        <i class="fas fa-file-pdf me-1"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <!-- In the card-header section of the table card -->
-                <div class="card-header bg-white border-bottom-0 py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">Categories List</h6>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="exportCategoriesToPDF()">
-                            <i class="fas fa-file-pdf me-1"></i> Export PDF
-                        </button>
-                    </div>
-                </div>
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Category</th>
-                            <th>Description</th>
-                            <th class="text-center">Products</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-center" style="width: 250px;">Category</th>
+                            <th class="text-center" style="width: 40%;">Description</th>
+                            <th class="text-center" style="width: 100px;">Products</th>
+                            <th class="text-center" style="width: 120px;">Status</th>
+                            <th class="text-center" style="width: 120px;">Created</th>
+                            <th class="text-center" style="width: 180px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="categoriesTable">
-                        @foreach (var category in Model)
+                        @foreach (var category in Model.Items)
                         {
                             <tr class="category-item"
                                 data-name="@category.Name.ToLower()"
+                                data-description="@category.Description?.ToLower()"
                                 data-status="@(category.IsActive ? "active" : "inactive")"
                                 data-products="@category.ProductCount"
                                 data-created="@category.CreatedAt.Ticks">
@@ -170,17 +175,18 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="text-truncate" style="max-width: 250px;">
-                                        @(string.IsNullOrEmpty(category.Description) ? "No description" : category.Description)
-                                    </div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-primary rounded-pill px-3 py-2">
-                                        @category.ProductCount
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (category.IsActive)
+                                    <div class="text-truncate" style="max-width: 400px;" title="@category.Description">
+                                        @(string.IsNullOrEmpty(category.Description) ? "No description" :
+                                                                            (category.Description.Length > 100 ? category.Description.Substring(0, 100) + "..." : category.Description))
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary rounded-pill px-3 py-2">
+                                    @category.ProductCount
+                                </span>
+                            </td>
+                            <td>
+                                @if (category.IsActive)
                                     {
                                         <span class="badge bg-success-soft text-success py-2 px-3">
                                             <i class="fas fa-check-circle me-1"></i>Active
@@ -205,12 +211,12 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a asp-action="Edit" asp-route-id="@category.Id"
-                                           class="btn btn-sm btn-outline-primary rounded-3 px-3">
-                                            <i class="fas fa-edit me-1"></i>Edit
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
                                         </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-3"
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
                                                 onclick="deleteCategory(@category.Id, '@category.Name')">
-                                            <i class="fas fa-trash me-1"></i>Delete
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -218,18 +224,6 @@
                         }
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Empty State -->
-            <div id="noResults" class="text-center py-5" style="display: none;">
-                <div class="py-5">
-                    <i class="fas fa-search fa-3x text-muted mb-4"></i>
-                    <h5 class="text-muted">No categories found</h5>
-                    <p class="text-muted">Try adjusting your search or filter criteria</p>
-                    <button class="btn btn-outline-primary mt-2" onclick="resetFilters()">
-                        <i class="fas fa-redo me-1"></i>Reset Filters
-                    </button>
-                </div>
             </div>
         </div>
     </div>

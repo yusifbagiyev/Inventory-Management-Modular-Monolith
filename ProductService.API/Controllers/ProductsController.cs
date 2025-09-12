@@ -37,12 +37,14 @@ namespace ProductService.API.Controllers
         public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
             [FromQuery] int? pageNumber = 1,
             [FromQuery] int? pageSize = 30,
+            [FromQuery] string? search=null,
             [FromQuery] DateTime? startDate=null,
             [FromQuery] DateTime? endDate=null,
-            bool? status=null,
-            bool? availability=null)
+            [FromQuery] bool? status = null,
+            [FromQuery] bool? availability = null)
         {
-            var products = await _mediator.Send(new GetAllProductsQuery(pageNumber,pageSize,startDate,endDate,status,availability));
+            var products = await _mediator.Send(new GetAllProductsQuery(
+                pageNumber,pageSize,search,startDate,endDate,status,availability));
             return Ok(products);
         }
 
