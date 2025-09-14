@@ -67,7 +67,6 @@ namespace ProductService.Infrastructure.Services
 
                 _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
                 _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
-                _channel.QueueBind(_queueName, "inventory-events", "product.image.updated");
                 _channel.QueueBind(_queueName, "inventory-events", "product.transferred");
 
                 _logger.LogInformation("RabbitMQ Consumer successfully connected");
