@@ -201,6 +201,7 @@ namespace RouteService.Infrastructure.Services
                 $"Product removed by {productDeletedEvent.RemovedBy}");
 
             await repository.AddAsync(route);
+            route.Complete();
             await unitOfWork.SaveChangesAsync();
         }
 

@@ -86,7 +86,7 @@ namespace RouteService.Infrastructure.Repositories
 
             if (endDate.HasValue)
             {
-                var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
+                var EndDate = endDate.Value.AddDays(1).AddTicks(-1);
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
@@ -98,13 +98,10 @@ namespace RouteService.Infrastructure.Repositories
                     EF.Functions.ILike(r.ProductSnapshot.CategoryName, $"%{search}%") ||
                     EF.Functions.ILike(r.ProductSnapshot.Vendor, $"%{search}%") ||
                     EF.Functions.ILike(r.ProductSnapshot.Model, $"%{search}%") ||
-                    (r.FromDepartmentName!=null && EF.Functions.ILike(r.FromDepartmentName, $"%{search}%")) ||
-                    EF.Functions.ILike(r.ToDepartmentName, $"%{search}%") ||
-                    EF.Functions.ILike(r.RouteType.ToString(), $"%{search}%") ||
-                    EF.Functions.ILike(r.CreatedAt.ToString(), $"%{search}%") ||
-                    EF.Functions.ILike(r.CompletedAt.ToString(), $"%{search}%")
+                    (r.FromDepartmentName != null && EF.Functions.ILike(r.FromDepartmentName, $"%{search}%")) ||
+                    EF.Functions.ILike(r.ToDepartmentName, $"%{search}%")
+                    
              );
-
             }
 
             var totalCount = await query.CountAsync(cancellationToken);

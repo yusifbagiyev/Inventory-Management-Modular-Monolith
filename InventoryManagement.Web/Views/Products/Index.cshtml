@@ -1,4 +1,9 @@
 ﻿@model PagedResultDto<ProductViewModel>
+@{
+    ViewData["Title"] = "Products";
+    var currentSearch = ViewBag.CurrentSearch as string ?? null;
+}
+
 <div class="container-fluid px-4">
     <h1 class="mt-4">Products</h1>
     <ol class="breadcrumb mb-4">
@@ -12,7 +17,8 @@
                 <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control"
+                        <input type="text" id="searchInput" class="form-control border-start-0"
+                               value="@currentSearch" name="search"
                                placeholder="Search by code, model, vendor..." />
                     </div>
                 </div>
@@ -344,37 +350,6 @@
             $('#statusFilter').val('');
             $('#availabilityFilter').val('');
             window.location.href = '/Products?pageSize=@Model.PageSize&pageNumber=1';
-        }
-
-                function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
-
-            // Restore search - this ensures the search box shows the current search term
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(decodeURIComponent(search));
-            }
-
-            // Restore date range
-            const startDate = params.get('startDate');
-            const endDate = params.get('endDate');
-            if (startDate && endDate) {
-                const formattedStart = moment(startDate).format('MM/DD/YYYY');
-                const formattedEnd = moment(endDate).format('MM/DD/YYYY');
-                $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
-            }
-
-            // Restore status filter
-            const status = params.get('status');
-            if (status !== null) {
-                $('#statusFilter').val(status);
-            }
-
-            // Restore availability filter
-            const availability = params.get('availability');
-            if (availability !== null) {
-                $('#availabilityFilter').val(availability);
-            }
         }
 
         // Change page with current filters maintained

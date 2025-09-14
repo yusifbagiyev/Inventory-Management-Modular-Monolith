@@ -17,6 +17,17 @@ namespace NotificationService.Application.Services
             _logger = logger;
         }
 
+        // Add this method that the client is expecting
+        public async Task JoinUserGroup()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+                _logger.LogInformation($"User {userId} joined their group via explicit call");
+            }
+        }
+
         public override async Task OnConnectedAsync()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;

@@ -112,7 +112,9 @@ namespace ProductService.Application.Features.Products.Commands
                         IsWorking = createdProduct.IsWorking,
                         ImageUrl = createdProduct.ImageUrl,
                         CreatedAt = createdProduct.CreatedAt,
-                        IsNewItem = createdProduct.IsNewItem
+                        IsNewItem = createdProduct.IsNewItem,
+                        ImageData= null,
+                        ImageFileName= null
                     };
 
                     // Add image data if available

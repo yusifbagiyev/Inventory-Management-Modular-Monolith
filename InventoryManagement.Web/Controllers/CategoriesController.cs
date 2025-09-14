@@ -1,5 +1,6 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +11,16 @@ namespace InventoryManagement.Web.Controllers
     public class CategoriesController : BaseController
     {
         private readonly IApiService _apiService;
+        private readonly IUrlService _urlService;
 
-        public CategoriesController(IApiService apiService, ILogger<CategoriesController> logger)
-            :base(logger)
+        public CategoriesController(
+            IApiService apiService, 
+            ILogger<CategoriesController> logger,
+            IUrlService urlService)
+            : base(logger)
         {
             _apiService = apiService;
+            _urlService = urlService;
         }
 
         public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
@@ -28,15 +34,32 @@ namespace InventoryManagement.Web.Controllers
                 var result=await _apiService.GetAsync<PagedResultDto<CategoryViewModel>>(
                     $"api/categories/paged{queryString}");
 
+                if (result == null)
+                {
+                    result = new PagedResultDto<CategoryViewModel>
+                    {
+                        Items = new List<CategoryViewModel>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize
+                    };
+                }
+
                 ViewBag.CurrentSearch = search;
                 ViewBag.PageNumber = pageNumber;
                 ViewBag.PageSize = pageSize;
 
-                return View(result ?? new PagedResultDto<CategoryViewModel>());
+                return View(result);
             }
             catch (Exception ex)
             {
-                return HandleException(ex, new PagedResultDto<CategoryViewModel>());
+                return HandleException(ex, new PagedResultDto<CategoryViewModel>
+                {
+                    Items = new List<CategoryViewModel>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                });
             }
         }
 
@@ -55,13 +78,23 @@ namespace InventoryManagement.Web.Controllers
 
                 var categoryProducts = products?.Items ?? new List<ProductViewModel>();
 
-                ViewBag.Products = categoryProducts;
+                // Update the image URLs for display
+                foreach (var product in categoryProducts)
+                {
+                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    {
+                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                    }
+                }
+
+                ViewBag.Products = categoryProducts.ToList();
                 category.ProductCount = categoryProducts.Count();
 
                 return View(category);
             }
             catch (Exception ex)
             {
+                _logger?.LogError(ex, "Error loading category details for ID: {CategoryId}", id);
                 return HandleException(ex);
             }
         }

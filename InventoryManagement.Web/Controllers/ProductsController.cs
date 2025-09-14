@@ -94,15 +94,26 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
+                // Handle deleted product scenario
                 if (product == null)
-                    return NotFound();
-
-                if (product != null)
                 {
-                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    // Check if there are routes for this product ID
+                    var routes = await _apiService.GetAsync<List<RouteViewModel>>($"api/inventoryroutes/product/{id}");
+
+                    if (routes != null && routes.Any())
                     {
-                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                        // Product was deleted but has route history
+                        TempData["Warning"] = "This product has been deleted but its route history is preserved.";
+                        return RedirectToAction("Timeline", "Routes", new { productId = id });
                     }
+
+                    TempData["Error"] = "Product not found. It may have been deleted.";
+                    return RedirectToAction("Index");
+                }
+
+                if (!string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
                 }
 
                 return View(product);

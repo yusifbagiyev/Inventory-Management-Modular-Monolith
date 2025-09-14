@@ -1,5 +1,8 @@
 ﻿@model PagedResultDto<RouteViewModel>
-
+@{
+    ViewData["Title"] = "Routes";
+    var currentSearch = ViewBag.CurrentSearch as string ?? null;
+}
 <div class="container-fluid px-4">
     <h1 class="mt-4">Routes</h1>
     <ol class="breadcrumb mb-4">
@@ -13,8 +16,9 @@
                 <div class="col md-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control"
-                               placeholder="Search by code, model, vendor..." />
+                        <input type="text" id="searchInput" class="form-control border-start-0"
+                               name="search" value="@currentSearch"
+                               placeholder="Search by code, category, department..." />
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -36,7 +40,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <button class="btn btn-primary w-100" onclick="applyRouteFilters()">
                         <i class="fas fa-filter"></i> Apply
                     </button>
                 </div>
@@ -62,7 +66,7 @@
                             <i class="fas fa-exchange-alt"></i> New Transfer
                         </a>
                     }
-                    <button class="btn btn-outline-secondary btn-sm" onclick="exportData()">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportRoutesToPDF()">
                         <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                     <div class="btn-group btn-group-sm" role="group">
@@ -117,7 +121,7 @@
                                         </td>
                                         <td>
                                             <small>
-                                                @route.CreatedAt.ToString("MM/dd/yyyy")<br />
+                                                @route.CreatedAt.ToString("dd/MM/yyyy")<br />
                                                 @route.CreatedAt.ToString("HH:mm")
                                             </small>
                                         </td>
@@ -136,13 +140,16 @@
                                             <span class="badge @typeColor">@route.RouteTypeName</span>
                                         </td>
                                         <td>
-                                            <a asp-controller="Products" asp-action="Details" asp-route-id="@route.ProductId"
+                                            <a asp-controller="Products" asp-action="Details" 
+                                               asp-route-id="@route.ProductId"
                                                class="text-decoration-none">
                                                 <span class="badge bg-primary">@route.InventoryCode</span>
                                                 @route.Vendor
                                             </a>
                                             <br />
-                                            <small class="text-muted">@route.Model</small>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag"></i> @route.CategoryName
+                                            </small>
                                         </td>
                                         <td>
                                             @if (!string.IsNullOrEmpty(route.FromDepartmentName))
@@ -177,7 +184,7 @@
                                                 @if (route.CompletedAt.HasValue)
                                                 {
                                                     <br />
-                                                    <small class="text-muted">@route.CompletedAt.Value.ToString("MM/dd HH:mm")</small>
+                                                    <small class="text-muted">@route.CompletedAt.Value.ToString("dd/MM HH:mm")</small>
                                                 }
                                             }
                                             else
@@ -187,7 +194,7 @@
                                                 </span>
                                                 <br />
                                                 <small class="text-muted">
-                                                    Created: @route.CreatedAt.ToString("MM/dd HH:mm")
+                                                    Created: @route.CreatedAt.ToString("MM/dd/yyyy HH:mm")
                                                 </small>
                                             }
                                         </td>
@@ -255,13 +262,13 @@
 </div>
 
 @section Scripts {
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-            <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-            <script src="~/js/pdf-export.js"></script>
-            <script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script src="~/js/pdf-export.js"></script>
+    <script>
         $(document).ready(function() {
-                    // Initialize date range picker
+            // Initialize date range picker
                     $('#dateRange').daterangepicker({
                         autoUpdateInput: false,
                         locale: {
@@ -278,52 +285,83 @@
                         $(this).val('');
                     });
 
-                    // Real-time search
-                    $('#searchInput').on('input', function() {
-                        filterTable();
-                    });
+                    restoreFilterValues();
                 });
 
-        function filterTable() 
-        {
-            const searchTerm = $('#searchInput').val().toLowerCase();
-                        $('#routesTableBody tr').each(function() {
-                            const searchData = $(this).data('search');
-                            $(this).toggle(searchData.includes(searchTerm));
-                        });
+            // Restore filter values from URL parameters
+        function restoreFilterValues() {
+            const params = new URLSearchParams(window.location.search);
+
+            // Restore search
+            const search = params.get('search');
+            if (search) {
+                $('#searchInput').val(search);
+            }
+
+            // Restore date range
+            const startDate = params.get('startDate');
+            const endDate = params.get('endDate');
+            if (startDate && endDate) {
+                const formattedStart = moment(startDate).format('MM/DD/YYYY');
+                const formattedEnd = moment(endDate).format('MM/DD/YYYY');
+                $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
+            }
+
+            // Restore status filter
+            const status = params.get('status');
+            if (status !== null) {
+                $('#statusFilter').val(status);
+            }
         }
 
-         function applyFilters() {
+        // Apply all filters and reload the page with query parameters
+        function applyRouteFilters() {
             const params = new URLSearchParams();
 
-            const search = $('#searchInput').val();
-            if (search) params.append('search', search);
+            const searchTerm = $('#searchInput').val().trim();
+            if (searchTerm) {
+                params.append('search', searchTerm);
+            }
 
+            // Get date range value
             const dateRange = $('#dateRange').val();
             if (dateRange) {
                 const dates = dateRange.split(' - ');
                 if (dates.length === 2) {
-                    // Parse dates and format them properly for the backend
                     const startDate = moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD');
                     const endDate = moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD');
-
                     params.append('startDate', startDate);
                     params.append('endDate', endDate);
                 }
             }
 
+            // Get status filter value
             const status = $('#statusFilter').val();
             if (status !== '') {
-                params.append('isCompleted', status);
+                params.append('status', status);
             }
 
-            // Preserve current page size
+            // Maintain page size
             params.append('pageSize', '@Model.PageSize');
-            params.append('pageNumber', '1'); // Reset to first page
+            params.append('pageNumber', '1');
 
-            // Navigate to the filtered URL
-            window.location.href = '/Routes' + (params.toString() ? '?' + params.toString() : '');
+            // Build the URL property
+            window.location.href = '/Routes?' + params.toString();
         }
+
+        // Make search work on Enter key
+        $('#searchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                applyRouteFilters();
+            }
+        });
+
+        function resetFilters() {
+                    $('#searchInput').val('');
+                    $('#dateRange').val('');
+                    $('#statusFilter').val('');
+                    window.location.href = '/Routes';
+                }
 
         function formatLocalDateTime(utcDateString) {
             const date = new Date(utcDateString);
@@ -337,21 +375,18 @@
             });
         }
 
-        function resetFilters() {
-                    $('#searchInput').val('');
-                    $('#dateRange').val('');
-                    $('#statusFilter').val('');
-                    window.location.href = '/Routes';
-                }
-        function changePage(page) {
+
+        // Change page with current filters maintained
+                function changePage(page) {
             const params = new URLSearchParams(window.location.search);
             params.set('pageNumber', page);
-            window.location.href = '/Routes?' + params.toString();
-        }
 
-        function exportData()
-        {
-             exportRoutesToPDF();
+            // Ensure we always have pageSize
+            if (!params.has('pageSize')) {
+                params.set('pageSize', '@Model.PageSize');
+            }
+
+            window.location.href = '/Routes?' + params.toString();
         }
 
         function showImageModal(imageUrl, title) {
@@ -398,6 +433,47 @@
                         form.submit();
                     }
                 }
+    </script>
+    <script>
+        // Real-time search functionality
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        const searchForm = document.getElementById('searchForm');
+
+        if (searchInput && searchForm) {
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+
+                // Show loading indicator
+                const submitBtn = searchForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Searching...';
+                }
+
+                searchTimeout = setTimeout(() => {
+                    searchForm.submit();
+                }, 500); // Wait 500ms after user stops typing
+            });
+        }
+
+        // Update the showing text dynamically
+        function updateShowingText() {
+            const totalCount = @(ViewBag.TotalCount ?? 0);
+            const showingStart = @(ViewBag.ShowingStart ?? 0);
+            const showingEnd = @(ViewBag.ShowingEnd ?? 0);
+
+            const showingText = document.querySelector('.showing-text');
+            if (showingText) {
+                if (totalCount === 0) {
+                    showingText.textContent = 'No routes found';
+                } else {
+                    showingText.textContent = `Showing ${showingStart}-${showingEnd} of ${totalCount} routes`;
+                }
+            }
+        }
+
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', updateShowingText);
     </script>
     <style>
         .route-image {

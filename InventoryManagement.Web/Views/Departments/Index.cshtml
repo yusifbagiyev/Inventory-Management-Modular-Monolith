@@ -130,8 +130,11 @@
     <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0 py-3">
             <div class="row align-items-center">
+                <div class="col">
+                    <partial name="_DepartmentPagination" model="Model" />
+                </div>
                 <div class="col-auto">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="exportDepartmentsToPDF()">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportDepartmentTableToPDF()">
                         <i class="fas fa-file-pdf me-1"></i> Export PDF
                     </button>
                 </div>

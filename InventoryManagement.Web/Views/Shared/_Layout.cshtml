@@ -171,6 +171,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script src="~/js/notifications.js" asp-append-version="true"></script>
+    <script src="~/js/request-handler.js" asp-append-version="true"></script>
     @if (User.IsInRole("Admin"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
@@ -251,15 +252,14 @@
             window.notificationConnection.on("ReceiveNotification", function(notification) {
             console.log('Notification received:', notification);
 
+            // Display the notification immediately
+            displayNotification(notification);
+
             // Play notification sound for important events
             const importantTypes = ['ApprovalRequest', 'ApprovalResponse', 'ProductCreated', 'RouteCompleted'];
             if (importantTypes.includes(notification.type)) {
                 playNotificationSound();
             }
-
-            // Update UI immediately
-            showToast(`${notification.title}: ${notification.message}`,
-                getNotificationType(notification.type));
 
             // Update notification count badge
             incrementNotificationCount();

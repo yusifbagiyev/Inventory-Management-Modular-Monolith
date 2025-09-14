@@ -193,3 +193,42 @@ function handleApprovalResponse(response, entityType, successRedirect) {
     // Redirect after delay
     setTimeout(() => window.location.href = successRedirect, 2000);
 }
+// Enhanced notification sound function
+function playNotificationSound() {
+    try {
+        // First, try to use the Audio API with better browser compatibility
+        const audioContext = window.AudioContext || window.webkitAudioContext;
+
+        if (audioContext) {
+            const context = new audioContext();
+            const oscillator = context.createOscillator();
+            const gainNode = context.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(context.destination);
+
+            // Create a pleasant notification sound
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, context.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+
+            oscillator.start(context.currentTime);
+            oscillator.stop(context.currentTime + 0.3);
+
+            console.log('Notification sound played via Web Audio API');
+        }
+    } catch (error) {
+        console.error('Error playing notification sound:', error);
+        // Fallback: try HTML5 audio
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLYiTYIG2m98OScTgwOUaXh7blmFgU7k9n1wHkkCE59y+z');
+            audio.volume = 0.3;
+            audio.play();
+            console.log('Notification sound played via HTML5 Audio');
+        } catch (audioError) {
+            console.error('Could not play any notification sound:', audioError);
+        }
+    }
+}

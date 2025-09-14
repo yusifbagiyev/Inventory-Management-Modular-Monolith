@@ -1,5 +1,6 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,23 +11,55 @@ namespace InventoryManagement.Web.Controllers
     public class DepartmentsController : BaseController
     {
         private readonly IApiService _apiService;
+        private readonly IUrlService _urlService;
 
-        public DepartmentsController(IApiService apiService, ILogger<DepartmentsController> logger)
-            :base(logger)
+        public DepartmentsController(
+            IApiService apiService, 
+            ILogger<DepartmentsController> logger,
+            IUrlService urlService)
+            : base(logger)
         {
             _apiService = apiService;
+            _urlService = urlService;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
         {
             try
             {
-                var departments = await _apiService.GetAsync<List<DepartmentViewModel>>("api/departments");
-                return View(departments ?? []);
+                var queryString = $"?pageNumber={pageNumber}&pageSize={pageSize}";
+                if (!string.IsNullOrWhiteSpace(search))
+                    queryString += $"&search={Uri.EscapeDataString(search)}";
+
+                var result = await _apiService.GetAsync<PagedResultDto<DepartmentViewModel>>(
+                    $"api/departments/paged{queryString}");
+
+                if (result == null)
+                {
+                    result = new PagedResultDto<DepartmentViewModel>
+                    {
+                        Items = new List<DepartmentViewModel>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize
+                    };
+                }
+
+                ViewBag.CurrentSearch = search;
+                ViewBag.PageNumber = pageNumber;
+                ViewBag.PageSize = pageSize;
+
+                return View(result);
             }
             catch (Exception ex)
             {
-                return HandleException(ex,new List<DepartmentViewModel>());
+                return HandleException(ex, new PagedResultDto<DepartmentViewModel>
+                {
+                    Items = new List<DepartmentViewModel>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                });
             }
         }
 
@@ -46,7 +79,16 @@ namespace InventoryManagement.Web.Controllers
 
                 var departmentProducts = products?.Items?? new List<ProductViewModel>();
 
-                ViewBag.Products = departmentProducts;
+                // Update the image URLs for display
+                foreach (var product in departmentProducts)
+                {
+                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    {
+                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
+                    }
+                }
+
+                ViewBag.Products = departmentProducts.ToList();
 
                 // Update counts
                 department.ProductCount = departmentProducts.Count();
@@ -60,6 +102,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
+                _logger?.LogError(ex, "Error loading department details for ID: {DepartmentId}", id);
                 return HandleException(ex);
             }
         }

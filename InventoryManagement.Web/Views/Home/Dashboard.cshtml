@@ -1,22 +1,26 @@
 ﻿@model DashboardViewModel
 @{
-    var currentPeriod = ViewContext.HttpContext.Request.Query["period"].ToString();
-    if (string.IsNullOrEmpty(currentPeriod))
-    {
-        currentPeriod = "week";
-    }
+    var currentPeriod = ViewBag.CurrentPeriod as string ?? "week";
+    var totalDepartments = ViewBag.TotalDepartments ?? 0;
+    var totalCategories = ViewBag.TotalCategories ?? 0;
 }
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Dashboard</h1>
         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod=="week"? "active" : "")"
-                    data-period="week" onclick="changePeriod('week')">This Week</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "week" ? "active" : "")"
+                    onclick="changePeriod('week')">
+                This Week
+            </button>
             <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "month" ? "active" : "")"
-                    data-period="month" onclick="changePeriod('month')">This Week</button>
+                    onclick="changePeriod('month')">
+                This Month
+            </button>
             <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "all" ? "active" : "")"
-                    data-period="all" onclick="changePeriod('all')">All time</button>
+                    onclick="changePeriod('all')">
+                All Time
+            </button>
         </div>
     </div>
 
@@ -27,7 +31,16 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Total Products</p>
+                            <p class="text-muted mb-2">
+                                @if (currentPeriod == "all")
+                                {
+                                    <text>Total Products</text>
+                                }
+                                else
+                                {
+                                    <text>Products (@currentPeriod)</text>
+                                }
+                            </p>
                             <h3 class="mb-0">@Model.TotalProducts.ToString("N0")</h3>
                             <p class="text-success mb-0">
                                 <i class="fas fa-arrow-up"></i> @Model.ActiveProducts active
@@ -46,7 +59,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Total Routes</p>
+                            <p class="text-muted mb-2">Routes (@currentPeriod)</p>
                             <h3 class="mb-0">@Model.TotalRoutes.ToString("N0")</h3>
                             <p class="text-warning mb-0">
                                 <i class="fas fa-clock"></i> @Model.PendingTransfers pending
@@ -66,7 +79,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted mb-2">Active Departments</p>
-                            <h3 class="mb-0">@Model.DepartmentStats.Count</h3>
+                            <h3 class="mb-0">@totalDepartments</h3>
                             <p class="text-info mb-0">
                                 <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers
                             </p>
@@ -84,8 +97,8 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Categories</p>
-                            <h3 class="mb-0">@Model.CategoryDistributions.Count</h3>
+                            <p class="text-muted mb-2">Total Categories</p>
+                            <h3 class="mb-0">@totalCategories</h3>
                             <p class="text-secondary mb-0">
                                 <i class="fas fa-tags"></i> Active categories
                             </p>
@@ -129,7 +142,6 @@
                     <div class="chart-container" style="position: relative; height: 300px;">
                         <canvas id="categoryChart"></canvas>
                     </div>
-                    <div id="categoryLegend" class="mt-3"></div>
                 </div>
             </div>
         </div>
@@ -140,7 +152,7 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Transfer Activity</h5>
+                    <h5 class="mb-0">Transfer Activity (@currentPeriod)</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="position: relative; height: 250px;">
@@ -153,10 +165,7 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Top Departments by Products</h5>
-                        <a href="/Reports/Departments" class="btn btn-sm btn-outline-primary">View All</a>
-                    </div>
+                    <h5 class="mb-0">Top Departments by Products</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -166,29 +175,25 @@
                                     <th>Department</th>
                                     <th>Products</th>
                                     <th>Workers</th>
-                                    <th>Utilization</th>
+                                    <th>Transfers</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var dept in Model.DepartmentStats.OrderByDescending(d => d.ProductCount).Take(5))
+                                @foreach (var dept in Model.DepartmentStats.Take(5))
                                 {
                                     <tr>
                                         <td>@dept.DepartmentName</td>
                                         <td><span class="badge bg-primary">@dept.ProductCount</span></td>
                                         <td>@dept.ActiveWorkers</td>
                                         <td>
-                                            <div class="progress" style="height: 20px;">
-                                                @{
-                                                    // Utilization = (Products / (Workers * 10)) * 100
-                                                    // Assuming each worker can handle 10 products optimally
-                                                    var utilization = dept.ActiveWorkers > 0
-                                                    ? Math.Min(100, (dept.ProductCount * 100.0 / (dept.ActiveWorkers * 10)))
-                                                    : 0;
-                                                }
-                                                <div class="progress-bar" style="width: @utilization%">
-                                                    @utilization.ToString("F0")%
-                                                </div>
-                                            </div>
+                                            @if (currentPeriod != "all")
+                                            {
+                                                <span class="badge bg-info">@dept.PeriodTransfers</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -248,6 +253,7 @@
                 }
             });
         });
+
         function changePeriod(period) {
             // Don't reload if already on this period
             if (period === currentPeriod) {
@@ -374,7 +380,7 @@
             });
         }
 
-        function generateTransferData(period) {
+        function generateTransferDatagenerateTransferData(period) {
             let labels, completedData, pendingData;
 
             const colors = {

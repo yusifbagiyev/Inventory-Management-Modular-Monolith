@@ -1,11 +1,12 @@
-﻿using System.Text;
-using InventoryManagement.Web.Models.DTOs;
+﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Net.NetworkInformation;
+using System.Text;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -27,6 +28,7 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Index(
             int? pageNumber = 1,
             int? pageSize = 30,
+            string? search = null,
             bool? isCompleted = null,
             DateTime? startDate = null,
             DateTime? endDate = null)
@@ -34,6 +36,9 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var queryString = new StringBuilder($"?pageNumber={pageNumber}&pageSize={pageSize}");
+
+                if (!string.IsNullOrEmpty(search))
+                    queryString.Append($"&search={Uri.EscapeDataString(search)}");
 
                 if (isCompleted.HasValue)
                     queryString.Append($"&isCompleted={isCompleted.Value}");
@@ -59,10 +64,19 @@ namespace InventoryManagement.Web.Controllers
                             route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
                         }
                     }
+
+                    // Calculate actual displayed range
+                    var start = ((routes.PageNumber - 1) * routes.PageSize) + 1;
+                    var end = Math.Min(routes.PageNumber * routes.PageSize, routes.TotalCount);
+                    ViewBag.ShowingStart = start;
+                    ViewBag.ShowingEnd = end;
+                    ViewBag.TotalCount = routes.TotalCount;
                 }
 
                 ViewBag.CurrentFilter = isCompleted;
                 ViewBag.StartDate = startDate;
+                ViewBag.CurrentSearch = search;
+                ViewBag.CurrentStatus = isCompleted;
                 ViewBag.EndDate = endDate;
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
