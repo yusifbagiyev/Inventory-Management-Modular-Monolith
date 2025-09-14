@@ -1,7 +1,4 @@
-﻿// Global configuration that adapts to the current environment
-// This file centralizes all environment-specific settings
-
-window.AppConfig = (function () {
+﻿window.AppConfig = (function () {
     'use strict';
 
     // Detect the current environment based on the hostname
@@ -26,25 +23,29 @@ window.AppConfig = (function () {
         // SignalR hub configuration
         signalR: {
             notificationHub: isDevelopment
-                ? 'http://localhost:5005/notificationHub'
+                ? 'http://localhost:5000/notificationHub'
                 : '/notificationHub',
 
             // Connection options
             options: {
-                skipNegotiation: isProduction,
-                transport: isProduction
-                    ? signalR.HttpTransportType.WebSockets
-                    : undefined
+                skipNegotiation: false,  // Allow negotiation
+                transport: undefined,  // Let SignalR choose the best transport
+                accessTokenProvider: () => {
+                    // Get the JWT token from session or cookie
+                    const token = sessionStorage.getItem('JwtToken') ||
+                        document.cookie.split('; ').find(row => row.startsWith('jwt_token='))?.split('=')[1];
+                    return token;
+                }
             }
         },
 
         // Image URLs
         images: {
             products: isDevelopment
-                ? 'http://localhost:5001/images/products'
+                ? 'http://localhost:5000/images/products'
                 : '/images/products',
             routes: isDevelopment
-                ? 'http://localhost:5002/images/routes'
+                ? 'http://localhost:5000/images/routes'
                 : '/images/routes'
         },
     };

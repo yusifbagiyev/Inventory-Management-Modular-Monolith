@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Roles ="Admin")]
     public class CategoriesController : BaseController
     {
         private readonly IApiService _apiService;
@@ -25,8 +25,13 @@ namespace InventoryManagement.Web.Controllers
                 if(!string.IsNullOrWhiteSpace(search))
                     queryString+=$"&search={Uri.EscapeDataString(search)}"; 
 
-                var result=await _apiService.GetAsync<PagedResultDto<CategoryViewModel>>($"api/categories/paged{queryString}");
+                var result=await _apiService.GetAsync<PagedResultDto<CategoryViewModel>>(
+                    $"api/categories/paged{queryString}");
+
                 ViewBag.CurrentSearch = search;
+                ViewBag.PageNumber = pageNumber;
+                ViewBag.PageSize = pageSize;
+
                 return View(result ?? new PagedResultDto<CategoryViewModel>());
             }
             catch (Exception ex)
@@ -45,7 +50,9 @@ namespace InventoryManagement.Web.Controllers
                     return NotFound();
 
                 // Get products for this category
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products?pageSize=1000&categoryId={id}");
+                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
+                    $"api/products?pageSize=10000&pageNumber=1&categoryId={id}");
+
                 var categoryProducts = products?.Items ?? new List<ProductViewModel>();
 
                 ViewBag.Products = categoryProducts;

@@ -14,6 +14,8 @@ namespace ProductService.Domain.Repositories
             DateTime? endDate = null,
             bool? status=null,
             bool? availability = null,
+            int? categoryId=null,
+            int? departmentId=null,
             CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
         Task<IEnumerable<Product>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);

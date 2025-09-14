@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class DepartmentsController : BaseController
     {
         private readonly IApiService _apiService;
@@ -42,7 +42,7 @@ namespace InventoryManagement.Web.Controllers
 
                 // Get products for this department
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
-                             $"api/products?pageSize=1000&departmentId={id}");
+                    $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
 
                 var departmentProducts = products?.Items?? new List<ProductViewModel>();
 

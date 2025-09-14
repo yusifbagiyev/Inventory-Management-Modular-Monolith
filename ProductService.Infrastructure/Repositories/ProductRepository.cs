@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ProductService.Application.DTOs;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
@@ -32,12 +31,20 @@ namespace ProductService.Infrastructure.Repositories
             DateTime? endDate,
             bool? status,
             bool? availability,
+            int? categoryId=null,
+            int? departmentId=null,
             CancellationToken cancellationToken = default)
         {
             var query = _context.Products
                 .Include(p=>p.Category)
                 .Include(p=>p.Department)
                 .AsQueryable();
+
+            if(categoryId.HasValue)
+                query=query.Where(p=>p.CategoryId==categoryId.Value);
+
+            if(departmentId.HasValue)
+                query=query.Where(p=>p.DepartmentId==departmentId.Value);
 
             if (status.HasValue)
                 query=query.Where(p=>p.IsWorking==status.Value);
@@ -59,15 +66,14 @@ namespace ProductService.Infrastructure.Repositories
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim().ToLower();
-                query =query.Where(r =>
+                query = query.Where(r =>
                     r.Id.ToString().Contains(search) ||
                     r.InventoryCode.ToString().Contains(search) ||
-                    r.Vendor.Contains(search) ||
-                    r.Model.Contains(search) ||
-                    r.CreatedAt.ToString("yyyy-MM-dd").Contains(search) ||
-                    r.Worker.Contains(search) ||
-                    r.Category.Name.Contains(search) ||
-                    r.Department.Name.Contains(search)
+                    r.Vendor.ToLower().Contains(search) ||
+                    r.Model.ToLower().Contains(search) ||
+                    r.Worker.ToLower().Contains(search) ||
+                    r.Category.Name.ToLower().Contains(search) ||
+                    r.Department.Name.ToLower().Contains(search)
                 );
             }
 

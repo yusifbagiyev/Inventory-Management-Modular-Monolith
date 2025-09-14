@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "User,Operator")]
     public class MyRequestsController : BaseController
     {
         private readonly IApprovalService _approvalService;

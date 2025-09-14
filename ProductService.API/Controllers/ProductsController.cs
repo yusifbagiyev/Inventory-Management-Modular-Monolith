@@ -41,10 +41,12 @@ namespace ProductService.API.Controllers
             [FromQuery] DateTime? startDate=null,
             [FromQuery] DateTime? endDate=null,
             [FromQuery] bool? status = null,
-            [FromQuery] bool? availability = null)
+            [FromQuery] bool? availability = null,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] int? departmentId = null)
         {
             var products = await _mediator.Send(new GetAllProductsQuery(
-                pageNumber,pageSize,search,startDate,endDate,status,availability));
+                pageNumber,pageSize,search,startDate,endDate,status,availability,categoryId,departmentId));
             return Ok(products);
         }
 

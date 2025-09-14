@@ -12,7 +12,9 @@ namespace ProductService.Application.Features.Products.Queries
         DateTime? startDate=null,
         DateTime? endDate=null,
         bool? status=null,
-        bool? availability=null) : IRequest<PagedResultDto<ProductDto>>;
+        bool? availability=null,
+        int? categoryId=null,
+        int? departmentId=null) : IRequest<PagedResultDto<ProductDto>>;
 
     public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQuery, PagedResultDto<ProductDto>>
     {
@@ -37,6 +39,8 @@ namespace ProductService.Application.Features.Products.Queries
                 request.endDate,
                 request.status,
                 request.availability,
+                request.categoryId,
+                request.departmentId,
                 cancellationToken);
 
             return new PagedResultDto<ProductDto>
