@@ -23,7 +23,10 @@ namespace InventoryManagement.Web.Controllers
             _urlService = urlService;
         }
 
-        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
+        public async Task<IActionResult> Index(
+            int pageNumber = 1, 
+            int pageSize = 20, 
+            string? search = null)
         {
             try
             {
@@ -34,15 +37,28 @@ namespace InventoryManagement.Web.Controllers
                 var result = await _apiService.GetAsync<PagedResultDto<DepartmentViewModel>>(
                     $"api/departments/paged{queryString}");
 
+                var allDepartments=await _apiService.GetAsync<List<DepartmentViewModel>>(
+                    $"api/departments");
+
                 if (result == null)
                 {
                     result = new PagedResultDto<DepartmentViewModel>
                     {
-                        Items = new List<DepartmentViewModel>(),
+                        Items = [],
                         TotalCount = 0,
                         PageNumber = pageNumber,
                         PageSize = pageSize
                     };
+                }
+
+                if (allDepartments != null)
+                {
+                    var activeDepartments = allDepartments.Count(c => c.IsActive);
+                    var inActiveDepartments = allDepartments.Count(c => !c.IsActive);
+                    var departmentsInWithProducts = allDepartments.Sum(c => c.ProductCount);
+                    ViewBag.ActiveDepartments = activeDepartments;
+                    ViewBag.InActiveDepartments = inActiveDepartments;
+                    ViewBag.DepartmentsInWithProducts = departmentsInWithProducts;
                 }
 
                 ViewBag.CurrentSearch = search;

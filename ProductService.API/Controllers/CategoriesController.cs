@@ -38,7 +38,8 @@ namespace ProductService.API.Controllers
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null)
         {
-            var categories = await _mediator.Send(new GetPagedCategoriesQuery(pageNumber, pageSize, search));
+            var categories = await _mediator.Send(new GetPagedCategoriesQuery(
+                pageNumber, pageSize, search));
             return Ok(categories);
         }
 

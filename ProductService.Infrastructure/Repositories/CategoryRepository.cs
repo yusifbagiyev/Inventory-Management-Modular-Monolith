@@ -30,13 +30,18 @@ namespace ProductService.Infrastructure.Repositories
         }
 
 
-        public async Task<PagedResult<Category>> GetPagedAsync(int pageNumber, int pageSize, string? search, CancellationToken cancellationToken = default)
+        public async Task<PagedResult<Category>> GetPagedAsync(
+            int pageNumber, int pageSize, string? search, CancellationToken cancellationToken = default)
         {
             var query = _context.Categories.Include(c => c.Products).AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(search))
+            if (!string.IsNullOrEmpty(search))
             {
-                query = query.Where(c => c.Name.Contains(search) || (c.Description != null && c.Description.Contains(search)));
+                search = search.Trim();
+                query = query.Where(r =>
+                    EF.Functions.ILike(r.Name, $"%{search}%") ||
+                    EF.Functions.ILike(r.Description, $"%{search}%")
+                );
             }
 
             var totalCount= await query.CountAsync(cancellationToken);

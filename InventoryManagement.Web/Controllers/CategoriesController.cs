@@ -1,6 +1,5 @@
 ﻿using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
-using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +22,10 @@ namespace InventoryManagement.Web.Controllers
             _urlService = urlService;
         }
 
-        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
+        public async Task<IActionResult> Index(
+            int pageNumber = 1, 
+            int pageSize = 20, 
+            string? search = null)
         {
             try
             {
@@ -33,6 +35,8 @@ namespace InventoryManagement.Web.Controllers
 
                 var result=await _apiService.GetAsync<PagedResultDto<CategoryViewModel>>(
                     $"api/categories/paged{queryString}");
+                var allCategories = await _apiService.GetAsync<List<CategoryViewModel>>(
+                    $"api/categories");
 
                 if (result == null)
                 {
@@ -43,6 +47,16 @@ namespace InventoryManagement.Web.Controllers
                         PageNumber = pageNumber,
                         PageSize = pageSize
                     };
+                }
+
+                if (allCategories != null)
+                {
+                    var activeCategories = allCategories.Count(c => c.IsActive);
+                    var inActiveCategories = allCategories.Count(c => !c.IsActive);
+                    var categoriesInWithProducts = allCategories.Sum(c => c.ProductCount);
+                    ViewBag.ActiveCategories = activeCategories;
+                    ViewBag.InActiveCategories = inActiveCategories;
+                    ViewBag.CategoriesInWithProducts = categoriesInWithProducts;    
                 }
 
                 ViewBag.CurrentSearch = search;

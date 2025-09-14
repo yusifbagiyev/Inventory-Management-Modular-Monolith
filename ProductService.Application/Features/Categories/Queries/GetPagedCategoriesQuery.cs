@@ -27,6 +27,7 @@ namespace ProductService.Application.Features.Categories.Queries
                 request.pageSize ?? 20,
                 request.search,
                 cancellationToken);
+
             return new PagedResultDto<CategoryDto>
             {
                 Items = _mapper.Map<IEnumerable<CategoryDto>>(categories.Items),

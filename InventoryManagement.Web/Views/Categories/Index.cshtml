@@ -4,21 +4,12 @@
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
 }
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <h2 class="fw-bold">
-                    <i class="fas fa-tags text-primary me-2"></i>Categories
-                </h2>
-                <div class="d-flex">
-                    <a asp-action="Create" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i>New Category
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Categories</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item active">Categories</li>
+    </ol>
 
     <!-- Stats Cards -->
     <div class="row mb-4">
@@ -28,7 +19,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Total Categories</h6>
-                            <h3 class="mb-0">@Model.Items.Count()</h3>
+                            <h3 class="mb-0">@Model.TotalCount</h3>
                         </div>
                         <div class="icon-shape bg-primary-soft text-primary rounded-3">
                             <i class="fas fa-tags fa-lg"></i>
@@ -44,7 +35,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Active</h6>
-                            <h3 class="mb-0 text-success">@Model.Items.Count(c => c.IsActive)</h3>
+                            <h3 class="mb-0 text-success">@ViewBag.ActiveCategories</h3>
                         </div>
                         <div class="icon-shape bg-success-soft text-success rounded-3">
                             <i class="fas fa-check-circle fa-lg"></i>
@@ -60,7 +51,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Inactive</h6>
-                            <h3 class="mb-0 text-secondary">@Model.Items.Count(c => !c.IsActive)</h3>
+                            <h3 class="mb-0 text-secondary">@ViewBag.InActiveCategories</h3>
                         </div>
                         <div class="icon-shape bg-secondary-soft text-secondary rounded-3">
                             <i class="fas fa-times-circle fa-lg"></i>
@@ -76,7 +67,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">With Products</h6>
-                            <h3 class="mb-0">@Model.Items.Sum(c=>c.ProductCount)</h3>
+                            <h3 class="mb-0">@ViewBag.CategoriesInWithProducts</h3>
                         </div>
                         <div class="icon-shape bg-info-soft text-info rounded-3">
                             <i class="fas fa-boxes fa-lg"></i>
@@ -138,99 +129,115 @@
     <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0 py-3">
             <div class="row align-items-center">
-                <div class="col-4">
+                <div class="col">
                     <partial name="_CategoryPagination" model="Model" />
                 </div>
-                <div class="col-md-6"> 
-                    <button type="button" class="btn btn-outline-secondary" onclick="exportCategoryTableToPDF()">
-                        <i class="fas fa-file-pdf me-1"></i>Export PDF
+                <div class="col-auto">
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Create" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> New Category
+                        </a>
+                    }
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportCategoriesToPDF()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th style="width: 250px;">Category</th>
-                            <th style="width: 35%;">Description</th>
-                            <th class="text-center" style="width: 100px;">Products</th>
-                            <th style="width: 120px;">Status</th>
-                            <th style="width: 120px;">Created</th>
-                            <th class="text-center" style="width: 100px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="categoriesTable">
-                        @foreach (var category in Model.Items)
-                        {
-                            <tr class="category-item"
-                                data-name="@category.Name.ToLower()"
-                                data-description="@category.Description?.ToLower()"
-                                data-status="@(category.IsActive ? "active" : "inactive")"
-                                data-products="@category.ProductCount"
-                                data-created="@category.CreatedAt.Ticks">
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="icon-shape bg-light text-primary rounded-2 p-2 me-3">
-                                            <i class="fas fa-tag"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">@category.Name</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="text-truncate" style="max-width: 400px;" title="@category.Description">
-                                        @(string.IsNullOrEmpty(category.Description) ? "No description" :
-                                                                            (category.Description.Length > 100 ? category.Description.Substring(0, 100) + "..." : category.Description))
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-primary rounded-pill px-3 py-2">
-                                    @category.ProductCount
-                                </span>
-                            </td>
-                            <td>
-                                @if (category.IsActive)
-                                    {
-                                        <span class="badge bg-success-soft text-success py-2 px-3">
-                                            <i class="fas fa-check-circle me-1"></i>Active
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary-soft text-secondary py-2 px-3">
-                                            <i class="fas fa-times-circle me-1"></i>Inactive
-                                        </span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="text-muted small">
-                                        @category.CreatedAt.ToString("MMM dd, yyyy")
-                                    </div>
-                                </td>
-                                <td class="text-end">
-                                    <div class="btn-group" role="group">
-                                        <a asp-action="Details" asp-route-id="@category.Id"
-                                           class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@category.Id"
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                onclick="deleteCategory(@category.Id, '@category.Name')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
+            @if (Model.Items.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 250px;">Category</th>
+                                <th style="width: 35%;">Description</th>
+                                <th class="text-center" style="width: 100px;">Products</th>
+                                <th style="width: 120px;">Status</th>
+                                <th style="width: 120px;">Created</th>
+                                <th class="text-center" style="width: 100px;">Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody id="categoriesTable">
+                            @foreach (var category in Model.Items)
+                            {
+                                <tr class="category-item"
+                                    data-name="@category.Name.ToLower()"
+                                    data-description="@category.Description?.ToLower()"
+                                    data-status="@(category.IsActive ? "active" : "inactive")"
+                                    data-products="@category.ProductCount"
+                                    data-created="@category.CreatedAt.Ticks">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="icon-shape bg-light text-primary rounded-2 p-2 me-3">
+                                                <i class="fas fa-tag"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">@category.Name</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 400px;" title="@category.Description">
+                                            @(string.IsNullOrEmpty(category.Description) ? "No description" :
+                                                                                (category.Description.Length > 100 ? category.Description.Substring(0, 100) + "..." : category.Description))
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary rounded-pill px-3 py-2">
+                                            @category.ProductCount
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (category.IsActive)
+                                        {
+                                            <span class="badge bg-success-soft text-success py-2 px-3">
+                                                <i class="fas fa-check-circle me-1"></i>Active
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-soft text-secondary py-2 px-3">
+                                                <i class="fas fa-times-circle me-1"></i>Inactive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="text-muted small">
+                                            @category.CreatedAt.ToString("MMM dd, yyyy")
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@category.Id"
+                                               class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@category.Id"
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="deleteCategory(@category.Id, '@category.Name')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No categories found</p>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -268,30 +275,40 @@
 @section Scripts {
     <script src="~/js/pdf-export.js"></script>
     <script>
-            let allCategories=[];
         $(document).ready(function() {
-            allCategories=$('.category-item').toArray();
-
-            // Search functionality
-            $('#searchInput').on('input', function() {
-                filterCategories();
-            });
-
             // Filter functionality
             $('#statusFilter, #sortBy').on('change', function() {
                 filterCategories();
             });
-
             // Mobile filter toggle
             $('#filterToggle').click(function() {
                 $('.col-lg-2, .col-lg-3').toggleClass('d-none d-md-block');
             });
+            restoreFilterValues();
         });
+
+        // Restore filter values from URL parameters
+        function restoreFilterValues() {
+            const params = new URLSearchParams(window.location.search);
+
+            // Restore search
+            const search = params.get('search');
+            if (search) {
+                $('#searchInput').val(search);
+            }
+
+            // Restore status filter
+            const status = params.get('status');
+            if (status !== null) {
+                $('#statusFilter').val(status);
+            }
+        }
 
             function filterCategories() {
             const searchTerm = $('#searchInput').val().toLowerCase().trim();
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
+
 
             let visibleItems = allCategories.filter(item => {
                 const $item = $(item);
@@ -346,7 +363,7 @@
             $('#searchInput').val('');
             $('#statusFilter').val('');
             $('#sortBy').val('name');
-            filterCategories();
+            window.location.href = '/Categories';
         }
 
         function deleteCategory(id, name) {
