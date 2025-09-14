@@ -16,6 +16,7 @@ namespace RouteService.Domain.Repositories
         Task<PagedResult<InventoryRoute>> GetAllAsync(
             int pageNumber = 1,
             int pageSize = 30,
+            string? search= null,
             bool? isCompleted = null,
             DateTime? startDate = null,
             DateTime? endDate = null,

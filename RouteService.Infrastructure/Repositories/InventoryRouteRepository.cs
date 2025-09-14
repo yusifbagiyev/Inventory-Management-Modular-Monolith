@@ -68,6 +68,7 @@ namespace RouteService.Infrastructure.Repositories
         public async Task<PagedResult<InventoryRoute>> GetAllAsync(
             int pageNumber,
             int pageSize,
+            string? search,
             bool? isCompleted,
             DateTime? startDate,
             DateTime? endDate,
@@ -87,6 +88,23 @@ namespace RouteService.Infrastructure.Repositories
             {
                 var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
                 query = query.Where(r => r.CreatedAt <= EndDate);
+            }
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.Trim();
+                query = query.Where(r =>
+                    EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{search}%") ||
+                    EF.Functions.ILike(r.ProductSnapshot.CategoryName, $"%{search}%") ||
+                    EF.Functions.ILike(r.ProductSnapshot.Vendor, $"%{search}%") ||
+                    EF.Functions.ILike(r.ProductSnapshot.Model, $"%{search}%") ||
+                    (r.FromDepartmentName!=null && EF.Functions.ILike(r.FromDepartmentName, $"%{search}%")) ||
+                    EF.Functions.ILike(r.ToDepartmentName, $"%{search}%") ||
+                    EF.Functions.ILike(r.RouteType.ToString(), $"%{search}%") ||
+                    EF.Functions.ILike(r.CreatedAt.ToString(), $"%{search}%") ||
+                    EF.Functions.ILike(r.CompletedAt.ToString(), $"%{search}%")
+             );
+
             }
 
             var totalCount = await query.CountAsync(cancellationToken);

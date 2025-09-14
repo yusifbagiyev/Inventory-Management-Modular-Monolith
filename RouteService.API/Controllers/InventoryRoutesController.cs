@@ -124,11 +124,13 @@ namespace RouteService.API.Controllers
         public async Task<ActionResult<PagedResultDto<InventoryRouteDto>>> GetAllRoutes(
             [FromQuery] int? pageNumber = 1,
             [FromQuery] int? pageSize = 30,
+            [FromQuery] string? search = null,
             [FromQuery] bool? isCompleted = null,
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
-            var result = await _mediator.Send(new GetAllRoutesQuery(pageNumber, pageSize, isCompleted, startDate, endDate));
+            var result = await _mediator.Send(new GetAllRoutesQuery(
+                pageNumber, pageSize,search, isCompleted, startDate, endDate));
             return Ok(result);
         }
 
