@@ -46,7 +46,8 @@ namespace ProductService.API.Controllers
             [FromQuery] int? departmentId = null)
         {
             var products = await _mediator.Send(new GetAllProductsQuery(
-                pageNumber,pageSize,search,startDate,endDate,status,availability,categoryId,departmentId));
+                pageNumber,pageSize,search,startDate,endDate,
+                status,availability,categoryId,departmentId));
             return Ok(products);
         }
 

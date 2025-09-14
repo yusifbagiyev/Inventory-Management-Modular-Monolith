@@ -61,6 +61,14 @@ namespace InventoryManagement.Web.Controllers
                             product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
                         }
                     }
+
+
+                    // Calculate actual displayed range
+                    var start = ((products.PageNumber - 1) * products.PageSize) + 1;
+                    var end = Math.Min(products.PageNumber * products.PageSize, products.TotalCount);
+                    ViewBag.ShowingStart = start;
+                    ViewBag.ShowingEnd = end;
+                    ViewBag.TotalCount = products.TotalCount;
                 }
 
                 ViewBag.PageNumber = pageNumber ?? 1;
@@ -70,6 +78,7 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.CurrentAvailability = availability;
                 ViewBag.StartDate = startDate;
                 ViewBag.EndDate = endDate;
+
 
                 return View(products ?? new PagedResultDto<ProductViewModel>());
             }

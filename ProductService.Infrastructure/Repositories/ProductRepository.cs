@@ -31,49 +31,49 @@ namespace ProductService.Infrastructure.Repositories
             DateTime? endDate,
             bool? status,
             bool? availability,
-            int? categoryId=null,
-            int? departmentId=null,
+            int? categoryId = null,
+            int? departmentId = null,
             CancellationToken cancellationToken = default)
         {
             var query = _context.Products
-                .Include(p=>p.Category)
-                .Include(p=>p.Department)
+                .Include(p => p.Category)
+                .Include(p => p.Department)
                 .AsQueryable();
 
-            if(categoryId.HasValue)
-                query=query.Where(p=>p.CategoryId==categoryId.Value);
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
 
-            if(departmentId.HasValue)
-                query=query.Where(p=>p.DepartmentId==departmentId.Value);
+            if (departmentId.HasValue)
+                query = query.Where(p => p.DepartmentId == departmentId.Value);
 
             if (status.HasValue)
-                query=query.Where(p=>p.IsWorking==status.Value);
+                query = query.Where(p => p.IsWorking == status.Value);
 
             if (availability.HasValue)
                 query = query.Where(p => p.IsActive == availability.Value);
 
             if (startDate.HasValue)
-            {;
+            {
                 query = query.Where(r => r.CreatedAt >= startDate);
             }
 
             if (endDate.HasValue)
             {
-                var EndDate = endDate.Value.AddDays(1).AddSeconds(-1);
+                var EndDate = endDate.Value.AddDays(1).AddTicks(-1);
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.Trim().ToLower();
+                search = search.Trim();
                 query = query.Where(r =>
-                    r.Id.ToString().Contains(search) ||
-                    r.InventoryCode.ToString().Contains(search) ||
-                    r.Vendor.ToLower().Contains(search) ||
-                    r.Model.ToLower().Contains(search) ||
-                    r.Worker.ToLower().Contains(search) ||
-                    r.Category.Name.ToLower().Contains(search) ||
-                    r.Department.Name.ToLower().Contains(search)
+                    EF.Functions.ILike(r.InventoryCode.ToString(), $"%{search}%") ||
+                    EF.Functions.ILike(r.Vendor, $"%{search}%") ||
+                    EF.Functions.ILike(r.Model, $"%{search}%") ||
+                    (r.Category != null && EF.Functions.ILike(r.Category.Name, $"%{search}%")) ||
+                    (r.Department != null && EF.Functions.ILike(r.Department.Name, $"%{search}%")) ||
+                    EF.Functions.Like(r.Description, $"%{search}%") ||
+                    EF.Functions.Like(r.Worker, $"%{search}%")
                 );
             }
 

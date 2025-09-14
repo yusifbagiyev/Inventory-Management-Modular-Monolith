@@ -469,4 +469,45 @@
             $('#globalImageModal').modal('show');
         }
     </script>
+    <script>
+        // Real-time search functionality
+        let searchTimeout;
+        const searchInput = document.getElementById('searchInput');
+        const searchForm = document.getElementById('searchForm');
+
+        if (searchInput && searchForm) {
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+
+                // Show loading indicator
+                const submitBtn = searchForm.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Searching...';
+                }
+
+                searchTimeout = setTimeout(() => {
+                    searchForm.submit();
+                }, 500); // Wait 500ms after user stops typing
+            });
+        }
+
+        // Update the showing text dynamically
+        function updateShowingText() {
+            const totalCount = @(ViewBag.TotalCount ?? 0);
+            const showingStart = @(ViewBag.ShowingStart ?? 0);
+            const showingEnd = @(ViewBag.ShowingEnd ?? 0);
+
+            const showingText = document.querySelector('.showing-text');
+            if (showingText) {
+                if (totalCount === 0) {
+                    showingText.textContent = 'No products found';
+                } else {
+                    showingText.textContent = `Showing ${showingStart}-${showingEnd} of ${totalCount} products`;
+                }
+            }
+        }
+
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', updateShowingText);
+    </script>
 }

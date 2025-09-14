@@ -47,7 +47,7 @@ namespace InventoryManagement.Web.Controllers
                         startDate = now.AddMonths(-1);
                         break;
                     case "all":
-                        startDate = DateTime.MinValue;
+                        startDate = new DateTime(2020, 1, 1);
                         break;
                     default:
                         startDate = now.AddDays(-7);
@@ -76,31 +76,45 @@ namespace InventoryManagement.Web.Controllers
                     model.ActiveProducts = products.Items.Count(p => p.IsActive);
                 }
 
-                if (routes != null)
+                if (routes != null) 
                 {
-                    model.TotalRoutes = routes.TotalCount;
-                    model.CompletedTransfers = routes.Items.Count(r => r.IsCompleted);
-                    model.PendingTransfers = routes.Items.Count(r => !r.IsCompleted);
+                    var periodRoutes=routes.Items
+                        .Where(r => r.CreatedAt >= startDate && r.CreatedAt <= endDate)
+                        .ToList();
+
+                    model.TotalRoutes = periodRoutes.Count;
+                    model.CompletedTransfers = periodRoutes.Count(r => r.IsCompleted);
+                    model.PendingTransfers = periodRoutes.Count(r => !r.IsCompleted);
                 }
 
                 if (departments != null && products != null)
                 {
                     var activeDepartments = departments.Where(d => d.IsActive).ToList();
 
-                    model.DepartmentStats = activeDepartments.Select(d => new DepartmentStats
+                    model.DepartmentStats = activeDepartments.Select(d =>
                     {
-                        DepartmentName = d.Name,
-                        ProductCount = products.Items.Count(p => p.DepartmentId == d.Id),
-                        ActiveWorkers = products.Items
-                            .Where(p => p.DepartmentId == d.Id && !string.IsNullOrEmpty(p.Worker))
-                            .Select(p => p.Worker)
-                            .Distinct()
-                            .Count(),
-                        PeriodTransfers = routes?.Items.Count(r => r.ToDepartmentId == d.Id) ?? 0
+                        var deptProducts = products.Items.Where(p => p.DepartmentId == d.Id).ToList();
+                        var periodTransfers = routes?.Items
+                            .Where(r => r.ToDepartmentId == d.Id &&
+                                       r.CreatedAt >= startDate &&
+                                       r.CreatedAt <= endDate)
+                            .Count() ?? 0;
+
+                        return new DepartmentStats
+                        {
+                            DepartmentName = d.Name,
+                            ProductCount = deptProducts.Count,
+                            ActiveWorkers = deptProducts
+                                .Where(p => !string.IsNullOrEmpty(p.Worker))
+                                .Select(p => p.Worker)
+                                .Distinct()
+                                .Count(),
+                            PeriodTransfers = periodTransfers
+                        };
                     })
-                    .OrderByDescending(d => d.ProductCount)
-                    .Take(5)
-                    .ToList();
+                       .OrderByDescending(d => d.ProductCount)
+                       .Take(5)
+                       .ToList();
                 }
 
                 if (categories != null && products != null)
@@ -108,11 +122,15 @@ namespace InventoryManagement.Web.Controllers
                     var activeCategories = categories.Where(c => c.IsActive).ToList();
                     var colors = new[] { "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899" };
 
-                    model.CategoryDistributions = activeCategories.Select((c, index) => new CategoryDistribution
+                    model.CategoryDistributions = activeCategories.Select((c, index) =>
                     {
-                        CategoryName = c.Name,
-                        Count = products.Items.Count(p => p.CategoryId == c.Id),
-                        Color = colors[index % colors.Length]
+                        var categoryProducts = products.Items.Count(p => p.CategoryId == c.Id);
+                        return new CategoryDistribution
+                        {
+                            CategoryName = c.Name,
+                            Count = categoryProducts,
+                            Color = colors[index % colors.Length]
+                        };
                     })
                     .Where(c => c.Count > 0)
                     .OrderByDescending(c => c.Count)
