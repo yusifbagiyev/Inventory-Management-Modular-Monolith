@@ -78,7 +78,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Active Departments</p>
+                            <p class="text-muted mb-2">Total Active Departments</p>
                             <h3 class="mb-0">@totalDepartments</h3>
                             <p class="text-info mb-0">
                                 <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers
@@ -352,17 +352,66 @@
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
 
+            // Get the current period from the view
+            const currentPeriod = '@currentPeriod';
+
+            // Generate dynamic labels based on period
+            let labels, completedData, pendingData;
+
+            switch(currentPeriod) {
+                case 'week':
+                    // Last 7 days
+                    labels = [];
+                    for(let i = 6; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                    }
+                    // These should come from actual data - for now using sample data
+                    completedData = [@Model.CompletedTransfers]; // Use actual model data
+                    pendingData = [@Model.PendingTransfers];
+                    break;
+
+                case 'month':
+                    // Last 30 days - show weekly aggregates
+                    labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+                    completedData = [15, 22, 18, 25]; // Replace with actual data
+                    pendingData = [5, 8, 6, 10];
+                    break;
+
+                case 'all':
+                    // Show monthly data for all time
+                    labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                    completedData = [45, 52, 48, 65, 72, 68];
+                    pendingData = [12, 15, 10, 18, 20, 15];
+                    break;
+            }
+
             const colors = {
                 success: '#10B981',
                 warning: '#F59E0B'
             };
 
-            // Generate dynamic data based on the period
-            const transferData = generateTransferData(currentPeriod);
-
             transferChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
-                data: transferData,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Completed',
+                        data: completedData,
+                        borderColor: colors.success,
+                        backgroundColor: colors.success + '20',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Pending',
+                        data: pendingData,
+                        borderColor: colors.warning,
+                        backgroundColor: colors.warning + '20',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -373,7 +422,10 @@
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 5
+                            }
                         }
                     }
                 }

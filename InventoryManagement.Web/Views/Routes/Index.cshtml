@@ -140,13 +140,23 @@
                                             <span class="badge @typeColor">@route.RouteTypeName</span>
                                         </td>
                                         <td>
-                                            <a asp-controller="Products" asp-action="Details" 
-                                               asp-route-id="@route.ProductId"
-                                               class="text-decoration-none">
-                                                <span class="badge bg-primary">@route.InventoryCode</span>
-                                                @route.Vendor
-                                            </a>
-                                            <br />
+                                            @if(route.RouteTypeName!="Removal")
+                                            {
+                                                <a asp-controller="Products" asp-action="Details" 
+                                                   asp-route-id="@route.ProductId"
+                                                   class="text-decoration-none">
+                                                    <span class="badge bg-primary">@route.InventoryCode</span>
+                                                    @route.Vendor
+                                                </a>
+                                                <br />
+                                            }
+                                            else
+                                            {
+                                                <div class="text-decoration-none">
+                                                    <span class="badge bg-primary">@route.InventoryCode</span>
+                                                    @route.Vendor
+                                                </div>
+                                            }
                                             <small class="text-muted">
                                                 <i class="fas fa-tag"></i> @route.CategoryName
                                             </small>

@@ -102,6 +102,54 @@
     exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Products Report', customStyles);
 }
 
+function exportCategoriesToPDF() {
+    const table = document.querySelector('.table');
+    if (!table) {
+        showToast('Categories table not found', 'error');
+        return;
+    }
+
+    const tableClone = table.cloneNode(true);
+    tableClone.id = 'categoriesPdfTable';
+
+    // Remove actions column
+    const headers = tableClone.querySelectorAll('th');
+    headers[headers.length - 1].remove();
+
+    tableClone.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+            cells[cells.length - 1].remove();
+        }
+    });
+
+    // Clean up content
+    tableClone.querySelectorAll('td:first-child').forEach(cell => {
+        const textDiv = cell.querySelector('div:last-child');
+        if (textDiv) {
+            cell.innerHTML = textDiv.innerHTML;
+        }
+    });
+
+    // Remove icons from status column
+    tableClone.querySelectorAll('.badge i').forEach(icon => icon.remove());
+
+    // Adjusted column widths - decreased name, increased description
+    const customStyles = `
+        #categoriesPdfTable {
+            table-layout: fixed;
+            width: 100%;
+        }
+        #categoriesPdfTable th:nth-child(1) { width: 18%; }  /* Category Name - reduced */
+        #categoriesPdfTable th:nth-child(2) { width: 42%; }  /* Description - increased */
+        #categoriesPdfTable th:nth-child(3) { width: 12%; }  /* Products */
+        #categoriesPdfTable th:nth-child(4) { width: 15%; }  /* Status */
+        #categoriesPdfTable th:nth-child(5) { width: 13%; }  /* Created */
+    `;
+
+    exportToPDF(tableClone.outerHTML, 'categories_export.pdf', 'Categories Report', customStyles);
+}
+
 function exportRoutesToPDF() {
     const table = document.getElementById('routesTable');
     if (!table) {
@@ -109,106 +157,100 @@ function exportRoutesToPDF() {
         return;
     }
 
-    // Clone the table to modify it
     const tableClone = table.cloneNode(true);
 
-    // Find all headers to determine indices to remove
+    // Remove Image and Actions columns
     const headers = tableClone.querySelectorAll('th');
-    const indicesToRemove = [];
-    const headersToKeep = ['Date', 'Type', 'Product', 'From', 'To', 'Status'];
+    if (headers[0]) headers[0].remove(); // Image
+    if (headers[headers.length - 1]) headers[headers.length - 1].remove(); // Actions
 
-    headers.forEach((header, index) => {
-        const headerText = header.textContent.trim();
-        // Keep only specified columns
-        if (!headersToKeep.some(keep => headerText.includes(keep))) {
-            indicesToRemove.push(index);
-        }
-    });
-
-    // Sort indices in descending order for safe removal
-    indicesToRemove.sort((a, b) => b - a);
-
-    // Remove headers
-    indicesToRemove.forEach(index => {
-        headers[index].remove();
-    });
-
-    // Remove corresponding cells in rows
-    tableClone.querySelectorAll('tr').forEach(row => {
+    // Process rows
+    tableClone.querySelectorAll('tbody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
-        indicesToRemove.forEach(index => {
-            if (cells[index]) cells[index].remove();
-        });
-    });
 
-    // Clean up columns
-    // After removal, the columns are: Date, Type, Product, From, To, Status
-    tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
-        // Clean up Product column
-        const badge = cell.querySelector('.badge');
-        const anchor = cell.querySelector('a');
-        const small = cell.querySelector('small');
+        // Remove image column
+        if (cells[0]) cells[0].remove();
 
-        let vendor = '';
-        let model = '';
+        // Remove actions column (now last after removing image)
+        if (cells[cells.length - 1]) cells[cells.length - 1].remove();
 
-        if (anchor) {
-            vendor = anchor.childNodes[1]?.textContent.trim() || '';
-            model = small?.textContent || '';
+        // Clean up Date column (now first)
+        const dateCell = cells[1];
+        if (dateCell) {
+            const dateText = dateCell.textContent.trim().replace(/\s+/g, ' ');
+            dateCell.innerHTML = `<small>${dateText}</small>`;
         }
 
-        cell.innerHTML = `
-            <div style="font-weight: bold;">${badge?.textContent || ''}</div>
-            <div>${vendor}</div>
-            <small>${model}</small>
-        `;
+        // Clean up Type column
+        const typeCell = cells[2];
+        if (typeCell) {
+            const badge = typeCell.querySelector('.badge');
+            if (badge) {
+                typeCell.innerHTML = badge.textContent.trim();
+            }
+        }
+
+        // Clean up Product column
+        const productCell = cells[3];
+        if (productCell) {
+            const code = productCell.querySelector('.badge')?.textContent || '';
+            const vendor = productCell.textContent.replace(code, '').trim();
+            const category = productCell.querySelector('small')?.textContent || '';
+            productCell.innerHTML = `
+                <div><strong>${code}</strong> ${vendor}</div>
+                <small>${category}</small>
+            `;
+        }
+
+        // Clean up From/To columns
+        [cells[4], cells[5]].forEach(cell => {
+            if (cell) {
+                const dept = cell.childNodes[0]?.textContent?.trim() || '';
+                const worker = cell.querySelector('small')?.textContent?.replace('👤', '').trim() || '';
+                cell.innerHTML = `
+                    <div>${dept}</div>
+                    ${worker ? `<small>${worker}</small>` : ''}
+                `;
+            }
+        });
+
+        // Clean up Status column
+        const statusCell = cells[6];
+        if (statusCell) {
+            const badge = statusCell.querySelector('.badge');
+            const dateInfo = statusCell.querySelector('small');
+            statusCell.innerHTML = `
+                <div>${badge ? badge.textContent.trim() : ''}</div>
+                ${dateInfo ? `<small>${dateInfo.textContent.trim()}</small>` : ''}
+            `;
+        }
     });
 
-    // Clean up From column (now 4th column)
-    tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => {
-        const div = cell.querySelector('div');
-        const small = cell.querySelector('small');
-        cell.innerHTML = `
-            <div style="font-weight: bold;">${div?.textContent || ''}</div>
-            ${small?.outerHTML || ''}
-        `;
-    });
-
-    // Clean up To column (now 5th column)
-    tableClone.querySelectorAll('td:nth-child(5)').forEach(cell => {
-        const div = cell.querySelector('div');
-        const small = cell.querySelector('small');
-        cell.innerHTML = `
-            <div style="font-weight: bold;">${div?.textContent || ''}</div>
-            ${small?.outerHTML || ''}
-        `;
-    });
-
-    // Clean up Status column (now 6th column)
-    tableClone.querySelectorAll('td:nth-child(6)').forEach(cell => {
-        // Remove icons and extra elements
-        cell.querySelectorAll('i').forEach(icon => icon.remove());
-        cell.querySelectorAll('br').forEach(br => br.remove());
-        cell.querySelectorAll('small').forEach(sm => sm.remove());
-    });
-
-    // Remove any remaining images
-    tableClone.querySelectorAll('img').forEach(img => img.remove());
-
-    // Set a fixed ID for the table in the PDF
+    // Set table ID and custom styles
     tableClone.id = 'routesPdfTable';
 
     const customStyles = `
         #routesPdfTable {
             table-layout: fixed;
             width: 100%;
+            font-size: 9pt;
         }
-        #routesPdfTable th:nth-child(1) { width: 12%; }  /* Date */
+        #routesPdfTable th:nth-child(1) { width: 13%; }  /* Date */
         #routesPdfTable th:nth-child(2) { width: 10%; }  /* Type */
-        #routesPdfTable th:nth-child(3) { width: 23%; }  /* Product */
-        #routesPdfTable th:nth-child(4) { width: 15%; }  /* From */
-        #routesPdfTable th:nth-child(5) { width: 15%; }  /* To */
-        #routesPdfTable th:nth-child(6) { width: 25%; }  /* Status */
+        #routesPdfTable th:nth-child(3) { width: 22%; }  /* Product */
+        #routesPdfTable th:nth-child(4) { width: 18%; }  /* From */
+        #routesPdfTable th:nth-child(5) { width: 18%; }  /* To */
+        #routesPdfTable th:nth-child(6) { width: 19%; }  /* Status */
+        
+        #routesPdfTable td {
+            padding: 5px 3px;
+            vertical-align: top;
+        }
+        
+        #routesPdfTable small {
+            font-size: 8pt;
+            color: #666;
+        }
     `;
 
     exportToPDF(tableClone.outerHTML, 'routes_export.pdf', 'Routes Report', customStyles);
@@ -540,53 +582,4 @@ function exportDepartmentsToPDF() {
     `;
 
     exportToPDF(tableClone.outerHTML, 'departments_export.pdf', 'Departments Report', customStyles);
-}
-
-function exportCategoriesToPDF() {
-    const table = document.querySelector('.table');
-    if (!table) {
-        showToast('Categories table not found', 'error');
-        return;
-    }
-
-    // Clone the table to modify it
-    const tableClone = table.cloneNode(true);
-    tableClone.id = 'categoriesPdfTable';
-
-    // Remove actions column
-    const headers = tableClone.querySelectorAll('th');
-    headers[headers.length - 1].remove();  // Remove Actions header
-
-    tableClone.querySelectorAll('tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length > 0) {
-            cells[cells.length - 1].remove();  // Remove Actions cell
-        }
-    });
-
-    // Clean up content
-    tableClone.querySelectorAll('td:first-child').forEach(cell => {
-        const textDiv = cell.querySelector('div:last-child');
-        if (textDiv) {
-            cell.innerHTML = textDiv.outerHTML;
-        }
-    });
-
-    // Remove icons from status column
-    tableClone.querySelectorAll('.badge i').forEach(icon => icon.remove());
-
-    // Set column widths
-    const customStyles = `
-        #categoriesPdfTable {
-            table-layout: fixed;
-            width: 100%;
-        }
-        #categoriesPdfTable th:nth-child(1) { width: 25%; }  /* Category */
-        #categoriesPdfTable th:nth-child(2) { width: 30%; }  /* Description */
-        #categoriesPdfTable th:nth-child(3) { width: 15%; }  /* Products */
-        #categoriesPdfTable th:nth-child(4) { width: 15%; }  /* Status */
-        #categoriesPdfTable th:nth-child(5) { width: 15%; }  /* Created */
-    `;
-
-    exportToPDF(tableClone.outerHTML, 'categories_export.pdf', 'Categories Report', customStyles);
 }

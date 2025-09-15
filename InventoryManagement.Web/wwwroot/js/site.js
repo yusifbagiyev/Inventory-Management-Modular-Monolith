@@ -1,4 +1,4 @@
-﻿// Global site functionality
+﻿// Global site functionality - simplified and focused
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -6,9 +6,9 @@ document.addEventListener('DOMContentLoaded', function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Auto-hide alerts after 5 seconds (excluding permanent alerts)
+    // Auto-hide alerts after 5 seconds
     setTimeout(function () {
-        const alerts = document.querySelectorAll('.alert:not(.alert-permanent):not(#productInfo):not(#errorInfo)');
+        const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
         alerts.forEach(function (alert) {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
@@ -53,7 +53,7 @@ function copyToClipboard(text) {
     });
 }
 
-// Toast notification system
+// Toast notification system - improved version
 function showToast(message, type = 'info', duration = 5000) {
     // Validate and normalize type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
@@ -72,13 +72,12 @@ function showToast(message, type = 'info', duration = 5000) {
     const textClass = (type === 'warning' || type === 'info') ? 'text-dark' : 'text-white';
     const closeButtonClass = (type === 'warning' || type === 'info') ? '' : 'btn-close-white';
 
-    // Create toast HTML
+    // Create toast HTML - allow HTML content for rich notifications
     const toastHtml = `
         <div id="${toastId}" class="toast align-items-center bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body ${textClass}">
-                    <i class="fas fa-${icon} me-2"></i>
-                    ${escapeHtml(message)}
+                    ${message}
                 </div>
                 <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
@@ -124,17 +123,6 @@ function getToastIcon(type) {
     return icons[type] || 'info-circle';
 }
 
-// Helper function to escape HTML to prevent XSS
-function escapeHtml(unsafe) {
-    if (typeof unsafe !== 'string') return '';
-    return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
 // Global loader functions
 function showLoader() {
     if (!document.querySelector('.loader-overlay')) {
@@ -162,7 +150,6 @@ function handleApprovalResponse(response, entityType, successRedirect) {
         try {
             response = JSON.parse(response);
         } catch (e) {
-            // Not JSON, assume direct success
             showToast(`${entityType} created successfully!`, 'success');
             setTimeout(() => window.location.href = successRedirect, 1500);
             return;
@@ -193,42 +180,29 @@ function handleApprovalResponse(response, entityType, successRedirect) {
     // Redirect after delay
     setTimeout(() => window.location.href = successRedirect, 2000);
 }
+
 // Enhanced notification sound function
 function playNotificationSound() {
     try {
-        // First, try to use the Audio API with better browser compatibility
-        const audioContext = window.AudioContext || window.webkitAudioContext;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-        if (audioContext) {
-            const context = new audioContext();
-            const oscillator = context.createOscillator();
-            const gainNode = context.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(context.destination);
+        // Create a pleasant notification sound
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
 
-            // Create a pleasant notification sound
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
 
-            gainNode.gain.setValueAtTime(0.3, context.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
 
-            oscillator.start(context.currentTime);
-            oscillator.stop(context.currentTime + 0.3);
-
-            console.log('Notification sound played via Web Audio API');
-        }
+        console.log('Notification sound played successfully');
     } catch (error) {
         console.error('Error playing notification sound:', error);
-        // Fallback: try HTML5 audio
-        try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLYiTYIG2m98OScTgwOUaXh7blmFgU7k9n1wHkkCE59y+z');
-            audio.volume = 0.3;
-            audio.play();
-            console.log('Notification sound played via HTML5 Audio');
-        } catch (audioError) {
-            console.error('Could not play any notification sound:', audioError);
-        }
     }
 }

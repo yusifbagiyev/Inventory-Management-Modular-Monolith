@@ -276,94 +276,104 @@
     <script src="~/js/pdf-export.js"></script>
     <script>
         $(document).ready(function() {
-            // Filter functionality
+            // Store all category elements for filtering
+            const allCategories = Array.from(document.querySelectorAll('#categoriesTable tr'));
+
+            // Real-time search with debouncing
+            let searchTimeout;
+            $('#searchInput').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => filterCategories(), 300);
+            });
+
+            // Filter change handlers
             $('#statusFilter, #sortBy').on('change', function() {
                 filterCategories();
             });
-            // Mobile filter toggle
-            $('#filterToggle').click(function() {
-                $('.col-lg-2, .col-lg-3').toggleClass('d-none d-md-block');
-            });
+
+            // Restore filter values from URL
             restoreFilterValues();
         });
 
-        // Restore filter values from URL parameters
-        function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
-
-            // Restore search
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(search);
-            }
-
-            // Restore status filter
-            const status = params.get('status');
-            if (status !== null) {
-                $('#statusFilter').val(status);
-            }
-        }
-
-            function filterCategories() {
+        function filterCategories() {
             const searchTerm = $('#searchInput').val().toLowerCase().trim();
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
 
+            // Get all rows
+            const allRows = Array.from(document.querySelectorAll('#categoriesTable tr'));
 
-            let visibleItems = allCategories.filter(item => {
-                const $item = $(item);
-                const matchesSearch = searchTerm === '' ||
-                    $item.data('name').includes(searchTerm) ||
-                    $item.find('.fw-semibold').text().toLowerCase().includes(searchTerm);
-                const matchesStatus = statusFilter === '' ||
-                    $item.data('status') === statusFilter;
+            // Filter rows
+            let visibleRows = allRows.filter(row => {
+                // Search filter
+                const name = row.querySelector('.fw-semibold')?.textContent.toLowerCase() || '';
+                const description = row.querySelector('.text-truncate')?.textContent.toLowerCase() || '';
+                const matchesSearch = !searchTerm ||
+                    name.includes(searchTerm) ||
+                    description.includes(searchTerm);
+
+                // Status filter
+                const isActive = row.querySelector('.badge.bg-success-soft') !== null;
+                const matchesStatus = !statusFilter ||
+                    (statusFilter === 'active' && isActive) ||
+                    (statusFilter === 'inactive' && !isActive);
 
                 return matchesSearch && matchesStatus;
             });
 
-            // Sort items with proper type conversion
-            visibleItems.sort((a, b) => {
-                const $a = $(a);
-                const $b = $(b);
-
+            // Sort rows
+            visibleRows.sort((a, b) => {
                 switch(sortBy) {
                     case 'name':
-                        // String comparison for names
-                        return $a.data('name').toString().localeCompare($b.data('name').toString());
+                        const nameA = a.querySelector('.fw-semibold')?.textContent || '';
+                        const nameB = b.querySelector('.fw-semibold')?.textContent || '';
+                        return nameA.localeCompare(nameB);
                     case 'products':
-                        // Convert to numbers explicitly for proper numerical comparison
-                        const aProducts = parseInt($a.data('products')) || 0;
-                        const bProducts = parseInt($b.data('products')) || 0;
-                        return bProducts - aProducts; // Descending order (highest first)
+                        const productsA = parseInt(a.querySelector('.badge.bg-primary')?.textContent) || 0;
+                        const productsB = parseInt(b.querySelector('.badge.bg-primary')?.textContent) || 0;
+                        return productsB - productsA;
                     case 'created':
-                        // Convert to numbers for date comparison (ticks)
-                        const aCreated = parseInt($a.data('created')) || 0;
-                        const bCreated = parseInt($b.data('created')) || 0;
-                        return bCreated - aCreated; // Descending order (newest first)
+                        const dateA = a.querySelector('td:nth-child(5) .text-muted')?.textContent || '';
+                        const dateB = b.querySelector('td:nth-child(5) .text-muted')?.textContent || '';
+                        return new Date(dateB) - new Date(dateA);
                     default:
                         return 0;
                 }
             });
 
-            // Clear and rebuild the table body
-            const $tbody = $('#categoriesTable');
-            $tbody.empty();
+            // Update table
+            const tbody = document.getElementById('categoriesTable');
+            tbody.innerHTML = '';
+            visibleRows.forEach(row => tbody.appendChild(row));
 
-            // Append sorted items
-            visibleItems.forEach(item => {
-                $tbody.append(item);
-            });
+            // Show/hide empty state
+            if (visibleRows.length === 0) {
+                if (!document.getElementById('noResults')) {
+                    tbody.innerHTML = `
+                        <tr id="noResults">
+                            <td colspan="6" class="text-center py-4">
+                                <i class="fas fa-search fa-2x text-muted mb-2"></i>
+                                <p class="text-muted">No categories found matching your filters</p>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
 
-            // Show/hide the table and empty state
-            $('.table-responsive').toggle(visibleItems.length > 0);
-            $('#noResults').toggle(visibleItems.length === 0);
+        function restoreFilterValues() {
+            const params = new URLSearchParams(window.location.search);
+            const search = params.get('search');
+            if (search) {
+                $('#searchInput').val(search);
+            }
         }
 
         function resetFilters() {
             $('#searchInput').val('');
             $('#statusFilter').val('');
             $('#sortBy').val('name');
-            window.location.href = '/Categories';
+            filterCategories();
         }
 
         function deleteCategory(id, name) {
@@ -372,7 +382,6 @@
             $('#deleteModal').modal('show');
         }
     </script>
-
     <style>
         .card {
             border-radius: 12px;

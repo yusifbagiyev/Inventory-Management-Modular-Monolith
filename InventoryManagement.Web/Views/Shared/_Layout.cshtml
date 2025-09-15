@@ -27,7 +27,6 @@
             <!-- Overlay for mobile -->
             <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
         }
-
         <!-- Main Content -->
         <div class="main-content" id="page-content-wrapper">
             <!-- Modern Top Navigation -->
@@ -117,6 +116,7 @@
                                 </ul>
                             </div>
                         }
+                    
                     </div>
                 </div>
             </nav>
@@ -178,12 +178,14 @@
     }
     <script>
         // Global notification variables
-        let notificationConnection = null;
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
+        let notificationHub = null;
 
-        // Store whether user is admin for JavaScript usage
-		const isAdmin=@(User.IsInRole("Admin") ? "true" : "false");
+        const isUserAuthenticated = @(User.Identity?.IsAuthenticated ?? false ? "true" : "false");
+        const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
+        const currentUserId = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0")';
+
 
         $(document).ready(function() {
             // Sidebar toggle
@@ -201,31 +203,33 @@
         });
 
             // Only initialize notifications if user is authenticated
-        const jwtToken=$('#jwtToken').val();
-            if (jwtToken) {
-                initializeNotifications();
-                setupNotificationHandlers();
-                loadNotificationCount();
+            if (isUserAuthenticated) {
+                initializeNotificationHub();
+                setupNotificationUI();
+
+                // Load initial notification data
+                loadUnreadNotificationCount();
                 loadRecentNotifications();
 
                 // Check for pending approvals if admin
                 if (isAdmin) {
-                    loadPendingApprovalsCount();
+                    checkPendingApprovals();
                 }
-            }   
+            }
         });
 
-        function initializeNotifications() {
-            const token = $('#jwtToken').val();
+        function initializeNotificationHub() {
+            const token = $('#jwtToken').val() || sessionStorage.getItem('JwtToken');
+
             if (!token) {
-                console.error('No JWT token available');
+                console.error('No authentication token found');
                 return;
             }
 
             const hubUrl = window.location.protocol + '//' + window.location.host + '/notificationHub';
 
 
-            window.notificationConnection = new signalR.HubConnectionBuilder()
+            notificationHub = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl, {
                     accessTokenFactory: () => token,
                     transport: signalR.HttpTransportType.WebSockets |
@@ -233,140 +237,136 @@
                               signalR.HttpTransportType.LongPolling
                 })
                 .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-                .configureLogging(signalR.LogLevel.Debug)
+                .configureLogging(signalR.LogLevel.Information)
                 .build();
 
-                // Set up handlers before starting
-            setupMessageHandlers();
+                // Set up message handlers
+            notificationHub.on("ReceiveNotification", function(notification) {
+                console.log('Notification received:', notification);
+                handleIncomingNotification(notification);
+            });
 
-            // Start connection with retry logic
-            startConnectionWithRetry();
+            notificationHub.on("Connected", function(data) {
+                console.log('Connected to notification hub:', data);
+            });
+
+            // Handle connection state changes
+            notificationHub.onreconnecting(error => {
+                console.warn('Reconnecting to notification hub...', error);
+                showToast('Connection lost. Reconnecting...', 'warning');
+            });
+
+            notificationHub.onreconnected(connectionId => {
+                console.log('Reconnected to notification hub');
+                showToast('Connection restored', 'success');
+            });
+
+            notificationHub.onclose(error => {
+                console.error('Connection closed:', error);
+                setTimeout(() => startNotificationHub(), 5000);
+            });
+
+            // Start the connection
+            startNotificationHub();
         }
 
+        function startNotificationHub() {
+            if (!notificationHub) return;
 
-        // Setup SignalR message handlers
-        function setupMessageHandlers() {
-            if (!window.notificationConnection) return;
+            notificationHub.start()
+                .then(() => {
+                    console.log('Notification hub connected successfully');
 
-            // Handle incoming notifications
-            window.notificationConnection.on("ReceiveNotification", function(notification) {
-            console.log('Notification received:', notification);
+                    // Join user-specific group
+                    notificationHub.invoke("JoinUserGroup")
+                        .then(() => console.log('Joined user notification group'))
+                        .catch(err => console.error('Failed to join user group:', err));
+                })
+                .catch(err => {
+                    console.error('Failed to connect to notification hub:', err);
+                    setTimeout(() => startNotificationHub(), 5000);
+                });
+        }
 
+        function handleIncomingNotification(notification) {
             // Display the notification immediately
-            displayNotification(notification);
+            displayNotificationToast(notification);
 
-            // Play notification sound for important events
-            const importantTypes = ['ApprovalRequest', 'ApprovalResponse', 'ProductCreated', 'RouteCompleted'];
+            // Play sound for important notifications
+            const importantTypes = ['ApprovalRequest', 'ApprovalResponse', 'ProductUpdate', 'RouteUpdate', 'RouteCompleted'];
             if (importantTypes.includes(notification.type)) {
                 playNotificationSound();
             }
 
-            // Update notification count badge
-            incrementNotificationCount();
+            // Update UI elements
+            incrementNotificationBadge();
+            addNotificationToDropdown(notification);
 
-            loadRecentNotifications(); // Refresh the dropdown
-
-            // Update pending approvals count for admin users
-            if (isAdmin && (notification.type === 'ApprovalRequest' ||
-                notification.type === 'ApprovalResponse')) {
-                loadPendingApprovalsCount();
-            }
-        });
-
-
-            window.notificationConnection.on("Connected", function(data) {
-                console.log('Connected to SignalR:', data);
-                // Join user-specific group for targeted notifications
-                if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                    window.notificationConnection.invoke("JoinUserGroup")
-                        .catch(err => console.error('Failed to join user group:', err));
-                }
-            });
-        }
-
-
-        // Start SignalR connection
-        function startConnectionWithRetry(retryCount = 0) {
-            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                console.log('SignalR already connected');
-                return;
-            }
-
-            window.notificationConnection.start()
-                .then(() => {
-                    console.log('SignalR connected successfully');
-                    reconnectAttempts = 0;
-                    // Test the connection
-                    testSignalRConnection();
-                })
-                .catch(err => {
-                    console.error('SignalR connection error:', err);
-                    if (retryCount < 3) {
-                        setTimeout(() => startConnectionWithRetry(retryCount + 1), 3000);
-                    }
-                });
-        }
-
-
-        function testSignalRConnection() {
-            // Send a test message to verify connection
-            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                console.log('SignalR connection test: Connected');
+            // Special handling for admin approval requests
+            if (isAdmin && notification.type === 'ApprovalRequest') {
+                checkPendingApprovals();
             }
         }
 
+        function displayNotificationToast(notification) {
+            const type = getNotificationType(notification.type);
+            const icon = getNotificationIcon(notification.type);
 
-        // Improved notification sound function with better fallback
+            // Create a more detailed toast message
+            const message = `
+                <div class="d-flex align-items-start">
+                    <i class="${icon} me-2 mt-1"></i>
+                    <div>
+                        <strong>${notification.title}</strong><br>
+                        <small>${notification.message}</small>
+                    </div>
+                </div>
+            `;
+
+            showToast(message, type, 7000);
+        }
+
         function playNotificationSound() {
             try {
-                // Try to play the sound file
-                const audio = new Audio('/sounds/notify.mp3');
-                audio.volume = 0.3; // Lower volume for less intrusive notification
+                // Create a simple notification sound using Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-                const playPromise = audio.play();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
 
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        // If file doesn't exist or can't play, use Web Audio API for a beep
-                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                        const oscillator = audioContext.createOscillator();
-                        const gainNode = audioContext.createGain();
+                // Create a pleasant notification sound
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
 
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioContext.destination);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
 
-                        oscillator.frequency.value = 800; // Frequency in Hz
-                        oscillator.type = 'sine';
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
 
-                        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-                        oscillator.start(audioContext.currentTime);
-                        oscillator.stop(audioContext.currentTime + 0.2);
-                    });
-                }
+                console.log('Notification sound played');
             } catch (error) {
                 console.error('Error playing notification sound:', error);
             }
         }
 
-
-        function setupNotificationHandlers() {
-            // Notification bell click handler
+        function setupNotificationUI() {
+            // Notification bell click
             $('#notificationIcon').on('click', function(e) {
                 e.preventDefault();
                 loadRecentNotifications();
             });
 
-            // Mark all as read handler
+            // Mark all as read
             $('#markAllAsRead').on('click', function(e) {
                 e.preventDefault();
-                markAllAsRead();
+                markAllNotificationsAsRead();
             });
         }
 
-
-        function loadNotificationCount() {
+        function loadUnreadNotificationCount() {
             $.ajax({
                 url: '/Notifications/GetUnreadCount',
                 type: 'GET',
@@ -378,7 +378,6 @@
                 }
             });
         }
-
 
         function loadRecentNotifications() {
             $('#notificationList').html(`
@@ -393,7 +392,7 @@
                 url: '/Notifications/GetRecentNotifications',
                 type: 'GET',
                 success: function(notifications) {
-                    renderNotifications(notifications);
+                    renderNotificationList(notifications);
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to load notifications:', error);
@@ -407,26 +406,24 @@
             });
         }
 
-
-        function renderNotifications(notifications) {
-            let html = '';
-
+        function renderNotificationList(notifications) {
             if (!notifications || notifications.length === 0) {
-                html = `
+                $('#notificationList').html(`
                     <div class="notification-empty">
                         <i class="fas fa-bell-slash"></i>
                         <p class="mb-0">No new notifications</p>
                     </div>
-                `;
-            } else {
-                notifications.forEach(function(notification) {
-                    html += createNotificationItem(notification);
-                });
+                `);
+                return;
             }
+
+            let html = '';
+            notifications.forEach(notification => {
+                html += createNotificationItem(notification);
+            });
 
             $('#notificationList').html(html);
         }
-
 
         function createNotificationItem(notification) {
             const timeAgo = formatTimeAgo(notification.createdAt);
@@ -435,7 +432,7 @@
             const iconColor = getNotificationIconColor(notification.type);
 
             return `
-                <div class="notification-item ${unreadClass}" data-id="${notification.id}" onclick="markAsRead(${notification.id})">
+                <div class="notification-item ${unreadClass}" data-id="${notification.id}" onclick="markNotificationAsRead(${notification.id})">
                     <div class="d-flex align-items-start">
                         <div class="notification-icon ${iconColor} me-3">
                             <i class="${icon} text-white"></i>
@@ -454,66 +451,65 @@
             `;
         }
 
+        function addNotificationToDropdown(notification) {
+            const notificationHtml = createNotificationItem(notification);
 
-        function markAsRead(notificationId) {
+            // Remove empty state if exists
+            $('.notification-empty').remove();
+
+            // Add new notification at the top
+            $('#notificationList').prepend(notificationHtml);
+
+            // Limit to 10 notifications in dropdown
+            $('#notificationList .notification-item:gt(9)').remove();
+        }
+
+        function markNotificationAsRead(notificationId) {
+            const token = $('input[name="__RequestVerificationToken"]').first().val();
+
             $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
                 data: JSON.stringify(notificationId),
                 contentType: 'application/json',
                 headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val(),
-                    'Content-Type': 'application/json'
+                    'RequestVerificationToken': token
                 },
-                success: function(response) {
-                        $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
-                            loadNotificationCount();
+                success: function() {
+                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    decrementNotificationBadge();
                 },
                 error: function(xhr, status, error) {
-                        const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Failed to mark notification as read');
-                        showToast(errorMessage, 'error');
+                    console.error('Failed to mark notification as read:', error);
                 }
             });
         }
 
+        function markAllNotificationsAsRead() {
+            const token = $('input[name="__RequestVerificationToken"]').first().val();
 
-        function markAllAsRead() {
-                         // Find the first available CSRF token
-            var token = $('input[name="__RequestVerificationToken"]').first().val();
-                 if (!token) {
-            // If no token found in forms, create a temporary form to get one
-            var tempForm = $('<form>').html('@Html.AntiForgeryToken()');
-            token = tempForm.find('input[name="__RequestVerificationToken"]').val();
-            }
-                    $.ajax({
+            $.ajax({
                 url: '/Notifications/MarkAllAsRead',
                 type: 'POST',
                 headers: {
                     'RequestVerificationToken': token
                 },
-                success: function(response) {
+                success: function() {
                     $('.notification-item').removeClass('unread');
                     $('.notification-dot').remove();
                     updateNotificationBadge(0);
                     showToast('All notifications marked as read', 'success');
-
-                    // Reload notifications if dropdown is open
-                    if ($('.notification-dropdown').hasClass('show')) {
-                        loadRecentNotifications();
-                    }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Mark all as read failed:', xhr.responseText);
+                    console.error('Failed to mark all as read:', error);
                     showToast('Failed to mark notifications as read', 'error');
                 }
             });
         }
 
-
         function updateNotificationBadge(count) {
             const $badge = $('#notificationBadge');
             const $sidebarBadge = $('#sidebarUnreadCount');
-            count = parseInt(count) || 0;
 
             if (count > 0) {
                 $badge.text(count > 99 ? '99+' : count).show();
@@ -524,15 +520,13 @@
             }
         }
 
-
-        function incrementNotificationCount() {
+        function incrementNotificationBadge() {
             const $badge = $('#notificationBadge');
             const current = parseInt($badge.text()) || 0;
             updateNotificationBadge(current + 1);
         }
 
-
-        function decrementNotificationCount() {
+        function decrementNotificationBadge() {
             const $badge = $('#notificationBadge');
             const current = parseInt($badge.text()) || 0;
             if (current > 0) {
@@ -540,8 +534,74 @@
             }
         }
 
+        function checkPendingApprovals() {
+            if (!isAdmin) return;
+
+            $.ajax({
+                url: '/api/approvalrequests?pageNumber=1&pageSize=1',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + $('#jwtToken').val()
+                },
+                success: function(data) {
+                    const count = data.totalCount || 0;
+                    updatePendingApprovalsCount(count);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load pending approvals:', error);
+                }
+            });
+        }
+
+        function updatePendingApprovalsCount(count) {
+            const $badge = $('#pendingApprovalsCount');
+            if (count > 0) {
+                $badge.text(count).show();
+            } else {
+                $badge.hide();
+            }
+        }
 
         // Helper functions
+        function getNotificationType(type) {
+            const types = {
+                'ApprovalRequest': 'warning',
+                'ApprovalResponse': 'success',
+                'ProductUpdate': 'info',
+                'RouteUpdate': 'info',
+                'RouteCompleted': 'success',
+                'TransferCompleted': 'success',
+                'System': 'secondary'
+            };
+            return types[type] || 'info';
+        }
+
+        function getNotificationIcon(type) {
+            const icons = {
+                'ApprovalRequest': 'fas fa-clock',
+                'ApprovalResponse': 'fas fa-check-circle',
+                'ProductUpdate': 'fas fa-box',
+                'RouteUpdate': 'fas fa-route',
+                'RouteCompleted': 'fas fa-check-double',
+                'TransferCompleted': 'fas fa-exchange-alt',
+                'System': 'fas fa-info-circle'
+            };
+            return icons[type] || 'fas fa-bell';
+        }
+
+        function getNotificationIconColor(type) {
+            const colors = {
+                'ApprovalRequest': 'bg-warning',
+                'ApprovalResponse': 'bg-success',
+                'ProductUpdate': 'bg-info',
+                'RouteUpdate': 'bg-primary',
+                'RouteCompleted': 'bg-success',
+                'TransferCompleted': 'bg-success',
+                'System': 'bg-secondary'
+            };
+            return colors[type] || 'bg-primary';
+        }
+
         function formatTimeAgo(dateString) {
             const date = new Date(dateString);
             const now = new Date();
@@ -563,50 +623,8 @@
             });
         }
 
-
-        function getNotificationIcon(type) {
-            const icons = {
-                'ApprovalRequest': 'fas fa-clock',
-                'ApprovalResponse': 'fas fa-check-circle',
-                'ProductUpdate': 'fas fa-box',
-                'RouteUpdate': 'fas fa-route',
-                'RouteCompleted':'fas fa-check-double',
-                'TransferCompleted':'fas fa-exchange-alt',
-                'System': 'fas fa-info-circle'
-            };
-            return icons[type] || 'fas fa-bell';
-        }
-
-
-        function getNotificationType(type) {
-            const types = {
-                'ApprovalRequest': 'warning',
-                'ApprovalResponse': 'success',
-                'ProductUpdate': 'info',
-                'RouteUpdate': 'info',
-                'RouteCompleted': 'success',
-                'TransferCompleted': 'success',
-                'System': 'secondary'
-            };
-            return types[type] || 'info';
-        }
-
-
-        function getNotificationIconColor(type) {
-            const colors = {
-                'ApprovalRequest': 'bg-warning',
-                'ApprovalResponse': 'bg-success',
-                'ProductUpdate': 'bg-info',
-                'RouteUpdate': 'bg-primary',
-                'RouteCompleted':'bg-success',
-                'TransferCompleted':'bg-success',
-                'System': 'bg-secondary'
-            };
-            return colors[type] || 'bg-primary';
-        }
-
-
         function escapeHtml(text) {
+            if (typeof text !== 'string') return '';
             const map = {
                 '&': '&amp;',
                 '<': '&lt;',
@@ -616,11 +634,6 @@
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-
-
-        function toggleSidebar() {
-              document.body.classList.toggle('sidebar-open');
-         }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
