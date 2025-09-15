@@ -192,11 +192,17 @@ namespace InventoryManagement.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> RefreshToken()
         {
-            var accessToken = HttpContext.Session.GetString("JwtToken");
-            var refreshToken = HttpContext.Session.GetString("RefreshToken");
+            var accessToken = HttpContext.Session.GetString("JwtToken")
+                ?? Request.Cookies["jwt_token"];
+            var refreshToken = HttpContext.Session.GetString("RefreshToken")
+                ?? Request.Cookies["refresh_token"];
 
-            if(string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
             {
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return Json(new { success = false, message = "No tokens available" });
+                }
                 return RedirectToAction("Login");
             }
 
@@ -206,15 +212,42 @@ namespace InventoryManagement.Web.Controllers
 
                 if (result != null)
                 {
+                    // Update all storage locations
                     HttpContext.Session.SetString("JwtToken", result.AccessToken);
                     HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
+                    HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
 
-                    return Ok(new { success = true });
+                    // Update cookies if they exist
+                    if (Request.Cookies.ContainsKey("jwt_token"))
+                    {
+                        var cookieOptions = new CookieOptions
+                        {
+                            HttpOnly = true,
+                            Secure = Request.IsHttps,
+                            SameSite = SameSiteMode.Lax,
+                            Expires = DateTimeOffset.Now.AddDays(30)
+                        };
+
+                        Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
+                        Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
+                    }
+
+                    return Json(new
+                    {
+                        success = true,
+                        token = result.AccessToken,
+                        refreshToken = result.RefreshToken
+                    });
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Token refresh error");
+            }
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Json(new { success = false, message = "Token refresh failed" });
             }
 
             return RedirectToAction("Login");

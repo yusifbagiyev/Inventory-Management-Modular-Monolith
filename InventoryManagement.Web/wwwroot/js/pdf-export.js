@@ -157,126 +157,106 @@ function exportRoutesToPDF() {
         return;
     }
 
+    // Clone the table to modify it
     const tableClone = table.cloneNode(true);
 
-    // Remove Image and Actions columns
+    // Find all headers to determine indices to remove
     const headers = tableClone.querySelectorAll('th');
-    if (headers[0]) headers[0].remove(); // Image
-    if (headers[headers.length - 1]) headers[headers.length - 1].remove(); // Actions
+    const indicesToRemove = [];
+    const headersToKeep = ['Date', 'Type', 'Product', 'From', 'To', 'Status'];
 
-    // Process rows
-    tableClone.querySelectorAll('tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-
-        // Remove image column
-        if (cells[0]) cells[0].remove();
-
-        // Remove actions column (now last after removing image)
-        if (cells[cells.length - 1]) cells[cells.length - 1].remove();
-
-        // Clean up Date column (now at index 0 after removals)
-        const dateCell = cells[1];
-        if (dateCell) {
-            const dateText = dateCell.textContent.trim().replace(/\s+/g, ' ');
-            dateCell.innerHTML = `<small>${dateText}</small>`;
-        }
-
-        // Clean up Type column
-        const typeCell = cells[2];
-        if (typeCell) {
-            const badge = typeCell.querySelector('.badge');
-            if (badge) {
-                typeCell.innerHTML = badge.textContent.trim();
-            }
-        }
-
-        // Clean up Product column - THIS IS THE IMPORTANT FIX
-        const productCell = cells[3];
-        if (productCell) {
-            // Extract the inventory code (should only appear once)
-            const codeElement = productCell.querySelector('.badge');
-            const inventoryCode = codeElement ? codeElement.textContent.trim() : '';
-
-            // Get the rest of the product info
-            const productTextNodes = Array.from(productCell.childNodes)
-                .filter(node => node.nodeType === Node.TEXT_NODE || node.tagName !== 'SPAN')
-                .map(node => node.textContent.trim())
-                .filter(text => text && text !== inventoryCode); // Remove duplicate code
-
-            // Get vendor and model
-            const vendorModel = productTextNodes.join(' ').trim();
-
-            // Get category from small tag
-            const categoryElement = productCell.querySelector('small');
-            const category = categoryElement ? categoryElement.textContent.trim() : '';
-
-            // Rebuild the cell content with proper formatting
-            productCell.innerHTML = `
-                <div><strong>Code: ${inventoryCode}</strong></div>
-                <div>${vendorModel || 'No details'}</div>
-                ${category ? `<small style="color: #666;">${category}</small>` : ''}
-            `;
-        }
-
-        // Clean up From/To columns
-        [cells[4], cells[5]].forEach(cell => {
-            if (cell) {
-                const deptElement = cell.querySelector('div') || cell;
-                const dept = deptElement.childNodes[0]?.textContent?.trim() || cell.textContent.split('\n')[0]?.trim() || '';
-                const workerElement = cell.querySelector('small');
-                const worker = workerElement ? workerElement.textContent.replace('👤', '').trim() : '';
-
-                cell.innerHTML = `
-                    <div>${dept}</div>
-                    ${worker ? `<small style="color: #666;">${worker}</small>` : ''}
-                `;
-            }
-        });
-
-        // Clean up Status column
-        const statusCell = cells[6];
-        if (statusCell) {
-            const badge = statusCell.querySelector('.badge');
-            const dateInfo = statusCell.querySelector('small');
-            statusCell.innerHTML = `
-                <div>${badge ? badge.textContent.trim() : ''}</div>
-                ${dateInfo ? `<small style="color: #666;">${dateInfo.textContent.trim()}</small>` : ''}
-            `;
+    headers.forEach((header, index) => {
+        const headerText = header.textContent.trim();
+        // Keep only specified columns
+        if (!headersToKeep.some(keep => headerText.includes(keep))) {
+            indicesToRemove.push(index);
         }
     });
 
-    // Set table ID and custom styles
+    // Sort indices in descending order for safe removal
+    indicesToRemove.sort((a, b) => b - a);
+
+    // Remove headers
+    indicesToRemove.forEach(index => {
+        headers[index].remove();
+    });
+
+    // Remove corresponding cells in rows
+    tableClone.querySelectorAll('tr').forEach(row => {
+        const cells = row.querySelectorAll('td');
+        indicesToRemove.forEach(index => {
+            if (cells[index]) cells[index].remove();
+        });
+    });
+
+    // Clean up columns
+    // After removal, the columns are: Date, Type, Product, From, To, Status
+    tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
+        // Clean up Product column
+        const badge = cell.querySelector('.badge');
+        const anchor = cell.querySelector('a');
+        const small = cell.querySelector('small');
+
+        let vendor = '';
+        let model = '';
+
+        if (anchor) {
+            vendor = anchor.childNodes[1]?.textContent.trim() || '';
+            model = small?.textContent || '';
+        }
+
+        cell.innerHTML = `
+            <div style="font-weight: bold;">${badge?.textContent || ''}</div>
+            <div>${vendor}</div>
+            <small>${model}</small>
+        `;
+    });
+
+    // Clean up From column (now 4th column)
+    tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => {
+        const div = cell.querySelector('div');
+        const small = cell.querySelector('small');
+        cell.innerHTML = `
+            <div style="font-weight: bold;">${div?.textContent || ''}</div>
+            ${small?.outerHTML || ''}
+        `;
+    });
+
+    // Clean up To column (now 5th column)
+    tableClone.querySelectorAll('td:nth-child(5)').forEach(cell => {
+        const div = cell.querySelector('div');
+        const small = cell.querySelector('small');
+        cell.innerHTML = `
+            <div style="font-weight: bold;">${div?.textContent || ''}</div>
+            ${small?.outerHTML || ''}
+        `;
+    });
+
+    // Clean up Status column (now 6th column)
+    tableClone.querySelectorAll('td:nth-child(6)').forEach(cell => {
+        // Remove icons and extra elements
+        cell.querySelectorAll('i').forEach(icon => icon.remove());
+        cell.querySelectorAll('br').forEach(br => br.remove());
+        cell.querySelectorAll('small').forEach(sm => sm.remove());
+    });
+
+    // Remove any remaining images
+    tableClone.querySelectorAll('img').forEach(img => img.remove());
+
+    // Set a fixed ID for the table in the PDF
     tableClone.id = 'routesPdfTable';
 
     const customStyles = `
         #routesPdfTable {
             table-layout: fixed;
             width: 100%;
-            font-size: 9pt;
         }
         #routesPdfTable th:nth-child(1) { width: 12%; }  /* Date */
         #routesPdfTable th:nth-child(2) { width: 10%; }  /* Type */
-        #routesPdfTable th:nth-child(3) { width: 25%; }  /* Product - increased */
-        #routesPdfTable th:nth-child(4) { width: 17%; }  /* From */
-        #routesPdfTable th:nth-child(5) { width: 17%; }  /* To */
-        #routesPdfTable th:nth-child(6) { width: 19%; }  /* Status */
-        
-        #routesPdfTable td {
-            padding: 6px 4px;
-            vertical-align: top;
-            word-wrap: break-word;
-        }
-        
-        #routesPdfTable small {
-            font-size: 8pt;
-            color: #666;
-            display: block;
-            margin-top: 2px;
-        }
-        
-        #routesPdfTable strong {
-            font-weight: 600;
-        }
+        #routesPdfTable th:nth-child(3) { width: 23%; }  /* Product */
+        #routesPdfTable th:nth-child(4) { width: 15%; }  /* From */
+        #routesPdfTable th:nth-child(5) { width: 15%; }  /* To */
+        #routesPdfTable th:nth-child(6) { width: 25%; }  /* Status */
     `;
 
     exportToPDF(tableClone.outerHTML, 'routes_export.pdf', 'Routes Report', customStyles);
