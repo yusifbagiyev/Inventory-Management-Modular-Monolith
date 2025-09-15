@@ -174,7 +174,7 @@ function exportRoutesToPDF() {
         // Remove actions column (now last after removing image)
         if (cells[cells.length - 1]) cells[cells.length - 1].remove();
 
-        // Clean up Date column (now first)
+        // Clean up Date column (now at index 0 after removals)
         const dateCell = cells[1];
         if (dateCell) {
             const dateText = dateCell.textContent.trim().replace(/\s+/g, ' ');
@@ -190,26 +190,45 @@ function exportRoutesToPDF() {
             }
         }
 
-        // Clean up Product column
+        // Clean up Product column - THIS IS THE IMPORTANT FIX
         const productCell = cells[3];
         if (productCell) {
-            const code = productCell.querySelector('.badge')?.textContent || '';
-            const vendor = productCell.textContent.replace(code, '').trim();
-            const category = productCell.querySelector('small')?.textContent || '';
+            // Extract the inventory code (should only appear once)
+            const codeElement = productCell.querySelector('.badge');
+            const inventoryCode = codeElement ? codeElement.textContent.trim() : '';
+
+            // Get the rest of the product info
+            const productTextNodes = Array.from(productCell.childNodes)
+                .filter(node => node.nodeType === Node.TEXT_NODE || node.tagName !== 'SPAN')
+                .map(node => node.textContent.trim())
+                .filter(text => text && text !== inventoryCode); // Remove duplicate code
+
+            // Get vendor and model
+            const vendorModel = productTextNodes.join(' ').trim();
+
+            // Get category from small tag
+            const categoryElement = productCell.querySelector('small');
+            const category = categoryElement ? categoryElement.textContent.trim() : '';
+
+            // Rebuild the cell content with proper formatting
             productCell.innerHTML = `
-                <div><strong>${code}</strong> ${vendor}</div>
-                <small>${category}</small>
+                <div><strong>Code: ${inventoryCode}</strong></div>
+                <div>${vendorModel || 'No details'}</div>
+                ${category ? `<small style="color: #666;">${category}</small>` : ''}
             `;
         }
 
         // Clean up From/To columns
         [cells[4], cells[5]].forEach(cell => {
             if (cell) {
-                const dept = cell.childNodes[0]?.textContent?.trim() || '';
-                const worker = cell.querySelector('small')?.textContent?.replace('👤', '').trim() || '';
+                const deptElement = cell.querySelector('div') || cell;
+                const dept = deptElement.childNodes[0]?.textContent?.trim() || cell.textContent.split('\n')[0]?.trim() || '';
+                const workerElement = cell.querySelector('small');
+                const worker = workerElement ? workerElement.textContent.replace('👤', '').trim() : '';
+
                 cell.innerHTML = `
                     <div>${dept}</div>
-                    ${worker ? `<small>${worker}</small>` : ''}
+                    ${worker ? `<small style="color: #666;">${worker}</small>` : ''}
                 `;
             }
         });
@@ -221,7 +240,7 @@ function exportRoutesToPDF() {
             const dateInfo = statusCell.querySelector('small');
             statusCell.innerHTML = `
                 <div>${badge ? badge.textContent.trim() : ''}</div>
-                ${dateInfo ? `<small>${dateInfo.textContent.trim()}</small>` : ''}
+                ${dateInfo ? `<small style="color: #666;">${dateInfo.textContent.trim()}</small>` : ''}
             `;
         }
     });
@@ -235,21 +254,28 @@ function exportRoutesToPDF() {
             width: 100%;
             font-size: 9pt;
         }
-        #routesPdfTable th:nth-child(1) { width: 13%; }  /* Date */
+        #routesPdfTable th:nth-child(1) { width: 12%; }  /* Date */
         #routesPdfTable th:nth-child(2) { width: 10%; }  /* Type */
-        #routesPdfTable th:nth-child(3) { width: 22%; }  /* Product */
-        #routesPdfTable th:nth-child(4) { width: 18%; }  /* From */
-        #routesPdfTable th:nth-child(5) { width: 18%; }  /* To */
+        #routesPdfTable th:nth-child(3) { width: 25%; }  /* Product - increased */
+        #routesPdfTable th:nth-child(4) { width: 17%; }  /* From */
+        #routesPdfTable th:nth-child(5) { width: 17%; }  /* To */
         #routesPdfTable th:nth-child(6) { width: 19%; }  /* Status */
         
         #routesPdfTable td {
-            padding: 5px 3px;
+            padding: 6px 4px;
             vertical-align: top;
+            word-wrap: break-word;
         }
         
         #routesPdfTable small {
             font-size: 8pt;
             color: #666;
+            display: block;
+            margin-top: 2px;
+        }
+        
+        #routesPdfTable strong {
+            font-weight: 600;
         }
     `;
 

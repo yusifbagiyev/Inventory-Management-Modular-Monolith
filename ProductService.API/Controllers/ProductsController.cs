@@ -86,9 +86,18 @@ namespace ProductService.API.Controllers
 
             // Firstly, check the product is not already created
             var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
+            // Double-check with a direct database query if needed
             if (existingProduct != null)
             {
-                return BadRequest(new { error = "Product with this inventory code already exists." });
+                // Wait a moment and check again to avoid race conditions
+                await Task.Delay(100);
+                existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
+
+                if (existingProduct != null)
+                {
+                    _logger.LogWarning($"Product with inventory code {dto.InventoryCode} already exists");
+                    return BadRequest(new { error = $"Product with inventory code {dto.InventoryCode} already exists." });
+                }
             }
 
             //Check if user has direct permission

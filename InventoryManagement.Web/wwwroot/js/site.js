@@ -180,29 +180,3 @@ function handleApprovalResponse(response, entityType, successRedirect) {
     // Redirect after delay
     setTimeout(() => window.location.href = successRedirect, 2000);
 }
-
-// Enhanced notification sound function
-function playNotificationSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        // Create a pleasant notification sound
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-
-        console.log('Notification sound played successfully');
-    } catch (error) {
-        console.error('Error playing notification sound:', error);
-    }
-}
