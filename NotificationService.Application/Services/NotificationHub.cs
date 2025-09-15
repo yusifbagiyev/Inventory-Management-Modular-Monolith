@@ -17,45 +17,32 @@ namespace NotificationService.Application.Services
             _logger = logger;
         }
 
-        // Add this method that the client is expecting
-        public async Task JoinUserGroup()
-        {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
-                _logger.LogInformation($"User {userId} joined their group via explicit call");
-            }
-        }
-
         public override async Task OnConnectedAsync()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userName = Context.User?.Identity?.Name;
-            var roles = Context.User?.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
-
-            _logger.LogInformation($"User connecting: ID={userId}, Name={userName}, ConnectionId={Context.ConnectionId}");
 
             if (!string.IsNullOrEmpty(userId))
             {
-                await _connectionManager.AddConnection(userId, Context.ConnectionId);
+                // Add to user-specific group
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
 
-                // Add to role groups
+                // Add to role-based groups
+                var roles = Context.User?.FindAll(ClaimTypes.Role).Select(c => c.Value) ?? Enumerable.Empty<string>();
                 foreach (var role in roles)
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, $"role-{role}");
-                    _logger.LogInformation($"User {userId} added to role group: role-{role}");
                 }
 
-                _logger.LogInformation($"User {userId} connected successfully");
+                await _connectionManager.AddConnection(userId, Context.ConnectionId);
+                _logger.LogInformation($"User {userId} connected with connection ID {Context.ConnectionId}");
 
-                // Send connection confirmation
-                await Clients.Caller.SendAsync("Connected", new { userId, connectionId = Context.ConnectionId });
-            }
-            else
-            {
-                _logger.LogWarning("User connected without userId");
+                // Send acknowledgment to client (not "Connected" method)
+                await Clients.Caller.SendAsync("ConnectionEstablished", new
+                {
+                    connectionId = Context.ConnectionId,
+                    userId = userId,
+                    timestamp = DateTime.UtcNow
+                });
             }
 
             await base.OnConnectedAsync();
@@ -64,20 +51,38 @@ namespace NotificationService.Application.Services
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            _logger.LogInformation($"User disconnecting: ID={userId}, ConnectionId={Context.ConnectionId}");
 
-            if (exception != null)
-            {
-                _logger.LogWarning($"User {userId} disconnected abnormally: {exception.Message}");
-            }
-            
             if (!string.IsNullOrEmpty(userId))
             {
                 await _connectionManager.RemoveConnection(userId, Context.ConnectionId);
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user-{userId}");
+                _logger.LogInformation($"User {userId} disconnected");
             }
 
             await base.OnDisconnectedAsync(exception);
+        }
+
+        // Method to join user group (called from client)
+        public async Task JoinUserGroup()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+                _logger.LogInformation($"User {userId} joined their notification group");
+            }
+        }
+
+        // Method to send notification to specific user
+        public async Task SendToUser(string userId, object notification)
+        {
+            await Clients.Group($"user-{userId}").SendAsync("ReceiveNotification", notification);
+        }
+
+        // Method to send notification to role
+        public async Task SendToRole(string role, object notification)
+        {
+            await Clients.Group($"role-{role}").SendAsync("ReceiveNotification", notification);
         }
     }
 }

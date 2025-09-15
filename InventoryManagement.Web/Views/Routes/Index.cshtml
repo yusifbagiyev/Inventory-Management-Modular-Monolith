@@ -66,7 +66,7 @@
                             <i class="fas fa-exchange-alt"></i> New Transfer
                         </a>
                     }
-                    <button class="btn btn-outline-secondary btn-sm" onclick="exportRoutesToPDF()">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportRouteToPDF()">
                         <i class="fas fa-file-pdf"></i> Export PDF
                     </button>
                     <div class="btn-group btn-group-sm" role="group">
@@ -276,6 +276,124 @@
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="~/js/pdf-export.js"></script>
+    <script>
+            function exportRouteToPDF() {
+                // Create a new PDF document
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm'
+                });
+
+                // Add title
+                doc.setFontSize(18);
+                doc.text('Routes Report', 105, 15, { align: 'center' });
+
+                // Add date
+                doc.setFontSize(10);
+                const today = new Date();
+                doc.text(`Generated on: ${today.toLocaleDateString()} ${today.toLocaleTimeString()}`, 105, 22, { align: 'center' });
+
+                // Define columns
+                const columns = [
+                    { title: "Date", dataKey: "date" },
+                    { title: "Type", dataKey: "type" },
+                    { title: "Inventory Code", dataKey: "inventoryCode" },
+                    { title: "Vendor", dataKey: "vendor" },
+                    { title: "Category", dataKey: "category" },
+                    { title: "From Department", dataKey: "fromDept" },
+                    { title: "To Department", dataKey: "toDept" },
+                    { title: "Status", dataKey: "status" },
+                    { title: "Completed At", dataKey: "completedAt" }
+                ];
+
+                // Extract data from table rows
+                const rows = [];
+                const tableRows = document.querySelectorAll('#routesTableBody tr');
+
+                tableRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+
+                    // Extract date
+                    const dateText = cells[1].querySelector('small').textContent.trim();
+                    const [date, time] = dateText.split('\n').map(s => s.trim());
+
+                    // Extract type
+                    const type = cells[2].textContent.trim();
+
+                    // Extract product details
+                    const productDetails = cells[3];
+                    const inventoryCode = productDetails.querySelector('.badge').textContent.trim();
+                    const vendor = productDetails.textContent.replace(inventoryCode, '').trim().split('\n')[0];
+                    const category = productDetails.querySelector('.text-muted').textContent.replace('⏏', '').trim();
+
+                    // Extract from department
+                    const fromDept = cells[4].querySelector('div').textContent.trim();
+
+                    // Extract to department
+                    const toDept = cells[5].querySelector('div').textContent.trim();
+
+                    // Extract status
+                    const statusBadge = cells[6].querySelector('.badge');
+                    let status = statusBadge.textContent.trim();
+                    let completedAt = '';
+
+                    if (status.includes('Completed')) {
+                        const completedAtText = cells[6].querySelectorAll('small')[1]?.textContent.trim() || '';
+                        completedAt = completedAtText;
+                    } else {
+                        completedAt = 'N/A';
+                    }
+
+                    // Add to rows array
+                    rows.push({
+                        date: `${date} ${time}`,
+                        type: type,
+                        inventoryCode: inventoryCode,
+                        vendor: vendor,
+                        category: category,
+                        fromDept: fromDept,
+                        toDept: toDept,
+                        status: status,
+                        completedAt: completedAt
+                    });
+                });
+
+                // Add table to PDF
+                doc.autoTable({
+                    head: [columns.map(col => col.title)],
+                    body: rows.map(row => columns.map(col => row[col.dataKey])),
+                    startY: 30,
+                    margin: { left: 10, right: 10 },
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2,
+                        overflow: 'linebreak'
+                    },
+                    headStyles: {
+                        fillColor: [41, 128, 185],
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    },
+                    alternateRowStyles: {
+                        fillColor: [245, 245, 245]
+                    },
+                    columnStyles: {
+                        date: { cellWidth: 25 },
+                        type: { cellWidth: 15 },
+                        inventoryCode: { cellWidth: 20 },
+                        vendor: { cellWidth: 25 },
+                        category: { cellWidth: 20 },
+                        fromDept: { cellWidth: 25 },
+                        toDept: { cellWidth: 25 },
+                        status: { cellWidth: 25 },
+                        completedAt: { cellWidth: 20 }
+                    }
+                });
+
+                // Save the PDF
+                doc.save(`Routes_Report_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}.pdf`);
+                }
+    </script>
     <script>
         $(document).ready(function() {
             // Initialize date range picker

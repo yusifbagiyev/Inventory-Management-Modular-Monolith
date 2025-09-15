@@ -1,67 +1,58 @@
-﻿window.AppConfig = (function () {
+﻿// Application Configuration Module
+window.AppConfig = (function () {
     'use strict';
 
-    // Detect the current environment based on the hostname
+    // Detect environment based on hostname
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    const isProduction = hostname.includes('inventory166.az') || hostname.includes('www.inventory166.az');
-    const isDevelopment = !isProduction;
+    const isProduction = hostname.includes('inventory166.az') ||
+        hostname === '10.0.7.39';
 
-    // Create the base configuration
     const config = {
-        environment: isDevelopment ? 'development' : 'production',
-        hostname: hostname,
-        protocol: protocol,
+        environment: isProduction ? 'production' : 'development',
 
-        // API endpoints configuration
+        // API configuration - simplified for proxy usage
         api: {
-            // In production, everything goes through relative paths
-            baseUrl: isDevelopment ? 'http://localhost:5000' : '',
-            gateway: isDevelopment ? 'http://localhost:5000' : '/api',
+            baseUrl: isProduction ? '' : 'http://localhost:5000',
+            timeout: 30000
         },
 
-        // SignalR hub configuration
+        // SignalR configuration
         signalR: {
-            notificationHub: isDevelopment
-                ? 'http://localhost:5000/notificationHub'
-                : '/notificationHub',
+            hubUrl: '/notificationHub',
+            reconnectInterval: 5000,
+            maxReconnectAttempts: 10
+        },
 
-            // Connection options
-            options: {
-                skipNegotiation: false,  // Allow negotiation
-                transport: undefined,  // Let SignalR choose the best transport
-                accessTokenProvider: () => {
-                    // Get the JWT token from session or cookie
-                    const token = sessionStorage.getItem('JwtToken') ||
-                        document.cookie.split('; ').find(row => row.startsWith('jwt_token='))?.split('=')[1];
-                    return token;
-                }
+        // Build API URL helper
+        buildApiUrl: function (endpoint) {
+            // Remove leading slash if present
+            endpoint = endpoint.replace(/^\//, '');
+
+            // In production, everything goes through the proxy
+            if (isProduction) {
+                return `/api/${endpoint}`;
             }
+
+            // In development, use the base URL
+            return `${this.api.baseUrl}/api/${endpoint}`;
         },
 
-        // Image URLs
-        images: {
-            products: isDevelopment
-                ? 'http://localhost:5000/images/products'
-                : '/images/products',
-            routes: isDevelopment
-                ? 'http://localhost:5000/images/routes'
-                : '/images/routes'
+        // Get JWT token from storage
+        getToken: function () {
+            return sessionStorage.getItem('JwtToken') ||
+                document.querySelector('#jwtToken')?.value ||
+                this.getCookie('jwt_token');
         },
-    };
 
-    // Helper function to build API URLs
-    config.buildApiUrl = function (endpoint) {
-        // Remove leading slash if present
-        endpoint = endpoint.replace(/^\//, '');
-
-        // In production, use relative URLs for proxy
-        if (isProduction) {
-            return `/api/${endpoint}`;
+        // Cookie helper
+        getCookie: function (name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+            return null;
         }
-
-        // In development, use full URLs
-        return `${this.api.gateway}/api/${endpoint}`;
     };
 
     return config;
