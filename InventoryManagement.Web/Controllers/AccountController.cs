@@ -252,5 +252,25 @@ namespace InventoryManagement.Web.Controllers
 
             return RedirectToAction("Login");
         }
+
+
+        [HttpGet]
+        public IActionResult GetCurrentToken()
+        {
+            try
+            {
+                var token = HttpContext.Session.GetString("JwtToken");
+                if (string.IsNullOrEmpty(token))
+                {
+                    return Json(new { success = false, message = "No token available" });
+                }
+
+                return Json(new { success = true, token = token });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error retrieving token" });
+            }
+        }
     }
 }

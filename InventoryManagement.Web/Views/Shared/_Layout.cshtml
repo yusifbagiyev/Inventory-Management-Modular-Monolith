@@ -181,7 +181,6 @@
         }
         <!-- Hidden fields for JavaScript access -->
         <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
-        <input type="hidden" id="currentUserId" value="@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value" />
 
         <script>
             // Initialize notification system when document is ready

@@ -1,4 +1,4 @@
-﻿// PDF Export Module with proper formatting
+﻿// Complete PDF Export Module with proper global registration
 window.PDFExport = (function () {
     'use strict';
 
@@ -6,7 +6,7 @@ window.PDFExport = (function () {
     function exportProductsToPDF() {
         const table = document.getElementById('productsTable');
         if (!table) {
-            showToast('Products table not found', 'error');
+            window.showToast('Products table not found', 'error');
             return;
         }
 
@@ -102,107 +102,188 @@ window.PDFExport = (function () {
         generatePDF(tableClone.outerHTML, 'products_export.pdf', 'Products Report', customStyles);
     }
 
-    // Export routes to PDF with fixed product column
+    // FIXED: Export routes to PDF with corrected product column parsing
     function exportRoutesToPDF() {
+        console.log('exportRoutesToPDF called - function is working!'); // Debug log
+
         const table = document.getElementById('routesTable');
         if (!table) {
-            showToast('Routes table not found', 'error');
+            console.error('Routes table not found'); // Debug log
+            window.showToast('Routes table not found', 'error');
             return;
         }
 
+        console.log('Found routes table, processing...'); // Debug log
+
         const tableClone = table.cloneNode(true);
 
-        // Remove Image and Actions columns
+        // Remove Image and Actions columns from headers
         const headers = tableClone.querySelectorAll('thead th');
+        console.log('Found headers:', headers.length); // Debug log
+
         if (headers[0]) headers[0].remove(); // Image
         if (headers[headers.length - 1]) headers[headers.length - 1].remove(); // Actions
 
         // Process each row
-        tableClone.querySelectorAll('tbody tr').forEach(row => {
+        const rows = tableClone.querySelectorAll('tbody tr');
+        console.log('Processing rows:', rows.length); // Debug log
+
+        rows.forEach((row, index) => {
             const cells = row.querySelectorAll('td');
+            console.log(`Row ${index} has ${cells.length} cells`); // Debug log
 
             // Remove image column (first)
             if (cells[0]) cells[0].remove();
 
-            // Remove actions column (last)
-            if (cells[cells.length - 1]) cells[cells.length - 1].remove();
+            // Remove actions column (last)  
+            const lastCell = row.querySelector('td:last-child');
+            if (lastCell) lastCell.remove();
 
-            // Format Product column properly (now index 2 after removing image)
-            if (cells[3]) {
-                // Extract the inventory code, vendor, model, and category
-                const badge = cells[3].querySelector('.badge');
-                const linkOrDiv = cells[3].querySelector('a, div');
-                const categorySmall = cells[3].querySelector('small');
+            // Get updated cell list after removals
+            const updatedCells = row.querySelectorAll('td');
 
-                let inventoryCode = badge ? badge.textContent.trim() : '';
+            // FIXED: Format Product column properly (should be index 2 after removing image)
+            const productCell = updatedCells[2];
+            if (productCell) {
+                console.log(`Processing product cell for row ${index}:`, productCell.innerHTML); // Debug log
+
+                // Create a temporary div to safely parse the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = productCell.innerHTML;
+
+                // Extract elements from the original HTML structure  
+                const badge = tempDiv.querySelector('.badge');
+                const linkOrDiv = tempDiv.querySelector('a, div');
+                const categorySmall = tempDiv.querySelector('small.text-muted');
+
+                let inventoryCode = '';
                 let vendor = '';
-                let model = '';
                 let category = '';
 
+                // Extract inventory code from badge
+                if (badge) {
+                    inventoryCode = badge.textContent.trim();
+                    console.log('Found inventory code:', inventoryCode);
+                }
+
+                // Extract vendor - this is the tricky part
                 if (linkOrDiv) {
-                    // Get text content and parse it
-                    const textContent = linkOrDiv.textContent;
-                    // Remove the inventory code from the text to get vendor
-                    vendor = textContent.replace(inventoryCode, '').trim();
+                    // Clone the element to avoid modifying the original
+                    const clonedElement = linkOrDiv.cloneNode(true);
+
+                    // Remove the badge from the cloned element
+                    const badgeInCloned = clonedElement.querySelector('.badge');
+                    if (badgeInCloned) {
+                        badgeInCloned.remove();
+                    }
+
+                    // Remove any small elements (they contain category info)
+                    const smallElements = clonedElement.querySelectorAll('small');
+                    smallElements.forEach(small => small.remove());
+
+                    // Now get the remaining text, which should be the vendor
+                    vendor = clonedElement.textContent.trim();
+                    console.log('Extracted vendor:', vendor);
                 }
 
+                // Extract category from the small element
                 if (categorySmall) {
-                    category = categorySmall.textContent.replace(/fas fa-tag/gi, '').trim();
+                    // Clone to avoid modifying original
+                    const categoryClone = categorySmall.cloneNode(true);
+                    // Remove any icons
+                    const icons = categoryClone.querySelectorAll('i');
+                    icons.forEach(icon => icon.remove());
+                    category = categoryClone.textContent.trim();
+                    console.log('Found category:', category);
                 }
 
-                // Properly format the product details
-                cells[3].innerHTML = `
+                // Create the properly formatted product details
+                productCell.innerHTML = `
                     <div><strong>Code:</strong> ${inventoryCode}</div>
                     <div><strong>Vendor:</strong> ${vendor}</div>
                     <div><strong>Category:</strong> ${category}</div>
                 `;
+
+                console.log('Final formatted HTML:', productCell.innerHTML);
             }
 
-            // Clean up From column (now index 3)
-            if (cells[4]) {
-                const deptDiv = cells[4].querySelector('div');
-                const workerSmall = cells[4].querySelector('small');
+            // Clean up From column
+            const fromCell = updatedCells[3];
+            if (fromCell) {
+                const deptDiv = fromCell.querySelector('div');
+                const workerSmall = fromCell.querySelector('small');
 
                 const dept = deptDiv ? deptDiv.textContent.trim() : '';
-                const worker = workerSmall ? workerSmall.textContent.replace(/fas fa-user/gi, '').trim() : '';
+                let worker = '';
+                if (workerSmall) {
+                    // Remove icons and clean up worker text
+                    const workerClone = workerSmall.cloneNode(true);
+                    const icons = workerClone.querySelectorAll('i');
+                    icons.forEach(icon => icon.remove());
+                    worker = workerClone.textContent.trim();
+                }
 
-                cells[4].innerHTML = `
+                fromCell.innerHTML = `
                     <div><strong>${dept}</strong></div>
                     ${worker ? `<div style="font-size: 8pt; color: #666;">${worker}</div>` : ''}
                 `;
             }
 
-            // Clean up To column (now index 4)
-            if (cells[5]) {
-                const deptDiv = cells[5].querySelector('div');
-                const workerSmall = cells[5].querySelector('small');
+            // Clean up To column
+            const toCell = updatedCells[4];
+            if (toCell) {
+                const deptDiv = toCell.querySelector('div');
+                const workerSmall = toCell.querySelector('small');
 
                 const dept = deptDiv ? deptDiv.textContent.trim() : '';
-                const worker = workerSmall ? workerSmall.textContent.replace(/fas fa-user/gi, '').trim() : '';
+                let worker = '';
+                if (workerSmall) {
+                    // Remove icons and clean up worker text
+                    const workerClone = workerSmall.cloneNode(true);
+                    const icons = workerClone.querySelectorAll('i');
+                    icons.forEach(icon => icon.remove());
+                    worker = workerClone.textContent.trim();
+                }
 
-                cells[5].innerHTML = `
+                toCell.innerHTML = `
                     <div><strong>${dept}</strong></div>
                     ${worker ? `<div style="font-size: 8pt; color: #666;">${worker}</div>` : ''}
                 `;
             }
 
-            // Clean up Status column (now index 5)
-            if (cells[6]) {
-                // Remove icons and format status
-                cells[6].querySelectorAll('i').forEach(icon => icon.remove());
-                const badge = cells[6].querySelector('.badge');
-                const smallDate = cells[6].querySelector('small');
+            // Clean up Status column
+            const statusCell = updatedCells[5];
+            if (statusCell) {
+                // Create temp div for safe manipulation
+                const tempStatusDiv = document.createElement('div');
+                tempStatusDiv.innerHTML = statusCell.innerHTML;
 
-                let statusText = badge ? badge.textContent.trim() : '';
-                let dateText = smallDate ? smallDate.textContent.trim() : '';
+                // Remove all icons
+                const icons = tempStatusDiv.querySelectorAll('i');
+                icons.forEach(icon => icon.remove());
 
-                cells[6].innerHTML = `
+                const badge = tempStatusDiv.querySelector('.badge');
+                const smallDate = tempStatusDiv.querySelector('small');
+
+                let statusText = '';
+                let dateText = '';
+
+                if (badge) {
+                    statusText = badge.textContent.trim();
+                }
+
+                if (smallDate) {
+                    dateText = smallDate.textContent.replace('Created:', '').trim();
+                }
+
+                statusCell.innerHTML = `
                     <div><strong>${statusText}</strong></div>
                     ${dateText ? `<div style="font-size: 8pt; color: #666;">${dateText}</div>` : ''}
                 `;
             }
         });
 
+        // Custom styles for routes PDF
         const customStyles = `
             #routesPdfTable {
                 table-layout: fixed;
@@ -210,171 +291,209 @@ window.PDFExport = (function () {
             }
             #routesPdfTable th:nth-child(1) { width: 12%; }  /* Date */
             #routesPdfTable th:nth-child(2) { width: 10%; }  /* Type */
-            #routesPdfTable th:nth-child(3) { width: 25%; }  /* Product */
-            #routesPdfTable th:nth-child(4) { width: 18%; }  /* From */
-            #routesPdfTable th:nth-child(5) { width: 18%; }  /* To */
-            #routesPdfTable th:nth-child(6) { width: 17%; }  /* Status */
+            #routesPdfTable th:nth-child(3) { width: 28%; }  /* Product */
+            #routesPdfTable th:nth-child(4) { width: 17%; }  /* From */
+            #routesPdfTable th:nth-child(5) { width: 17%; }  /* To */
+            #routesPdfTable th:nth-child(6) { width: 16%; }  /* Status */
             
             #routesPdfTable td {
                 vertical-align: top;
                 padding: 6px 4px;
                 font-size: 9pt;
+                word-wrap: break-word;
             }
         `;
 
         tableClone.id = 'routesPdfTable';
+        console.log('Calling generatePDF...'); // Debug log
         generatePDF(tableClone.outerHTML, 'routes_export.pdf', 'Routes Report', customStyles);
     }
 
-    // Generate PDF from HTML
+    // Generate PDF from HTML with enhanced error handling
     function generatePDF(tableHTML, filename, title, customStyles) {
-        const printWindow = window.open('', '_blank');
+        try {
+            console.log('generatePDF called with title:', title); // Debug log
 
-        const styles = `
-            <style>
-                @page { 
-                    size: portrait; 
-                    margin: 0.7cm;
-                }
-                body { 
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    font-size: 10pt;
-                    color: #333;
-                    line-height: 1.4;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #3b82f6;
-                }
-                h1 { 
-                    font-size: 20pt;
-                    margin: 0 0 5px 0;
-                    color: #1e40af;
-                    font-weight: 600;
-                }
-                .subheader {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-top: 5px;
-                    font-size: 10pt;
-                    color: #6b7280;
-                }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse;
-                    margin-top: 15px;
-                }
-                th, td { 
-                    padding: 6px 5px; 
-                    text-align: left; 
-                    vertical-align: top;
-                    word-wrap: break-word;
-                }
-                th { 
-                    background-color: #3b82f6; 
-                    color: white;
-                    font-weight: 600;
-                    font-size: 10pt;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    border: 1px solid #2563eb;
-                }
-                td {
-                    border: 1px solid #e2e8f0;
-                    font-size: 9pt;
-                }
-                tr:nth-child(even) {
-                    background-color: #f8fafc;
-                }
-                .footer {
-                    margin-top: 20px;
-                    text-align: center;
-                    font-size: 9pt;
-                    color: #6b7280;
-                    border-top: 1px solid #e2e8f0;
-                    padding-top: 10px;
-                }
-                ${customStyles}
-            </style>
-        `;
+            const printWindow = window.open('', '_blank');
 
-        const now = new Date();
-        const timestamp = now.toLocaleString('en-US', {
-            timeZone: 'Asia/Baku',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+            if (!printWindow) {
+                window.showToast('Popup blocked. Please allow popups for this site to export PDF.', 'error');
+                return;
+            }
 
-        // Count rows
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = tableHTML;
-        const rowCount = tempDiv.querySelectorAll('tbody tr').length;
+            const styles = `
+                <style>
+                    @page { 
+                        size: landscape;
+                        margin: 0.7cm;
+                    }
+                    body { 
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        font-size: 10pt;
+                        color: #333;
+                        line-height: 1.4;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 15px;
+                        padding-bottom: 10px;
+                        border-bottom: 2px solid #3b82f6;
+                    }
+                    h1 { 
+                        font-size: 20pt;
+                        margin: 0 0 5px 0;
+                        color: #1e40af;
+                        font-weight: 600;
+                    }
+                    .subheader {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 5px;
+                        font-size: 10pt;
+                        color: #6b7280;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse;
+                        margin-top: 15px;
+                    }
+                    th, td { 
+                        padding: 6px 5px; 
+                        text-align: left; 
+                        vertical-align: top;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                    }
+                    th { 
+                        background-color: #3b82f6; 
+                        color: white;
+                        font-weight: 600;
+                        font-size: 10pt;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        border: 1px solid #2563eb;
+                    }
+                    td {
+                        border: 1px solid #e2e8f0;
+                        font-size: 9pt;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f8fafc;
+                    }
+                    .footer {
+                        margin-top: 20px;
+                        text-align: center;
+                        font-size: 9pt;
+                        color: #6b7280;
+                        border-top: 1px solid #e2e8f0;
+                        padding-top: 10px;
+                    }
+                    td div {
+                        word-break: break-word;
+                        hyphens: auto;
+                    }
+                    ${customStyles}
+                </style>
+            `;
 
-        const documentContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>${title}</title>
-                ${styles}
-            </head>
-            <body>
-                <div class="header">
-                    <h1>${title}</h1>
-                    <div class="subheader">
-                        <span>Generated: ${timestamp}</span>
-                        <span>Total Records: ${rowCount}</span>
+            const now = new Date();
+            const timestamp = now.toLocaleString('en-US', {
+                timeZone: 'Asia/Baku',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Count rows
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = tableHTML;
+            const rowCount = tempDiv.querySelectorAll('tbody tr').length;
+
+            const documentContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>${title}</title>
+                    ${styles}
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>${title}</h1>
+                        <div class="subheader">
+                            <span>Generated: ${timestamp}</span>
+                            <span>Total Records: ${rowCount}</span>
+                        </div>
                     </div>
-                </div>
-                ${tableHTML}
-                <div class="footer">
-                    Inventory Management System | ${timestamp}
-                </div>
-            </body>
-            </html>
-        `;
+                    ${tableHTML}
+                    <div class="footer">
+                        Inventory Management System | ${timestamp}
+                    </div>
+                </body>
+                </html>
+            `;
 
-        printWindow.document.write(documentContent);
-        printWindow.document.close();
+            printWindow.document.write(documentContent);
+            printWindow.document.close();
 
-        // Wait for content to load then print
-        printWindow.onload = function () {
+            // Wait for content to load then print
+            printWindow.onload = function () {
+                setTimeout(() => {
+                    printWindow.print();
+                    printWindow.onafterprint = function () {
+                        printWindow.close();
+                    };
+                }, 500);
+            };
+
+            // Fallback for browsers that don't support onload
             setTimeout(() => {
-                printWindow.print();
-                printWindow.onafterprint = function () {
-                    printWindow.close();
-                };
-            }, 250);
-        };
-    }
+                if (printWindow && !printWindow.closed) {
+                    printWindow.print();
+                }
+            }, 1000);
 
-    // Export other tables (categories, departments)
-    function exportCategoriesToPDF() {
-        // Implementation remains the same as before
-        window.exportCategoriesToPDF();
-    }
-
-    function exportDepartmentsToPDF() {
-        // Implementation remains the same as before
-        window.exportDepartmentsToPDF();
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            window.showToast('Failed to generate PDF. Please try again.', 'error');
+        }
     }
 
     // Public API
     return {
         exportProducts: exportProductsToPDF,
-        exportRoutes: exportRoutesToPDF,
-        exportCategories: exportCategoriesToPDF,
-        exportDepartments: exportDepartmentsToPDF
+        exportRoutes: exportRoutesToPDF
     };
 })();
 
-// Global function references for backward compatibility
-window.exportProductsToPDF = PDFExport.exportProducts;
-window.exportRoutesToPDF = PDFExport.exportRoutes;
-window.exportCategoriesToPDF = PDFExport.exportCategories;
-window.exportDepartmentsToPDF = PDFExport.exportDepartments;
+// CRITICAL: Global function registration for backward compatibility
+// This is what makes the functions available to onclick handlers
+window.exportProductsToPDF = function () {
+    console.log('Global exportProductsToPDF called'); // Debug log
+    return PDFExport.exportProducts();
+};
+
+window.exportRoutesToPDF = function () {
+    console.log('Global exportRoutesToPDF called'); // Debug log  
+    return PDFExport.exportRoutes();
+};
+
+// Alternative function name that matches your HTML button
+window.exportRouteToPDF = function () {
+    console.log('Global exportRouteToPDF called (alternative name)'); // Debug log
+    return PDFExport.exportRoutes();
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('PDF Export module loaded and global functions registered');
+
+    // Test that functions are available
+    if (typeof window.exportRouteToPDF === 'function') {
+        console.log('✓ exportRouteToPDF is available globally');
+    } else {
+        console.error('✗ exportRouteToPDF is NOT available globally');
+    }
+});

@@ -271,3 +271,38 @@ body {
 .search-wrapper {
     display: none; /* Remove non-functional search */
 }
+/* Enhanced notification badge styles */
+.badge-urgent {
+    animation: pulse 1s infinite !important;
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.5) !important;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Notification badge base styles */
+.badge-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    border: 2px solid white;
+    font-size: 10px;
+    line-height: 14px;
+    text-align: center;
+    font-weight: 600;
+}
