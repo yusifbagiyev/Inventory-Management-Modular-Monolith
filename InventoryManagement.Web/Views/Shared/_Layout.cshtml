@@ -142,6 +142,7 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
     </div>
+    <div id="connectionStatus" class="connection-status disconnected" title="Connection status"></div>
 
     <!-- Global Image Modal -->
     <div class="modal fade" id="globalImageModal" tabindex="-1">
@@ -172,9 +173,10 @@
 
         <!-- Application scripts -->
         <script src="~/js/app-config.js" asp-append-version="true"></script>
-        <script src="~/js/site.js" asp-append-version="true"></script>
-        <script src="~/js/notification-manager.js" asp-append-version="true"></script>
+        <script src="~/js/notification-system.js" asp-append-version="true"></script>
+        <script src="~/js/form-handler.js" asp-append-version="true"></script>
         <script src="~/js/pdf-export.js" asp-append-version="true"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
 	     @if (User.IsInRole("Admin"))
         {
             <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
@@ -182,33 +184,40 @@
         <!-- Hidden fields for JavaScript access -->
         <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
 
-        <script>
-            // Initialize notification system when document is ready
-            document.addEventListener('DOMContentLoaded', function() {
-                // Set global variables for notification system
-                window.isUserAuthenticated = @(User.Identity?.IsAuthenticated ?? false ? "true" : "false");
-                window.isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
-                window.currentUserId = '@(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0")';
+    <script>
+        // Initialize notification system when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is authenticated
+            const isAuthenticated = @(User.Identity?.IsAuthenticated ?? false ? "true" : "false");
 
-                // Initialize notifications if user is authenticated
-                    if (window.isUserAuthenticated) {
-                // Small delay to ensure all resources are loaded
-                setTimeout(function() {
-                    NotificationManager.initialize();
+            if (isAuthenticated) {
+                // Initialize notification system
+                NotificationSystem.initialize();
 
-                    // Initialize admin approvals if admin
-                    if (window.isAdmin === 'true' && window.AdminApprovals) {
-                        AdminApprovals.init();
-                    }
-                }, 500);
+                // Show success messages from TempData
+                @if (TempData["Success"] != null)
+                {
+                        <text>
+                        NotificationSystem.showSuccess('@Html.Raw(TempData["Success"])');
+                        </text>
+                }
+
+                // Show error messages from TempData
+                @if (TempData["Error"] != null)
+                {
+                        <text>
+                        NotificationSystem.showError('@Html.Raw(TempData["Error"])');
+                        </text>
+                }
+
+                // Show info messages from TempData
+                @if (TempData["Info"] != null)
+                {
+                        <text>
+                        NotificationSystem.showInfo('@Html.Raw(TempData["Info"])');
+                        </text>
+                }
             }
-
-            // Sidebar toggle
-            document.getElementById('menu-toggle')?.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.body.classList.toggle('sidebar-toggled');
-                document.getElementById('wrapper')?.classList.toggle('toggled');
-            });
         });
     </script>
 

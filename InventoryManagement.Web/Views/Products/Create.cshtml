@@ -156,38 +156,39 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
         function previewImage(input, targetId) {
             if (input.files && input.files[0]) {
-                var reader = new FileReader();
+                const reader = new FileReader();
                 reader.onload = function(e) {
-                    $('#' + targetId).attr('src', e.target.result).show();
+                    const preview = document.getElementById(targetId);
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
                 };
                 reader.readAsDataURL(input.files[0]);
             }
         }
-                $(document).ready(function() {
-                // Store original button html
-        const $submitBtn = $('button[type="submit"]');
-        const originalBtnHtml = $submitBtn.html();
 
-            AjaxHandler.handleForm('form', {
+        document.addEventListener('DOMContentLoaded', function() {
+            FormHandler.handleForm('form', {
                 successMessage: 'Product created successfully!',
                 successRedirect: '/Products',
+                redirectDelay: 1500,
                 onError: function(errorMessage, response) {
-                    // Clear previous error states
-                    $('.is-invalid').removeClass('is-invalid');
-                    $('.invalid-feedback').remove();
-
-                    // Special handling for inventory code errors
+                    // Handle specific errors like duplicate inventory code
                     if (errorMessage.toLowerCase().includes('inventory code')) {
-                        $('#InventoryCode').addClass('is-invalid');
-                        if (!$('#InventoryCode').next('.invalid-feedback').length) {
-                            $('#InventoryCode').after('<div class="invalid-feedback">' + errorMessage + '</div>');
+                        const inventoryCodeField = document.getElementById('InventoryCode');
+                        inventoryCodeField.classList.add('is-invalid');
+
+                        // Add error message if not exists
+                        if (!inventoryCodeField.nextElementSibling ||
+                            !inventoryCodeField.nextElementSibling.classList.contains('invalid-feedback')) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'invalid-feedback';
+                            errorDiv.textContent = errorMessage;
+                            inventoryCodeField.parentNode.insertBefore(errorDiv, inventoryCodeField.nextSibling);
                         }
                     }
-                    // Note: We removed the manual button reset here - AjaxHandler handles it
                 }
             });
         });
