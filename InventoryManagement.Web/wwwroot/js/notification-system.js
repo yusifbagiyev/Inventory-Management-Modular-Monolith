@@ -1,5 +1,4 @@
-﻿// wwwroot/js/notification-system.js
-window.NotificationSystem = (function () {
+﻿window.NotificationSystem = (function () {
     'use strict';
 
     let connection = null;
@@ -7,10 +6,14 @@ window.NotificationSystem = (function () {
     const maxReconnectAttempts = 5;
     let notificationSound = null;
     let unreadCount = 0;
+    let currentUserId = null; // Track current user ID
 
     // Initialize the notification system
     function initialize() {
         console.log('Initializing Notification System...');
+
+        // Get current user ID for filtering own actions
+        currentUserId = getCurrentUserId();
 
         // Initialize notification sound
         initializeSound();
@@ -33,6 +36,34 @@ window.NotificationSystem = (function () {
         setupUIHandlers();
     }
 
+    function getCurrentUserId() {
+        // Try to get from meta tag or hidden field first
+        const userIdMeta = document.querySelector('meta[name="current-user-id"]');
+        if (userIdMeta) {
+            return userIdMeta.getAttribute('content');
+        }
+
+        // Try to get from hidden input
+        const userIdInput = document.querySelector('#currentUserId');
+        if (userIdInput) {
+            return userIdInput.value;
+        }
+
+        // Try to parse from JWT token
+        const token = getAuthToken();
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                return payload.nameid || payload.sub || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+            } catch (e) {
+                console.warn('Could not parse user ID from token');
+            }
+        }
+
+        return null;
+    }
+
+
     // Initialize notification sound
     function initializeSound() {
         notificationSound = new Audio('/sounds/notify.mp3');
@@ -45,6 +76,7 @@ window.NotificationSystem = (function () {
         };
     }
 
+
     // Play notification sound
     function playNotificationSound() {
         if (notificationSound) {
@@ -56,6 +88,7 @@ window.NotificationSystem = (function () {
             generateBeep();
         }
     }
+
 
     // Generate a beep sound as fallback
     function generateBeep() {
@@ -74,6 +107,7 @@ window.NotificationSystem = (function () {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.5);
     }
+
 
     // Get authentication token from various sources
     function getAuthToken() {
@@ -99,6 +133,7 @@ window.NotificationSystem = (function () {
         return null;
     }
 
+
     // Setup SignalR connection
     function setupSignalRConnection(token) {
         try {
@@ -123,19 +158,44 @@ window.NotificationSystem = (function () {
         }
     }
 
+
     // Setup connection event handlers
     function setupConnectionHandlers() {
-        // Handle incoming notifications - THIS IS THE KEY HANDLER
+        // Handle incoming notifications - MAIN HANDLER
         connection.on("ReceiveNotification", function (notification) {
             console.log('📨 Notification received:', notification);
+
+            // Don't show notifications for test messages or our own actions
+            if (notification.isTest || notification.silent) {
+                console.log('Silent notification - not showing popup');
+                return;
+            }
+
+            // Check if this notification is from the current user's action
+            if (notification.triggeredByUserId && notification.triggeredByUserId === currentUserId) {
+                console.log('Ignoring notification triggered by current user');
+                return;
+            }
+
             handleIncomingNotification(notification);
         });
 
-        // Handle connection established
+        // Handle SILENT connection established
         connection.on("ConnectionEstablished", function (data) {
             console.log('✅ SignalR connection established:', data);
             reconnectAttempts = 0;
-            showSystemNotification('Connected', 'Connected to notification service', 'success');
+            updateConnectionStatus('connected');
+
+            // Only show system notification if not silent
+            if (!data.silent) {
+                showSystemNotification('Connected', 'Connected to notification service', 'success');
+            }
+        });
+
+        // Handle silent connection test
+        connection.on("ConnectionTest", function (data) {
+            console.log('🔧 Connection test successful:', data);
+            // Don't show any popup for connection tests
         });
 
         // Handle reconnecting
@@ -149,6 +209,9 @@ window.NotificationSystem = (function () {
             console.log('✅ Reconnected to SignalR');
             reconnectAttempts = 0;
             updateConnectionStatus('connected');
+
+            // Reload notification count after reconnection
+            loadUnreadCount();
         });
 
         // Handle connection closed
@@ -163,6 +226,7 @@ window.NotificationSystem = (function () {
         });
     }
 
+
     // Start the SignalR connection
     function startConnection() {
         connection.start()
@@ -175,9 +239,9 @@ window.NotificationSystem = (function () {
                     .then(() => console.log('Joined user notification group'))
                     .catch(err => console.error('Failed to join user group:', err));
 
-                // Test the connection
-                connection.invoke("TestNotification")
-                    .catch(err => console.error('Test notification failed:', err));
+                // Test connection silently (no popup)
+                connection.invoke("TestConnection")
+                    .catch(err => console.error('Connection test failed:', err));
             })
             .catch(err => {
                 console.error('❌ Failed to connect to SignalR:', err);
@@ -189,6 +253,7 @@ window.NotificationSystem = (function () {
                 }
             });
     }
+
 
     // Handle incoming notification
     function handleIncomingNotification(notification) {
@@ -214,6 +279,7 @@ window.NotificationSystem = (function () {
             }));
         }
     }
+
 
     // Show popup notification in upper right corner
     function showPopupNotification(notification) {
@@ -260,15 +326,25 @@ window.NotificationSystem = (function () {
         }, 10000);
     }
 
-    // Show system notification (for success messages)
+
+    // Show system notification (for success messages) - these won't trigger sound
     function showSystemNotification(title, message, type = 'success') {
-        showPopupNotification({
+        const notification = {
             title: title,
             message: message,
             type: type,
-            createdAt: new Date()
-        });
+            createdAt: new Date(),
+            silent: type === 'success' // Success messages are silent (no sound)
+        };
+
+        showPopupNotification(notification);
+
+        // Only play sound for non-success notifications
+        if (type !== 'success') {
+            playNotificationSound();
+        }
     }
+
 
     // Update badge count
     function incrementBadgeCount() {
@@ -276,20 +352,27 @@ window.NotificationSystem = (function () {
         updateBadgeDisplay();
     }
 
+
     // Update badge display
     function updateBadgeDisplay() {
-        const badges = document.querySelectorAll('#notificationBadge, .notification-badge');
+        // Update main notification badge
+        const badges = document.querySelectorAll('#notificationBadge, .notification-badge, #sidebarUnreadCount');
         badges.forEach(badge => {
             if (unreadCount > 0) {
                 badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                badge.style.display = 'block';
+                badge.style.display = 'inline-block';
                 badge.classList.add('pulse-animation');
             } else {
                 badge.style.display = 'none';
                 badge.classList.remove('pulse-animation');
             }
         });
+
+        // Also update any approval-related badges separately if they exist
+        const approvalBadges = document.querySelectorAll('#pendingApprovalsCount, #sidebarPendingCount');
+        // These should be handled by their own system
     }
+
 
     // Load unread notification count
     function loadUnreadCount() {
@@ -301,6 +384,7 @@ window.NotificationSystem = (function () {
             })
             .catch(err => console.error('Failed to load unread count:', err));
     }
+
 
     // Add notification to dropdown
     function addToDropdown(notification) {
@@ -336,13 +420,14 @@ window.NotificationSystem = (function () {
         }
     }
 
+
     // Show browser notification
     function showBrowserNotification(notification) {
         if ('Notification' in window && Notification.permission === 'granted') {
             try {
                 const browserNotif = new Notification(notification.title || 'New Notification', {
                     body: notification.message,
-                    icon: '/icon-192x192.png',
+                    icon: '/favicon.ico',
                     tag: `notification-${notification.id}`,
                     requireInteraction: false
                 });
@@ -359,6 +444,7 @@ window.NotificationSystem = (function () {
         }
     }
 
+    // Setup UI event handlers
     // Setup UI event handlers
     function setupUIHandlers() {
         // Mark all as read
@@ -447,7 +533,7 @@ window.NotificationSystem = (function () {
         initialize: initialize,
         showSuccess: function (message) {
             showSystemNotification('Success', message, 'success');
-            playNotificationSound();
+            // Don't play sound for success messages
         },
         showError: function (message) {
             showSystemNotification('Error', message, 'danger');
@@ -457,7 +543,15 @@ window.NotificationSystem = (function () {
         },
         testConnection: function () {
             if (connection && connection.state === signalR.HubConnectionState.Connected) {
-                connection.invoke("TestNotification");
+                connection.invoke("TestConnection");
+            } else {
+                console.error('SignalR not connected');
+            }
+        },
+        // Add method to manually trigger test notification for debugging
+        sendTestNotification: function () {
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke("SendTestNotification");
             } else {
                 console.error('SignalR not connected');
             }

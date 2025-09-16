@@ -156,41 +156,31 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/enhanced-form-handler.js" asp-append-version="true"></script>
     <script>
-        function previewImage(input, targetId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById(targetId);
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            FormHandler.handleForm('form', {
+            initializeCreateForm('form', {
                 successMessage: 'Product created successfully!',
-                successRedirect: '/Products',
+                successRedirect: window.location.pathname.replace('/Create', ''),
                 redirectDelay: 1500,
+                onSuccess: function(response) {
+                    console.log('Create success:', response);
+                },
                 onError: function(errorMessage, response) {
-                    // Handle specific errors like duplicate inventory code
-                    if (errorMessage.toLowerCase().includes('inventory code')) {
-                        const inventoryCodeField = document.getElementById('InventoryCode');
-                        inventoryCodeField.classList.add('is-invalid');
-
-                        // Add error message if not exists
-                        if (!inventoryCodeField.nextElementSibling ||
-                            !inventoryCodeField.nextElementSibling.classList.contains('invalid-feedback')) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'invalid-feedback';
-                            errorDiv.textContent = errorMessage;
-                            inventoryCodeField.parentNode.insertBefore(errorDiv, inventoryCodeField.nextSibling);
-                        }
-                    }
+                    console.error('Create error:', errorMessage);
                 }
             });
         });
+            function previewImage(input, targetId) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById(targetId);
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
     </script>
 }

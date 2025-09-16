@@ -46,12 +46,14 @@ namespace NotificationService.Application.Services
                     connectionId = Context.ConnectionId,
                     userId = userId,
                     timestamp = DateTime.UtcNow,
-                    groups = roles.Select(r => $"role-{r}").Append(userGroup)
+                    groups = roles.Select(r => $"role-{r}").Append(userGroup),
+                    silent = true // This flag tells the client not to show a popup
                 });
             }
 
             await base.OnConnectedAsync();
         }
+
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
@@ -66,8 +68,9 @@ namespace NotificationService.Application.Services
             await base.OnDisconnectedAsync(exception);
         }
 
+
         // Method to manually trigger a test notification
-        public async Task TestNotification()
+        public async Task SendTestNotification()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(userId))
@@ -76,10 +79,28 @@ namespace NotificationService.Application.Services
                 {
                     id = 0,
                     type = "System",
-                    title = "Test Notification",
-                    message = "SignalR connection is working properly!",
+                    title = "Manual Test Notification",
+                    message = "This is a manual test notification!",
                     createdAt = DateTime.UtcNow,
-                    isRead = false
+                    isRead = false,
+                    isTest = true
+                });
+            }
+        }
+
+
+        // Add a method for silent connection testing that doesn't trigger popups
+        public async Task TestConnection()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // Send a silent test response - no popup will be shown
+                await Clients.Caller.SendAsync("ConnectionTest", new
+                {
+                    status = "connected",
+                    timestamp = DateTime.UtcNow,
+                    silent = true
                 });
             }
         }
