@@ -24,13 +24,18 @@ namespace NotificationService.Application.Services
             if (!string.IsNullOrEmpty(userId))
             {
                 // Add to user-specific group
+                var groupName = $"user-{userId}";
+
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+                _logger.LogInformation($"User {userId} joined group {groupName} with connection {Context.ConnectionId}");
+
 
                 // Add to role-based groups
                 var roles = Context.User?.FindAll(ClaimTypes.Role).Select(c => c.Value) ?? Enumerable.Empty<string>();
                 foreach (var role in roles)
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, $"role-{role}");
+                    _logger.LogInformation($"User {userId} joined role group: role-{role}");
                 }
 
                 await _connectionManager.AddConnection(userId, Context.ConnectionId);
@@ -41,8 +46,14 @@ namespace NotificationService.Application.Services
                 {
                     connectionId = Context.ConnectionId,
                     userId = userId,
+                    groupName = groupName,
                     timestamp = DateTime.UtcNow
                 });
+                _logger.LogInformation($"✅ User {userId} fully connected to notification hub");
+            }
+            else
+            {
+                _logger.LogWarning("User connected without userId in claims");
             }
 
             await base.OnConnectedAsync();
@@ -55,7 +66,7 @@ namespace NotificationService.Application.Services
             if (!string.IsNullOrEmpty(userId))
             {
                 await _connectionManager.RemoveConnection(userId, Context.ConnectionId);
-                _logger.LogInformation($"User {userId} disconnected");
+                _logger.LogInformation($"User {userId} disconnected from notification hub");
             }
 
             await base.OnDisconnectedAsync(exception);
@@ -68,21 +79,27 @@ namespace NotificationService.Application.Services
 
             if (!string.IsNullOrEmpty(userId))
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
-                _logger.LogInformation($"User {userId} joined their notification group");
+                var groupName = $"user-{userId}";
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+                _logger.LogInformation($"✅ User {userId} manually joined group {groupName}");
+
+                // Send confirmation back to the caller
+                await Clients.Caller.SendAsync("GroupJoined", new
+                {
+                    success = true,
+                    groupName = groupName,
+                    userId = userId
+                });
             }
-        }
-
-        // Method to send notification to specific user
-        public async Task SendToUser(string userId, object notification)
-        {
-            await Clients.Group($"user-{userId}").SendAsync("ReceiveNotification", notification);
-        }
-
-        // Method to send notification to role
-        public async Task SendToRole(string role, object notification)
-        {
-            await Clients.Group($"role-{role}").SendAsync("ReceiveNotification", notification);
+            else
+            {
+                _logger.LogWarning("JoinUserGroup called without valid userId");
+                await Clients.Caller.SendAsync("GroupJoined", new
+                {
+                    success = false,
+                    error = "No valid user ID found"
+                });
+            }
         }
     }
 }

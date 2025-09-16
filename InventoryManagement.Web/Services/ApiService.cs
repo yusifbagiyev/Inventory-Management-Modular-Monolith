@@ -205,13 +205,17 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PostAsync(endpoint, content);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
-
-            if (refreshResult != null)
+            if (!response.IsSuccessStatusCode)
             {
-                AddAuthorizationHeader();
-                response = await _httpClient.PostAsync(endpoint, content);
+                var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+
+                if (refreshResult != null)
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PostAsync(endpoint, content);
+                }
             }
+            
 
             var responseContent = await response.Content.ReadAsStringAsync();
 

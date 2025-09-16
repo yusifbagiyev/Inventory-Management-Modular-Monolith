@@ -400,6 +400,8 @@ namespace NotificationService.Infrastructure.Services
                 await repository.AddAsync(notification);
                 await unitOfWork.SaveChangesAsync();
 
+                _logger.LogInformation($"✅ Notification saved to database for user {notification.UserId}");
+
                 // Send via SignalR
                 var groupName = $"user-{notification.UserId}";
 
@@ -414,6 +416,9 @@ namespace NotificationService.Infrastructure.Services
                     Data = notification.Data
                 });
 
+                _logger.LogInformation($"📤 Notification sent via SignalR to group {groupName}");
+
+                _logger.LogInformation($"📦 Notification content: Type={notification.Type}, Title={notification.Title}");
             }
             catch (Exception ex)
             {
