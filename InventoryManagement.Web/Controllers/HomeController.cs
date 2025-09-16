@@ -55,35 +55,25 @@ namespace InventoryManagement.Web.Controllers
                         break;
                 }
 
-                // Fetch all required data
-                var productsTask = _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
-                    $"api/products?pageSize=10000&pageNumber=1&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+                var routesTask = _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
+           $"api/inventoryroutes?pageSize=10000&pageNumber=1&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+
+                // Get all products for department stats
                 var allProductsTask = _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
                     "api/products?pageSize=10000&pageNumber=1");
-                var routesTask = _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
-                    $"api/inventoryroutes?pageSize=10000&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+
                 var departmentsTask = _apiService.GetAsync<List<DepartmentViewModel>>("/api/departments");
                 var categoriesTask = _apiService.GetAsync<PagedResultDto<CategoryViewModel>>("/api/categories/paged?pageSize=1000");
 
-                await Task.WhenAll(productsTask, allProductsTask, routesTask, departmentsTask, categoriesTask);
+                await Task.WhenAll(routesTask, allProductsTask, departmentsTask, categoriesTask);
 
-                var periodProducts = await productsTask;
                 var allProducts = await allProductsTask;
                 var routes = await routesTask;
                 var departments = await departmentsTask;
                 var categoriesResult = await categoriesTask;
 
-                // Set product counts based on period
-                if (period.ToLower() == "all")
-                {
-                    model.TotalProducts = allProducts?.TotalCount ?? 0;
-                    model.ActiveProducts = allProducts?.Items.Count(p => p.IsActive) ?? 0;
-                }
-                else
-                {
-                    model.TotalProducts = periodProducts?.TotalCount ?? 0;
-                    model.ActiveProducts = periodProducts?.Items.Count(p => p.IsActive) ?? 0;
-                }
+                model.TotalProducts = allProducts?.TotalCount ?? 0;
+                model.ActiveProducts = allProducts?.Items.Count(p => p.IsActive) ?? 0;
 
                 // Process routes for the period
                 if (routes != null)

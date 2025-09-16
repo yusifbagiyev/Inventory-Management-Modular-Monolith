@@ -41,19 +41,13 @@
                 }
             }
 
-            // Store original button state
-            if ($submitBtn.length) {
-                if (!buttonStates.has($submitBtn[0])) {
+            // Store original button state ( only once )
+            if ($submitBtn.length && !buttonStates.has($submitBtn[0])) {
                     buttonStates.set($submitBtn[0], {
                         html: $submitBtn.html(),
                         disabled: $submitBtn.prop('disabled')
                     });
                 }
-                if ($submitBtn.data('original-html') === undefined) {
-                    $submitBtn.data('original-html', $submitBtn.html());
-                    $submitBtn.data('original-disabled', $submitBtn.prop('disabled'));
-                }
-            }
 
             // Call before submit hook
             if (settings.onBeforeSubmit) {
@@ -68,7 +62,7 @@
             // Prepare form data
             const formData = new FormData(form);
 
-            // Submit form via AJAX
+            // Submit form via AJAX with proper error handling
             $.ajax({
                 url: form.action,
                 type: form.method || 'POST',
@@ -76,64 +70,88 @@
                 processData: false,
                 contentType: false,
                 success: function (response, textStatus, xhr) {
-                    // If the server returned HTML (often a full view on ModelState invalid),
-                    // detect it and inject / rebind if desired.
-                    const ct = (xhr.getResponseHeader && xhr.getResponseHeader('content-type')) || '';
-                    if (typeof response === 'string' && ct.indexOf('text/html') !== -1) {
-                        // Example: replace form container with server HTML (adjust selector as needed)
-                        const $container = $(form).closest('.card-body');
-                        if ($container.length) {
-                            $container.html(response);
-                            // Re-bind AjaxHandler for the new form element inside container
-                            const $newForm = $container.find('form');
-                            if ($newForm.length) {
-                                // re-run handler on the new form
-                                AjaxHandler.handleForm($newForm);
-                            }
-                            // ensure old submit button reset attempt happens (new DOM has restored default)
-                            return;
-                        }
-                    }
+                    // ALWAYS reset button first, no matter what
+                    resetButton($submitBtn);
 
-                    // Normal JSON flow
-                    handleSuccess(response, form, $submitBtn, settings);
+                    // Handle different response types
+                    const contentType = xhr.getResponseHeader('content-type') || '';
+
+                    if (contentType.indexOf('text/html') > -1) {
+                        // Handle HTML response (server-side validation errors)
+                        handleHtmlResponse(response, form, settings);
+                    } else {
+                        // Handle JSON response
+                        handleSuccess(response, form, $submitBtn, settings);
+                    }
                 },
                 error: function (xhr, status, error) {
+                    // ALWAYS reset button on error
+                    resetButton($submitBtn);
                     handleError(xhr, form, $submitBtn, settings);
                 },
                 complete: function () {
-                    // Always attempt to reset the button (safety net)
-                    resetButton($submitBtn);
+                    // Failsafe: Always ensure button is reset after 3 seconds
+                    setTimeout(function () {
+                        resetButton($submitBtn);
+                    }, 3000);
                 }
             });
         });
     }
 
-    function handleSuccess(response, form, $submitBtn, settings) {
-        // Always reset button first
-        resetButton($submitBtn);
+    function resetButton($submitBtn) {
+        if (!$submitBtn || !$submitBtn.length) return;
 
-        // Check if it's an approval request
-        if (isApprovalRequest(response)) {
-            const message = response.message || response.Message ||
-                'Request submitted for approval';
-            showToast(message, 'info');
-
-            if (settings.successRedirect) {
-                setTimeout(() => window.location.href = settings.successRedirect,
-                    settings.redirectDelay);
-            }
-            return;
+        const originalState = buttonStates.get($submitBtn[0]);
+        if (originalState) {
+            $submitBtn.prop('disabled', originalState.disabled)
+                .html(originalState.html);
+        } else {
+            // Fallback if no original state stored
+            const currentHtml = $submitBtn.html();
+            const newHtml = currentHtml.replace(/<span[^>]*>.*?<\/span>\s*/gi, '')
+                .replace('Processing...', 'Submit');
+            $submitBtn.prop('disabled', false).html(newHtml);
         }
+    }
 
-        // Check if response indicates actual success
-        if (response && response.isSuccess === false) {
+    function handleHtmlResponse(html, form, settings) {
+        // Replace form with server response (for server-side validation)
+        const $container = $(form).closest('.card-body');
+        if ($container.length) {
+            $container.html(html);
+            // Re-attach handler to new form
+            const $newForm = $container.find('form');
+            if ($newForm.length) {
+                AjaxHandler.handleForm($newForm, settings);
+            }
+        }
+    }
+
+    function handleSuccess(response, form, $submitBtn, settings) {
+        // Check for various error indicators
+        if (response && (
+            response.isSuccess === false ||
+            response.success === false ||
+            (response.message && response.message.toLowerCase().includes('error'))
+        )) {
             // This is actually an error response
             const errorMessage = response.message || 'Operation failed';
             showToast(errorMessage, 'error');
 
             if (settings.onError) {
                 settings.onError(errorMessage, response);
+            }
+            return;
+        }
+
+        // Check if it's an approval request
+        if (isApprovalRequest(response)) {
+            const message = response.message || response.Message || 'Request submitted for approval';
+            showToast(message, 'info');
+
+            if (settings.successRedirect) {
+                setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
             }
             return;
         }
@@ -151,15 +169,11 @@
         }
 
         if (settings.successRedirect) {
-            setTimeout(() => window.location.href = settings.successRedirect,
-                settings.redirectDelay);
+            setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
         }
     }
 
     function handleError(xhr, form, $submitBtn, settings) {
-        // ALWAYS reset button on error
-        resetButton($submitBtn);
-
         let errorMessage = 'An error occurred';
         let validationErrors = null;
 
@@ -170,7 +184,6 @@
                     xhr.responseJSON.title ||
                     errorMessage;
 
-                // Check for validation errors
                 if (xhr.responseJSON.errors) {
                     validationErrors = xhr.responseJSON.errors;
                     displayValidationErrors(form, validationErrors);
@@ -194,8 +207,6 @@
                 setTimeout(() => window.location.href = '/Account/Login', 2000);
             } else if (xhr.status === 403) {
                 errorMessage = 'You do not have permission to perform this action.';
-            } else if (xhr.status === 404) {
-                errorMessage = 'Resource not found.';
             } else if (xhr.status === 409) {
                 errorMessage = errorMessage || 'This item already exists.';
             } else if (xhr.status >= 500) {
@@ -209,18 +220,6 @@
 
         if (settings.onError) {
             settings.onError(errorMessage, xhr);
-        }
-    }
-
-    function resetButton($submitBtn) {
-        const originalState = buttonStates.get($submitBtn[0]);
-        if (originalState) {
-            $submitBtn.prop('disabled', originalState.disabled)
-                .html(originalState.html);
-        } else {
-            // Fallback if no original state stored
-            $submitBtn.prop('disabled', false)
-                .html($submitBtn.text().replace('Processing...', 'Submit'));
         }
     }
 

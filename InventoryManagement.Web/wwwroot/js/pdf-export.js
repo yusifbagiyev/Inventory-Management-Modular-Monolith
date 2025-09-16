@@ -10,22 +10,16 @@
 
     // Find headers to remove (Image and Actions columns)
     const headers = tableClone.querySelectorAll('th');
-    const imageColIndex = 0;  // Image column
-    const actionColIndex = headers.length - 1;  // Actions column
-
-    // Remove headers
-    if (headers[imageColIndex]) headers[imageColIndex].remove();
-    if (headers[actionColIndex]) headers[actionColIndex].remove();
+    headers[0].remove();  // Remove Image header
+    headers[headers.length - 1].remove();  // Actions column
 
     // Process each row
     tableClone.querySelectorAll('tbody tr').forEach(row => {
         const cells = row.querySelectorAll('td');
 
-        // Remove image column
-        if (cells[imageColIndex]) cells[imageColIndex].remove();
-
-        // Remove actions column (now at index -1 after removing image)
-        if (cells[cells.length - 1]) cells[cells.length - 1].remove();
+        // Remove image and actions cells
+        cells[0].remove();
+        cells[cells.length - 1].remove();
 
         // Clean up the Code column (now first column)
         const codeCell = cells[1]; // After removing image, code is at index 0
@@ -37,19 +31,21 @@
             }
         }
 
-        // Clean up Product Details column
+        // Clean up Product Details column to include category
         const detailsCell = cells[2];
         if (detailsCell) {
-            const strong = detailsCell.querySelector('strong');
-            const small = detailsCell.querySelector('small');
-            if (strong && small) {
-                detailsCell.innerHTML = `
-                    <div><strong>${strong.textContent}</strong></div>
-                    <div style="font-size: 9pt; color: #666;">${small.textContent}</div>
-                `;
-            }
+            const model = detailsCell.querySelector('strong')?.textContent || '';
+            const vendor = detailsCell.querySelector('small:first-of-type')?.textContent?.replace('by ', '') || '';
+            const category = detailsCell.querySelector('.fa-tag')?.parentElement?.textContent?.trim() || '';
+
+            detailsCell.innerHTML = `
+                <div><strong>${model}</strong></div>
+                <div style="font-size: 9pt;">Vendor: ${vendor}</div>
+                <div style="font-size: 9pt;">Category: ${category}</div>
+            `;
         }
     });
+
     tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => { // Assuming Location is 4th column
         const deptText = cell.textContent.trim();
         const parts = deptText.split('(');
@@ -144,23 +140,14 @@ function exportRoutesToPDF() {
     // Clean up columns
     // After removal, the columns are: Date, Type, Product, From, To, Status
     tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
-        // Clean up Product column
         const badge = cell.querySelector('.badge');
-        const anchor = cell.querySelector('a');
-        const small = cell.querySelector('small');
-
-        let vendor = '';
-        let model = '';
-
-        if (anchor) {
-            vendor = anchor.childNodes[1]?.textContent.trim() || '';
-            model = small?.textContent || '';
-        }
+        const vendorModel = cell.textContent.replace(badge?.textContent || '', '').trim();
+        const category = cell.querySelector('.fa-tag')?.parentElement?.textContent?.trim() || '';
 
         cell.innerHTML = `
-            <div style="font-weight: bold;">${badge?.textContent || ''}</div>
-            <div>${vendor}</div>
-            <small>${model}</small>
+            <div><strong>Code: ${badge?.textContent || ''}</strong></div>
+            <div>${vendorModel}</div>
+            <div style="font-size: 8pt;">${category}</div>
         `;
     });
 
