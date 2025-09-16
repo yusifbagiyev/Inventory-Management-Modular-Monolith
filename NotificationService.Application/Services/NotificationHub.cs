@@ -68,6 +68,17 @@ namespace NotificationService.Application.Services
             await base.OnDisconnectedAsync(exception);
         }
 
+        public async Task JoinUserGroup()
+        {
+            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var userGroup = $"user-{userId}";
+                await Groups.AddToGroupAsync(Context.ConnectionId, userGroup);
+                _logger.LogInformation($"User {userId} explicitly joined group {userGroup}");
+            }
+        }
+
 
         // Method to manually trigger a test notification
         public async Task SendTestNotification()

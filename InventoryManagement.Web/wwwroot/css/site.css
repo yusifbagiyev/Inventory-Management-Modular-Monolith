@@ -92,7 +92,7 @@ body {
         border-bottom: 2px solid #dee2e6;
         font-weight: 600;
         text-transform: uppercase;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         letter-spacing: 0.3px;
     }
     
@@ -571,76 +571,3 @@ h1,h2,h3,h4,h5,h6{
 .badge{
     font-weight:400;
 }
-
-
-/* New notification system */
-
-/* Notification animations */
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-}
-
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.1);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-.pulse-animation {
-    animation: pulse 0.5s ease 3;
-}
-
-.notification-toast {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-radius: 8px;
-}
-
-.connection-status {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-}
-
-    .connection-status.connected {
-        background-color: #28a745;
-    }
-
-    .connection-status.reconnecting {
-        background-color: #ffc107;
-        animation: pulse 1s infinite;
-    }
-
-    .connection-status.disconnected {
-        background-color: #dc3545;
-    }

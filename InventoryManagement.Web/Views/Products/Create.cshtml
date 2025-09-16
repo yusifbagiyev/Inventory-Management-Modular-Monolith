@@ -156,31 +156,14 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/enhanced-form-handler.js" asp-append-version="true"></script>
+    <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCreateForm('form', {
+        $(document).ready(function() {
+            AjaxHandler.handleForm('form', {
                 successMessage: 'Product created successfully!',
-                successRedirect: window.location.pathname.replace('/Create', ''),
-                redirectDelay: 1500,
-                onSuccess: function(response) {
-                    console.log('Create success:', response);
-                },
-                onError: function(errorMessage, response) {
-                    console.error('Create error:', errorMessage);
-                }
+                successRedirect: '@Url.Action("Index")',
+                redirectDelay: 1500
             });
         });
-            function previewImage(input, targetId) {
-                if (input.files && input.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const preview = document.getElementById(targetId);
-                        preview.src = e.target.result;
-                        preview.style.display = 'block';
-                    };
-                    reader.readAsDataURL(input.files[0]);
-                }
-            }
     </script>
 }

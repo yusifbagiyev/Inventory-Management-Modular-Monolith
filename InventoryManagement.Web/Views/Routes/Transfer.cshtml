@@ -264,10 +264,10 @@
                                       xhr.responseJSON.error ||
                                       xhr.responseJSON.title ||
                                       errorMessage;
-                    } 
+                    }
                     else if (xhr.responseText && xhr.responseText.length < 500) {
                         errorMessage = xhr.responseText;
-                    }} 
+                    }}
                     catch (e) {
                     console.error('Error parsing error response:', e);
                     }

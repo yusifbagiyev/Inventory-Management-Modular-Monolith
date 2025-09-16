@@ -1,58 +1,66 @@
-﻿// Application Configuration Module
+﻿// Global configuration that adapts to the current environment
+// This file centralizes all environment-specific settings
+
 window.AppConfig = (function () {
     'use strict';
 
-    // Detect environment based on hostname
+    // Detect the current environment based on the hostname
     const hostname = window.location.hostname;
-    const isProduction = hostname.includes('inventory166.az') ||
-        hostname === '10.0.7.39';
+    const protocol = window.location.protocol;
+    const isProduction = hostname.includes('inventory166.az') || hostname.includes('www.inventory166.az');
+    const isDevelopment = !isProduction;
 
+    // Create the base configuration
     const config = {
-        environment: isProduction ? 'production' : 'development',
+        environment: isDevelopment ? 'development' : 'production',
+        hostname: hostname,
+        protocol: protocol,
 
-        // API configuration - simplified for proxy usage
+        // API endpoints configuration
         api: {
-            baseUrl: isProduction ? '' : 'http://localhost:5000',
-            timeout: 30000
+            // In production, everything goes through relative paths
+            baseUrl: isDevelopment ? 'http://localhost:5000' : '',
+            gateway: isDevelopment ? 'http://localhost:5000' : '/api',
         },
 
-        // SignalR configuration
+        // SignalR hub configuration
         signalR: {
-            hubUrl: '/notificationHub',
-            reconnectInterval: 5000,
-            maxReconnectAttempts: 10
-        },
+            notificationHub: isDevelopment
+                ? 'http://localhost:5005/notificationHub'
+                : '/notificationHub',
 
-        // Build API URL helper
-        buildApiUrl: function (endpoint) {
-            // Remove leading slash if present
-            endpoint = endpoint.replace(/^\//, '');
-
-            // In production, everything goes through the proxy
-            if (isProduction) {
-                return `/api/${endpoint}`;
+            // Connection options
+            options: {
+                skipNegotiation: isProduction,
+                transport: isProduction
+                    ? signalR.HttpTransportType.WebSockets
+                    : undefined
             }
-
-            // In development, use the base URL
-            return `${this.api.baseUrl}/api/${endpoint}`;
         },
 
-        // Get JWT token from storage
-        getToken: function () {
-            return sessionStorage.getItem('JwtToken') ||
-                document.querySelector('#jwtToken')?.value ||
-                this.getCookie('jwt_token');
+        // Image URLs
+        images: {
+            products: isDevelopment
+                ? 'http://localhost:5001/images/products'
+                : '/images/products',
+            routes: isDevelopment
+                ? 'http://localhost:5002/images/routes'
+                : '/images/routes'
         },
+    };
 
-        // Cookie helper
-        getCookie: function (name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-                return parts.pop().split(';').shift();
-            }
-            return null;
+    // Helper function to build API URLs
+    config.buildApiUrl = function (endpoint) {
+        // Remove leading slash if present
+        endpoint = endpoint.replace(/^\//, '');
+
+        // In production, use relative URLs for proxy
+        if (isProduction) {
+            return `/api/${endpoint}`;
         }
+
+        // In development, use full URLs
+        return `${this.api.gateway}/api/${endpoint}`;
     };
 
     return config;

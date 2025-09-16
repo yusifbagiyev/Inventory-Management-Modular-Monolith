@@ -76,19 +76,35 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/enhanced-form-handler.js" asp-append-version="true"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeEditForm('form', {
-                successMessage: 'Department updated successfully!',
-                successRedirect: window.location.pathname.replace(/\/Edit\/\d+/, ''),
-                redirectDelay: 1500,
-                onSuccess: function(response) {
-                    console.log('Update success:', response);
-                },
-                onError: function(errorMessage, response) {
-                    console.error('Update error:', errorMessage);
-                }
+        $(document).ready(function() {
+            $('form').on('submit', function(e) {
+                e.preventDefault();
+                var form = this;
+                var $btn = $(form).find('button[type="submit"]');
+                var originalText = $btn.html();
+
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+
+                $.ajax({
+                    url: form.action,
+                    type: form.method,
+                    data: new FormData(form),
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        showToast('Department updated successfully!', 'success');
+                        setTimeout(() => window.location.href = '@Url.Action("Index")', 1500);
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).html(originalText);
+                        var error = 'Failed to update department';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            error = xhr.responseJSON.message;
+                        }
+                        showToast(error, 'error');
+                    }
+                });
             });
         });
     </script>

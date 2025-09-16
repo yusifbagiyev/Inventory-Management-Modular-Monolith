@@ -31,7 +31,8 @@
                             <div class="col-md-6">
                                 <p class="mb-1"><strong>From:</strong> @Model.FromDepartmentName (@Model.FromWorker)</p>
                                 <p class="mb-1"><strong>Created:</strong> @Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</p>
-                                <p class="mb-1"><strong>Status:</strong> 
+                                <p class="mb-1">
+                                    <strong>Status:</strong>
                                     @if (Model.IsCompleted)
                                     {
                                         <span class="badge bg-success">Completed</span>
@@ -47,7 +48,7 @@
 
                     <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editRouteForm">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                        
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -84,7 +85,7 @@
                             {
                                 <p class="text-muted">No image uploaded</p>
                             }
-                            
+
                             <div id="newImageUpload" style="@(!string.IsNullOrEmpty(Model.ImageUrl) ? "display:none;" : "")">
                                 <label class="form-label">Upload New Image</label>
                                 <input type="file" name="ImageFile" class="form-control" accept="image/*"
@@ -206,7 +207,7 @@
 
         function deleteRoute() {
             $('#deleteModal').modal('hide');
-            
+
             $.ajax({
                 url: '/Routes/DeleteWithRollback/' + routeId,
                 type: 'POST',

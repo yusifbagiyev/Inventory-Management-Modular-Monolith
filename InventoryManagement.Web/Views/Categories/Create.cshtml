@@ -35,8 +35,8 @@
                         </div>
 
                         <div class="form-check mb-3">
-                            <input asp-for="IsActive" class="form-check-input"/>
-                            <label asp-for="IsActive" class="form-check-label" ></label>
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
                         </div>
 
                         <div class="d-flex justify-content-between">
@@ -55,19 +55,13 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/enhanced-form-handler.js" asp-append-version="true"></script>
+    <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCreateForm('form', {
+        $(document).ready(function() {
+            AjaxHandler.handleForm('form', {
                 successMessage: 'Category created successfully!',
-                successRedirect: window.location.pathname.replace('/Create', ''),
-                redirectDelay: 1500,
-                onSuccess: function(response) {
-                    console.log('Create success:', response);
-                },
-                onError: function(errorMessage, response) {
-                    console.error('Create error:', errorMessage);
-                }
+                successRedirect: '@Url.Action("Index")',
+                redirectDelay: 1500
             });
         });
     </script>
