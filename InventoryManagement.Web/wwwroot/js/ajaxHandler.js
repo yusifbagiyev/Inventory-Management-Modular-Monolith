@@ -1,5 +1,4 @@
-﻿// Simplified and more reliable ajaxHandler.js
-window.AjaxHandler = (function () {
+﻿window.AjaxHandler = (function () {
     'use strict';
 
     function handleForm(formSelector, options) {
@@ -15,174 +14,122 @@ window.AjaxHandler = (function () {
         };
 
         const settings = { ...defaults, ...options };
-        const $form = $(formSelector);
 
-        if (!$form.length) {
+        // Get the specific form element(s)
+        const $forms = $(formSelector);
+
+        if (!$forms.length) {
             console.error('Form not found:', formSelector);
             return;
         }
 
-        // Remove any existing submit handlers to prevent duplicates
-        $form.off('submit.ajaxHandler');
+        // Handle each form individually to avoid conflicts
+        $forms.each(function () {
+            const $individualForm = $(this);
 
-        // Attach our submit handler with a namespace
-        $form.on('submit.ajaxHandler', function (e) {
-            e.preventDefault();
-            console.log('Form submission intercepted by AjaxHandler');
-
-            const form = this;
-            const $submitBtn = $(form).find('button[type="submit"]');
-
-            // Store the original button HTML directly as a data attribute
-            // This is more reliable than WeakMap
-            if ($submitBtn.length && !$submitBtn.data('original-html')) {
-                $submitBtn.data('original-html', $submitBtn.html());
-                $submitBtn.data('original-disabled', $submitBtn.prop('disabled'));
-                console.log('Stored original button state:', $submitBtn.data('original-html'));
-            }
-
-            // Validate form if required
-            if (settings.validateBeforeSubmit) {
-                if (!form.checkValidity()) {
-                    form.reportValidity();
-                    return false;
-                }
-            }
-
-            // Call before submit hook if provided
-            if (settings.onBeforeSubmit) {
-                const shouldContinue = settings.onBeforeSubmit(form);
-                if (shouldContinue === false) {
-                    return false;
-                }
-            }
-
-            // Disable button and show loading state
-            const originalHtml = $submitBtn.data('original-html') || $submitBtn.html();
-            $submitBtn.prop('disabled', true);
-            $submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
-            console.log('Button disabled, showing processing state');
-
-            // Create a function to reset the button
-            // We define this here so it has access to the correct button reference
-            const resetButtonState = function () {
-                console.log('Resetting button state');
-                $submitBtn.prop('disabled', false);
-                $submitBtn.html(originalHtml);
-                console.log('Button reset complete');
-            };
-
-            // Prepare form data
-            const formData = new FormData(form);
-
-            // Make the AJAX request
-            $.ajax({
-                url: form.action,
-                type: form.method || 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function (response, textStatus, xhr) {
-                    console.log('AJAX success response:', response);
-
-                    // First, always reset the button
-                    resetButtonState();
-
-                    // Check if this is an HTML response (server-side validation error)
-                    const contentType = xhr.getResponseHeader('content-type') || '';
-                    if (contentType.indexOf('text/html') > -1) {
-                        console.log('Received HTML response, likely validation errors');
-                        // If we get HTML back, it's probably a validation error
-                        // Don't replace the form, just show an error
-                        showToast('Please check the form for validation errors', 'error');
-                        return;
-                    }
-
-                    // Handle JSON response
-                    handleJsonResponse(response, form, settings);
-                },
-                error: function (xhr, status, error) {
-                    console.log('AJAX error:', status, error);
-                    console.log('Response status:', xhr.status);
-                    console.log('Response text:', xhr.responseText);
-
-                    // Always reset the button first
-                    resetButtonState();
-
-                    // Parse and handle the error
-                    let errorMessage = 'An error occurred';
-
-                    try {
-                        if (xhr.responseJSON) {
-                            errorMessage = xhr.responseJSON.message ||
-                                xhr.responseJSON.error ||
-                                xhr.responseJSON.title ||
-                                errorMessage;
-
-                            // Handle validation errors
-                            if (xhr.responseJSON.errors) {
-                                displayValidationErrors(form, xhr.responseJSON.errors);
-                            }
-                        } else if (xhr.responseText && xhr.responseText.length < 500) {
-                            // Try to parse as JSON
-                            try {
-                                const response = JSON.parse(xhr.responseText);
-                                errorMessage = response.message || errorMessage;
-                            } catch (e) {
-                                // If not JSON and short enough, use as is
-                                if (!xhr.responseText.includes('<')) {
-                                    errorMessage = xhr.responseText;
-                                }
-                            }
-                        }
-
-                        // Handle specific HTTP status codes
-                        if (xhr.status === 400) {
-                            errorMessage = errorMessage || 'Invalid request. Please check your input.';
-                        } else if (xhr.status === 401) {
-                            errorMessage = 'Session expired. Redirecting to login...';
-                            setTimeout(() => window.location.href = '/Account/Login', 2000);
-                        } else if (xhr.status === 403) {
-                            errorMessage = 'You do not have permission to perform this action.';
-                        } else if (xhr.status === 409) {
-                            errorMessage = errorMessage || 'This item already exists or conflicts with existing data.';
-                        } else if (xhr.status >= 500) {
-                            errorMessage = 'Server error occurred. Please try again later.';
-                        }
-                    } catch (e) {
-                        console.error('Error parsing error response:', e);
-                    }
-
-                    // Show error toast
-                    showToast(errorMessage, 'error');
-
-                    // Call error callback if provided
-                    if (settings.onError) {
-                        settings.onError(errorMessage, xhr);
-                    }
-                },
-                complete: function () {
-                    console.log('AJAX request complete');
-                    // As a final failsafe, ensure button is reset after 2 seconds
-                    setTimeout(function () {
-                        if ($submitBtn.prop('disabled')) {
-                            console.log('Failsafe: Button still disabled, forcing reset');
-                            resetButtonState();
-                        }
-                    }, 2000);
-                }
+            // Find the submit button ONLY within THIS specific form
+            // We use a more specific search that excludes nested forms
+            const $submitBtnInThisForm = $individualForm.find('button[type="submit"]').filter(function () {
+                // Make sure this button is a direct child of THIS form, not a nested form
+                return $(this).closest('form')[0] === $individualForm[0];
             });
 
-            // Return false to prevent any default form submission
-            return false;
+            // If no submit button found in this form, skip it
+            if (!$submitBtnInThisForm.length) {
+                console.warn('No submit button found in form:', $individualForm);
+                return; // Skip this form
+            }
+
+            // Store the original state of THIS form's button
+            const originalButtonHtml = $submitBtnInThisForm.html();
+            const originalButtonDisabled = $submitBtnInThisForm.prop('disabled');
+
+            // Attach submit handler to THIS specific form
+            $individualForm.off('submit.ajaxHandler').on('submit.ajaxHandler', function (e) {
+                e.preventDefault();
+                const form = this;
+
+                // Get the submit button for THIS form again (in case DOM changed)
+                const $currentSubmitBtn = $(form).find('button[type="submit"]').filter(function () {
+                    return $(this).closest('form')[0] === form;
+                });
+
+                // Validate form first
+                if (settings.validateBeforeSubmit) {
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return false;
+                    }
+
+                    if ($.validator && !$(form).valid()) {
+                        return false;
+                    }
+                }
+
+                // Call before submit hook
+                if (settings.onBeforeSubmit) {
+                    const shouldContinue = settings.onBeforeSubmit(form);
+                    if (shouldContinue === false) return false;
+                }
+
+                // Disable button and show loading
+                $currentSubmitBtn.prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+                // Prepare form data
+                const formData = new FormData(form);
+
+                // Helper function to restore THIS form's button
+                const restoreButton = () => {
+                    $currentSubmitBtn.prop('disabled', originalButtonDisabled)
+                        .html(originalButtonHtml);
+                };
+
+                // Submit form via AJAX
+                $.ajax({
+                    url: form.action || window.location.href,
+                    type: form.method || 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response, textStatus, xhr) {
+                        // Always restore button first
+                        restoreButton();
+
+                        // Handle different response types
+                        const contentType = xhr.getResponseHeader('content-type') || '';
+
+                        if (contentType.indexOf('text/html') > -1) {
+                            handleHtmlResponse(response, form, settings);
+                        } else {
+                            handleSuccess(response, form, settings);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        // Always restore button on error
+                        restoreButton();
+                        handleError(xhr, form, settings);
+                    },
+                    complete: function () {
+                        // Failsafe: Always ensure button is restored after 3 seconds
+                        setTimeout(() => {
+                            restoreButton();
+                        }, 3000);
+                    }
+                });
+            });
         });
     }
 
-    function handleJsonResponse(response, form, settings) {
-        console.log('Processing JSON response:', response);
-
-        // Check if this is actually an error response
-        if (response && (response.isSuccess === false || response.success === false)) {
+    // Simplified handleSuccess function
+    function handleSuccess(response, form, settings) {
+        // Check for various error indicators in the response
+        if (response && (
+            response.isSuccess === false ||
+            response.success === false ||
+            (response.message && response.message.toLowerCase().includes('error'))
+        )) {
+            // This is actually an error response
             const errorMessage = response.message || 'Operation failed';
             showToast(errorMessage, 'error');
 
@@ -194,7 +141,7 @@ window.AjaxHandler = (function () {
 
         // Check if it's an approval request
         if (isApprovalRequest(response)) {
-            const message = response.message || response.Message || 'Request submitted for approval';
+            const message = response.message || 'Request submitted for approval';
             showToast(message, 'info');
 
             if (settings.successRedirect) {
@@ -203,23 +150,71 @@ window.AjaxHandler = (function () {
             return;
         }
 
-        // Handle success
+        // Handle normal success
         if (settings.onSuccess) {
             const result = settings.onSuccess(response);
             if (result === false) return;
         }
 
-        // Show success message
         showToast(settings.successMessage, 'success');
 
-        // Reset form if requested
-        if (settings.resetFormOnSuccess && form) {
+        if (settings.resetFormOnSuccess) {
             form.reset();
         }
 
-        // Redirect if specified
         if (settings.successRedirect) {
             setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
+        }
+    }
+
+    // Rest of your functions remain the same...
+    function handleError(xhr, form, settings) {
+        let errorMessage = 'An error occurred';
+        let validationErrors = null;
+
+        try {
+            if (xhr.responseJSON) {
+                errorMessage = xhr.responseJSON.message ||
+                    xhr.responseJSON.error ||
+                    xhr.responseJSON.title ||
+                    errorMessage;
+
+                if (xhr.responseJSON.errors) {
+                    validationErrors = xhr.responseJSON.errors;
+                    displayValidationErrors(form, validationErrors);
+                }
+            } else if (xhr.responseText) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMessage = response.message || errorMessage;
+                } catch (e) {
+                    if (xhr.responseText.length < 500 && !xhr.responseText.includes('<')) {
+                        errorMessage = xhr.responseText;
+                    }
+                }
+            }
+
+            // Handle specific status codes
+            if (xhr.status === 400) {
+                errorMessage = errorMessage || 'Invalid request. Please check your input.';
+            } else if (xhr.status === 401) {
+                errorMessage = 'Session expired. Please login again.';
+                setTimeout(() => window.location.href = '/Account/Login', 2000);
+            } else if (xhr.status === 403) {
+                errorMessage = 'You do not have permission to perform this action.';
+            } else if (xhr.status === 409) {
+                errorMessage = errorMessage || 'This item already exists.';
+            } else if (xhr.status >= 500) {
+                errorMessage = 'Server error occurred. Please try again later.';
+            }
+        } catch (e) {
+            console.error('Error parsing error response:', e);
+        }
+
+        showToast(errorMessage, 'error');
+
+        if (settings.onError) {
+            settings.onError(errorMessage, xhr);
         }
     }
 
@@ -234,21 +229,42 @@ window.AjaxHandler = (function () {
     }
 
     function displayValidationErrors(form, errors) {
-        console.log('Displaying validation errors:', errors);
-
         // Clear previous validation errors
         $(form).find('.field-validation-error').removeClass('field-validation-error');
         $(form).find('.validation-message').remove();
-        $(form).find('.is-invalid').removeClass('is-invalid');
 
         if (typeof errors === 'object') {
             for (const field in errors) {
                 const $field = $(form).find(`[name="${field}"]`);
                 if ($field.length) {
                     $field.addClass('is-invalid');
-                    const messages = Array.isArray(errors[field]) ? errors[field] : [errors[field]];
-                    const errorHtml = `<span class="text-danger validation-message">${messages.join(', ')}</span>`;
+                    const messages = Array.isArray(errors[field]) ?
+                        errors[field] : [errors[field]];
+                    const errorHtml = `<span class="text-danger validation-message">
+                                        ${messages.join(', ')}</span>`;
                     $field.after(errorHtml);
+                }
+            }
+        }
+    }
+
+    function handleHtmlResponse(html, form, settings) {
+        // Replace form with server response (for server-side validation)
+        const $container = $(form).closest('.card-body');
+        if ($container.length) {
+            $container.html(html);
+            // Re-attach handler to new form
+            const $newForm = $container.find('form');
+            if ($newForm.length) {
+                // Use a more specific selector for the new form
+                const formId = $newForm.attr('id');
+                if (formId) {
+                    AjaxHandler.handleForm('#' + formId, settings);
+                } else {
+                    // Add a unique identifier to the form
+                    const uniqueId = 'form-' + Date.now();
+                    $newForm.attr('id', uniqueId);
+                    AjaxHandler.handleForm('#' + uniqueId, settings);
                 }
             }
         }
@@ -260,10 +276,24 @@ window.AjaxHandler = (function () {
     };
 })();
 
-// Also add this helper function to ensure showToast is available
-if (typeof showToast === 'undefined') {
-    window.showToast = function (message, type) {
-        console.log(`Toast [${type}]: ${message}`);
-        // You can implement your toast logic here or it should already be in site.js
-    };
-}
+// Global error handler utility remains the same
+window.ErrorHandler = {
+    parseErrorMessage: function (xhr, defaultMessage) {
+        defaultMessage = defaultMessage || 'An error occurred';
+
+        try {
+            if (xhr.responseJSON) {
+                return xhr.responseJSON.message ||
+                    xhr.responseJSON.error ||
+                    defaultMessage;
+            } else if (xhr.responseText) {
+                const response = JSON.parse(xhr.responseText);
+                return response.message || defaultMessage;
+            }
+        } catch (e) {
+            console.error('Error parsing response:', e);
+        }
+
+        return defaultMessage;
+    }
+};
