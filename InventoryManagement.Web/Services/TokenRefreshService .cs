@@ -5,92 +5,64 @@ using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Services
 {
-    public class TokenRefreshService : ITokenRefreshService
+    public class TokenManager : ITokenManager
     {
         private readonly IAuthService _authService;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<TokenRefreshService> _logger;
+        private readonly ILogger<TokenManager> _logger;
         private static readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
-        private static DateTime _lastRefreshAttempt = DateTime.MinValue;
-        private static readonly TimeSpan _minRefreshInterval = TimeSpan.FromSeconds(5);
 
-        public TokenRefreshService(
+        public TokenManager(
             IAuthService authService,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<TokenRefreshService> logger)
+            ILogger<TokenManager> logger)
         {
             _authService = authService;
             _httpContextAccessor = httpContextAccessor;
             _logger = logger;
         }
 
-        public async Task<TokenDto?> RefreshTokenIfNeededAsync()
+        public async Task<bool> RefreshTokenAsync()
         {
-            var context = _httpContextAccessor.HttpContext;
-            if (context == null) return null;
-
-            var accessToken = GetCurrentAccessToken(context);
-            var refreshToken = GetCurrentRefreshToken(context);
-
-            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
-            {
-                _logger.LogDebug("No tokens available for refresh");
-                return null;
-            }
-
-            // Check if token needs refresh
-            if (!IsTokenExpiringSoon(accessToken))
-            {
-                return null;
-            }
-
-            // Prevent multiple concurrent refresh attempts
             if (!await _refreshSemaphore.WaitAsync(100))
             {
                 _logger.LogDebug("Token refresh already in progress");
-                return null;
+                return false;
             }
 
             try
             {
-                // Rate limiting protection
-                var timeSinceLastAttempt = DateTime.UtcNow - _lastRefreshAttempt;
-                if (timeSinceLastAttempt < _minRefreshInterval)
+                var context = _httpContextAccessor.HttpContext;
+                if (context == null) return false;
+
+                var accessToken = context.Session.GetString("JwtToken");
+                var refreshToken = context.Session.GetString("RefreshToken");
+
+                if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
                 {
-                    _logger.LogDebug("Refresh rate limited, last attempt was {Seconds}s ago",
-                        timeSinceLastAttempt.TotalSeconds);
-                    return null;
+                    _logger.LogWarning("No tokens available for refresh");
+                    return false;
                 }
 
-                _lastRefreshAttempt = DateTime.UtcNow;
-
-                // Double-check token still needs refresh (might have been refreshed by another thread)
-                var currentToken = GetCurrentAccessToken(context);
-                if (currentToken != accessToken || !IsTokenExpiringSoon(currentToken))
-                {
-                    _logger.LogDebug("Token already refreshed by another process");
-                    return null;
-                }
-
-                _logger.LogInformation("Attempting token refresh");
+                // Call auth service to refresh
                 var newTokens = await _authService.RefreshTokenAsync(accessToken, refreshToken);
+                if (newTokens == null)
+                {
+                    _logger.LogWarning("Token refresh failed - clearing session");
+                    ClearSession();
+                    return false;
+                }
 
-                if (newTokens != null && !string.IsNullOrEmpty(newTokens.AccessToken))
-                {
-                    UpdateTokensEverywhere(newTokens);
-                    _logger.LogInformation("Token refreshed successfully");
-                    return newTokens;
-                }
-                else
-                {
-                    _logger.LogWarning("Token refresh returned null or empty token");
-                    return null;
-                }
+                // Update session
+                StoreTokens(newTokens);
+                _logger.LogInformation("Token refreshed successfully");
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during token refresh");
-                return null;
+                _logger.LogError(ex, "Error refreshing token");
+                ClearSession();
+                return false;
             }
             finally
             {
@@ -98,70 +70,68 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public bool IsTokenExpiringSoon(string token)
-        {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(token))
-                    return false;
-
-                var jwtToken = handler.ReadJwtToken(token);
-                var timeUntilExpiry = jwtToken.ValidTo - DateTime.UtcNow;
-
-                // Refresh if token expires in less than 5 minutes
-                return timeUntilExpiry.TotalMinutes <= 5;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error checking token expiration");
-                return false;
-            }
-        }
-
-        public void UpdateTokensEverywhere(TokenDto tokenDto)
+        public void StoreTokens(TokenDto tokens)
         {
             var context = _httpContextAccessor.HttpContext;
             if (context == null) return;
 
-            // Update session
-            context.Session.SetString("JwtToken", tokenDto.AccessToken);
-            context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
-            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
+            // Store in session only
+            context.Session.SetString("JwtToken", tokens.AccessToken);
+            context.Session.SetString("RefreshToken", tokens.RefreshToken);
+            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokens.User));
+            context.Session.SetString("TokenExpiry", tokens.ExpiresAt.ToString("O"));
+        }
 
-            // Update HttpContext.Items for immediate use
-            context.Items["JwtToken"] = tokenDto.AccessToken;
-            context.Items["RefreshToken"] = tokenDto.RefreshToken;
+        public void ClearSession()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return;
 
-            // Update cookies if Remember Me was used
+            context.Session.Clear();
+
+            // Clear cookies if they exist
             if (context.Request.Cookies.ContainsKey("jwt_token"))
             {
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = context.Request.IsHttps,
-                    SameSite = SameSiteMode.Lax,
-                    Expires = DateTimeOffset.Now.AddDays(30)
-                };
-
-                context.Response.Cookies.Append("jwt_token", tokenDto.AccessToken, cookieOptions);
-                context.Response.Cookies.Append("refresh_token", tokenDto.RefreshToken, cookieOptions);
-                context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(tokenDto.User), cookieOptions);
+                context.Response.Cookies.Delete("jwt_token");
+                context.Response.Cookies.Delete("refresh_token");
+                context.Response.Cookies.Delete("user_data");
             }
         }
 
-        private string? GetCurrentAccessToken(HttpContext context)
+        private bool IsTokenExpiringSoon(string token)
         {
-            return context.Items["JwtToken"] as string
-                ?? context.Session.GetString("JwtToken")
-                ?? context.Request.Cookies["jwt_token"];
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+                var timeUntilExpiry = jwtToken.ValidTo - DateTime.UtcNow;
+
+                // Refresh if less than 5 minutes remaining
+                return timeUntilExpiry.TotalMinutes <= 5;
+            }
+            catch
+            {
+                return true; // Assume expired if can't parse
+            }
         }
 
-        private string? GetCurrentRefreshToken(HttpContext context)
+        public async Task<string?> GetValidTokenAsync()
         {
-            return context.Items["RefreshToken"] as string
-                ?? context.Session.GetString("RefreshToken")
-                ?? context.Request.Cookies["refresh_token"];
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return null;
+
+            // Get current token from session only
+            var token = context.Session.GetString("JwtToken");
+            if (string.IsNullOrEmpty(token)) return null;
+
+            // Check if token needs refresh
+            if (IsTokenExpiringSoon(token))
+            {
+                await RefreshTokenAsync();
+                token = context.Session.GetString("JwtToken");
+            }
+
+            return token;
         }
     }
 }

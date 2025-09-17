@@ -19,7 +19,7 @@ namespace InventoryManagement.Web.Middleware
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context, ITokenRefreshService tokenRefreshService)
+        public async Task InvokeAsync(HttpContext context, ITokenManager tokenRefreshService)
         {
             // Skip for static files and auth pages
             if (IsStaticFileRequest(context) || IsAuthPage(context))
@@ -41,7 +41,7 @@ namespace InventoryManagement.Web.Middleware
             {
                 try
                 {
-                    await tokenRefreshService.RefreshTokenIfNeededAsync();
+                    await tokenRefreshService.RefreshTokenAsync();
                 }
                 catch (Exception ex)
                 {

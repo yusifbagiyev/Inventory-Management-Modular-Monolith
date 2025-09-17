@@ -39,8 +39,8 @@
             const category = detailsCell.querySelector('.fa-tag')?.parentElement?.textContent?.trim() || '';
 
             detailsCell.innerHTML = `
-                <div><strong>${model}</strong></div>
-                <div style="font-size: 9pt;">Vendor: ${vendor}</div>
+                <div><strong>Vendor: ${vendor}</strong></div>
+                <div style="font-size: 9pt;">Model: ${model}</div>
                 <div style="font-size: 9pt;">Category: ${category}</div>
             `;
         }
@@ -142,12 +142,10 @@ function exportRoutesToPDF() {
     tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
         const badge = cell.querySelector('.badge');
         const vendorModel = cell.textContent.replace(badge?.textContent || '', '').trim();
-        const category = cell.querySelector('.fa-tag')?.parentElement?.textContent?.trim() || '';
 
         cell.innerHTML = `
             <div><strong>Code: ${badge?.textContent || ''}</strong></div>
             <div>${vendorModel}</div>
-            <div style="font-size: 8pt;">${category}</div>
         `;
     });
 

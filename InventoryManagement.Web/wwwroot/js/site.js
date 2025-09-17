@@ -272,3 +272,56 @@ function handleApprovalResponse(response, entityType, successRedirect) {
 
     setTimeout(() => window.location.href = successRedirect, 2000);
 }
+// Automatic token refresh every 8 minutes
+let tokenRefreshInterval;
+
+function startTokenRefresh() {
+    // Clear any existing interval
+    if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+    }
+
+    // Set up refresh every 8 minutes (token expires in 10)
+    tokenRefreshInterval = setInterval(async function () {
+        try {
+            const response = await fetch('/Account/RefreshToken', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Token refreshed successfully');
+                } else {
+                    console.warn('Token refresh failed:', data.message);
+                    if (data.message === 'No tokens available') {
+                        window.location.href = '/Account/Login';
+                    }
+                }
+            } else if (response.status === 401) {
+                // Session expired, redirect to login
+                window.location.href = '/Account/Login';
+            }
+        } catch (error) {
+            console.error('Error refreshing token:', error);
+        }
+    }, 8 * 60 * 1000); // 8 minutes
+}
+
+// Start refresh when page loads if authenticated
+$(document).ready(function () {
+    if ($('#jwtToken').val()) {
+        startTokenRefresh();
+    }
+});
+
+// Stop refresh when user logs out
+function stopTokenRefresh() {
+    if (tokenRefreshInterval) {
+        clearInterval(tokenRefreshInterval);
+        tokenRefreshInterval = null;
+    }
+}

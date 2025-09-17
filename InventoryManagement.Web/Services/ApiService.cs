@@ -14,11 +14,11 @@ namespace InventoryManagement.Web.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
         private readonly ILogger<ApiService> _logger;
-        private readonly ITokenRefreshService _tokenRefreshService;
+        private readonly ITokenManager _tokenRefreshService;
         public ApiService(
             HttpClient httpClient,
             IHttpContextAccessor httpContextAccessor,
-            ITokenRefreshService tokenRefreshService,
+            ITokenManager tokenRefreshService,
             IConfiguration configuration,
             ILogger<ApiService> logger)
         {
@@ -109,7 +109,7 @@ namespace InventoryManagement.Web.Services
             {
                 _logger.LogInformation("Received 401, attempting token refresh for GET {Endpoint}", endpoint);
 
-                var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
                 if (refreshResult != null)
                 {
@@ -150,9 +150,9 @@ namespace InventoryManagement.Web.Services
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-                if (refreshResult != null)
+                if (!refreshResult)
                 {
                     AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
@@ -207,9 +207,9 @@ namespace InventoryManagement.Web.Services
 
             if (!response.IsSuccessStatusCode)
             {
-                var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-                if (refreshResult != null)
+                if (!refreshResult)
                 {
                     AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
@@ -232,9 +232,9 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PutAsync(endpoint, content);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (refreshResult != null)
+            if (!refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.PutAsync(endpoint, content);
@@ -257,9 +257,9 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PutAsync(endpoint, content);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (refreshResult != null)
+            if (!refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.PutAsync(endpoint, content);
@@ -277,9 +277,9 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.DeleteAsync(endpoint);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenIfNeededAsync();
+            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (refreshResult != null)
+            if (!refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.DeleteAsync(endpoint);
