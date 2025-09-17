@@ -43,7 +43,7 @@ namespace InventoryManagement.Web.Extensions
                 options.LoginPath = "/Account/Login";
                 options.LogoutPath = "/Account/Logout";
                 options.AccessDeniedPath = "/Account/AccessDenied";
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 90));
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue<int>("Authentication:CookieExpirationMinutes", 15));
                 options.SlidingExpiration = true;
             });
 
