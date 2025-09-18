@@ -114,18 +114,20 @@ namespace RouteService.Domain.Entities
             int departmentId,
             string departmentName,
             string? worker,
+            string? imageUrl,
             string notes)
         {
             return new InventoryRoute
             {
                 RouteType = RouteType.Update,
                 ProductSnapshot = updatedProduct,
-                FromDepartmentId = existingProduct.DepartmentId, // No previous department for updates
+                FromDepartmentId = existingProduct.DepartmentId,
                 FromDepartmentName = existingProduct.DepartmentName,
                 ToDepartmentId = departmentId,
                 ToDepartmentName = departmentName,
                 FromWorker = existingProduct.Worker,
                 ToWorker = worker,
+                ImageUrl = imageUrl,
                 Notes = notes,
                 CreatedAt = DateTime.Now
             };

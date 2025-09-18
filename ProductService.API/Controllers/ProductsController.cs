@@ -160,6 +160,10 @@ namespace ProductService.API.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
             var userName = User.Identity?.Name ?? "Unknown";
 
+            var existingProduct = await _mediator.Send(new GetProductByIdQuery(id));
+            if (existingProduct == null || dto==null)
+                return NotFound();
+
             if (User.HasClaim("permission", AllPermissions.ProductUpdateDirect))
             {
                 await _mediator.Send(new UpdateProduct.Command(id, dto));
@@ -167,11 +171,6 @@ namespace ProductService.API.Controllers
             }
             else if (User.HasClaim("permission", AllPermissions.ProductUpdate))
             {
-                // Get the existing product to include inventory code
-                var existingProduct = await _mediator.Send(new GetProductByIdQuery(id));
-                if (existingProduct == null)
-                    return NotFound();
-
                 // Create update data object
                 var updateData = new Dictionary<string, object>
                 {

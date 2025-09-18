@@ -211,11 +211,24 @@ namespace RouteService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
             var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var imageService = scope.ServiceProvider.GetRequiredService<IImageService>();
             var productClient = scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
 
             // Get current product details
             var product = await productClient.GetProductByIdAsync(existingProduct.Product.ProductId);
             if (product == null) return;
+
+            string? imageUrl = null;
+
+            // Upload image if data is provided
+            if (existingProduct.ImageData != null && existingProduct.ImageData.Length > 0)
+            {
+                using var stream = new MemoryStream(existingProduct.ImageData);
+                imageUrl = await imageService.UploadImageAsync(
+                    stream,
+                    existingProduct.ImageFileName ?? $"image-{DateTime.Now}.jpg",
+                    existingProduct.Product.InventoryCode);
+            }
 
             var updatedProduct = new ProductSnapshot(
                 existingProduct.Product.ProductId,
@@ -232,6 +245,7 @@ namespace RouteService.Infrastructure.Services
                 product.DepartmentId,
                 product.DepartmentName,
                 product.Worker,
+                imageUrl,
                 $"Product updated: {existingProduct.Changes}");
 
             await repository.AddAsync(route);

@@ -139,6 +139,14 @@ namespace ProductService.Application.Features.Products.Commands
                                 UpdatedAt = DateTime.Now,
                             };
 
+                            if (shouldUpdateImage)
+                            {
+                                using var ms = new MemoryStream();
+                                await dto.ImageFile!.CopyToAsync(ms);
+                                updateEvent.ImageData = ms.ToArray();
+                                updateEvent.ImageFileName = dto.ImageFile.FileName;
+                            }
+
                             await _messagePublisher.PublishAsync(updateEvent, "product.updated", cancellationToken);
                         }
                         return Task.CompletedTask;

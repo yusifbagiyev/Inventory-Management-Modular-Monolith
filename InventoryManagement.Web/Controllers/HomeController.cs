@@ -127,7 +127,7 @@ namespace InventoryManagement.Web.Controllers
 
                         // Count transfers to this department in the period
                         var periodTransfers = routes?.Items
-                            .Where(r => r.ToDepartmentId == d.Id && r.IsCompleted)
+                            .Where(r => r.ToDepartmentId == d.Id && r.IsCompleted && r.RouteTypeName=="Transfer")
                             .Count() ?? 0;
 
                         // Count unique workers in this department for the period
