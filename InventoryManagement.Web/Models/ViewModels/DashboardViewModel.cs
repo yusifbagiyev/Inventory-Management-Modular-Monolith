@@ -10,6 +10,7 @@
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
         public List<RecentActivity> RecentActivities { get; set; } = [];
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];
+        public TransferActivityData TransferActivityData { get; set; } = new();
     }
 
     public class DepartmentStats
@@ -25,6 +26,12 @@
         public DateTime Timestamp { get; set; }
         public string Type { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
+    }
+    public class TransferActivityData
+    {
+        public List<string> Labels { get; set; } = [];
+        public List<int> CompletedData { get; set; } = [];
+        public List<int> PendingData { get; set; } = [];
     }
     public class CategoryDistribution
     {

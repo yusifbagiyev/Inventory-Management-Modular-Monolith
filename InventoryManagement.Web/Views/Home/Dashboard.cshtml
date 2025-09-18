@@ -3,6 +3,8 @@
     var currentPeriod = ViewBag.CurrentPeriod as string ?? "week";
     var totalDepartments = ViewBag.TotalDepartments ?? 0;
     var totalCategories = ViewBag.TotalCategories ?? 0;
+    var startDate = ViewBag.PeriodStartDate as DateTime?;
+    var endDate = ViewBag.PeriodEndDate as DateTime?;
 }
 
 <div class="container-fluid px-4">
@@ -17,12 +19,29 @@
                     onclick="changePeriod('month')">
                 This Month
             </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "6months" ? "active" : "")"
+                    onclick="changePeriod('6months')">
+                Last 6 Months
+            </button>
             <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "all" ? "active" : "")"
                     onclick="changePeriod('all')">
                 All Time
             </button>
         </div>
     </div>
+
+    <!-- Period Info Banner -->
+    @if (startDate.HasValue && endDate.HasValue && currentPeriod != "all")
+    {
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Period:</strong> @startDate.Value.ToString("MMM dd, yyyy") - @endDate.Value.ToString("MMM dd, yyyy")
+            @if (currentPeriod != "all")
+            {
+                <span class="ms-3"><em>Showing new products and activity for this period</em></span>
+            }
+        </div>
+    }
 
     <!-- Key Metrics -->
     <div class="row mb-4">
@@ -38,7 +57,7 @@
                                 }
                                 else
                                 {
-                                    <text>Products (@currentPeriod)</text>
+                                    <text>New Products (@currentPeriod.Replace("6months", "6 Months"))</text>
                                 }
                             </p>
                             <h3 class="mb-0">@Model.TotalProducts.ToString("N0")</h3>
@@ -59,7 +78,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Routes (@currentPeriod)</p>
+                            <p class="text-muted mb-2">Routes (@currentPeriod.Replace("6months", "6 Months"))</p>
                             <h3 class="mb-0">@Model.TotalRoutes.ToString("N0")</h3>
                             <p class="text-warning mb-0">
                                 <i class="fas fa-clock"></i> @Model.PendingTransfers pending
@@ -78,10 +97,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Total Active Departments</p>
+                            <p class="text-muted mb-2">Active Departments</p>
                             <h3 class="mb-0">@totalDepartments</h3>
                             <p class="text-info mb-0">
-                                <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers
+                                <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers (@currentPeriod.Replace("6months", "6 Months"))
                             </p>
                         </div>
                         <div class="rounded-circle bg-info-soft text-info p-3">
@@ -97,10 +116,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Total Categories</p>
+                            <p class="text-muted mb-2">Active Categories</p>
                             <h3 class="mb-0">@totalCategories</h3>
                             <p class="text-secondary mb-0">
-                                <i class="fas fa-tags"></i> Active categories
+                                <i class="fas fa-tags"></i> @Model.CategoryDistributions.Count with products (@currentPeriod.Replace("6months", "6 Months"))
                             </p>
                         </div>
                         <div class="rounded-circle bg-warning-soft text-warning p-3">
@@ -118,7 +137,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Department Overview</h5>
+                        <h5 class="mb-0">Department Overview (@currentPeriod.Replace("6months", "6 Months"))</h5>
                         <div class="btn-group btn-group-sm" role="group">
                             <button type="button" class="btn btn-outline-primary active" data-chart="bar">Bar</button>
                             <button type="button" class="btn btn-outline-primary" data-chart="line">Line</button>
@@ -126,9 +145,19 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px;">
-                        <canvas id="departmentChart"></canvas>
-                    </div>
+                    @if (Model.DepartmentStats.Any())
+                    {
+                        <div class="chart-container" style="position: relative; height: 300px;">
+                            <canvas id="departmentChart"></canvas>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No department data available for this period</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -136,12 +165,35 @@
         <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Category Distribution</h5>
+                    <h5 class="mb-0">Category Distribution (@currentPeriod.Replace("6months", "6 Months"))</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 300px;">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
+                    @if (Model.CategoryDistributions.Any())
+                    {
+                        <div class="chart-container" style="position: relative; height: 300px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <!-- Legend -->
+                        <div class="mt-3">
+                            @foreach (var category in Model.CategoryDistributions.Take(4))
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2" style="width: 12px; height: 12px; background-color: @category.Color; border-radius: 50%;"></div>
+                                        <small>@category.CategoryName</small>
+                                    </div>
+                                    <small class="text-muted">@category.Count</small>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No category data available for this period</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -152,12 +204,22 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Transfer Activity (@currentPeriod)</h5>
+                    <h5 class="mb-0">Transfer Activity (@currentPeriod.Replace("6months", "6 Months"))</h5>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="position: relative; height: 250px;">
-                        <canvas id="transferChart"></canvas>
-                    </div>
+                    @if (Model.TransferActivityData.Labels.Any())
+                    {
+                        <div class="chart-container" style="position: relative; height: 250px;">
+                            <canvas id="transferChart"></canvas>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No transfer activity for this period</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -165,41 +227,42 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Top Departments by Products</h5>
+                    <h5 class="mb-0">Top Departments by Products (@currentPeriod.Replace("6months", "6 Months"))</h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Department</th>
-                                    <th>Products</th>
-                                    <th>Workers</th>
-                                    <th>Transfers</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var dept in Model.DepartmentStats.Take(5))
-                                {
+                    @if (Model.DepartmentStats.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
                                     <tr>
-                                        <td>@dept.DepartmentName</td>
-                                        <td><span class="badge bg-primary">@dept.ProductCount</span></td>
-                                        <td>@dept.ActiveWorkers</td>
-                                        <td>
-                                            @if (currentPeriod != "all")
-                                            {
-                                                <span class="badge bg-info">@dept.PeriodTransfers</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">-</span>
-                                            }
-                                        </td>
+                                        <th>Department</th>
+                                        <th>Products</th>
+                                        <th>Workers</th>
+                                        <th>Transfers</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    @foreach (var dept in Model.DepartmentStats.Take(5))
+                                    {
+                                        <tr>
+                                            <td>@dept.DepartmentName</td>
+                                            <td><span class="badge bg-primary">@dept.ProductCount</span></td>
+                                            <td>@dept.ActiveWorkers</td>
+                                            <td><span class="badge bg-info">@dept.PeriodTransfers</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-table fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No department data available for this period</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -209,38 +272,13 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Store the current period globally
+        // Store the current period and data globally
         let currentPeriod = '@currentPeriod';
+        let departmentChart, categoryChart, transferChart;
 
         $(document).ready(function() {
-            // Initialize with the current period
+            // Initialize charts with data from the server
             initializeCharts();
-
-            // Set the active button based on current period
-            $(`[data-period="${currentPeriod}"]`).addClass('active');
-
-            // Period switcher with proper state management
-            $('[data-period]').click(function(e) {
-                e.preventDefault();
-
-                const $button = $(this);
-                const period = $button.data('period');
-
-                // Don't reload if already on this period
-                if (period === currentPeriod) {
-                    return;
-                }
-
-                // Update button states immediately for better UX
-                $('[data-period]').removeClass('active');
-                $button.addClass('active');
-
-                // Show loading indicator
-                showSpinner();
-
-                // Navigate to the new period
-                window.location.href = '/Home/Dashboard?period=' + period;
-            });
 
             // Chart type switcher
             $('[data-chart]').click(function() {
@@ -267,9 +305,6 @@
             window.location.href = '/Home/Dashboard?period=' + period;
         }
 
-        // Chart instances
-        let departmentChart, categoryChart, transferChart;
-
         function initializeCharts() {
             initializeDepartmentChart();
             initializeCategoryChart();
@@ -285,18 +320,23 @@
                 success: '#10B981'
             };
 
+            // Use data passed from the server
+            const departmentData = @Html.Raw(Json.Serialize(Model.DepartmentStats));
+
+            if (departmentData.length === 0) return;
+
             departmentChart = new Chart(ctx.getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.DepartmentName))),
+                    labels: departmentData.map(d => d.departmentName),
                     datasets: [{
                         label: 'Products',
-                        data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ProductCount))),
+                        data: departmentData.map(d => d.productCount),
                         backgroundColor: colors.primary,
                         borderRadius: 8
                     }, {
                         label: 'Workers',
-                        data: @Html.Raw(Json.Serialize(Model.DepartmentStats.Select(d => d.ActiveWorkers))),
+                        data: departmentData.map(d => d.activeWorkers),
                         backgroundColor: colors.success,
                         borderRadius: 8
                     }]
@@ -325,13 +365,18 @@
             const ctx = document.getElementById('categoryChart');
             if (!ctx) return;
 
+            // Use data passed from the server
+            const categoryData = @Html.Raw(Json.Serialize(Model.CategoryDistributions));
+
+            if (categoryData.length === 0) return;
+
             categoryChart = new Chart(ctx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
-                    labels: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.CategoryName))),
+                    labels: categoryData.map(c => c.categoryName),
                     datasets: [{
-                        data: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Count))),
-                        backgroundColor: @Html.Raw(Json.Serialize(Model.CategoryDistributions.Select(c => c.Color))),
+                        data: categoryData.map(c => c.count),
+                        backgroundColor: categoryData.map(c => c.color),
                         borderWidth: 0
                     }]
                 },
@@ -352,40 +397,10 @@
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
 
-            // Get the current period from the view
-            const currentPeriod = '@currentPeriod';
+            // Use real data from the server
+            const transferData = @Html.Raw(Json.Serialize(Model.TransferActivityData));
 
-            // Generate dynamic labels based on period
-            let labels, completedData, pendingData;
-
-            switch(currentPeriod) {
-                case 'week':
-                    // Last 7 days
-                    labels = [];
-                    for(let i = 6; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-                    }
-                    // These should come from actual data - for now using sample data
-                    completedData = [@Model.CompletedTransfers]; // Use actual model data
-                    pendingData = [@Model.PendingTransfers];
-                    break;
-
-                case 'month':
-                    // Last 30 days - show weekly aggregates
-                    labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-                    completedData = [15, 22, 18, 25]; // Replace with actual data
-                    pendingData = [5, 8, 6, 10];
-                    break;
-
-                case 'all':
-                    // Show monthly data for all time
-                    labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                    completedData = [45, 52, 48, 65, 72, 68];
-                    pendingData = [12, 15, 10, 18, 20, 15];
-                    break;
-            }
+            if (transferData.labels.length === 0) return;
 
             const colors = {
                 success: '#10B981',
@@ -395,17 +410,17 @@
             transferChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: transferData.labels,
                     datasets: [{
                         label: 'Completed',
-                        data: completedData,
+                        data: transferData.completedData,
                         borderColor: colors.success,
                         backgroundColor: colors.success + '20',
                         tension: 0.4,
                         fill: true
                     }, {
                         label: 'Pending',
-                        data: pendingData,
+                        data: transferData.pendingData,
                         borderColor: colors.warning,
                         backgroundColor: colors.warning + '20',
                         tension: 0.4,
@@ -424,7 +439,7 @@
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                stepSize: 5
+                                stepSize: Math.max(1, Math.ceil(Math.max(...transferData.completedData, ...transferData.pendingData) / 10))
                             }
                         }
                     }
@@ -432,62 +447,10 @@
             });
         }
 
-        function generateTransferDatagenerateTransferData(period) {
-            let labels, completedData, pendingData;
-
-            const colors = {
-                success: '#10B981',
-                warning: '#F59E0B'
-            };
-
-            switch(period) {
-                case 'week':
-                    labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    completedData = [12, 19, 15, 25, 22, 18, 20];
-                    pendingData = [5, 8, 6, 10, 7, 5, 8];
-                    break;
-                case 'month':
-                    // Generate labels for last 30 days
-                    labels = [];
-                    for(let i = 29; i >= 0; i--) {
-                        const date = new Date();
-                        date.setDate(date.getDate() - i);
-                        labels.push(date.getDate());
-                    }
-                    // Generate sample data for month
-                    completedData = labels.map(() => Math.floor(Math.random() * 30) + 10);
-                    pendingData = labels.map(() => Math.floor(Math.random() * 15) + 5);
-                    break;
-                default: // today
-                    labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'];
-                    completedData = [2, 4, 8, 12, 10, 6, 3];
-                    pendingData = [1, 2, 3, 5, 4, 2, 1];
-            }
-
-            return {
-                labels: labels,
-                datasets: [{
-                    label: 'Completed',
-                    data: completedData,
-                    borderColor: colors.success,
-                    backgroundColor: colors.success + '20',
-                    tension: 0.4,
-                    fill: true
-                }, {
-                    label: 'Pending',
-                    data: pendingData,
-                    borderColor: colors.warning,
-                    backgroundColor: colors.warning + '20',
-                    tension: 0.4,
-                    fill: true
-                }]
-            };
-        }
-
         function showSpinner() {
             if (!$('.spinner-overlay').length) {
                 $('body').append(`
-                    <div class="spinner-overlay">
+                    <div class="spinner-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
@@ -500,4 +463,21 @@
             $('.spinner-overlay').remove();
         }
     </script>
+    <style>
+        .bg-primary-soft {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .bg-success-soft {
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        .bg-info-soft {
+            background-color: rgba(6, 182, 212, 0.1);
+        }
+
+        .bg-warning-soft {
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+    </style>
 }
