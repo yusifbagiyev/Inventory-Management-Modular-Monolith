@@ -278,61 +278,174 @@
                 setTimeout(resetButton, 5000);
                 }});
             });
+
+
+         const savedState = sessionStorage.getItem('transferFormState');
+            if (savedState) {
+                try {
+                    const formState = JSON.parse(savedState);
+                    $('#inventoryCodeInput').val(formState.inventoryCode);
+                    $('#ToDepartmentId').val(formState.toDepartmentId);
+                    $('#ToWorker').val(formState.toWorker);
+                    $('#Notes').val(formState.notes);
+
+                    // Clear the saved state
+                    sessionStorage.removeItem('transferFormState');
+
+                    // Trigger search if inventory code was saved
+                    if (formState.inventoryCode) {
+                        $('#inventoryCodeInput').trigger('input');
+                    }
+                } catch (e) {
+                    console.error('Error restoring form state:', e);
+                }
+            }
         });
 
         // Moved searchProduct function to global scope
-        function searchProduct(inventoryCode) {
+        function searchProduct(inventoryCode) 
+        {
             $('.route-warning').remove();
             const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
 
-            $.ajax({
-                url: apiUrl,
-                type: 'GET',
-                headers: {
-                    'Authorization': 'Bearer @ViewBag.JwtToken'
-                },
-                success: function(product) {
-                    hideSearching();
+            // Add retry logic for token refresh scenarios
+            let retryCount = 0;
+            const maxRetries = 2;
 
-                    if (product && product.id) {
-                        currentProductId = product.id;
-                        displayProductInfo(product);
-                        $('#productId').val(product.id);
-                        checkPendingRoutes(product.id);
-                    } else {
-                        currentProductId = null;
-                        showError('No product found with inventory code: ' + inventoryCode);
-                        hideProductInfo();
-                        hideTransferFields();
+            function makeRequest() {
+                $.ajax({
+                    url: apiUrl,
+                    type: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer @ViewBag.JwtToken'
+                    },
+                    success: function(product) {
+                        hideSearching();
+
+                        if (product && product.id) {
+                            currentProductId = product.id;
+                            displayProductInfo(product);
+                            $('#productId').val(product.id);
+                            checkPendingRoutes(product.id);
+                        } else {
+                            currentProductId = null;
+                            showError('No product found with inventory code: ' + inventoryCode);
+                            hideProductInfo();
+                            hideTransferFields();
+                        }
+                    },
+                    error: function(xhr) {
+                        // Handle 401 with retry logic instead of immediate redirect
+                        if (xhr.status === 401 && retryCount < maxRetries) {
+                            retryCount++;
+                            console.log(`Authentication error, attempting retry ${retryCount}/${maxRetries}`);
+
+                            // Try to refresh the token first
+                            $.ajax({
+                                url: '/Account/RefreshToken',
+                                type: 'GET',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                success: function(refreshResponse) {
+                                    if (refreshResponse.success && refreshResponse.token) {
+                                        // Update the token in our headers and retry
+                                        // Note: You might want to store this in a global variable
+                                        setTimeout(makeRequest, 500); // Small delay before retry
+                                    } else {
+                                        handleSearchError(xhr, inventoryCode);
+                                    }
+                                },
+                                error: function() {
+                                    // Only redirect if refresh also fails
+                                    handleSearchError(xhr, inventoryCode, true);
+                                }
+                            });
+                            return; // Exit to wait for refresh attempt
+                        }
+
+                        // Handle other errors or if retries exhausted
+                        handleSearchError(xhr, inventoryCode, xhr.status === 401);
                     }
-                },
-                error: function(xhr) {
-                    hideSearching();
-                    currentProductId = null;
+                });
+            }
 
-                    let errorMessage = 'Error searching for product';
-                    if (xhr.status === 404) {
-                        errorMessage = `Product not found with code: ${inventoryCode}`;
-                    } else if (xhr.status === 401) {
-                        errorMessage = 'Session expired. Redirecting to login...';
-                        setTimeout(() => {
-                            window.location.href = '/Account/Login?returnUrl=' + window.location.pathname;
-                        }, 2000);
-                    }
-
-                    showError(errorMessage);
-                    hideProductInfo();
-                    hideTransferFields();
-                }
-            });
+            makeRequest();
         }
+
+                function handleSearchError(xhr, inventoryCode, isAuthError = false) {
+            hideSearching();
+            currentProductId = null;
+
+            let errorMessage = 'Error searching for product';
+
+            if (xhr.status === 404) {
+                errorMessage = `Product not found with code: ${inventoryCode}`;
+            } else if (isAuthError) {
+                errorMessage = 'Authentication failed. Please refresh the page or log in again.';
+                // Show a button to refresh instead of auto-redirect
+                showAuthErrorWithRefreshOption();
+            } else if (xhr.status === 0) {
+                errorMessage = 'Network error. Please check your connection.';
+            } else {
+                try {
+                    if (xhr.responseJSON) {
+                        errorMessage = xhr.responseJSON.message ||
+                                     xhr.responseJSON.error ||
+                                     errorMessage;
+                    }
+                } catch (e) {
+                    console.error('Error parsing error response:', e);
+                }
+            }
+
+            showError(errorMessage);
+            hideProductInfo();
+            hideTransferFields();
+        }
+
+
+                function showAuthErrorWithRefreshOption() {
+            const authErrorHtml = `
+                <div class="alert alert-warning mt-3" id="authErrorAlert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Authentication Issue:</strong> Your session may have expired.
+                    <br>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary" onclick="refreshPageWithState()">
+                            <i class="fas fa-sync"></i> Refresh Page
+                        </button>
+                        <a href="/Account/Login?returnUrl=${encodeURIComponent(window.location.pathname)}"
+                           class="btn btn-sm btn-secondary ms-2">
+                            <i class="fas fa-sign-in-alt"></i> Re-login
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            $('#errorInfo').after(authErrorHtml);
+        }
+
+        function refreshPageWithState() {
+            // Save current form state to sessionStorage
+            const formState = {
+                inventoryCode: $('#inventoryCodeInput').val(),
+                toDepartmentId: $('#ToDepartmentId').val(),
+                toWorker: $('#ToWorker').val(),
+                notes: $('#Notes').val()
+            };
+
+            sessionStorage.setItem('transferFormState', JSON.stringify(formState));
+            window.location.reload();
+        }
+
 
         function checkPendingRoutes(productId)
         {
-                // Remove any existing warnings first
-                $('.route-warning').remove();
+            // Remove any existing warnings first
+            $('.route-warning').remove();
 
-             const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
+            const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
 
             $.ajax({
                 url: apiUrl,
@@ -444,6 +557,21 @@
                 reader.readAsDataURL(input.files[0]);
             }
         }
+    </script>
+    <script>
+                // Add a global AJAX error handler for better token management
+        $(document).ajaxError(function(event, xhr, settings, error) {
+            // Skip if this is already a token refresh request
+            if (settings.url.includes('/Account/RefreshToken')) {
+                return;
+            }
+
+            // Handle 401 errors globally
+            if (xhr.status === 401) {
+                console.log('Global 401 handler triggered for:', settings.url);
+                // You could trigger a global token refresh here if needed
+            }
+        });
     </script>
 }
 

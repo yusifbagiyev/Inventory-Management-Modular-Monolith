@@ -10,9 +10,17 @@ namespace InventoryManagement.Web.Services
         private readonly IAuthService _authService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<TokenManager> _logger;
+
+        // Thread-safe token refresh management
         private static readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
         private static DateTime _lastRefreshAttempt = DateTime.MinValue;
+        private static DateTime _lastSuccessfulRefresh = DateTime.MinValue;
         private static readonly TimeSpan _refreshCooldown = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan _minRefreshInterval = TimeSpan.FromSeconds(5);
+
+        // Cache for tracking ongoing refresh operations
+        private static readonly Dictionary<string, Task<bool>> _refreshOperations = new();
+        private static readonly object _refreshLock = new object();
 
         public TokenManager(
             IAuthService authService,
@@ -26,7 +34,7 @@ namespace InventoryManagement.Web.Services
 
         /// <summary>
         /// Gets a valid token, refreshing if necessary
-        /// This is the primary method that should be used by API calls
+        /// This method is designed to handle concurrent calls efficiently
         /// </summary>
         public async Task<string?> GetValidTokenAsync()
         {
@@ -45,20 +53,21 @@ namespace InventoryManagement.Web.Services
                 return null;
             }
 
-            // Check if the token is still valid (not expired or close to expiring)
-            if (IsTokenValid(currentToken))
+            // Check if the token is still valid
+            var tokenValidation = ValidateToken(currentToken);
+            if (tokenValidation.IsValid)
             {
-                _logger.LogDebug("Current token is still valid");
+                _logger.LogDebug("Current token is still valid for {Minutes:F2} minutes",
+                    tokenValidation.TimeUntilExpiry.TotalMinutes);
                 return currentToken;
             }
 
-            // Token is expired or close to expiring, attempt refresh
-            _logger.LogInformation("Token is expired or close to expiring, attempting refresh");
-            var refreshSuccess = await RefreshTokenAsync();
+            // Token needs refresh - use coordinated refresh
+            _logger.LogInformation("Token expired or expiring soon, attempting coordinated refresh");
+            var refreshSuccess = await CoordinatedRefreshAsync(context);
 
             if (refreshSuccess)
             {
-                // Return the newly refreshed token
                 var newToken = GetCurrentToken(context);
                 _logger.LogInformation("Token successfully refreshed");
                 return newToken;
@@ -68,16 +77,64 @@ namespace InventoryManagement.Web.Services
             return null;
         }
 
+
+
         /// <summary>
-        /// Refreshes the current token pair
+        /// Coordinates token refresh to prevent multiple simultaneous refresh attempts
         /// </summary>
-        public async Task<bool> RefreshTokenAsync()
+        private async Task<bool> CoordinatedRefreshAsync(HttpContext context)
         {
-            // Prevent multiple simultaneous refresh attempts
+            var sessionId = context.Session.Id;
+
+            lock (_refreshLock)
+            {
+                // Check if a refresh is already in progress for this session
+                if (_refreshOperations.ContainsKey(sessionId))
+                {
+                    _logger.LogDebug("Refresh already in progress for session {SessionId}, waiting...", sessionId);
+                    return _refreshOperations[sessionId].Result;
+                }
+
+                // Check if we recently did a successful refresh (within 5 seconds)
+                if (DateTime.UtcNow - _lastSuccessfulRefresh < _minRefreshInterval)
+                {
+                    _logger.LogDebug("Recent successful refresh detected, skipping new refresh attempt");
+                    // Check if the token was actually refreshed
+                    var currentToken = GetCurrentToken(context);
+                    var validation = ValidateToken(currentToken);
+                    return validation.IsValid;
+                }
+
+                // Start a new refresh operation
+                var refreshTask = PerformRefreshAsync();
+                _refreshOperations[sessionId] = refreshTask;
+
+                // Clean up the operation after completion
+                refreshTask.ContinueWith(t =>
+                {
+                    lock (_refreshLock)
+                    {
+                        _refreshOperations.Remove(sessionId);
+                    }
+                });
+
+                return refreshTask.Result;
+            }
+        }
+
+
+
+        /// <summary>
+        /// Performs the actual token refresh
+        /// </summary>
+        private async Task<bool> PerformRefreshAsync()
+        {
             if (!await _refreshSemaphore.WaitAsync(100))
             {
-                _logger.LogDebug("Token refresh already in progress, skipping");
-                return false;
+                _logger.LogDebug("Could not acquire refresh semaphore, another refresh in progress");
+                // Wait a bit and check if refresh succeeded
+                await Task.Delay(500);
+                return DateTime.UtcNow - _lastSuccessfulRefresh < TimeSpan.FromSeconds(10);
             }
 
             try
@@ -101,7 +158,8 @@ namespace InventoryManagement.Web.Services
                 // Get current tokens from all possible sources
                 var tokenInfo = GetTokenInfo(context);
 
-                if (string.IsNullOrEmpty(tokenInfo.AccessToken) || string.IsNullOrEmpty(tokenInfo.RefreshToken))
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken) ||
+                    string.IsNullOrEmpty(tokenInfo.RefreshToken))
                 {
                     _logger.LogWarning("Missing access or refresh token for refresh attempt");
                     return false;
@@ -110,7 +168,9 @@ namespace InventoryManagement.Web.Services
                 _logger.LogInformation("Attempting to refresh token");
 
                 // Call the auth service to refresh tokens
-                var newTokens = await _authService.RefreshTokenAsync(tokenInfo.AccessToken, tokenInfo.RefreshToken);
+                var newTokens = await _authService.RefreshTokenAsync(
+                    tokenInfo.AccessToken,
+                    tokenInfo.RefreshToken);
 
                 if (newTokens == null || string.IsNullOrEmpty(newTokens.AccessToken))
                 {
@@ -122,13 +182,22 @@ namespace InventoryManagement.Web.Services
                 // Store the new tokens in all appropriate locations
                 StoreTokens(newTokens, tokenInfo.RememberMe);
 
+                _lastSuccessfulRefresh = DateTime.UtcNow;
                 _logger.LogInformation("Token refresh completed successfully");
+
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred during token refresh");
-                await ClearAllTokensAsync();
+
+                // Only clear tokens if this is a permanent failure (e.g., refresh token expired)
+                if (ex.Message.Contains("expired", StringComparison.OrdinalIgnoreCase) ||
+                    ex.Message.Contains("invalid", StringComparison.OrdinalIgnoreCase))
+                {
+                    await ClearAllTokensAsync();
+                }
+
                 return false;
             }
             finally
@@ -136,6 +205,54 @@ namespace InventoryManagement.Web.Services
                 _refreshSemaphore.Release();
             }
         }
+
+
+
+        /// <summary>
+        /// Refreshes the current token pair (backward compatibility)
+        /// </summary>
+        public async Task<bool> RefreshTokenAsync()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return false;
+
+            return await CoordinatedRefreshAsync(context);
+        }
+
+
+
+        /// <summary>
+        /// Validates a token and returns detailed information
+        /// </summary>
+        private (bool IsValid, TimeSpan TimeUntilExpiry) ValidateToken(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(token))
+                {
+                    _logger.LogWarning("Unable to read JWT token format");
+                    return (false, TimeSpan.Zero);
+                }
+
+                var jwtToken = handler.ReadJwtToken(token);
+                var expirationTime = jwtToken.ValidTo;
+                var timeUntilExpiry = expirationTime - DateTime.UtcNow;
+
+                // Consider token invalid if it expires within the next 2 minutes
+                // This gives us a buffer to complete API calls before expiration
+                var isValid = timeUntilExpiry.TotalMinutes > 2;
+
+                return (isValid, timeUntilExpiry);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating JWT token");
+                return (false, TimeSpan.Zero);
+            }
+        }
+
+
 
         /// <summary>
         /// Stores tokens in session and optionally in cookies
@@ -147,9 +264,10 @@ namespace InventoryManagement.Web.Services
 
             // Check if cookies exist to determine if this was a "Remember Me" login
             var rememberMe = context.Request.Cookies.ContainsKey("jwt_token");
-
             StoreTokens(tokens, rememberMe);
         }
+
+
 
         /// <summary>
         /// Stores tokens with explicit Remember Me flag
@@ -179,12 +297,13 @@ namespace InventoryManagement.Web.Services
                         HttpOnly = true,
                         Secure = context.Request.IsHttps,
                         SameSite = SameSiteMode.Lax,
-                        Expires = DateTimeOffset.UtcNow.AddDays(30) // 30-day cookie expiration
+                        Expires = DateTimeOffset.UtcNow.AddDays(30)
                     };
 
                     context.Response.Cookies.Append("jwt_token", tokens.AccessToken, cookieOptions);
                     context.Response.Cookies.Append("refresh_token", tokens.RefreshToken, cookieOptions);
-                    context.Response.Cookies.Append("user_data", JsonConvert.SerializeObject(tokens.User), cookieOptions);
+                    context.Response.Cookies.Append("user_data",
+                        JsonConvert.SerializeObject(tokens.User), cookieOptions);
 
                     _logger.LogDebug("Tokens stored in session and cookies");
                 }
@@ -198,6 +317,8 @@ namespace InventoryManagement.Web.Services
                 _logger.LogError(ex, "Error storing tokens");
             }
         }
+
+
 
         /// <summary>
         /// Clears all tokens from session, cookies, and HTTP context
@@ -219,9 +340,17 @@ namespace InventoryManagement.Web.Services
                 // Clear cookies if they exist
                 if (context.Request.Cookies.ContainsKey("jwt_token"))
                 {
-                    context.Response.Cookies.Delete("jwt_token");
-                    context.Response.Cookies.Delete("refresh_token");
-                    context.Response.Cookies.Delete("user_data");
+                    var cookieOptions = new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = context.Request.IsHttps,
+                        SameSite = SameSiteMode.Lax,
+                        Expires = DateTimeOffset.UtcNow.AddDays(-1) // Expire immediately
+                    };
+
+                    context.Response.Cookies.Delete("jwt_token", cookieOptions);
+                    context.Response.Cookies.Delete("refresh_token", cookieOptions);
+                    context.Response.Cookies.Delete("user_data", cookieOptions);
                 }
 
                 _logger.LogInformation("All tokens cleared successfully");
@@ -232,6 +361,8 @@ namespace InventoryManagement.Web.Services
             }
         }
 
+
+
         /// <summary>
         /// Legacy method for backward compatibility
         /// </summary>
@@ -239,6 +370,8 @@ namespace InventoryManagement.Web.Services
         {
             ClearAllTokensAsync().ConfigureAwait(false).GetAwaiter().GetResult();
         }
+
+
 
         /// <summary>
         /// Gets the current token from the most reliable source
@@ -250,6 +383,8 @@ namespace InventoryManagement.Web.Services
                 ?? context.Session.GetString("JwtToken")
                 ?? context.Request.Cookies["jwt_token"];
         }
+
+
 
         /// <summary>
         /// Gets token information from all available sources
@@ -294,48 +429,6 @@ namespace InventoryManagement.Web.Services
             }
 
             return (accessToken ?? "", refreshToken ?? "", rememberMe);
-        }
-
-        /// <summary>
-        /// Checks if a token is valid and not close to expiring
-        /// </summary>
-        private bool IsTokenValid(string token)
-        {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                if (!handler.CanReadToken(token))
-                {
-                    _logger.LogWarning("Unable to read JWT token format");
-                    return false;
-                }
-
-                var jwtToken = handler.ReadJwtToken(token);
-                var expirationTime = jwtToken.ValidTo;
-                var timeUntilExpiry = expirationTime - DateTime.UtcNow;
-
-                // Consider token invalid if it expires within the next 2 minutes
-                // This gives us a buffer to complete API calls before expiration
-                var isValid = timeUntilExpiry.TotalMinutes > 2;
-
-                if (!isValid)
-                {
-                    _logger.LogInformation("Token expires in {Minutes:F2} minutes, considered invalid",
-                        timeUntilExpiry.TotalMinutes);
-                }
-                else
-                {
-                    _logger.LogDebug("Token valid for {Minutes:F2} more minutes",
-                        timeUntilExpiry.TotalMinutes);
-                }
-
-                return isValid;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating JWT token");
-                return false; // If we can't parse it, consider it invalid
-            }
         }
     }
 }

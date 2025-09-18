@@ -12,34 +12,40 @@ namespace InventoryManagement.Web.Controllers
     public class AccountController : Controller
     {
         private readonly IAuthService _authService;
+        private readonly ITokenManager _tokenManager;
         private readonly ILogger<AccountController> _logger;
         public AccountController(
             IAuthService authService,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            ITokenManager tokenManager)
         {
             _authService = authService;
-            _logger= logger;
+            _logger = logger;
+            _tokenManager = tokenManager;
         }
 
+
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public async Task<IActionResult> Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated ?? false)
             {
-                //Check if we have a valid JWT tokens
                 var token = HttpContext.Session.GetString("JwtToken");
-                if (string.IsNullOrEmpty(token))
+                if (!string.IsNullOrEmpty(token))
                 {
-                    // User is authenticated via cookie but has no JWT token
-                    // Sign them out and continue with login
-                    HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme).Wait();
-                    HttpContext.Session.Clear();
+                    var validToken = await _tokenManager.GetValidTokenAsync();
+                    if (!string.IsNullOrEmpty(validToken))
+                    {
+                        return RedirectToAction("Index", "Home");
+                    }
                 }
-                else
-                {
-                    // User has valid session, redirect to home
-                    return RedirectToAction("Index", "Home");
-                }
+
+                // If we get here, token is invalid - clean up properly
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                HttpContext.Session.Clear();
+                Response.Cookies.Delete("jwt_token");
+                Response.Cookies.Delete("refresh_token");
+                Response.Cookies.Delete("user_data");
             }
 
             ViewData["ReturnUrl"] = returnUrl;

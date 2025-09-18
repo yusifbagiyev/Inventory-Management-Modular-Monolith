@@ -1,6 +1,4 @@
-﻿using InventoryManagement.Web.Models.DTOs;
-
-namespace InventoryManagement.Web.Services.Interfaces
+﻿namespace InventoryManagement.Web.Services.Interfaces
 {
     public interface ITokenManager
     {
