@@ -81,7 +81,7 @@ namespace InventoryManagement.Web.Controllers
                 if (allProducts != null)
                 {
                     var products = allProducts.Items;
-                    
+
                     if (period.ToLower() == "all")
                     {
                         // For "all" period, show total products and active products
@@ -90,24 +90,23 @@ namespace InventoryManagement.Web.Controllers
                     }
                     else
                     {
-                        // For specific periods, count new products created in that period
-                        // Note: You'll need to add CreatedDate to ProductViewModel if it doesn't exist
-                        var newProductsInPeriod = products.Where(p => 
-                            p.IsNewItem && 
-                            p.CreatedAt >= startDate && 
+                        // For specific periods, count products created in that period
+                        var productsInPeriod = products.Where(p =>
+                            p.CreatedAt >= startDate &&
                             p.CreatedAt <= endDate).ToList();
 
-                        model.TotalProducts = newProductsInPeriod.Count();
-                        model.ActiveProducts = newProductsInPeriod.Count(p => p.IsActive);
+                        model.TotalProducts = productsInPeriod.Count();
+                        model.ActiveProducts = productsInPeriod.Count(p => p.IsActive);
                     }
                 }
 
                 // Process routes for the period
                 if (routes != null)
                 {
-                    model.TotalRoutes = routes.Items.Where(r => r.RouteTypeName == "Transfer").Count();
-                    model.CompletedTransfers = routes.Items.Where(r=>r.RouteTypeName=="Transfer").Count(r => r.IsCompleted);
-                    model.PendingTransfers = routes.Items.Count(r => !r.IsCompleted);
+                    var transferRoutes = routes.Items.Where(r => r.RouteTypeName == "Transfer").ToList();
+                    model.TotalRoutes = transferRoutes.Count();
+                    model.CompletedTransfers = transferRoutes.Count(r => r.IsCompleted);
+                    model.PendingTransfers = transferRoutes.Count(r => !r.IsCompleted);
                 }
 
                 // Process departments (period-aware)
@@ -155,7 +154,16 @@ namespace InventoryManagement.Web.Controllers
                 if (categoriesResult != null && allProducts != null)
                 {
                     var categories = categoriesResult.Items.Where(c => c.IsActive).ToList();
-                    var colors = new[] { "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316" };
+                    var colors = new[] {
+                        "#3B82F6", // Blue
+                        "#10B981", // Green
+                        "#F59E0B", // Yellow
+                        "#EF4444", // Red
+                        "#8B5CF6", // Purple
+                        "#EC4899", // Pink
+                        "#06B6D4", // Cyan
+                        "#14B8A6"  // Teal 
+                    };
 
                     model.CategoryDistributions = categories.Select((c, index) =>
                     {
@@ -174,7 +182,7 @@ namespace InventoryManagement.Web.Controllers
                             Color = colors[index % colors.Length]
                         };
                     })
-                    .Where(c => c.Count > 0) // Only show categories with products in the period
+                    .Where(c => c.Count > 0)
                     .OrderByDescending(c => c.Count)
                     .Take(8)
                     .ToList();

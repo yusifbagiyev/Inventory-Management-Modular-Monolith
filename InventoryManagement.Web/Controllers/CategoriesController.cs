@@ -51,12 +51,26 @@ namespace InventoryManagement.Web.Controllers
 
                 if (allCategories != null)
                 {
-                    var activeCategories = allCategories.Count(c => c.IsActive);
-                    var inActiveCategories = allCategories.Count(c => !c.IsActive);
-                    var categoriesInWithProducts = allCategories.Sum(c => c.ProductCount);
+                    var activeCategories = 0;
+                    var inActiveCategories = 0;
+                    var categoriesInWithProducts = 0;
+
+                    if (!string.IsNullOrEmpty(search))
+                    {
+                        activeCategories = result.Items.Count(c => c.IsActive);
+                        inActiveCategories = result.Items.Count(c => !c.IsActive);
+                        categoriesInWithProducts = result.Items.Sum(c => c.ProductCount);
+                    }
+                    else
+                    {
+                        activeCategories = allCategories.Count(c => c.IsActive);
+                        inActiveCategories = allCategories.Count(c => !c.IsActive);
+                        categoriesInWithProducts = allCategories.Sum(c => c.ProductCount);
+                    }
+
                     ViewBag.ActiveCategories = activeCategories;
                     ViewBag.InActiveCategories = inActiveCategories;
-                    ViewBag.CategoriesInWithProducts = categoriesInWithProducts;    
+                    ViewBag.CategoriesInWithProducts = categoriesInWithProducts;
                 }
 
                 ViewBag.CurrentSearch = search;

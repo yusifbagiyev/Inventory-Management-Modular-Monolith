@@ -26,8 +26,6 @@ namespace ProductService.Infrastructure
 
             //Services
             services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
-            services.AddScoped<IImageService, ImageService>();
-            services.AddScoped<ITransactionService, TransactionService>();
 
             services.AddHttpClient<IApprovalService, ApprovalServiceClient>();
             services.AddHttpContextAccessor();

@@ -1,20 +1,20 @@
 ﻿using Microsoft.Extensions.Configuration;
-using RouteService.Application.Interfaces;
+using ProductService.Application.Interfaces;
 
-namespace RouteService.Infrastructure.Services
+namespace ProductService.Application.Services
 {
     public class ImageService : IImageService
     {
         private readonly string _imagePath;
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png" };
+        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png"};
 
         public ImageService(IConfiguration configuration)
         {
-            _imagePath = configuration.GetSection("ImageSettings:Path").Value ?? "wwwroot/images/routes";
+            _imagePath = configuration.GetSection("ImageSettings:Path").Value ?? "wwwroot/images/products";
             Directory.CreateDirectory(_imagePath);
         }
 
-        public async Task<string> UploadImageAsync(Stream imageStream, string fileName, int inventoryCode)
+        public async Task<string> UploadImageAsync(Stream imageStream, string fileName,int inventoryCode)
         {
             if (!IsValidImage(fileName))
                 throw new ArgumentException("Invalid image format");
@@ -23,32 +23,43 @@ namespace RouteService.Infrastructure.Services
             if (imageStream.Length > 5 * 1024 * 1024) // 5MB
                 throw new ArgumentException("Image size exceeds 5MB limit");
 
-            var inventoryFolder = Path.Combine(_imagePath, inventoryCode.ToString());
+            var inventoryFolder=Path.Combine(_imagePath,inventoryCode.ToString());
             Directory.CreateDirectory(inventoryFolder);
+
             var uniqueFileName = $"{DateTime.Now.Ticks}{Path.GetExtension(fileName)}";
             var filePath = Path.Combine(inventoryFolder, uniqueFileName);
 
             using var fileStream = new FileStream(filePath, FileMode.Create);
             await imageStream.CopyToAsync(fileStream);
 
-            return $"/images/routes/{inventoryCode}/{uniqueFileName}";
+            return $"/images/products/{inventoryCode}/{uniqueFileName}";
         }
 
         public Task DeleteImageAsync(string imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl))
                 return Task.CompletedTask;
-
-            var segments = imageUrl.Split('/');
-            if(segments.Length >= 2)
+            
+            var segments= imageUrl.Split('/');
+            if (segments.Length>=2)
             {
                 var inventoryCode = segments[^2];
                 var fileName = segments[^1];
-                var filePath = Path.Combine(_imagePath, inventoryCode, fileName);
+                var filePath = Path.Combine(_imagePath, inventoryCode,fileName);
 
                 if (File.Exists(filePath))
                     File.Delete(filePath);
             }
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteInventoryFolderAsync(int inventoryCode)
+        {
+            var folderPath = Path.Combine(_imagePath, inventoryCode.ToString());
+
+            if (Directory.Exists(folderPath))
+                Directory.Delete(folderPath, true); // true = recursive delete
+
             return Task.CompletedTask;
         }
 

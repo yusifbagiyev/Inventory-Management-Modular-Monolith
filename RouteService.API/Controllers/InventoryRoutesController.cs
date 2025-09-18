@@ -1,14 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing;
 using RouteService.Application.DTOs;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
+using RouteService.Domain.Exceptions;
 using SharedServices.Authorization;
-using SharedServices.DTOs;
-using SharedServices.Enum;
+using SharedServices.Exceptions;
 using SharedServices.Identity;
 using System.Security.Claims;
 using System.Text.Json;
@@ -21,91 +20,101 @@ namespace RouteService.API.Controllers
     public class InventoryRoutesController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly IApprovalService _approvalService;
+        private readonly IRouteManagementService _routeManagementService;
         private readonly ILogger<InventoryRoutesController> _logger;
         public InventoryRoutesController(
             IMediator mediator,
-            IApprovalService approvalService,
+            IRouteManagementService routeManagementService,
             ILogger<InventoryRoutesController> logger)
         {
             _mediator = mediator;
-            _approvalService = approvalService;
+            _routeManagementService = routeManagementService;
             _logger = logger;
         }
 
 
         [HttpPost("transfer")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<InventoryRouteDto>> TransferInventory([FromForm] TransferInventoryDto dto)
+        public async Task<IActionResult> TransferInventory([FromForm] TransferInventoryDto dto)
         {
-            var userId=int.Parse(User.FindFirst("UserId")?.Value ?? "0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            if(User.HasClaim("permission", AllPermissions.RouteCreateDirect))
+            try
             {
-                var result=await _mediator.Send(new TransferInventory.Command(dto));
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
+
+                var result = await _routeManagementService.TransferInventoryWithApprovalAsync(
+                    dto, userId, userName, userPermissions);
+
                 return Ok(result);
             }
-            else if(User.HasClaim("permission", AllPermissions.RouteCreate))
+            catch (ApprovalRequiredException ex)
             {
-                // Fetch product details first
-                var productServiceClient = HttpContext.RequestServices.GetRequiredService<IProductServiceClient>();
-                var product = productServiceClient.GetProductByIdAsync(dto.ProductId);
-                if (product == null)
-                    return NotFound("Product not found");
-
-                var toDepartment=await productServiceClient.GetDepartmentByIdAsync(dto.ToDepartmentId);
-                if(toDepartment == null)
-                    return NotFound("Target department not found");
-
-                var productInfo=await productServiceClient.GetProductByIdAsync(dto.ProductId);
-                if(productInfo == null)
-                    return NotFound("Product information not found");
-
-                var fromDepartment = await productServiceClient.GetDepartmentByIdAsync(productInfo.DepartmentId);
-
-                var actionData=new Dictionary<string, object>
-                {
-                    ["productId"] = dto.ProductId,
-                    ["inventoryCode"] = productInfo?.InventoryCode ?? 0,
-                    ["productModel"] = productInfo?.Model ?? "",
-                    ["productVendor"] = productInfo?.Vendor ?? "",
-                    ["fromDepartmentId"] = productInfo?.DepartmentId ?? 0,
-                    ["fromDepartmentName"] = fromDepartment?.Name ?? "",
-                    ["fromWorker"] = productInfo?.Worker ?? "",
-                    ["toDepartmentId"] = dto.ToDepartmentId,
-                    ["toDepartmentName"] = toDepartment.Name,
-                    ["toWorker"] = dto.ToWorker ?? "",
-                    ["notes"] = dto.Notes ?? ""
-                };
-
-                //Add image data if available
-                if(dto.ImageFile != null && dto.ImageFile.Length > 0)
-                {
-                    using var ms=new MemoryStream();
-                    await dto.ImageFile.CopyToAsync(ms);
-                    actionData["image"] = Convert.ToBase64String(ms.ToArray());
-                    actionData["imageFileName"] = dto.ImageFile.FileName;
-                }
-
-                var approvalRequest = new CreateApprovalRequestDto
-                {
-                    RequestType = RequestType.TransferProduct,
-                    EntityType = "Route",
-                    EntityId = null,
-                    ActionData=actionData
-                };
-
-                var result=await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-
                 return Accepted(new
                 {
-                    ApprovalRequestId = result.Id,
-                    Message = "Transfer request has been submitted for approval",
-                    Status = "PendingApproval"
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
                 });
             }
-            return Forbid();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error creating transfer");
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
+        }
+
+
+
+        [HttpPut("{id}")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateRoute(int id, [FromForm] UpdateRouteDto dto)
+        {
+            try
+            {
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
+
+                await _routeManagementService.UpdateRouteWithApprovalAsync(
+                    id, dto, userId, userName, userPermissions);
+
+                return NoContent();
+            }
+            catch (ApprovalRequiredException ex)
+            {
+                return Accepted(new
+                {
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
+                });
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error updating route {RouteId}", id);
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
         }
 
 
@@ -131,20 +140,32 @@ namespace RouteService.API.Controllers
             [FromQuery] DateTime? endDate = null)
         {
             var result = await _mediator.Send(new GetAllRoutesQuery(
-                pageNumber, pageSize,search, isCompleted, startDate, endDate));
+                pageNumber, pageSize, search, isCompleted, startDate, endDate));
             return Ok(result);
         }
-
-
 
         [HttpGet("{id}")]
         [Permission(AllPermissions.RouteView)]
         public async Task<ActionResult<InventoryRouteDto>> GetById(int id)
         {
             var result = await _mediator.Send(new GetRouteByIdQuery(id));
-            if (result == null)
-                return NotFound();
-            return Ok(result);
+            return result == null ? NotFound() : Ok(result);
+        }
+
+
+        [HttpPut("{id}/complete")]
+        [Permission(AllPermissions.RouteComplete)]
+        public async Task<IActionResult> CompleteRoute(int id)
+        {
+            try
+            {
+                await _mediator.Send(new CompleteRoute.Command(id));
+                return NoContent();
+            }
+            catch (RouteException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
 
@@ -169,101 +190,48 @@ namespace RouteService.API.Controllers
 
 
 
-        [HttpPut("{id}")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateRoute(int id, [FromForm] UpdateRouteDto dto)
-        {
-            var userId = int.Parse(User.FindFirst("UserId")?.Value ?? "0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            if(User.HasClaim("permission", AllPermissions.RouteUpdateDirect))
-            {
-                await _mediator.Send(new UpdateRoute.Command(id, dto));
-                return NoContent();
-            }
-            else if(User.HasClaim("permission", AllPermissions.RouteUpdate))
-            {
-                var existingRoute=await _mediator.Send(new GetRouteByIdQuery(id));
-                if (existingRoute == null)
-                    return NotFound();
-
-                var updateData = new Dictionary<string, object>
-                {
-                    ["notes"] = dto.Notes ?? ""
-                };
-
-                //Add image data if available
-                if(dto.ImageFile != null && dto.ImageFile.Length > 0)
-                {
-                    using var ms = new MemoryStream();
-                    await dto.ImageFile.CopyToAsync(ms);
-                    updateData["image"] = Convert.ToBase64String(ms.ToArray());
-                    updateData["imageFileName"] = dto.ImageFile.FileName;
-                }
-
-                var approvalRequest = new CreateApprovalRequestDto
-                {
-                    RequestType = RequestType.UpdateRoute,
-                    EntityType = "Route",
-                    EntityId = id,
-                    ActionData = new
-                    {
-                        RouteId = id,
-                        UpdateData = updateData,
-                        existingRoute.InventoryCode,
-                        existingRoute.Model,
-                        existingRoute.FromDepartmentName,
-                        existingRoute.ToDepartmentName
-                    }
-                };
-
-                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-                return Accepted(
-                    new 
-                    { 
-                        ApprovalRequestId = result.Id, 
-                        Message = "Route update request submitted for approval" 
-                    });
-
-            }
-            return Forbid();
-        }
-
-
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRoute(int id)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            if (User.HasClaim("permission", AllPermissions.RouteDeleteDirect))
+            try
             {
-                await _mediator.Send(new DeleteRoute.Command(id));
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
+
+                await _routeManagementService.DeleteRouteWithApprovalAsync(
+                    id, userId, userName, userPermissions);
+
                 return NoContent();
             }
-            else if (User.HasClaim("permission", AllPermissions.RouteDelete))
+            catch (ApprovalRequiredException ex)
             {
-                var route = await _mediator.Send(new GetRouteByIdQuery(id));
-                if (route == null)
-                    return NotFound();
-
-                var approvalRequest = new CreateApprovalRequestDto
+                return Accepted(new
                 {
-                    RequestType = RequestType.DeleteRoute,
-                    EntityType = "Route",
-                    EntityId = id,
-                    ActionData = new DeleteRouteActionData
-                    {
-                        RouteId = id
-                    }
-                };
-
-                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-                return Accepted(new { ApprovalRequestId = result.Id, Message = "Route deletion request submitted for approval" });
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
+                });
             }
-            return Forbid();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error deleting route {RouteId}", id);
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
         }
+
 
 
 
@@ -318,15 +286,6 @@ namespace RouteService.API.Controllers
 
 
 
-        [HttpPut("{id}/complete")]
-        [Permission(AllPermissions.RouteComplete)]
-        public async Task<IActionResult> CompleteRoute(int id)
-        {
-            await _mediator.Send(new CompleteRoute.Command(id));
-            return NoContent();
-        }
-
-
 
         [HttpPost("batch-delete")]
         [Permission(AllPermissions.RouteBatchDelete)]
@@ -334,6 +293,28 @@ namespace RouteService.API.Controllers
         {
             var result = await _mediator.Send(new BatchDeleteRoutes.Command(dto));
             return Ok(result);
+        }
+
+
+
+        // Helper methods
+        private int GetUserId()
+        {
+            return int.Parse(User.FindFirst("UserId")?.Value ??
+                           User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+
+        private string GetUserName()
+        {
+            return User.Identity?.Name ?? "Unknown";
+        }
+
+        private List<string> GetUserPermissions()
+        {
+            return User.Claims
+                .Where(c => c.Type == "permission")
+                .Select(c => c.Value)
+                .ToList();
         }
     }
 }

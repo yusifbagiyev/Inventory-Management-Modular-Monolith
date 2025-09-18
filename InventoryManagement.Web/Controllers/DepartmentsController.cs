@@ -53,9 +53,23 @@ namespace InventoryManagement.Web.Controllers
 
                 if (allDepartments != null)
                 {
-                    var activeDepartments = allDepartments.Count(c => c.IsActive);
-                    var inActiveDepartments = allDepartments.Count(c => !c.IsActive);
-                    var departmentsInWithProducts = allDepartments.Sum(c => c.ProductCount);
+                    var activeDepartments = 0;
+                    var inActiveDepartments = 0;
+                    var departmentsInWithProducts = 0;
+
+                    if (!string.IsNullOrEmpty(search))
+                    {
+                        activeDepartments = result.Items.Count(c => c.IsActive);
+                        inActiveDepartments = result.Items.Count(c => !c.IsActive);
+                        departmentsInWithProducts = result.Items.Sum(c => c.ProductCount);
+                    }
+                    else
+                    {
+                        activeDepartments = allDepartments.Count(c => c.IsActive);
+                        inActiveDepartments = allDepartments.Count(c => !c.IsActive);
+                        departmentsInWithProducts = allDepartments.Sum(c => c.ProductCount);
+                    }
+                    
                     ViewBag.ActiveDepartments = activeDepartments;
                     ViewBag.InActiveDepartments = inActiveDepartments;
                     ViewBag.DepartmentsInWithProducts = departmentsInWithProducts;

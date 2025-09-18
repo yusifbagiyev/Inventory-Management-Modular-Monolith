@@ -1,6 +1,6 @@
 ﻿using ProductService.Application.Interfaces;
 
-namespace ProductService.Infrastructure.Services
+namespace ProductService.Application.Services
 {
     public class TransactionService : ITransactionService
     {

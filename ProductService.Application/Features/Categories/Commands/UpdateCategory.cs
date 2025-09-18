@@ -1,8 +1,8 @@
 ﻿using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
-using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
+using SharedServices.Exceptions;
 
 namespace ProductService.Application.Features.Categories.Commands
 {

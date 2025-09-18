@@ -1,6 +1,6 @@
 ﻿using MediatR;
-using ProductService.Domain.Exceptions;
 using ProductService.Domain.Repositories;
+using SharedServices.Exceptions;
 
 namespace ProductService.Application.Features.Departments.Commands
 {

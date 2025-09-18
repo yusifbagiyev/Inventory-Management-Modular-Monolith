@@ -97,50 +97,39 @@ function createDepartmentChart() {
     });
 }
 
-function createCategoryChart() {
-    const ctx = document.getElementById('categoryChart');
-    if (!ctx) return;
+function createCategoryChart(categoryData) {
+    const dataCount = categoryData.length;
+    const totalItems = categoryData.reduce((sum, cat) => sum + cat.count, 0);
 
-    $.get('/api/statistics/categories', function (data) {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: data.map(c => c.name),
-                datasets: [{
-                    data: data.map(c => c.count),
-                    backgroundColor: [
-                        chartColors.primary,
-                        chartColors.success,
-                        chartColors.warning,
-                        chartColors.danger,
-                        chartColors.info,
-                        chartColors.secondary
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                ...defaultChartOptions,
-                cutout: '60%',
-                plugins: {
-                    ...defaultChartOptions.plugins,
-                    datalabels: {
-                        display: true,
-                        color: '#fff',
-                        font: {
-                            weight: 'bold',
-                            size: 14
-                        },
-                        formatter: (value, context) => {
-                            const sum = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / sum) * 100).toFixed(1);
-                            return percentage + '%';
-                        }
+    // Dynamic sizing based on data amount
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    padding: dataCount <= 3 ? 25 : 15,  // More padding when less data
+                    font: {
+                        size: dataCount <= 3 ? 14 : 12
                     }
                 }
             }
-        });
-    });
+        },
+        layout: {
+            padding: {
+                left: dataCount <= 3 ? 30 : 10,
+                right: dataCount <= 3 ? 30 : 10
+            }
+        }
+    };
+
+    // Adjust chart radius for better visual balance
+    if (totalItems < 10) {
+        chartOptions.cutout = '40%';  // Makes a thinner donut when less data
+    }
+
+    return chartOptions;
 }
 
 function createTransfersChart() {

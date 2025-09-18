@@ -1,8 +1,10 @@
-﻿using System.Reflection;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using RouteService.Application.Behaviors;
+using RouteService.Application.Interfaces;
+using RouteService.Application.Services;
+using System.Reflection;
 
 namespace RouteService.Application
 {
@@ -18,6 +20,9 @@ namespace RouteService.Application
 
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
+
+            services.AddScoped<IImageService, ImageService>();
+            services.AddScoped<IRouteManagementService, RouteManagementService>();
             return services;
         }
     }

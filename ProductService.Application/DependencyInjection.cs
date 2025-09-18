@@ -1,8 +1,10 @@
-﻿using System.Reflection;
-using FluentValidation;
+﻿using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application.Behaviors;
+using ProductService.Application.Interfaces;
+using ProductService.Application.Services;
+using System.Reflection;
 
 namespace ProductService.Application
 {
@@ -15,6 +17,12 @@ namespace ProductService.Application
             services.AddAutoMapper(assembly);
             services.AddValidatorsFromAssembly(assembly);
             services.AddMediatR(config => config.RegisterServicesFromAssembly(assembly));
+
+            // Add services
+            services.AddScoped<IImageService, ImageService>();
+            services.AddScoped<ITransactionService, TransactionService>();
+            services.AddScoped<IProductManagementService, ProductManagementService>();
+
 
             // Add validation behavior
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));

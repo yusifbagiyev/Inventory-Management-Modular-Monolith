@@ -32,7 +32,6 @@ namespace RouteService.Infrastructure
             services.AddHttpClient<IProductServiceClient, ProductServiceClient>();
             services.AddHttpClient<IApprovalService, ApprovalServiceClient>();
             services.AddSingleton<IMessagePublisher, RabbitMQPublisher>();
-            services.AddScoped<IImageService, ImageService>();
 
             return services;
         }

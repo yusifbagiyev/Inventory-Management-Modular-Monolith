@@ -2,7 +2,7 @@
 using System.Text.Json;
 using FluentValidation;
 using ProductService.Application.DTOs;
-using ProductService.Domain.Exceptions;
+using SharedServices.Exceptions;
 
 namespace ProductService.API.Middleware
 {

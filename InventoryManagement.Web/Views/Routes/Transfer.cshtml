@@ -47,7 +47,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <p class="mb-1"><strong>Category:</strong> <span id="productCategory"></span></p>
-                                    <p class="mb-1"><strong>Current Department:</strong> <span id="currentDepartment"></span></p>
+                                    <p class="mb-1"><strong>Department:</strong> <span id="productDepartment"></span></p>
                                 </div>
                             </div>
                         </div>
@@ -373,11 +373,22 @@
             $('#productModel').text(product.model || 'N/A');
             $('#productVendor').text(product.vendor || 'N/A');
             $('#productCategory').text(product.categoryName || 'N/A');
-            $('#currentDepartment').text(product.departmentName || 'N/A');
+            $('#productDepartment').text(product.departmentName || 'N/A');
 
-            $('#productInfo').slideDown();
-            $('#searchFeedback').html('<span class="text-success"><i class="fas fa-check-circle"></i> Product found!</span>');
+           // Add worker/employee information display
+    if (product.worker) {
+        // Add a new field to show the current worker
+        if ($('#currentWorker').length === 0) {
+                    $('#productDepartment').after(`
+                            <span id="currentWorker"></span>
+            `);
         }
+        $('#currentWorker').text(' - ' + product.worker);
+    }
+
+    $('#productInfo').slideDown();
+    $('#searchFeedback').html('<span class="text-success"><i class="fas fa-check-circle"></i> Product found!</span>');
+}
 
         function showTransferFields() {
             $('#transferFields').slideDown();

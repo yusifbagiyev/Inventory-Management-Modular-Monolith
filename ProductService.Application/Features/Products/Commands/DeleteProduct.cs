@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using ProductService.Application.Events;
 using ProductService.Application.Interfaces;
-using ProductService.Domain.Exceptions;
+using SharedServices.Exceptions;
 using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Products.Commands

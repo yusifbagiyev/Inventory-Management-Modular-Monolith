@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-using System.Text.Json;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
@@ -9,9 +7,10 @@ using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Common;
 using SharedServices.Authorization;
-using SharedServices.DTOs;
-using SharedServices.Enum;
+using SharedServices.Exceptions;
 using SharedServices.Identity;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace ProductService.API.Controllers
 {
@@ -21,13 +20,13 @@ namespace ProductService.API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IMediator _mediator;
-        private readonly IApprovalService _approvalService;
+        private readonly IProductManagementService _productManagementService;
         private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IMediator mediator,IApprovalService approvalService, ILogger<ProductsController> logger)
+        public ProductsController(IMediator mediator, IProductManagementService productManagementService, ILogger<ProductsController> logger)
         {
-            _mediator = mediator;
-            _approvalService = approvalService;
+            _mediator = mediator; 
+            _productManagementService = productManagementService;
             _logger = logger;
         }
 
@@ -37,17 +36,17 @@ namespace ProductService.API.Controllers
         public async Task<ActionResult<PagedResult<ProductDto>>> GetAll(
             [FromQuery] int? pageNumber = 1,
             [FromQuery] int? pageSize = 30,
-            [FromQuery] string? search=null,
-            [FromQuery] DateTime? startDate=null,
-            [FromQuery] DateTime? endDate=null,
+            [FromQuery] string? search = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
             [FromQuery] bool? status = null,
             [FromQuery] bool? availability = null,
             [FromQuery] int? categoryId = null,
             [FromQuery] int? departmentId = null)
         {
             var products = await _mediator.Send(new GetAllProductsQuery(
-                pageNumber,pageSize,search,startDate,endDate,
-                status,availability,categoryId,departmentId));
+                pageNumber, pageSize, search, startDate, endDate,
+                status, availability, categoryId, departmentId));
             return Ok(products);
         }
 
@@ -58,9 +57,7 @@ namespace ProductService.API.Controllers
         public async Task<ActionResult<ProductDto>> GetById(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));
-            if (product == null)
-                return NotFound();
-            return Ok(product);
+            return product == null ? NotFound() : Ok(product);
         }
 
 
@@ -79,145 +76,82 @@ namespace ProductService.API.Controllers
 
         [HttpPost]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<ProductDto>> Create([FromForm] CreateProductDto dto)
+        public async Task<IActionResult> Create([FromForm] CreateProductDto dto)
         {
-            var userId=int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value??"0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            // Firstly, check the product is not already created
-            var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
-            // Double-check with a direct database query if needed
-            if (existingProduct != null)
+            try
             {
-                // Wait a moment and check again to avoid race conditions
-                await Task.Delay(100);
-                existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(dto.InventoryCode));
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
 
-                if (existingProduct != null)
-                {
-                    _logger.LogWarning($"Product with inventory code {dto.InventoryCode} already exists");
-                    return BadRequest(new { error = $"Product with inventory code {dto.InventoryCode} already exists." });
-                }
-            }
+                var product = await _productManagementService.CreateProductWithApprovalAsync(
+                    dto, userId, userName, userPermissions);
 
-            //Check if user has direct permission
-            if (User.HasClaim("permission", AllPermissions.ProductCreateDirect))
-            {
-                var product = await _mediator.Send(new CreateProduct.Command(dto));
                 return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
             }
-
-            else if (User.HasClaim("permission", AllPermissions.ProductCreate))
+            catch (ApprovalRequiredException ex)
             {
-                var actionData=new Dictionary<string, object>
-                {
-                    ["inventoryCode"]=dto.InventoryCode,
-                    ["model"] = dto.Model ?? "",
-                    ["vendor"] = dto.Vendor ?? "",
-                    ["worker"] = dto.Worker ?? "",
-                    ["description"] = dto.Description ?? "",
-                    ["isWorking"] = dto.IsWorking,
-                    ["isActive"] = dto.IsActive,
-                    ["isNewItem"] = dto.IsNewItem,
-                    ["categoryId"] = dto.CategoryId,
-                    ["departmentId"] = dto.DepartmentId
-                };
-
-                //Add image data if present
-                if(dto.ImageFile != null && dto.ImageFile.Length > 0)
-                {
-                    using var ms=new MemoryStream();
-                    await dto.ImageFile.CopyToAsync(ms);
-                    actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                    actionData["imageFileName"] = dto.ImageFile.FileName;
-                }
-
-                var approvalRequest = new CreateApprovalRequestDto
-                {
-                    RequestType = RequestType.CreateProduct,
-                    EntityType = "Product",
-                    EntityId = null,
-                    ActionData = new CreateProductActionData { ProductData = actionData }
-                };
-
-                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
                 return Accepted(new
                 {
-                    ApprovalRequestId = result.Id,
-                    Message = "Product creation request has been submitted for approval",
-                    Status = "PendingApproval"
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
                 });
             }
-            return Forbid();
+            catch (DuplicateEntityException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error creating product");
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
         }
 
 
 
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> Update(int id,[FromForm] UpdateProductDto dto)
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDto dto)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            var existingProduct = await _mediator.Send(new GetProductByIdQuery(id));
-            if (existingProduct == null || dto==null)
-                return NotFound();
-
-            if (User.HasClaim("permission", AllPermissions.ProductUpdateDirect))
+            try
             {
-                await _mediator.Send(new UpdateProduct.Command(id, dto));
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
+
+                var product = await _productManagementService.UpdateProductWithApprovalAsync(
+                    id, dto, userId, userName, userPermissions);
+
                 return NoContent();
             }
-            else if (User.HasClaim("permission", AllPermissions.ProductUpdate))
+            catch (ApprovalRequiredException ex)
             {
-                // Create update data object
-                var updateData = new Dictionary<string, object>
+                return Accepted(new
                 {
-                    ["model"] = dto.Model ?? "",
-                    ["vendor"] = dto.Vendor ?? "",
-                    ["worker"] = dto.Worker ?? "",
-                    ["description"] = dto.Description ?? "",
-                    ["categoryId"] = dto.CategoryId,
-                    ["departmentId"] = dto.DepartmentId
-                };
-
-                // Add image data if present
-                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-                {
-                    using var ms = new MemoryStream();
-                    await dto.ImageFile.CopyToAsync(ms);
-                    updateData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                    updateData["imageFileName"] = dto.ImageFile.FileName;
-                }
-
-                // Create a comparison of changes
-                var changes = new Dictionary<string, object>();
-                if (dto.Model != existingProduct.Model) changes["Model"] = new { Old = existingProduct.Model, New = dto.Model };
-                if (dto.Vendor != existingProduct.Vendor) changes["Vendor"] = new { Old = existingProduct.Vendor, New = dto.Vendor };
-                if (dto.Worker != existingProduct.Worker) changes["Worker"] = new { Old = existingProduct.Worker, New = dto.Worker };
-                if (dto.Description != existingProduct.Description) changes["Description"] = new { Old = existingProduct.Description, New = dto.Description };
-                if (dto.CategoryId != existingProduct.CategoryId) changes["CategoryId"] = new { Old = existingProduct.CategoryId, New = dto.CategoryId };
-                if (dto.DepartmentId != existingProduct.DepartmentId) changes["DepartmentId"] = new { Old = existingProduct.DepartmentId, New = dto.DepartmentId };
-
-                var approvalRequest = new CreateApprovalRequestDto
-                {
-                    RequestType = RequestType.UpdateProduct,
-                    EntityType = "Product",
-                    EntityId = id,
-                    ActionData = new
-                    {
-                        ProductId = id,
-                        existingProduct.InventoryCode,
-                        UpdateData = updateData,
-                        Changes = changes
-                    }
-                };
-
-                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product update request submitted for approval" });
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
+                });
             }
-            return Forbid();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error updating product {ProductId}", id);
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
         }
 
 
@@ -235,10 +169,11 @@ namespace ProductService.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating approved product with multipart data");
-                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
+                _logger.LogError(ex, "Error creating approved product");
+                return BadRequest(new { error = ex.Message });
             }
         }
+
 
 
         [HttpPut("{id}/approved")]
@@ -260,43 +195,43 @@ namespace ProductService.API.Controllers
         }
 
 
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            var userName = User.Identity?.Name ?? "Unknown";
-
-            if (User.HasClaim("permission", AllPermissions.ProductDeleteDirect))
+            try
             {
-                await _mediator.Send(new DeleteProduct.Command(id,userName));
+                var userId = GetUserId();
+                var userName = GetUserName();
+                var userPermissions = GetUserPermissions();
+
+                await _productManagementService.DeleteProductWithApprovalAsync(
+                    id, userId, userName, userPermissions);
+
                 return NoContent();
             }
-            else if (User.HasClaim("permission", AllPermissions.ProductDelete))
+            catch (ApprovalRequiredException ex)
             {
-                // Get product info for the approval request
-                var product = await _mediator.Send(new GetProductByIdQuery(id));
-                if (product == null)
-                    return NotFound();
-
-                var approvalRequest = new CreateApprovalRequestDto
+                return Accepted(new
                 {
-                    RequestType = RequestType.DeleteProduct,
-                    EntityType = "Product",
-                    EntityId = id,
-                    ActionData = new
-                    {
-                        ProductId = id,
-                        product.InventoryCode,
-                        product.Model,
-                        product.Vendor,
-                        product.DepartmentName
-                    }
-                };
-
-                var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
-                return Accepted(new { ApprovalRequestId = result.Id, Message = "Product deletion request submitted for approval" });
+                    ApprovalRequestId = ex.ApprovalRequestId,
+                    Message = ex.Message,
+                    Status = ex.Status
+                });
             }
-            return Forbid();
+            catch (NotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (InsufficientPermissionsException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error deleting product {ProductId}", id);
+                return StatusCode(500, new { error = "An unexpected error occurred" });
+            }
         }
 
 
@@ -332,6 +267,7 @@ namespace ProductService.API.Controllers
                 return BadRequest($"Error: {ex.Message}");
             }
         }
+
 
 
 
@@ -380,6 +316,27 @@ namespace ProductService.API.Controllers
             // Update only the inventory code
             await _mediator.Send(new UpdateProductInventoryCode.Command(id, dto.InventoryCode));
             return NoContent();
+        }
+
+
+
+        // Helper methods to extract user information
+        private int GetUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+
+        private string GetUserName()
+        {
+            return User.Identity?.Name ?? "Unknown";
+        }
+
+        private List<string> GetUserPermissions()
+        {
+            return User.Claims
+                .Where(c => c.Type == "permission")
+                .Select(c => c.Value)
+                .ToList();
         }
     }
 }
