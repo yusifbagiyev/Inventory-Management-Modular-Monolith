@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using ProductService.API.Authentication;
 using ProductService.API.Middleware;
 using ProductService.Application;
 using ProductService.Application.Mappings;
@@ -96,7 +97,11 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 //Add JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = "JWT_OR_APIKEY";
+    options.DefaultChallengeScheme = "JWT_OR_APIKEY";
+})
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -109,6 +114,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    })
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>("ApiKey",null)
+    .AddPolicyScheme("JWT_OR_APIKEY", "JWT_OR_APIKEY", options =>
+    {
+        options.ForwardDefaultSelector = context =>
+        {
+            // Check if the request has an API key header
+            if (context.Request.Headers.ContainsKey("X-Api-Key"))
+            {
+                return "ApiKey";
+            }
+            // Otherwise, use JWT Bearer authentication
+            return "Bearer";
         };
     });
 
