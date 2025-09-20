@@ -341,6 +341,33 @@ namespace ProductService.Application.Services
                 };
             }
 
+            if(existing.IsNewItem!=updated.IsNewItem)
+            {
+                changes["IsNewItem"] = new ChangeDetail
+                {
+                    Old = existing.IsNewItem ? "Product is new" : "Product is used",
+                    New = updated.IsNewItem ? "Product is new" : "Product is used"
+                };
+            }
+
+            if (existing.IsActive != updated.IsActive)
+            {
+                changes["IsActive"] = new ChangeDetail
+                {
+                    Old = existing.IsActive ? "Product is active" : "Product is not available",
+                    New = updated.IsActive ? "Product is active" : "Product is not available"
+                };
+            }
+
+            if (existing.IsWorking != updated.IsWorking)
+            {
+                changes["IsWorking"] = new ChangeDetail
+                {
+                    Old = existing.IsWorking ? "Product is working" : "Product is not working",
+                    New = updated.IsWorking ? "Product is working" : "Product is not working"
+                };
+            }
+
             comparison.Changes = changes;
             comparison.HasChanges = changes.Any();
             comparison.Summary = GenerateChangeSummary(changes);

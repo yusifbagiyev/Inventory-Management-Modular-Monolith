@@ -110,42 +110,43 @@ namespace InventoryManagement.Web.Controllers
                 }
 
                 // Process departments (period-aware)
-                if (departments != null && allProducts != null)
+                if (departments != null && routes != null)
                 {
                     var activeDepartments = departments.Where(d => d.IsActive).ToList();
 
                     model.DepartmentStats = activeDepartments.Select(d =>
                     {
-                        // For department stats, count products based on the period
-                        var deptProducts = period.ToLower() == "all" 
-                            ? allProducts.Items.Where(p => p.DepartmentId == d.Id).ToList()
-                            : allProducts.Items.Where(p => p.DepartmentId == d.Id && 
-                                p.IsNewItem && 
-                                p.CreatedAt >= startDate && 
-                                p.CreatedAt <= endDate).ToList();
+                        // Get all transfer routes TO this department in the period
+                        var transfersToThisDept =routes.Items
+                            .Where(r=>r.ToDepartmentId==d.Id &&
+                                      r.RouteTypeName=="Transfer" &&
+                                      r.CreatedAt>=startDate &&
+                                      r.CreatedAt<=endDate)
+                            .ToList();
 
-                        // Count transfers to this department in the period
-                        var periodTransfers = routes?.Items
-                            .Where(r => r.ToDepartmentId == d.Id && r.IsCompleted && r.RouteTypeName=="Transfer")
-                            .Count() ?? 0;
+                        // Count completed transfers (products received)
+                        var completedTransfers = transfersToThisDept
+                            .Where(r=> r.IsCompleted)
+                            .Count();
 
-                        // Count unique workers in this department for the period
-                        var activeWorkers = deptProducts
-                            .Where(p => !string.IsNullOrEmpty(p.Worker))
-                            .Select(p => p.Worker)
-                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                        // Get unique workers who received products in this department
+                        // This counts unique worker names from the transfers TO this department
+                        var uniqueWorkers = transfersToThisDept
+                            .Where(r => !string.IsNullOrEmpty(r.ToWorker))
+                            .Select(r => r.ToWorker!.Trim().ToLower()) // Normalize names for comparison
+                            .Distinct()
                             .Count();
 
                         return new DepartmentStats
                         {
                             DepartmentName = d.Name,
-                            ProductCount = deptProducts.Count,
-                            ActiveWorkers = activeWorkers,
-                            PeriodTransfers = periodTransfers
+                            ProductCount = completedTransfers,
+                            ActiveWorkers = uniqueWorkers,
+                            PeriodTransfers=transfersToThisDept.Count()
                         };
                     })
-                    .Where(d => period.ToLower() == "all" || d.ProductCount > 0) // Only show departments with activity in the period
-                    .OrderByDescending(d => d.ProductCount)
+                    .Where(d=>d.ProductCount > 0 || d.PeriodTransfers > 0) // Only show departments with activity in the period
+                    .OrderByDescending(d => d.PeriodTransfers)
                     .Take(5)
                     .ToList();
                 }

@@ -19,9 +19,9 @@
                     Edit Product Information
                 </div>
                 <div class="card-body">
-                    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editProductForm">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
+                        <input type="hidden" asp-for="Id" />
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -119,19 +119,19 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="form-check mb-3">
-                                    <input asp-for="IsWorking" class="form-check-input" />
+                                    <input asp-for="IsWorking" class="form-check-input" type="checkbox" />
                                     <label asp-for="IsWorking" class="form-check-label"></label>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-check mb-3">
-                                    <input asp-for="IsActive" class="form-check-input" />
+                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
                                     <label asp-for="IsActive" class="form-check-label"></label>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-check mb-3">
-                                    <input asp-for="IsNewItem" class="form-check-input" />
+                                    <input asp-for="IsNewItem" class="form-check-input" type="checkbox" />
                                     <label asp-for="IsNewItem" class="form-check-label"></label>
                                 </div>
                             </div>
@@ -179,33 +179,63 @@
 
         // Initialize AJAX form handler
                 $(document).ready(function() {
-            // Store original button text
-            const $submitBtn = $('#submitBtn, button[type="submit"]');
-            const originalBtnText = $submitBtn.html();
+            $('#editProductForm').on('submit', function(e) {
+                e.preventDefault();
 
-            AjaxHandler.handleForm('form', {
-                successMessage: 'Product updated successfully!',
-                successRedirect: '/Products',
-                redirectDelay: 1500,
-                onSuccess: function(response) {
-                    if (response && (response.isSuccess === true || response.isSuccess !== false)) {
-                        return true;
-                    }
-                },
-                onError: function(errorMessage, response) {
-                    // Explicitly reset button on error
-                    $submitBtn.prop('disabled', false).html(originalBtnText);
+                const form = this;
+                const formData = new FormData(form);
 
-                    // Special handling for inventory code errors
-                    if (errorMessage.toLowerCase().includes('inventory code')) {
-                        $('#InventoryCode').addClass('is-invalid');
-                        if (!$('#InventoryCode').next('.invalid-feedback').length) {
-                            $('#InventoryCode').after('<div class="invalid-feedback">' + errorMessage + '</div>');
-                        }
-                    }
+                // Ensure boolean values are properly set
+                formData.set('IsWorking', $('#IsWorking').is(':checked'));
+                formData.set('IsActive', $('#IsActive').is(':checked'));
+                formData.set('IsNewItem', $('#IsNewItem').is(':checked'));
 
-                    console.error('Product update failed:', errorMessage);
+                // Debug: Log form data
+                for(let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
                 }
+
+                const $submitBtn = $(form).find('button[type="submit"]');
+                const originalText = $submitBtn.html();
+
+                $submitBtn.prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+
+                $.ajax({
+                    url: form.action,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log('Update response:', response);
+
+                        if (response.isApprovalRequest) {
+                            showToast('Update submitted for approval', 'info');
+                        } else if (response.isSuccess === false) {
+                            showToast(response.message || 'Update failed', 'error');
+                            $submitBtn.prop('disabled', false).html(originalText);
+                            return;
+                        } else {
+                            showToast('Product updated successfully!', 'success');
+                        }
+
+                        setTimeout(() => window.location.href = '/Products', 1500);
+                    },
+                    error: function(xhr) {
+                        console.error('Update error:', xhr);
+                        $submitBtn.prop('disabled', false).html(originalText);
+
+                        let errorMsg = 'Failed to update product';
+                        if (xhr.responseJSON) {
+                            errorMsg = xhr.responseJSON.message ||
+                                      xhr.responseJSON.error ||
+                                      errorMsg;
+                        }
+
+                        showToast(errorMsg, 'error');
+                    }
+                });
             });
         });
     </script>

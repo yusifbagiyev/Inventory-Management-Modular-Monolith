@@ -64,8 +64,8 @@ namespace RouteService.Application.Features.Routes.Commands
                             dto.ImageFile.FileName,
                             route.ProductSnapshot.InventoryCode);
 
-                        route.UpdateImage(newImageUrl);
                     }
+                    route.UpdateImage(newImageUrl);
 
                     await _repository.UpdateAsync(route, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);

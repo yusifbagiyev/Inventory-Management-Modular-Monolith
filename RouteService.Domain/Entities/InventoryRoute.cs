@@ -139,9 +139,9 @@ namespace RouteService.Domain.Entities
             CompletedAt = DateTime.Now;
         }
 
-        public void UpdateImage(string imageUrl)
+        public void UpdateImage(string? imageUrl)
         {
-            ImageUrl = imageUrl;
+            ImageUrl = imageUrl ?? ImageUrl;
         }
         public void UpdateNotes(string notes)
         {

@@ -156,7 +156,7 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/app-config.js"></script>
+    <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script>
         // Declare variables in higher scope
         let searchTimeout;
@@ -302,184 +302,101 @@
             }
         });
 
-        // Moved searchProduct function to global scope
-        function searchProduct(inventoryCode) 
-        {
+        async function searchProduct(inventoryCode) {
             $('.route-warning').remove();
-            const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
 
-            // Add retry logic for token refresh scenarios
-            let retryCount = 0;
-            const maxRetries = 2;
+            try {
+                // Get a valid token (will auto-refresh if needed)
+                const token = await AppConfig.tokenManagement.getValidToken();
+                const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
 
-            function makeRequest() {
-                $.ajax({
+                const response = await $.ajax({
                     url: apiUrl,
                     type: 'GET',
                     headers: {
-                        'Authorization': 'Bearer @ViewBag.JwtToken'
-                    },
-                    success: function(product) {
-                        hideSearching();
-
-                        if (product && product.id) {
-                            currentProductId = product.id;
-                            displayProductInfo(product);
-                            $('#productId').val(product.id);
-                            checkPendingRoutes(product.id);
-                        } else {
-                            currentProductId = null;
-                            showError('No product found with inventory code: ' + inventoryCode);
-                            hideProductInfo();
-                            hideTransferFields();
-                        }
-                    },
-                    error: function(xhr) {
-                        // Handle 401 with retry logic instead of immediate redirect
-                        if (xhr.status === 401 && retryCount < maxRetries) {
-                            retryCount++;
-                            console.log(`Authentication error, attempting retry ${retryCount}/${maxRetries}`);
-
-                            // Try to refresh the token first
-                            $.ajax({
-                                url: '/Account/RefreshToken',
-                                type: 'GET',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                },
-                                success: function(refreshResponse) {
-                                    if (refreshResponse.success && refreshResponse.token) {
-                                        // Update the token in our headers and retry
-                                        // Note: You might want to store this in a global variable
-                                        setTimeout(makeRequest, 500); // Small delay before retry
-                                    } else {
-                                        handleSearchError(xhr, inventoryCode);
-                                    }
-                                },
-                                error: function() {
-                                    // Only redirect if refresh also fails
-                                    handleSearchError(xhr, inventoryCode, true);
-                                }
-                            });
-                            return; // Exit to wait for refresh attempt
-                        }
-
-                        // Handle other errors or if retries exhausted
-                        handleSearchError(xhr, inventoryCode, xhr.status === 401);
+                        'Authorization': 'Bearer ' + token
                     }
                 });
-            }
 
-            makeRequest();
-        }
+                hideSearching();
 
-                function handleSearchError(xhr, inventoryCode, isAuthError = false) {
-            hideSearching();
-            currentProductId = null;
-
-            let errorMessage = 'Error searching for product';
-
-            if (xhr.status === 404) {
-                errorMessage = `Product not found with code: ${inventoryCode}`;
-            } else if (isAuthError) {
-                errorMessage = 'Authentication failed. Please refresh the page or log in again.';
-                // Show a button to refresh instead of auto-redirect
-                showAuthErrorWithRefreshOption();
-            } else if (xhr.status === 0) {
-                errorMessage = 'Network error. Please check your connection.';
-            } else {
-                try {
-                    if (xhr.responseJSON) {
-                        errorMessage = xhr.responseJSON.message ||
-                                     xhr.responseJSON.error ||
-                                     errorMessage;
-                    }
-                } catch (e) {
-                    console.error('Error parsing error response:', e);
+                if (response && response.id) {
+                    currentProductId = response.id;
+                    displayProductInfo(response);
+                    $('#productId').val(response.id);
+                    await checkPendingRoutes(response.id);
+                } else {
+                    currentProductId = null;
+                    showError('No product found with inventory code: ' + inventoryCode);
+                    hideProductInfo();
+                    hideTransferFields();
                 }
+            } catch (error) {
+                hideSearching();
+                currentProductId = null;
+
+                if (error.status === 401) {
+                    // Try to refresh token once more
+                    try {
+                        console.log('Attempting token refresh after 401 error');
+                        const newToken = await AppConfig.tokenManagement.refreshToken();
+
+                        // Retry the search with new token
+                        return searchProduct(inventoryCode);
+                    } catch (refreshError) {
+                        showError('Your session has expired. Please log in again.');
+                        setTimeout(() => window.location.href = '/Account/Login', 3000);
+                    }
+                } else if (error.status === 404) {
+                    showError(`Product not found with code: ${inventoryCode}`);
+                } else {
+                    showError('Error searching for product: ' + (error.responseJSON?.message || error.statusText));
+                }
+
+                hideProductInfo();
+                hideTransferFields();
             }
-
-            showError(errorMessage);
-            hideProductInfo();
-            hideTransferFields();
         }
 
-
-                function showAuthErrorWithRefreshOption() {
-            const authErrorHtml = `
-                <div class="alert alert-warning mt-3" id="authErrorAlert">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Authentication Issue:</strong> Your session may have expired.
-                    <br>
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-primary" onclick="refreshPageWithState()">
-                            <i class="fas fa-sync"></i> Refresh Page
-                        </button>
-                        <a href="/Account/Login?returnUrl=${encodeURIComponent(window.location.pathname)}"
-                           class="btn btn-sm btn-secondary ms-2">
-                            <i class="fas fa-sign-in-alt"></i> Re-login
-                        </a>
-                    </div>
-                </div>
-            `;
-
-            $('#errorInfo').after(authErrorHtml);
-        }
-
-        function refreshPageWithState() {
-            // Save current form state to sessionStorage
-            const formState = {
-                inventoryCode: $('#inventoryCodeInput').val(),
-                toDepartmentId: $('#ToDepartmentId').val(),
-                toWorker: $('#ToWorker').val(),
-                notes: $('#Notes').val()
-            };
-
-            sessionStorage.setItem('transferFormState', JSON.stringify(formState));
-            window.location.reload();
-        }
-
-
-        function checkPendingRoutes(productId)
-        {
-            // Remove any existing warnings first
+        async function checkPendingRoutes(productId) {
             $('.route-warning').remove();
 
-            const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
+            try {
+                const token = await AppConfig.tokenManagement.getValidToken();
+                const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
 
-            $.ajax({
-                url: apiUrl,
-                type:'GET',
-                headers:{
-                    'Authorization':'Bearer @ViewBag.JwtToken'
-                },
-                        success: function(routes) {
-                    const pendingRoutes = routes.filter(r => !r.isCompleted);
-
-                    if (pendingRoutes.length > 0) {
-                        const lastPending = pendingRoutes[0];
-                        const warningHtml = `
-                    <div class="alert alert-warning mt-3 route-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Warning:</strong> This product has a pending transfer to ${lastPending.toDepartmentName}
-                        created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
-                        <br>
-                        <small>The pending transfer must be completed or cancelled before creating a new one.</small>
-                    </div>
-                `;
-                        $('#productInfo').after(warningHtml);
-                        hideTransferFields();
-                    } else {
-                        showTransferFields();
-                        hideError();
+                const routes = await $.ajax({
+                    url: apiUrl,
+                    type: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
                     }
-                },
-                error: function(xhr) {
-                console.error('Failed to check pending routes:', xhr);
+                });
+
+                const pendingRoutes = routes.filter(r => !r.isCompleted);
+
+                if (pendingRoutes.length > 0) {
+                    const lastPending = pendingRoutes[0];
+                    const warningHtml = `
+                        <div class="alert alert-warning mt-3 route-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> This product has a pending transfer to ${lastPending.toDepartmentName}
+                            created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
+                            <br>
+                            <small>The pending transfer must be completed or cancelled before creating a new one.</small>
+                        </div>
+                    `;
+                    $('#productInfo').after(warningHtml);
+                    hideTransferFields();
+                } else {
+                    showTransferFields();
+                    hideError();
+                }
+            } catch (error) {
+                console.error('Failed to check pending routes:', error);
                 // Continue anyway if check fails
                 showTransferFields();
-        }
-            });
+            }
         }
 
         function displayProductInfo(product) {
@@ -557,21 +474,6 @@
                 reader.readAsDataURL(input.files[0]);
             }
         }
-    </script>
-    <script>
-                // Add a global AJAX error handler for better token management
-        $(document).ajaxError(function(event, xhr, settings, error) {
-            // Skip if this is already a token refresh request
-            if (settings.url.includes('/Account/RefreshToken')) {
-                return;
-            }
-
-            // Handle 401 errors globally
-            if (xhr.status === 401) {
-                console.log('Global 401 handler triggered for:', settings.url);
-                // You could trigger a global token refresh here if needed
-            }
-        });
     </script>
 }
 

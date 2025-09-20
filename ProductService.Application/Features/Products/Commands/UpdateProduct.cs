@@ -71,6 +71,10 @@ namespace ProductService.Application.Features.Products.Commands
                     DepartmentId = product.DepartmentId,
                     DepartmentName = product.Department?.Name,
                     Worker = product.Worker,
+                    Description = product.Description,
+                    IsActive = product.IsActive,
+                    IsNewItem = product.IsNewItem,
+                    IsWorking = product.IsWorking
                 };
 
                 // Track what changed
@@ -90,6 +94,18 @@ namespace ProductService.Application.Features.Products.Commands
 
                 if (product.DepartmentId != dto.DepartmentId)
                     changes.Add($"Department: {product.Department?.Name} → {await GetDepartmentNameAsync(dto.DepartmentId)}");
+
+                if(product.Description != dto.Description)
+                    changes.Add($"Description: {product.Description} → {dto.Description}");
+
+                if (product.IsNewItem != dto.IsNewItem)
+                    changes.Add(dto.IsNewItem==true? "Product is new now" : "Product's status changed to old");
+
+                if (product.IsActive != dto.IsActive)
+                    changes.Add(dto.IsActive==true ? "Product is active now" : "Product is not available");
+
+                if (product.IsWorking != dto.IsWorking)
+                    changes.Add(dto.IsWorking==true ? "Product is working now" : "Product is not working ");
 
                 if (dto.ImageFile != null)
                     changes.Add($"Image uploaded");
@@ -116,7 +132,10 @@ namespace ProductService.Application.Features.Products.Commands
                             dto.DepartmentId,
                             dto.Worker,
                             shouldUpdateImage ? newImageUrl : oldImageUrl,
-                            dto.Description);
+                            dto.Description,
+                            dto.IsActive,
+                            dto.IsNewItem,
+                            dto.IsWorking);
 
                         await _productRepository.UpdateAsync(product, cancellationToken);
                         await _unitOfWork.SaveChangesAsync(cancellationToken);

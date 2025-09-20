@@ -218,7 +218,7 @@ namespace RouteService.Infrastructure.Services
             var product = await productClient.GetProductByIdAsync(existingProduct.Product.ProductId);
             if (product == null) return;
 
-            string? imageUrl = null;
+            string? imageUrl = product.ImageUrl;
 
             // Upload image if data is provided
             if (existingProduct.ImageData != null && existingProduct.ImageData.Length > 0)

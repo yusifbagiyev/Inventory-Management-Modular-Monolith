@@ -45,7 +45,7 @@
             CreatedAt = DateTime.Now;
         }
 
-        public void Update(string? model, string? vendor, int categoryId, int departmentId,string? worker, string? imageUrl, string? description)
+        public void Update(string? model, string? vendor, int categoryId, int departmentId,string? worker, string? imageUrl, string? description,bool? isActive,bool? isNewItem,bool? isWorking)
         {
             if(categoryId <= 0)
                 throw new ArgumentException("Category ID must be greater than zero", nameof(categoryId));
@@ -59,6 +59,9 @@
             DepartmentId = departmentId;
             ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
+            IsActive=isActive ?? IsActive;
+            IsWorking=isWorking ?? IsWorking;
+            IsNewItem=isNewItem ?? IsNewItem;
             UpdatedAt = DateTime.Now;
         }
         public void UpdateAfterRouting(int departmentId, string? worker)

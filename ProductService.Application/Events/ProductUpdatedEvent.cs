@@ -17,5 +17,9 @@
         public int? DepartmentId { get; set; }
         public string? DepartmentName { get; set; } = string.Empty;
         public string? Worker { get; set; } = string.Empty;
+        public string? Description { get; set; } = string.Empty;
+        public bool? IsActive { get; set; }
+        public bool? IsNewItem { get; set; }
+        public bool? IsWorking { get; set; }
     }
 }
