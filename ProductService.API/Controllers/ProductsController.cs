@@ -156,46 +156,6 @@ namespace ProductService.API.Controllers
 
 
 
-        [HttpPost("approved/multipart")]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        [Authorize(Roles = "Admin")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<ProductDto>> CreateApprovedMultipart([FromForm] CreateProductDto dto)
-        {
-            try
-            {
-                var product = await _mediator.Send(new CreateProduct.Command(dto));
-                return Ok(product);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating approved product");
-                return BadRequest(new { error = ex.Message });
-            }
-        }
-
-
-
-        [HttpPut("{id}/approved")]
-        [ApiExplorerSettings(IgnoreApi = true)]
-        [Authorize(Roles = "Admin")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UpdateApprovedMultipart(int id, [FromForm] UpdateProductDto dto)
-        {
-            try
-            {
-                await Update(id,dto);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating approved product with multipart data");
-                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
-            }
-        }
-
-
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -236,10 +196,30 @@ namespace ProductService.API.Controllers
 
 
 
+        [HttpPost("approved/multipart")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<ProductDto>> CreateApprovedMultipart([FromForm] CreateProductDto dto)
+        {
+            try
+            {
+                var product = await _mediator.Send(new CreateProduct.Command(dto));
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating approved product");
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+
+
         [HttpPost("approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<ProductDto>> CreateApproved([FromBody] JsonElement productData)
+        public async Task<IActionResult> CreateApproved([FromBody] JsonElement productData)
         {
             try
             {
@@ -258,8 +238,7 @@ namespace ProductService.API.Controllers
                     DepartmentId = productData.GetProperty("departmentId").GetInt32()
                 };
 
-                var product = await _mediator.Send(new CreateProduct.Command(dto));
-                return Ok(product);
+                return await Create(dto);
             }
             catch (Exception ex)
             {
@@ -270,20 +249,53 @@ namespace ProductService.API.Controllers
 
 
 
-
         [HttpPut("{id}/approved")]
         [ApiExplorerSettings(IgnoreApi = true)]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateApproved(int id, [FromBody] object updateData)
+        public async Task<IActionResult> UpdateApproved(int id, [FromBody] JsonElement updateData)
         {
-            var json = updateData.ToString();
-            var dto = JsonSerializer.Deserialize<UpdateProductDto>(json!);
+            try
+            {
+                // Create a DTO without the file
+                var dto = new UpdateProductDto
+                {
+                    Model = updateData.TryGetProperty("model", out var model) ? model.GetString() : "",
+                    Vendor = updateData.TryGetProperty("vendor", out var vendor) ? vendor.GetString() : "",
+                    Worker = updateData.TryGetProperty("worker", out var worker) ? worker.GetString() : "",
+                    Description = updateData.TryGetProperty("description", out var desc) ? desc.GetString() : "",
+                    IsWorking = updateData.TryGetProperty("isWorking", out var working) ? working.GetBoolean() : true,
+                    IsActive = updateData.TryGetProperty("isActive", out var active) ? active.GetBoolean() : true,
+                    IsNewItem = updateData.TryGetProperty("isNewItem", out var newItem) ? newItem.GetBoolean() : true,
+                    CategoryId = updateData.GetProperty("categoryId").GetInt32(),
+                    DepartmentId = updateData.GetProperty("departmentId").GetInt32()
+                };
 
-            if (dto == null)
-                return BadRequest("Invalid update data");
+                return await Update(id, dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating approved product");
+                return BadRequest($"Error: {ex.Message}");
+            }
+        }
 
-            await Update(id, dto);
-            return NoContent();
+
+
+        [HttpPut("{id}/approved/multipart")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateApprovedMultipart(int id, [FromForm] UpdateProductDto dto)
+        {
+            try
+            {
+                return await Update(id, dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating approved product with multipart data");
+                return BadRequest(new { error = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
 

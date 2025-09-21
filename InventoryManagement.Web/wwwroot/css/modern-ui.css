@@ -59,10 +59,37 @@ body {
     padding: 1rem 0;
 }
 
-.sidebar-nav {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+/* Fix notification badge positioning */
+.sidebar-nav .nav-item {
+    position: relative;
+}
+
+.sidebar-nav .nav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+}
+
+    .sidebar-nav .nav-link .badge {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+.sidebar-nav .notification-badge {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    padding: 0 6px;
 }
 
 .nav-section {

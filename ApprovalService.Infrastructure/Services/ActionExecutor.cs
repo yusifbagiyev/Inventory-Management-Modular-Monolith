@@ -1,14 +1,13 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using ApprovalService.Application.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using SharedServices.Enum;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using ApprovalService.Application.Interfaces;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using SharedServices.DTOs;
-using SharedServices.Enum;
 
 namespace ApprovalService.Infrastructure.Services
 {
@@ -17,6 +16,8 @@ namespace ApprovalService.Infrastructure.Services
         private readonly HttpClient _httpClient;
         private readonly ILogger<ActionExecutor> _logger;
         private readonly IConfiguration _configuration;
+        private int? _currentUserId;
+        private string? _currentUserName;
 
         public ActionExecutor(HttpClient httpClient,IConfiguration configuration,ILogger<ActionExecutor> logger)
         {
@@ -25,10 +26,18 @@ namespace ApprovalService.Infrastructure.Services
             _logger= logger;
         }
 
-        public async Task<bool> ExecuteAsync(string requestType, string actionData, CancellationToken cancellationToken = default)
+        public async Task<bool> ExecuteAsync(
+            string requestType, 
+            string actionData, 
+            int userId,
+            string userName,
+            CancellationToken cancellationToken = default)
         {
             try
             {
+                _currentUserId = userId;
+                _currentUserName = userName;
+
                 AddAuthorizationHeader();
 
                 return requestType switch
@@ -39,11 +48,12 @@ namespace ApprovalService.Infrastructure.Services
                     RequestType.TransferProduct => await ExecuteTransferProduct(actionData, cancellationToken),
                     RequestType.UpdateRoute => await ExecuteUpdateRoute(actionData, cancellationToken),
                     RequestType.DeleteRoute => await ExecuteDeleteRoute(actionData, cancellationToken),
-                    _ => false
+                    _ => throw new NotSupportedException($"Request type '{requestType}' is not supported")
                 };
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, $"Failed to execute action for request type: {requestType}");
                 return false;
             }
         }
@@ -53,15 +63,26 @@ namespace ApprovalService.Infrastructure.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
 
+            var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, _currentUserId.ToString()!),
+            new(ClaimTypes.Name, _currentUserName!),
+            new(ClaimTypes.Role, "Admin"),
+            new("permission","product.create.direct"),
+            new("permission","product.update.direct"),
+            new("permission","product.delete.direct"),
+            new("permission","product.transfer.direct"),
+            new("permission","route.update.direct"),
+            new("permission","route.delete.direct")
+        };
+
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity([
-                    new Claim(ClaimTypes.Role, "Admin"),
-                    new Claim(ClaimTypes.NameIdentifier, "0"), // System user
-                    new Claim(ClaimTypes.Name, "System")
-                ]),
-                Expires = DateTime.Now.AddMinutes(5),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"]
             };
@@ -69,6 +90,9 @@ namespace ApprovalService.Infrastructure.Services
             var token = tokenHandler.CreateToken(tokenDescriptor);
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", tokenHandler.WriteToken(token));
+
+            _logger.LogInformation("Created authorization token for admin {AdminName} (ID: {AdminId})",
+                _currentUserName, _currentUserId);
         }
 
         private async Task<bool> ExecuteCreateProduct(string actionData, CancellationToken cancellationToken)
@@ -78,63 +102,47 @@ namespace ApprovalService.Infrastructure.Services
                 var jsonDoc = JsonDocument.Parse(actionData);
                 var root = jsonDoc.RootElement;
 
-                // Check if it's wrapped in ActionData structure
-                JsonElement productElement;
-                if (root.TryGetProperty("ProductData", out var productDataProp))
-                {
-                    productElement = productDataProp;
-                }
-                else
-                {
-                    productElement = root;
-                }
+                // Extract product data from either nested or flat structure
+                JsonElement productElement = GetProductElement(root);
 
-                //Check if ImageFile is present
-                byte[]? imageData=null;
-                string? imageFileName = null;
+                // Build the product DTO from the JSON
+                var inventoryCode = GetIntProperty(productElement, "inventoryCode", "InventoryCode");
+                var model = GetStringProperty(productElement, "model", "Model");
+                var vendor = GetStringProperty(productElement, "vendor", "Vendor");
+                var worker = GetStringProperty(productElement, "worker", "Worker");
+                var description = GetStringProperty(productElement, "description", "Description");
+                var isWorking = GetBoolProperty(productElement, "isWorking", "IsWorking", true);
+                var isActive = GetBoolProperty(productElement, "isActive", "IsActive", true);
+                var isNewItem = GetBoolProperty(productElement, "isNewItem", "IsNewItem", true);
+                var categoryId = GetIntProperty(productElement, "categoryId", "CategoryId");
+                var departmentId = GetIntProperty(productElement, "departmentId", "DepartmentId");
 
-                if(productElement.TryGetProperty("imageData",out var imageDataProp) &&
-                    imageDataProp.ValueKind == JsonValueKind.String)
-                {
-                    imageData= Convert.FromBase64String(imageDataProp.GetString()!);
-                }
+                // Check for image data
+                var imageData = GetImageData(productElement);
+                var imageFileName = GetImageFileName(productElement);
 
-                else if (productElement.TryGetProperty("ImageData", out var imageDataProp2) &&
-                    imageDataProp2.ValueKind == JsonValueKind.String)
-                {
-                    imageData= Convert.FromBase64String(imageDataProp2.GetString()!);
-                }
-
-                if(productElement.TryGetProperty("imageFileName", out var fileNameProp))
-                {
-                    imageFileName=fileNameProp.GetString();
-                }
-
-                else if(productElement.TryGetProperty("ImageFileName", out var fileNameProp2))
-                {
-                    imageFileName=fileNameProp2.GetString();
-                }
-
-                // If we have image data, use multipart form data
                 if (imageData != null && imageFileName != null)
                 {
-                    using var formContent = new MultipartFormDataContent
-                    {
-                        { new StringContent(GetIntProperty(productElement, "inventoryCode", "InventoryCode").ToString()), "InventoryCode" },
-                        { new StringContent(GetStringProperty(productElement, "model", "Model")), "Model" },
-                        { new StringContent(GetStringProperty(productElement, "vendor", "Vendor")), "Vendor" },
-                        { new StringContent(GetStringProperty(productElement, "worker", "Worker")), "Worker" },
-                        { new StringContent(GetStringProperty(productElement, "description", "Description")), "Description" },
-                        { new StringContent(GetBoolProperty(productElement, "isWorking", "IsWorking", true).ToString()), "IsWorking" },
-                        { new StringContent(GetBoolProperty(productElement, "isActive", "IsActive", true).ToString()), "IsActive" },
-                        { new StringContent(GetBoolProperty(productElement, "isNewItem", "IsNewItem", true).ToString()), "IsNewItem" },
-                        { new StringContent(GetIntProperty(productElement, "categoryId", "CategoryId").ToString()), "CategoryId" },
-                        { new StringContent(GetIntProperty(productElement, "departmentId", "DepartmentId").ToString()), "DepartmentId" }
-                    };
+                    // When we have an image, use multipart form data
+                    _logger.LogInformation($"Creating product {inventoryCode} with image {imageFileName}");
+
+                    using var formContent = new MultipartFormDataContent();
+
+                    // Add all form fields
+                    formContent.Add(new StringContent(inventoryCode.ToString()), "InventoryCode");
+                    formContent.Add(new StringContent(model), "Model");
+                    formContent.Add(new StringContent(vendor), "Vendor");
+                    formContent.Add(new StringContent(worker), "Worker");
+                    formContent.Add(new StringContent(description), "Description");
+                    formContent.Add(new StringContent(isWorking.ToString()), "IsWorking");
+                    formContent.Add(new StringContent(isActive.ToString()), "IsActive");
+                    formContent.Add(new StringContent(isNewItem.ToString()), "IsNewItem");
+                    formContent.Add(new StringContent(categoryId.ToString()), "CategoryId");
+                    formContent.Add(new StringContent(departmentId.ToString()), "DepartmentId");
 
                     // Add image file
                     var imageContent = new ByteArrayContent(imageData);
-                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                    imageContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(imageFileName));
                     formContent.Add(imageContent, "ImageFile", imageFileName);
 
                     var response = await _httpClient.PostAsync(
@@ -142,31 +150,29 @@ namespace ApprovalService.Infrastructure.Services
                         formContent,
                         cancellationToken);
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var responseContent = await response.Content.ReadAsStringAsync();
-                        _logger.LogError($"Failed to create product with image: {response.StatusCode} - {responseContent}");
-                    }
-
+                    LogResponseIfError(response, "create product with image");
                     return response.IsSuccessStatusCode;
                 }
                 else
                 {
-                    // No image, use JSON
-                    var productData = new
+                    // Without image, use JSON
+                    _logger.LogInformation($"Creating product {inventoryCode} without image");
+
+                    var productDto = new
                     {
-                        inventoryCode = GetIntProperty(productElement, "inventoryCode", "InventoryCode"),
-                        model = GetStringProperty(productElement, "model", "Model"),
-                        vendor = GetStringProperty(productElement, "vendor", "Vendor"),
-                        worker = GetStringProperty(productElement, "worker", "Worker"),
-                        description = GetStringProperty(productElement, "description", "Description"),
-                        isWorking = GetBoolProperty(productElement, "isWorking", "IsWorking", true),
-                        isActive = GetBoolProperty(productElement, "isActive", "IsActive", true),
-                        isNewItem = GetBoolProperty(productElement, "isNewItem", "IsNewItem", true),
-                        categoryId = GetIntProperty(productElement, "categoryId", "CategoryId"),
-                        departmentId = GetIntProperty(productElement, "departmentId", "DepartmentId")
+                        inventoryCode,
+                        model,
+                        vendor,
+                        worker,
+                        description,
+                        isWorking,
+                        isActive,
+                        isNewItem,
+                        categoryId,
+                        departmentId
                     };
-                    var json = JsonSerializer.Serialize(productData);
+
+                    var json = JsonSerializer.Serialize(productDto);
                     var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     var response = await _httpClient.PostAsync(
@@ -174,12 +180,7 @@ namespace ApprovalService.Infrastructure.Services
                         content,
                         cancellationToken);
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var responseContent = await response.Content.ReadAsStringAsync();
-                        _logger.LogError($"Failed to create product: {response.StatusCode} - {responseContent}");
-                    }
-
+                    LogResponseIfError(response, "create product");
                     return response.IsSuccessStatusCode;
                 }
             }
@@ -198,90 +199,77 @@ namespace ApprovalService.Infrastructure.Services
                 var root = jsonDoc.RootElement;
 
                 //Extract ProductId
-                var productId = root.GetProperty("ProductId").GetInt32();
-
-                // Extract the UpdateData which contains the actual update fields
-                JsonElement updateDataElement;
-                if(root.TryGetProperty("UpdateData", out var updateDataProp))
+                var productId = GetIntProperty(root, "productId", "ProductId");
+                if (productId == 0)
                 {
-                    updateDataElement = updateDataProp;
-                }
-                else if(root.TryGetProperty("updateData", out var updateDataProp2))
-                {
-                    updateDataElement = updateDataProp2;
-                }
-                else
-                {
-                    _logger.LogError("UpdateData not found in action data");
+                    _logger.LogError("Product ID not found in update action data");
                     return false;
                 }
+
+                // Extract the UpdateData 
+                JsonElement updateDataElement =GetUpdateDataElement(root);
+
+                // Build update fields
+                var model = GetStringProperty(updateDataElement, "model", "Model");
+                var vendor = GetStringProperty(updateDataElement, "vendor", "Vendor");
+                var worker = GetStringProperty(updateDataElement, "worker", "Worker");
+                var description = GetStringProperty(updateDataElement, "description", "Description");
+                var categoryId = GetIntProperty(updateDataElement, "categoryId", "CategoryId");
+                var departmentId = GetIntProperty(updateDataElement, "departmentId", "DepartmentId");
+                var isWorking = GetBoolProperty(updateDataElement, "isWorking", "IsWorking", true);
+                var isActive = GetBoolProperty(updateDataElement, "isActive", "IsActive", true);
+                var isNewItem = GetBoolProperty(updateDataElement, "isNewItem", "IsNewItem", true);
+
                 // Check for image data
-                byte[]? imageData = null;
-                string? imageFileName = null;
+                var imageData = GetImageData(updateDataElement);
+                var imageFileName = GetImageFileName(updateDataElement);
 
-                if (updateDataElement.TryGetProperty("imageData", out var imageDataProp) &&
-                    imageDataProp.ValueKind == JsonValueKind.String)
-                {
-                    imageData = Convert.FromBase64String(imageDataProp.GetString()!);
-                }
-                else if (updateDataElement.TryGetProperty("ImageData", out var imageDataProp2) &&
-                    imageDataProp2.ValueKind == JsonValueKind.String)
-                {
-                    imageData = Convert.FromBase64String(imageDataProp2.GetString()!);
-                }
-
-                if (updateDataElement.TryGetProperty("imageFileName", out var fileNameProp))
-                {
-                    imageFileName = fileNameProp.GetString();
-                }
-                else if (updateDataElement.TryGetProperty("ImageFileName", out var fileNameProp2))
-                {
-                    imageFileName = fileNameProp2.GetString();
-                }
-
-                // Use multipart form data if we have an image, otherwise use JSON
                 if (imageData != null && imageFileName != null)
                 {
-                    using var formContent = new MultipartFormDataContent
-                    {
-                        // Add all update fields
-                        { new StringContent(GetStringProperty(updateDataElement, "model", "Model")), "Model" },
-                        { new StringContent(GetStringProperty(updateDataElement, "vendor", "Vendor")), "Vendor" },
-                        { new StringContent(GetStringProperty(updateDataElement, "worker", "Worker")), "Worker" },
-                        { new StringContent(GetStringProperty(updateDataElement, "description", "Description")), "Description" },
-                        { new StringContent(GetIntProperty(updateDataElement, "categoryId", "CategoryId").ToString()), "CategoryId" },
-                        { new StringContent(GetIntProperty(updateDataElement, "departmentId", "DepartmentId").ToString()), "DepartmentId" }
-                    };
+                    // Update with image using multipart
+                    _logger.LogInformation($"Updating product {productId} with new image");
 
-                    // Add image file
+                    using var formContent = new MultipartFormDataContent();
+
+                    formContent.Add(new StringContent(model), "Model");
+                    formContent.Add(new StringContent(vendor), "Vendor");
+                    formContent.Add(new StringContent(worker), "Worker");
+                    formContent.Add(new StringContent(description), "Description");
+                    formContent.Add(new StringContent(categoryId.ToString()), "CategoryId");
+                    formContent.Add(new StringContent(departmentId.ToString()), "DepartmentId");
+                    formContent.Add(new StringContent(isWorking.ToString()), "IsWorking");
+                    formContent.Add(new StringContent(isActive.ToString()), "IsActive");
+                    formContent.Add(new StringContent(isNewItem.ToString()), "IsNewItem");
+
+                    // Add image
                     var imageContent = new ByteArrayContent(imageData);
-                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                    imageContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(imageFileName));
                     formContent.Add(imageContent, "ImageFile", imageFileName);
 
                     var response = await _httpClient.PutAsync(
-                        $"{_configuration["Services:ProductService"]}/api/products/{productId}/approved",
+                        $"{_configuration["Services:ProductService"]}/api/products/{productId}/approved/multipart",
                         formContent,
                         cancellationToken);
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var responseContent = await response.Content.ReadAsStringAsync();
-                        _logger.LogError($"Failed to update product {productId}: {response.StatusCode} - {responseContent}");
-                    }
-
+                    LogResponseIfError(response, $"update product {productId}");
                     return response.IsSuccessStatusCode;
                 }
                 else
                 {
-                    // No image, use JSON
+                    // Update without image using JSON
+                    _logger.LogInformation($"Updating product {productId} without image change");
+
                     var updateDto = new
                     {
-                        model = GetStringProperty(updateDataElement, "model", "Model"),
-                        vendor = GetStringProperty(updateDataElement, "vendor", "Vendor"),
-                        worker = GetStringProperty(updateDataElement, "worker", "Worker"),
-                        description = GetStringProperty(updateDataElement, "description", "Description"),
-                        categoryId = GetIntProperty(updateDataElement, "categoryId", "CategoryId"),
-                        departmentId = GetIntProperty(updateDataElement, "departmentId", "DepartmentId")
+                        model,
+                        vendor,
+                        worker,
+                        description,
+                        categoryId,
+                        departmentId,
+                        isWorking,
+                        isActive,
+                        isNewItem
                     };
 
                     var json = JsonSerializer.Serialize(updateDto);
@@ -292,12 +280,7 @@ namespace ApprovalService.Infrastructure.Services
                         content,
                         cancellationToken);
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var responseContent = await response.Content.ReadAsStringAsync();
-                        _logger.LogError($"Failed to update product {productId}: {response.StatusCode} - {responseContent}");
-                    }
-
+                    LogResponseIfError(response, $"update product {productId}");
                     return response.IsSuccessStatusCode;
                 }
             }
@@ -315,12 +298,19 @@ namespace ApprovalService.Infrastructure.Services
                 var jsonDoc=JsonDocument.Parse(actionData);
                 var root=jsonDoc.RootElement;
 
-                var productId=root.GetProperty("ProductId").GetInt32();
+                var productId = GetIntProperty(root, "productId", "ProductId");
+                if (productId == 0)
+                {
+                    _logger.LogError("Product ID not found in delete action data");
+                    return false;
+                }
+                _logger.LogInformation($"Deleting product {productId}");
 
-                var response=await _httpClient.DeleteAsync(
+                var response = await _httpClient.DeleteAsync(
                     $"{_configuration["Services:ProductService"]}/api/products/{productId}/approved",
                     cancellationToken);
 
+                LogResponseIfError(response, $"delete product {productId}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -337,90 +327,45 @@ namespace ApprovalService.Infrastructure.Services
                 var jsonDoc = JsonDocument.Parse(actionData);
                 var root = jsonDoc.RootElement;
 
-                // Create form content for multipart request
+                // Extract transfer details
+                var productId = GetIntProperty(root, "productId", "ProductId");
+                var toDepartmentId = GetIntProperty(root, "toDepartmentId", "ToDepartmentId");
+                var toWorker = GetStringProperty(root, "toWorker", "ToWorker");
+                var notes = GetStringProperty(root, "notes", "Notes");
+
+                if (productId == 0 || toDepartmentId == 0)
+                {
+                    _logger.LogError("Invalid transfer data: missing product or department ID");
+                    return false;
+                }
+
+                _logger.LogInformation($"Transferring product {productId} to department {toDepartmentId}");
+
                 using var formContent = new MultipartFormDataContent();
 
-                // Get the productId to handle both camelCase and pascalCase
-                var productId = root.TryGetProperty("productId", out var pid)
-                    ? pid.GetInt32()
-                    : root.GetProperty("ProductId").GetInt32();
-
                 formContent.Add(new StringContent(productId.ToString()), "ProductId");
-
-                // Get department ID
-                var toDepartmentId = root.TryGetProperty("toDepartmentId", out var deptId)
-                    ? deptId.GetInt32()
-                    : root.GetProperty("ToDepartmentId").GetInt32();
-
                 formContent.Add(new StringContent(toDepartmentId.ToString()), "ToDepartmentId");
+                formContent.Add(new StringContent(toWorker), "ToWorker");
+                formContent.Add(new StringContent(notes), "Notes");
 
-                // Add optional fields
-                if (root.TryGetProperty("toWorker", out var worker) && worker.ValueKind != JsonValueKind.Null)
-                {
-                    formContent.Add(new StringContent(worker.GetString() ?? ""), "ToWorker");
-                }
-                else if (root.TryGetProperty("ToWorker", out var workerPascal) && workerPascal.ValueKind != JsonValueKind.Null)
-                {
-                    formContent.Add(new StringContent(workerPascal.GetString() ?? ""), "ToWorker");
-                }
+                // Check for image data in transfer
+                var imageData = GetImageData(root);
+                var imageFileName = GetImageFileName(root);
 
-                if (root.TryGetProperty("notes", out var notes) && notes.ValueKind != JsonValueKind.Null)
+                if (imageData != null && imageFileName != null)
                 {
-                    formContent.Add(new StringContent(notes.GetString() ?? ""), "Notes");
-                }
-                else if (root.TryGetProperty("Notes", out var notesPascal) && notesPascal.ValueKind != JsonValueKind.Null)
-                {
-                    formContent.Add(new StringContent(notesPascal.GetString() ?? ""), "Notes");
-                }
-
-                // Check for image data in multiple possible formats
-                byte[]? imageData = null;
-                string? imageFileName = null;
-
-                if (root.TryGetProperty("imageData", out var imageDataProp) &&
-                    imageDataProp.ValueKind == JsonValueKind.String)
-                {
-                    imageData = Convert.FromBase64String(imageDataProp.GetString()!);
-                }
-                else if (root.TryGetProperty("ImageData", out var imageDataProp2) &&
-                    imageDataProp2.ValueKind == JsonValueKind.String)
-                {
-                    imageData = Convert.FromBase64String(imageDataProp2.GetString()!);
-                }
-                else if (root.TryGetProperty("image", out var imageProp) && imageProp.ValueKind == JsonValueKind.String)
-                {
-                    imageData = Convert.FromBase64String(imageProp.GetString()!);
-                }
-
-                if (root.TryGetProperty("imageFileName", out var fileNameProp))
-                {
-                    imageFileName = fileNameProp.GetString();
-                }
-                else if (root.TryGetProperty("ImageFileName", out var fileNameProp2))
-                {
-                    imageFileName = fileNameProp2.GetString();
-                }
-
-                if (imageData != null && !string.IsNullOrEmpty(imageFileName))
-                {
+                    _logger.LogInformation($"Transfer includes image: {imageFileName}");
                     var imageContent = new ByteArrayContent(imageData);
-                    imageContent.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+                    imageContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(imageFileName));
                     formContent.Add(imageContent, "ImageFile", imageFileName);
                 }
-
-                _logger.LogInformation($"Executing transfer for product {productId} to department {toDepartmentId}");
 
                 var response = await _httpClient.PostAsync(
                     $"{_configuration["Services:RouteService"]}/api/inventoryroutes/transfer/approved",
                     formContent,
                     cancellationToken);
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    _logger.LogError($"Transfer failed: {response.StatusCode} - {responseContent}");
-                }
-
+                LogResponseIfError(response, $"transfer product {productId}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
@@ -437,63 +382,263 @@ namespace ApprovalService.Infrastructure.Services
                 var jsonDoc = JsonDocument.Parse(actionData);
                 var root = jsonDoc.RootElement;
 
-                var routeId=root.GetProperty("RouteId").GetInt32();
-                var updateData=root.GetProperty("UpdateData");
+                var routeId = GetIntProperty(root, "routeId", "RouteId");
+                if (routeId == 0)
+                {
+                    _logger.LogError("Route ID not found in update action data");
+                    return false;
+                }
 
-                var json= JsonSerializer.Serialize(updateData);
+                // Extract update data
+                JsonElement updateDataElement = GetUpdateDataElement(root);
+
+                // Build update object
+                var updateDto = new
+                {
+                    notes = GetStringProperty(updateDataElement, "notes", "Notes")
+                };
+
+                _logger.LogInformation($"Updating route {routeId}");
+
+                var json = JsonSerializer.Serialize(updateDto);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
+
                 var response = await _httpClient.PutAsync(
                     $"{_configuration["Services:RouteService"]}/api/inventoryroutes/{routeId}/approved",
                     content,
                     cancellationToken);
+
+                LogResponseIfError(response, $"update route {routeId}");
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error executing update route");
-                throw;
+                return false;
             }
         }
 
         private async Task<bool> ExecuteDeleteRoute(string actionData, CancellationToken cancellationToken)
         {
-            var data = JsonSerializer.Deserialize<DeleteRouteActionData>(actionData);
-            if (data != null)
+            try
             {
+                var jsonDoc = JsonDocument.Parse(actionData);
+                var root = jsonDoc.RootElement;
+
+                var routeId = GetIntProperty(root, "routeId", "RouteId");
+                if (routeId == 0)
+                {
+                    _logger.LogError("Route ID not found in delete action data");
+                    return false;
+                }
+
+                _logger.LogInformation($"Deleting route {routeId}");
+
                 var response = await _httpClient.DeleteAsync(
-                $"{_configuration["Services:RouteService"]}/api/inventoryroutes/{data.RouteId}/approved",
-                cancellationToken);
+                    $"{_configuration["Services:RouteService"]}/api/inventoryroutes/{routeId}/approved",
+                    cancellationToken);
+
+                LogResponseIfError(response, $"delete route {routeId}");
                 return response.IsSuccessStatusCode;
             }
-            return false;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing delete route");
+                return false;
+            }
+        }
+
+
+        // Helper methods
+        private JsonElement GetProductElement(JsonElement root)
+        {
+            // Try to find product data in various locations
+            if (root.TryGetProperty("ProductData", out var productDataProp))
+                return productDataProp;
+
+            if (root.TryGetProperty("productData", out var productDataCamel))
+                return productDataCamel;
+
+            // If not nested, return root itself
+            return root;
+        }
+
+        private JsonElement GetUpdateDataElement(JsonElement root)
+        {
+            if (root.TryGetProperty("UpdateData", out var updateDataProp))
+                return updateDataProp;
+
+            if (root.TryGetProperty("updateData", out var updateDataCamel))
+                return updateDataCamel;
+
+            // If not found, return root (flat structure)
+            return root;
+        }
+
+        private byte[]? GetImageData(JsonElement element)
+        {
+            string? base64Data = null;
+
+            // Try various property names
+            var propertyNames = new[] { "imageData", "ImageData", "image", "Image" };
+
+            foreach (var propName in propertyNames)
+            {
+                if (element.TryGetProperty(propName, out var prop) &&
+                    prop.ValueKind == JsonValueKind.String)
+                {
+                    base64Data = prop.GetString();
+                    if (!string.IsNullOrEmpty(base64Data))
+                        break;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(base64Data))
+            {
+                try
+                {
+                    // Handle data URL format if present
+                    if (base64Data.Contains(","))
+                    {
+                        base64Data = base64Data.Split(',')[1];
+                    }
+
+                    return Convert.FromBase64String(base64Data);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"Failed to decode image data: {ex.Message}");
+                }
+            }
+
+            return null;
+        }
+
+        private string? GetImageFileName(JsonElement element)
+        {
+            var propertyNames = new[] { "imageFileName", "ImageFileName", "imageName", "ImageName", "filename", "FileName" };
+
+            foreach (var propName in propertyNames)
+            {
+                if (element.TryGetProperty(propName, out var prop) &&
+                    prop.ValueKind == JsonValueKind.String)
+                {
+                    var value = prop.GetString();
+                    if (!string.IsNullOrEmpty(value))
+                        return value;
+                }
+            }
+
+            return null;
         }
 
         private string GetStringProperty(JsonElement element, string camelCase, string pascalCase)
         {
-            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.String)
-                return prop.GetString() ?? "";
-            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.String)
-                return propPascal.GetString() ?? "";
+            // Try camelCase first
+            if (element.TryGetProperty(camelCase, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.String)
+                    return prop.GetString() ?? "";
+                if (prop.ValueKind != JsonValueKind.Null && prop.ValueKind != JsonValueKind.Undefined)
+                    return prop.ToString();
+            }
+
+            // Then try PascalCase
+            if (element.TryGetProperty(pascalCase, out var propPascal))
+            {
+                if (propPascal.ValueKind == JsonValueKind.String)
+                    return propPascal.GetString() ?? "";
+                if (propPascal.ValueKind != JsonValueKind.Null && propPascal.ValueKind != JsonValueKind.Undefined)
+                    return propPascal.ToString();
+            }
+
             return "";
         }
 
         private bool GetBoolProperty(JsonElement element, string camelCase, string pascalCase, bool defaultValue)
         {
-            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)
-                return prop.GetBoolean();
-            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.True || propPascal.ValueKind == JsonValueKind.False)
-                return propPascal.GetBoolean();
+            // Try camelCase
+            if (element.TryGetProperty(camelCase, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.True) return true;
+                if (prop.ValueKind == JsonValueKind.False) return false;
+
+                // Handle string representations
+                if (prop.ValueKind == JsonValueKind.String)
+                {
+                    var strValue = prop.GetString()?.ToLower();
+                    if (strValue == "true") return true;
+                    if (strValue == "false") return false;
+                }
+            }
+
+            // Try PascalCase
+            if (element.TryGetProperty(pascalCase, out var propPascal))
+            {
+                if (propPascal.ValueKind == JsonValueKind.True) return true;
+                if (propPascal.ValueKind == JsonValueKind.False) return false;
+
+                // Handle string representations
+                if (propPascal.ValueKind == JsonValueKind.String)
+                {
+                    var strValue = propPascal.GetString()?.ToLower();
+                    if (strValue == "true") return true;
+                    if (strValue == "false") return false;
+                }
+            }
+
             return defaultValue;
         }
 
         private int GetIntProperty(JsonElement element, string camelCase, string pascalCase)
         {
-            if (element.TryGetProperty(camelCase, out var prop) && prop.ValueKind == JsonValueKind.Number)
-                return prop.GetInt32();
-            if (element.TryGetProperty(pascalCase, out var propPascal) && propPascal.ValueKind == JsonValueKind.Number)
-                return propPascal.GetInt32();
+            // Try camelCase
+            if (element.TryGetProperty(camelCase, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.Number)
+                    return prop.GetInt32();
+
+                // Handle string representations
+                if (prop.ValueKind == JsonValueKind.String &&
+                    int.TryParse(prop.GetString(), out var parsed))
+                    return parsed;
+            }
+
+            // Try PascalCase
+            if (element.TryGetProperty(pascalCase, out var propPascal))
+            {
+                if (propPascal.ValueKind == JsonValueKind.Number)
+                    return propPascal.GetInt32();
+
+                // Handle string representations
+                if (propPascal.ValueKind == JsonValueKind.String &&
+                    int.TryParse(propPascal.GetString(), out var parsed))
+                    return parsed;
+            }
+
             return 0;
+        }
+
+        private string GetMimeType(string fileName)
+        {
+            var extension = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
+            return extension switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                _ => "application/octet-stream"
+            };
+        }
+
+        private async void LogResponseIfError(HttpResponseMessage response, string operation)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _logger.LogError($"Failed to {operation}: Status={response.StatusCode}, Content={content}");
+            }
         }
     }
 }

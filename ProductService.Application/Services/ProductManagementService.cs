@@ -299,8 +299,6 @@ namespace ProductService.Application.Services
                 changes.Add(updatedProduct.IsActive == true ? "Product is active now" : "Product is not available");
             if (existingProduct.IsWorking != updatedProduct.IsWorking)
                 changes.Add(updatedProduct.IsWorking == true ? "Product is working now" : "Product is not working ");
-            if (updatedProduct.ImageFile == null && existingProduct.ImageUrl != null)
-                changes.Add("Product image was removed");
             if (updatedProduct.ImageFile != null)
                 changes.Add("Product image was updated");
 

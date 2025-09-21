@@ -3,6 +3,7 @@ using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace ApprovalService.Application.Features.Commands
 {
@@ -16,18 +17,20 @@ namespace ApprovalService.Application.Features.Commands
             private readonly IUnitOfWork _unitOfWork;
             private readonly IActionExecutor _actionExecutor;
             private readonly IMessagePublisher _messagePublisher;
+            private readonly ILogger<Handler> _logger;
 
             public Handler(
                 IApprovalRequestRepository repository,
                 IUnitOfWork unitOfWork,
                 IActionExecutor actionExecutor,
-                IMessagePublisher messagePublisher
-                )
+                IMessagePublisher messagePublisher,
+                ILogger<Handler> logger)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _actionExecutor = actionExecutor;
                 _messagePublisher = messagePublisher;
+                _logger = logger;
             }
 
             public async Task<bool> Handle(Command request, CancellationToken cancellationToken = default)
@@ -50,21 +53,31 @@ namespace ApprovalService.Application.Features.Commands
                     var executed = await _actionExecutor.ExecuteAsync(
                         approvalRequest.RequestType,
                         approvalRequest.ActionData,
+                        request.UserId,      // Pass the admin's user ID
+                        request.UserName,    // Pass the admin's user name
                         cancellationToken);
 
                     if (executed)
                     {
                         approvalRequest.MarkAsExecuted();
+                        _logger.LogInformation("Request {RequestId} executed successfully by admin {AdminName}",
+                            request.RequestId, request.UserName);
                     }
+
                     else
                     {
                         approvalRequest.MarkAsFailed("Execution failed");
+                        _logger.LogWarning("Request {RequestId} execution failed for admin {AdminName}",
+                            request.RequestId, request.UserName);
                     }
                 }
                 catch (Exception ex)
                 {
                     approvalRequest.MarkAsFailed($"Execution error: {ex.Message}");
+                    _logger.LogError(ex, "Error executing request {RequestId} by admin {AdminName}",
+                        request.RequestId, request.UserName);
                 }
+
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

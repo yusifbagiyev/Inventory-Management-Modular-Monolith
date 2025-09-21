@@ -45,7 +45,7 @@ namespace ProductService.Application.Features.Products.Commands
                     DepartmentId=product.DepartmentId,
                     IsWorking= product.IsWorking,
                     DeletedAt = DateTime.Now,
-                    RemovedBy=request.userName
+                    RemovedBy=request.userName ?? "Unknown"
                 };
                 await _messagePublisher.PublishAsync(deletedEvent, "product.deleted", cancellationToken);
 
