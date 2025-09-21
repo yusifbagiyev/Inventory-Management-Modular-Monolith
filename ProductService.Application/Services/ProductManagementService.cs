@@ -6,6 +6,7 @@ using ProductService.Application.Features.Departments.Queries;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
+using ProductService.Domain.Repositories;
 using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
@@ -17,15 +18,21 @@ namespace ProductService.Application.Services
     {
         private readonly IMediator _mediator;
         private readonly IApprovalService _approvalService;
+        private readonly ICategoryRepository _categoryRepository;
+        private readonly IDepartmentRepository _departmentRepository;
         private readonly ILogger<ProductManagementService> _logger;
 
         public ProductManagementService(
             IMediator mediator,
             IApprovalService approvalService,
+            ICategoryRepository categoryRepository,
+            IDepartmentRepository departmentRepository,
             ILogger<ProductManagementService> logger)
         {
             _mediator = mediator;
             _approvalService = approvalService;
+            _categoryRepository = categoryRepository;
+            _departmentRepository = departmentRepository;
             _logger = logger;
         }
 
@@ -58,7 +65,10 @@ namespace ProductService.Application.Services
                 RequestType = RequestType.CreateProduct,
                 EntityType = "Product",
                 EntityId = null,
-                ActionData = new CreateProductActionData { ProductData = actionData }
+                ActionData = new 
+                {
+                    ProductData = actionData
+                }
             };
 
             var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
@@ -66,6 +76,7 @@ namespace ProductService.Application.Services
             _logger.LogInformation($"Approval request {result.Id} created for product {dto.InventoryCode}");
             throw new ApprovalRequiredException(result.Id, "Product creation request has been submitted for approval");
         }
+
 
         public async Task<ProductDto> UpdateProductWithApprovalAsync(
             int id,
@@ -75,34 +86,31 @@ namespace ProductService.Application.Services
             List<string> userPermissions)
         {
             // First, get the existing product to compare changes
-            var existingProduct = await _mediator.Send(new GetProductByIdQuery(id));
-            if (existingProduct == null)
+            var existingProduct = await GetProductById(id);
+
+            // Build comprehensive change tracking
+            var changeComparison = await TrackWhatChanges(existingProduct, dto);
+
+            // Only proceed if there are actual changes
+            if (!changeComparison.Any())
             {
-                throw new NotFoundException($"Product with ID {id} not found");
+                _logger.LogInformation($"No changes detected for product {id}");
+                return existingProduct;
             }
 
             // Check if user has direct update permission
             if (userPermissions.Contains(AllPermissions.ProductUpdateDirect))
             {
                 _logger.LogInformation($"User {userName} updating product {id} directly");
-                await _mediator.Send(new UpdateProduct.Command(id, dto));
-                return await _mediator.Send(new GetProductByIdQuery(id));
+                await _mediator.Send(new UpdateProduct.Command(id, dto,changeComparison));
+                return await GetProductById(id);
             }
+
 
             // Check if user has permission to update with approval
             if (!userPermissions.Contains(AllPermissions.ProductUpdate))
             {
                 throw new InsufficientPermissionsException("You don't have permission to update products");
-            }
-
-            // Build comprehensive change tracking
-            var changeComparison = await BuildChangeComparison(existingProduct, dto);
-
-            // Only proceed if there are actual changes
-            if (!changeComparison.HasChanges)
-            {
-                _logger.LogInformation($"No changes detected for product {id}");
-                return existingProduct;
             }
 
             // Create the update data and approval request
@@ -117,8 +125,7 @@ namespace ProductService.Application.Services
                     ProductId = id,
                     existingProduct.InventoryCode,
                     UpdateData = updateData,
-                    Changes = changeComparison.Changes,
-                    ChangesSummary = changeComparison.Summary
+                    Changes = changeComparison
                 }
             };
 
@@ -128,6 +135,7 @@ namespace ProductService.Application.Services
             throw new ApprovalRequiredException(result.Id, "Product update request submitted for approval");
         }
 
+
         public async Task DeleteProductWithApprovalAsync(
             int id,
             int userId,
@@ -135,11 +143,7 @@ namespace ProductService.Application.Services
             List<string> userPermissions)
         {
             // Get product information for the approval request
-            var product = await _mediator.Send(new GetProductByIdQuery(id));
-            if (product == null)
-            {
-                throw new NotFoundException($"Product with ID {id} not found");
-            }
+            var product = await GetProductById(id);
 
             // Check if user has direct delete permission
             if (userPermissions.Contains(AllPermissions.ProductDeleteDirect))
@@ -178,6 +182,12 @@ namespace ProductService.Application.Services
             throw new ApprovalRequiredException(result.Id, "Product deletion request submitted for approval");
         }
 
+
+        private async Task<ProductDto> GetProductById(int id)
+        {
+            return await _mediator.Send(new GetProductByIdQuery(id)) ??
+                throw new NotFoundException($"Product with ID {id} not found");
+        }
         private async Task ValidateProductDoesNotExist(int inventoryCode)
         {
             var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
@@ -185,17 +195,10 @@ namespace ProductService.Application.Services
             // Double-check with a small delay to avoid race conditions
             if (existingProduct != null)
             {
-                await Task.Delay(100);
-                existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
-
-                if (existingProduct != null)
-                {
-                    _logger.LogWarning($"Attempt to create duplicate product with inventory code {inventoryCode}");
-                    throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists");
-                }
+                _logger.LogWarning($"Attempt to create duplicate product with inventory code {inventoryCode}");
+                throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists");
             }
         }
-
         private async Task<Dictionary<string, object>> BuildCreateProductActionData(CreateProductDto dto)
         {
             var actionData = new Dictionary<string, object>
@@ -248,7 +251,10 @@ namespace ProductService.Application.Services
                 ["worker"] = dto.Worker ?? "",
                 ["description"] = dto.Description ?? "",
                 ["categoryId"] = dto.CategoryId,
-                ["departmentId"] = dto.DepartmentId
+                ["departmentId"] = dto.DepartmentId,
+                ["isWorking"] = dto.IsWorking,
+                ["isActive"] = dto.IsActive,
+                ["isNewItem"] = dto.IsNewItem,
             };
 
             // Add image data if present
@@ -261,130 +267,56 @@ namespace ProductService.Application.Services
                 updateData["imageSize"] = dto.ImageFile.Length;
             }
 
+            // If you want to remove image , send ImageFile as null
+            else
+            {
+                updateData["imageUrl"] = string.Empty;
+            }
+            
             return updateData;
         }
-
-        private async Task<ProductChangeComparison> BuildChangeComparison(ProductDto existing, UpdateProductDto updated)
+        public async Task<List<string>> TrackWhatChanges(ProductDto existingProduct, UpdateProductDto updatedProduct)
         {
-            var comparison = new ProductChangeComparison();
-            var changes = new Dictionary<string, ChangeDetail>();
+            ArgumentNullException.ThrowIfNull(existingProduct);
+            ArgumentNullException.ThrowIfNull(updatedProduct);
 
-            // Compare each field and track changes
-            if (existing.Model != updated.Model)
-            {
-                changes["Model"] = new ChangeDetail
-                {
-                    Old = existing.Model ?? "None",
-                    New = updated.Model ?? "None"
-                };
-            }
+            var changes = new List<string>();
+            if (existingProduct.Vendor != updatedProduct.Vendor)
+                changes.Add($"Vendor: {existingProduct.Vendor} → {updatedProduct.Vendor}");
+            if (existingProduct.Model != updatedProduct.Model)
+                changes.Add($"Model: {existingProduct.Model} → {updatedProduct.Model}");
+            if (existingProduct.CategoryId != updatedProduct.CategoryId)
+                changes.Add($"Category: {existingProduct.CategoryName} → {await GetCategoryNameAsync(updatedProduct.CategoryId)}");
+            if (existingProduct.DepartmentId != updatedProduct.DepartmentId)
+                changes.Add($"Department: {existingProduct.DepartmentName} → {await GetDepartmentNameAsync(updatedProduct.DepartmentId)}");
+            if (existingProduct.Worker != updatedProduct.Worker)
+                changes.Add($"Worker: {existingProduct.Worker ?? "None"} → {updatedProduct.Worker ?? "None"}");
+            if (existingProduct.Description != updatedProduct.Description)
+                changes.Add($"Description: {existingProduct.Description} → {updatedProduct.Description}");
+            if (existingProduct.IsNewItem != updatedProduct.IsNewItem)
+                changes.Add(updatedProduct.IsNewItem == true ? "Product is new now" : "Product's status changed to old");
+            if (existingProduct.IsActive != updatedProduct.IsActive)
+                changes.Add(updatedProduct.IsActive == true ? "Product is active now" : "Product is not available");
+            if (existingProduct.IsWorking != updatedProduct.IsWorking)
+                changes.Add(updatedProduct.IsWorking == true ? "Product is working now" : "Product is not working ");
+            if (updatedProduct.ImageFile == null && existingProduct.ImageUrl != null)
+                changes.Add("Product image was removed");
+            if (updatedProduct.ImageFile != null)
+                changes.Add("Product image was updated");
 
-            if (existing.Vendor != updated.Vendor)
-            {
-                changes["Vendor"] = new ChangeDetail
-                {
-                    Old = existing.Vendor ?? "None",
-                    New = updated.Vendor ?? "None"
-                };
-            }
-
-            if (existing.Worker != updated.Worker)
-            {
-                changes["Worker"] = new ChangeDetail
-                {
-                    Old = existing.Worker ?? "None",
-                    New = updated.Worker ?? "None"
-                };
-            }
-
-            if (existing.Description != updated.Description)
-            {
-                changes["Description"] = new ChangeDetail
-                {
-                    Old = existing.Description ?? "None",
-                    New = updated.Description ?? "None"
-                };
-            }
-
-            if (existing.CategoryId != updated.CategoryId)
-            {
-                // Get category names for better context
-                var oldCategory = await _mediator.Send(new GetCategoryByIdQuery(existing.CategoryId));
-                var newCategory = await _mediator.Send(new GetCategoryByIdQuery(updated.CategoryId));
-
-                changes["Category"] = new ChangeDetail
-                {
-                    Old = oldCategory?.Name ?? $"Category #{existing.CategoryId}",
-                    New = newCategory?.Name ?? $"Category #{updated.CategoryId}"
-                };
-            }
-
-            if (existing.DepartmentId != updated.DepartmentId)
-            {
-                // Get department names for better context
-                var oldDepartment = await _mediator.Send(new GetDepartmentByIdQuery(existing.DepartmentId));
-                var newDepartment = await _mediator.Send(new GetDepartmentByIdQuery(updated.DepartmentId));
-
-                changes["Department"] = new ChangeDetail
-                {
-                    Old = oldDepartment?.Name ?? $"Department #{existing.DepartmentId}",
-                    New = newDepartment?.Name ?? $"Department #{updated.DepartmentId}"
-                };
-            }
-
-            if (updated.ImageFile != null)
-            {
-                changes["Image"] = new ChangeDetail
-                {
-                    Old = "Current Image",
-                    New = $"New Image ({updated.ImageFile.FileName})"
-                };
-            }
-
-            if(existing.IsNewItem!=updated.IsNewItem)
-            {
-                changes["IsNewItem"] = new ChangeDetail
-                {
-                    Old = existing.IsNewItem ? "Product is new" : "Product is used",
-                    New = updated.IsNewItem ? "Product is new" : "Product is used"
-                };
-            }
-
-            if (existing.IsActive != updated.IsActive)
-            {
-                changes["IsActive"] = new ChangeDetail
-                {
-                    Old = existing.IsActive ? "Product is active" : "Product is not available",
-                    New = updated.IsActive ? "Product is active" : "Product is not available"
-                };
-            }
-
-            if (existing.IsWorking != updated.IsWorking)
-            {
-                changes["IsWorking"] = new ChangeDetail
-                {
-                    Old = existing.IsWorking ? "Product is working" : "Product is not working",
-                    New = updated.IsWorking ? "Product is working" : "Product is not working"
-                };
-            }
-
-            comparison.Changes = changes;
-            comparison.HasChanges = changes.Any();
-            comparison.Summary = GenerateChangeSummary(changes);
-
-            return comparison;
+            return changes;
         }
-
-        private string GenerateChangeSummary(Dictionary<string, ChangeDetail> changes)
+        public async Task<string?> GetCategoryNameAsync(int categoryId)
         {
-            if (!changes.Any())
-                return "No changes detected";
-
-            var summaryParts = changes.Select(kvp =>
-                $"{kvp.Key}: '{kvp.Value.Old}' → '{kvp.Value.New}'"
-            );
-
-            return string.Join(", ", summaryParts);
+            var categoryName = await _categoryRepository.GetByIdAsync(categoryId)
+                ?? throw new NotFoundException($"Category was not found with ID: {categoryId}");
+            return categoryName?.Name;
+        }
+        public async Task<string?> GetDepartmentNameAsync(int departmentId)
+        {
+            var departmentName = await _departmentRepository.GetByIdAsync(departmentId)
+                ?? throw new NotFoundException($"Department was not found with ID: {departmentId}");
+            return departmentName.Name;
         }
     }
 }

@@ -123,34 +123,34 @@
 
     // Simplified handleSuccess function
     function handleSuccess(response, form, settings) {
-        // Check for various error indicators in the response
-        if (response && (
-            response.isSuccess === false ||
-            response.success === false ||
-            (response.message && response.message.toLowerCase().includes('error'))
-        )) {
-            // This is actually an error response
-            const errorMessage = response.message || 'Operation failed';
-            showToast(errorMessage, 'error');
-
-            if (settings.onError) {
-                settings.onError(errorMessage, response);
-            }
-            return;
-        }
-
-        // Check if it's an approval request
+        // FIRST: Check if this is an approval request (before checking for errors)
         if (isApprovalRequest(response)) {
             const message = response.message || 'Request submitted for approval';
             showToast(message, 'info');
 
+            // Still redirect for approval requests
             if (settings.successRedirect) {
                 setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
             }
             return;
         }
 
-        // Handle normal success
+        // THEN: Check for actual errors
+        if (response && (
+            response.isSuccess === false ||
+            response.success === false ||
+            (response.message && response.message.toLowerCase().includes('error'))
+        )) {
+            const errorMessage = response.message || 'Operation failed';
+            showToast(errorMessage, 'error');
+
+            if (settings.onError) {
+                settings.onError(errorMessage, response);
+            }
+            return; // Don't redirect on actual errors
+        }
+
+        // Finally: Handle normal success
         if (settings.onSuccess) {
             const result = settings.onSuccess(response);
             if (result === false) return;

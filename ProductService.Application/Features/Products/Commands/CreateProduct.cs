@@ -30,8 +30,6 @@ namespace ProductService.Application.Features.Products.Commands
         public class CreateProductCommandHandler : IRequestHandler<Command, ProductDto>
         {
             private readonly IProductRepository _productRepository;
-            private readonly ICategoryRepository _categoryRepository;
-            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IMapper _mapper;
             private readonly IImageService _imageService;
@@ -40,8 +38,6 @@ namespace ProductService.Application.Features.Products.Commands
 
             public CreateProductCommandHandler(
                 IProductRepository productRepository,
-                ICategoryRepository categoryRepository,
-                IDepartmentRepository departmentRepository,
                 IUnitOfWork unitOfWork,
                 IMapper mapper,
                 IImageService ımageService,
@@ -49,8 +45,6 @@ namespace ProductService.Application.Features.Products.Commands
                 IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
-                _categoryRepository = categoryRepository;
-                _departmentRepository = departmentRepository;
                 _unitOfWork = unitOfWork;
                 _mapper = mapper;
                 _imageService = ımageService;
@@ -61,12 +55,6 @@ namespace ProductService.Application.Features.Products.Commands
             public async Task<ProductDto> Handle(Command request, CancellationToken cancellationToken)
             {
                 var dto = request.ProductDto;
-
-                if (!await _categoryRepository.ExistsByIdAsync(dto.CategoryId, cancellationToken))
-                    throw new ArgumentException($"Category with ID {dto.CategoryId} not found");
-
-                if (!await _departmentRepository.ExistsByIdAsync(dto.DepartmentId, cancellationToken))
-                    throw new ArgumentException($"Department with ID {dto.DepartmentId} not found");
 
                 var imageUrl = string.Empty;
 

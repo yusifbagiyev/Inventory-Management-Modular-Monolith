@@ -151,92 +151,38 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-        // Image handling functions
-        function removeCurrentImage() {
-            $('#currentImageContainer').hide();
-            $('#RemoveImage').val('true');
-            $('#newImageContainer label').text('Upload New Image');
-        }
 
-        function previewNewImage(input, previewId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    $('#' + previewId).attr('src', e.target.result).show();
-                };
-                reader.readAsDataURL(input.files[0]);
-
-                if ($('#currentImageContainer').length) {
-                    $('#currentImageContainer').hide();
-                    $('#RemoveImage').val('true');
-                }
-            }
-        }
-
-        // Initialize AJAX form handler
-                $(document).ready(function() {
-            $('#editProductForm').on('submit', function(e) {
-                e.preventDefault();
-
-                const form = this;
-                const formData = new FormData(form);
-
-                // Ensure boolean values are properly set
-                formData.set('IsWorking', $('#IsWorking').is(':checked'));
-                formData.set('IsActive', $('#IsActive').is(':checked'));
-                formData.set('IsNewItem', $('#IsNewItem').is(':checked'));
-
-                // Debug: Log form data
-                for(let pair of formData.entries()) {
-                    console.log(pair[0] + ': ' + pair[1]);
-                }
-
-                const $submitBtn = $(form).find('button[type="submit"]');
-                const originalText = $submitBtn.html();
-
-                $submitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
-
-                $.ajax({
-                    url: form.action,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        console.log('Update response:', response);
-
-                        if (response.isApprovalRequest) {
-                            showToast('Update submitted for approval', 'info');
-                        } else if (response.isSuccess === false) {
-                            showToast(response.message || 'Update failed', 'error');
-                            $submitBtn.prop('disabled', false).html(originalText);
-                            return;
-                        } else {
-                            showToast('Product updated successfully!', 'success');
-                        }
-
-                        setTimeout(() => window.location.href = '/Products', 1500);
-                    },
-                    error: function(xhr) {
-                        console.error('Update error:', xhr);
-                        $submitBtn.prop('disabled', false).html(originalText);
-
-                        let errorMsg = 'Failed to update product';
-                        if (xhr.responseJSON) {
-                            errorMsg = xhr.responseJSON.message ||
-                                      xhr.responseJSON.error ||
-                                      errorMsg;
-                        }
-
-                        showToast(errorMsg, 'error');
-                    }
-                });
+        $(document).ready(function() {
+            AjaxHandler.handleForm('form', {
+                successMessage: 'Product updated successfully!',
+                successRedirect: '@Url.Action("Index")',
+                redirectDelay: 1500
             });
         });
+
+                    // Image handling functions
+            function removeCurrentImage() {
+                $('#currentImageContainer').hide();
+                $('#RemoveImage').val('true');
+                $('#newImageContainer label').text('Upload New Image');
+            }
+
+            function previewNewImage(input, previewId) {
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#' + previewId).attr('src', e.target.result).show();
+                    };
+                    reader.readAsDataURL(input.files[0]);
+
+                    if ($('#currentImageContainer').length) {
+                        $('#currentImageContainer').hide();
+                        $('#RemoveImage').val('true');
+                    }
+                }
+            }
     </script>
 }

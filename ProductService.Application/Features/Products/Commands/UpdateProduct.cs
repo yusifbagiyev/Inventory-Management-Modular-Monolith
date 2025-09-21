@@ -10,7 +10,7 @@ namespace ProductService.Application.Features.Products.Commands
 {
     public class UpdateProduct
     {
-        public record Command(int Id, UpdateProductDto ProductDto) : IRequest;
+        public record Command(int Id, UpdateProductDto ProductDto,List<string> changes) : IRequest;
 
         public class Validator : AbstractValidator<Command>
         {
@@ -30,8 +30,6 @@ namespace ProductService.Application.Features.Products.Commands
         public class UpdateProductCommandHandler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
-            private readonly ICategoryRepository _categoryRepository;
-            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IImageService _imageService;
             private readonly ITransactionService _transactionService;
@@ -39,16 +37,12 @@ namespace ProductService.Application.Features.Products.Commands
 
             public UpdateProductCommandHandler(
                 IProductRepository productRepository,
-                ICategoryRepository categoryRepository,
-                IDepartmentRepository departmentRepository,
                 IUnitOfWork unitOfWork,
                 IImageService imageService,
                 ITransactionService transactionService,
                 IMessagePublisher messagePublisher)
             {
                 _productRepository = productRepository;
-                _categoryRepository = categoryRepository;
-                _departmentRepository = departmentRepository;
                 _unitOfWork = unitOfWork;
                 _imageService = imageService;
                 _transactionService = transactionService;
@@ -60,12 +54,14 @@ namespace ProductService.Application.Features.Products.Commands
                 var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Product with ID {request.Id} not found");
 
-                var dto = request.ProductDto;
-
-                var existingProduct = new ExistingProduct
+                var updatedProduct = request.ProductDto;
+                var changes=request.changes;
+                var existingProduct = new ProductDto
                 {
-                    ProductId = product.Id,
+                    Id = product.Id,
                     InventoryCode = product.InventoryCode,
+                    Vendor = product.Vendor,
+                    Model = product.Model,
                     CategoryId = product.CategoryId,
                     CategoryName = product.Category?.Name,
                     DepartmentId = product.DepartmentId,
@@ -74,99 +70,57 @@ namespace ProductService.Application.Features.Products.Commands
                     Description = product.Description,
                     IsActive = product.IsActive,
                     IsNewItem = product.IsNewItem,
-                    IsWorking = product.IsWorking
+                    IsWorking = product.IsWorking,
+                    ImageUrl = product.ImageUrl
                 };
 
-                // Track what changed
-                var changes = new List<string>();
+                var oldImageUrl = existingProduct.ImageUrl;
+                var newImageUrl = oldImageUrl;
+                var shouldUpdateImage = updatedProduct.ImageFile != null && updatedProduct.ImageFile.Length > 0;
 
-                if (product.Model != dto.Model)
-                    changes.Add($"Model: {product.Model} → {dto.Model}");
-
-                if (product.Vendor != dto.Vendor)
-                    changes.Add($"Vendor: {product.Vendor} → {dto.Vendor}");
-
-                if (product.Worker != dto.Worker)
-                    changes.Add($"Worker: {product.Worker ?? "None"} → {dto.Worker ?? "None"}");
-
-                if (product.CategoryId != dto.CategoryId)
-                    changes.Add($"Category: {product.Category?.Name} → {await GetCategoryNameAsync(dto.CategoryId)}");
-
-                if (product.DepartmentId != dto.DepartmentId)
-                    changes.Add($"Department: {product.Department?.Name} → {await GetDepartmentNameAsync(dto.DepartmentId)}");
-
-                if(product.Description != dto.Description)
-                    changes.Add($"Description: {product.Description} → {dto.Description}");
-
-                if (product.IsNewItem != dto.IsNewItem)
-                    changes.Add(dto.IsNewItem==true? "Product is new now" : "Product's status changed to old");
-
-                if (product.IsActive != dto.IsActive)
-                    changes.Add(dto.IsActive==true ? "Product is active now" : "Product is not available");
-
-                if (product.IsWorking != dto.IsWorking)
-                    changes.Add(dto.IsWorking==true ? "Product is working now" : "Product is not working ");
-
-                if (dto.ImageFile != null)
-                    changes.Add($"Image uploaded");
-
-
-                var oldImageUrl = product.ImageUrl;
-                var newImageUrl = product.ImageUrl;
-                var shouldUpdateImage = dto.ImageFile != null && dto.ImageFile.Length > 0;
                 await _transactionService.ExecuteAsync(
                     async () =>
                     {
+                        var updateEvent = new ProductUpdatedEvent
+                        {
+                            Product = existingProduct,
+                            Changes = string.Join(", ", changes),
+                            UpdatedAt = DateTime.Now,
+                        };
+
                         if (shouldUpdateImage)
                         {
                             // Upload new image
-                            using var stream = dto.ImageFile!.OpenReadStream();
-                            newImageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
+                            using var stream = updatedProduct.ImageFile!.OpenReadStream();
+                            newImageUrl = await _imageService.UploadImageAsync(stream, updatedProduct.ImageFile.FileName, product.InventoryCode);
+
+                            using var ms = new MemoryStream();
+                            await updatedProduct.ImageFile!.CopyToAsync(ms);
+                            updateEvent.ImageData = ms.ToArray();
+                            updateEvent.ImageFileName = updatedProduct.ImageFile.FileName;
                         }
-
-                        // Update product with new image URL or keep the old one
-                        product.Update(
-                            dto.Model,
-                            dto.Vendor,
-                            dto.CategoryId,
-                            dto.DepartmentId,
-                            dto.Worker,
-                            shouldUpdateImage ? newImageUrl : oldImageUrl,
-                            dto.Description,
-                            dto.IsActive,
-                            dto.IsNewItem,
-                            dto.IsWorking);
-
-                        await _productRepository.UpdateAsync(product, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-
                         // Delete old image only after successful update
                         if (shouldUpdateImage && !string.IsNullOrEmpty(oldImageUrl))
                         {
                             await _imageService.DeleteImageAsync(oldImageUrl);
                         }
 
-                        // Publish update event
-                        if (changes.Any())
-                        {
-                            var updateEvent = new ProductUpdatedEvent
-                            {
-                                Product = existingProduct,
-                                Changes = string.Join(", ", changes),
-                                UpdatedAt = DateTime.Now,
-                            };
+                        // Update product with new image URL or keep the old one
+                        product.Update(
+                            updatedProduct.Model,
+                            updatedProduct.Vendor,
+                            updatedProduct.CategoryId,
+                            updatedProduct.DepartmentId,
+                            updatedProduct.Worker,
+                            shouldUpdateImage ? newImageUrl : oldImageUrl,
+                            updatedProduct.Description,
+                            updatedProduct.IsActive,
+                            updatedProduct.IsNewItem,
+                            updatedProduct.IsWorking);
 
-                            if (shouldUpdateImage)
-                            {
-                                using var ms = new MemoryStream();
-                                await dto.ImageFile!.CopyToAsync(ms);
-                                updateEvent.ImageData = ms.ToArray();
-                                updateEvent.ImageFileName = dto.ImageFile.FileName;
-                            }
-
-                            await _messagePublisher.PublishAsync(updateEvent, "product.updated", cancellationToken);
-                        }
+                        await _productRepository.UpdateAsync(product, cancellationToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        await _messagePublisher.PublishAsync(updateEvent, "product.updated", cancellationToken);
                         return Task.CompletedTask;
                     },
                     async () =>
@@ -177,20 +131,6 @@ namespace ProductService.Application.Features.Products.Commands
                             await _imageService.DeleteImageAsync(newImageUrl);
                         }
                     });
-            }
-
-
-            private async Task<string?> GetCategoryNameAsync(int categoryId)
-            {
-                var categoryName = await _categoryRepository.GetByIdAsync(categoryId)
-                    ?? throw new NotFoundException($"Category was not found with ID: {categoryId}");
-                return categoryName?.Name;
-            }
-            private async Task<string?> GetDepartmentNameAsync(int departmentId)
-            {
-                var departmentName = await _departmentRepository.GetByIdAsync(departmentId)
-                    ?? throw new NotFoundException($"Department was not found with ID: {departmentId}");
-                return departmentName.Name;
             }
         }
     }

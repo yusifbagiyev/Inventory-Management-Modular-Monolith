@@ -125,7 +125,7 @@ namespace ProductService.API.Controllers
                 var userName = GetUserName();
                 var userPermissions = GetUserPermissions();
 
-                var product = await _productManagementService.UpdateProductWithApprovalAsync(
+                await _productManagementService.UpdateProductWithApprovalAsync(
                     id, dto, userId, userName, userPermissions);
 
                 return NoContent();
@@ -184,7 +184,7 @@ namespace ProductService.API.Controllers
         {
             try
             {
-                await _mediator.Send(new UpdateProduct.Command(id, dto));
+                await Update(id,dto);
                 return NoContent();
             }
             catch (Exception ex)
@@ -282,7 +282,7 @@ namespace ProductService.API.Controllers
             if (dto == null)
                 return BadRequest("Invalid update data");
 
-            await _mediator.Send(new UpdateProduct.Command(id, dto));
+            await Update(id, dto);
             return NoContent();
         }
 

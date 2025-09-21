@@ -4,6 +4,7 @@ using ProductService.Application.Events;
 using ProductService.Application.Interfaces;
 using SharedServices.Exceptions;
 using ProductService.Domain.Repositories;
+using ProductService.Application.DTOs;
 
 namespace ProductService.Application.Features.Products.Commands
 {
@@ -60,9 +61,9 @@ namespace ProductService.Application.Features.Products.Commands
                 {
                     var eventMessage = new ProductUpdatedEvent
                     {
-                        Product=new ExistingProduct
+                        Product=new ProductDto
                         {
-                            ProductId = product.Id,
+                            Id = product.Id,
                             InventoryCode = product.InventoryCode,
                             CategoryId = product.CategoryId,
                             DepartmentId = product.DepartmentId,
