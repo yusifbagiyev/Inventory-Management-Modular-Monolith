@@ -65,7 +65,7 @@ namespace ProductService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.Trim();
+                search = search.Trim().ToLower();
                 query = query.Where(r =>
                     EF.Functions.ILike(r.InventoryCode.ToString(), $"%{search}%") ||
                     EF.Functions.ILike(r.Vendor, $"%{search}%") ||
