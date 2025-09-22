@@ -1,10 +1,10 @@
-﻿using RouteService.Domain.ValueObjects;
+﻿using RouteService.Application.DTOs;
 
 namespace RouteService.Application.Events
 {
     public record ProductUpdatedEvent
     {
-        public ExistingProduct Product { get; set; } = null!;
+        public ProductDto Product { get; set; } = null!;
         public string? Changes { get; set; } = string.Empty;
         public byte[]? ImageData { get; set; } = null;
         public string? ImageFileName { get; set; } = null;

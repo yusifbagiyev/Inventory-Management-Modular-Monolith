@@ -37,6 +37,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
         public async Task<IActionResult> Details(int id)
         {
             try

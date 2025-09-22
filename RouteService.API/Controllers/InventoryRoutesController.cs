@@ -144,6 +144,7 @@ namespace RouteService.API.Controllers
             return Ok(result);
         }
 
+
         [HttpGet("{id}")]
         [Permission(AllPermissions.RouteView)]
         public async Task<ActionResult<InventoryRouteDto>> GetById(int id)

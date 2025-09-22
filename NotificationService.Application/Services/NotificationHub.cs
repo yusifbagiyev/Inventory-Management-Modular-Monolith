@@ -41,7 +41,7 @@ namespace NotificationService.Application.Services
                 _logger.LogInformation($"User {userId} connected with ID {Context.ConnectionId}");
 
                 // Send connection confirmation with initial data
-                await Clients.Caller.SendAsync("ConnectionEstablished", new
+                await Clients.Caller.SendAsync("connectionestablished", new
                 {
                     connectionId = Context.ConnectionId,
                     userId = userId,

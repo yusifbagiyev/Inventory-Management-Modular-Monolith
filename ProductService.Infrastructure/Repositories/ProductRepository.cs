@@ -82,6 +82,7 @@ namespace ProductService.Infrastructure.Repositories
 
             var items = await query
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r=>r.UpdatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);

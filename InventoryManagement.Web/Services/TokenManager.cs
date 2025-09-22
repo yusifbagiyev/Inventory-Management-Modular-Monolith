@@ -17,6 +17,8 @@ namespace InventoryManagement.Web.Services
         private static DateTime _lastSuccessfulRefresh = DateTime.MinValue;
         private static readonly TimeSpan _refreshCooldown = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan _minRefreshInterval = TimeSpan.FromSeconds(5);
+        private const int RefreshTimeoutSeconds = 10;
+
 
         // Cache for tracking ongoing refresh operations
         private static readonly Dictionary<string, Task<bool>> _refreshOperations = new();
@@ -62,21 +64,96 @@ namespace InventoryManagement.Web.Services
                 return currentToken;
             }
 
-            // Token needs refresh - use coordinated refresh
-            _logger.LogInformation("Token expired or expiring soon, attempting coordinated refresh");
-            var refreshSuccess = await CoordinatedRefreshAsync(context);
+            // Use timeout for refresh operation
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
 
-            if (refreshSuccess)
+
+            try
             {
-                var newToken = GetCurrentToken(context);
-                _logger.LogInformation("Token successfully refreshed");
-                return newToken;
+                _logger.LogInformation("Token expired or expiring soon, attempting refresh");
+                var refreshSuccess = await RefreshTokenWithTimeoutAsync(context, cts.Token);
+
+                if (refreshSuccess)
+                {
+                    var newToken = GetCurrentToken(context);
+                    _logger.LogInformation("Token successfully refreshed");
+                    return newToken;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogError("Token refresh operation timed out after {Timeout} seconds", RefreshTimeoutSeconds);
             }
 
             _logger.LogWarning("Failed to refresh expired token");
             return null;
         }
 
+
+        private async Task<bool> RefreshTokenWithTimeoutAsync(HttpContext context, CancellationToken cancellationToken)
+        {
+            // Try to acquire the semaphore with timeout
+            if (!await _refreshSemaphore.WaitAsync(100, cancellationToken))
+            {
+                _logger.LogDebug("Could not acquire refresh semaphore, another refresh in progress");
+
+                // Wait a bit and check if refresh succeeded
+                await Task.Delay(500, cancellationToken);
+                return DateTime.UtcNow - _lastRefreshAttempt < TimeSpan.FromSeconds(5);
+            }
+
+            try
+            {
+                // Check if we recently refreshed
+                if (DateTime.UtcNow - _lastRefreshAttempt < TimeSpan.FromSeconds(5))
+                {
+                    _logger.LogDebug("Token was recently refreshed, skipping");
+                    return true;
+                }
+
+                _lastRefreshAttempt = DateTime.UtcNow;
+
+                var tokenInfo = GetTokenInfo(context);
+                if (string.IsNullOrEmpty(tokenInfo.AccessToken) ||
+                    string.IsNullOrEmpty(tokenInfo.RefreshToken))
+                {
+                    _logger.LogWarning("Missing tokens for refresh");
+                    return false;
+                }
+
+                _logger.LogInformation("Attempting to refresh token");
+
+                // Call auth service with cancellation token support
+                var refreshTask = _authService.RefreshTokenAsync(
+                    tokenInfo.AccessToken,
+                    tokenInfo.RefreshToken);
+
+                var completedTask = await Task.WhenAny(
+                    refreshTask,
+                    Task.Delay(TimeSpan.FromSeconds(RefreshTimeoutSeconds), cancellationToken));
+
+                if (completedTask != refreshTask)
+                {
+                    _logger.LogError("Token refresh timed out");
+                    return false;
+                }
+
+                var newTokens = await refreshTask;
+
+                if (newTokens == null || string.IsNullOrEmpty(newTokens.AccessToken))
+                {
+                    _logger.LogError("Token refresh returned invalid tokens");
+                    return false;
+                }
+
+                StoreTokens(newTokens, tokenInfo.RememberMe);
+                return true;
+            }
+            finally
+            {
+                _refreshSemaphore.Release();
+            }
+        }
 
 
         /// <summary>

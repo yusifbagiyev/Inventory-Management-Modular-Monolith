@@ -1,4 +1,5 @@
 ﻿@model MyRequestsViewModel
+    @Html.AntiForgeryToken()
 <div class="container-fluid px-4">
     <h1 class="mt-4">My Approval Requests</h1>
     <ol class="breadcrumb mb-4">
@@ -168,17 +169,93 @@
             });
         }
 
-        function cancelRequest(requestId) {
+         function cancelRequest(requestId) {
             if (confirm('Are you sure you want to cancel this request?')) {
-                $.post(`/MyRequests/Cancel/${requestId}`, function(response) {
-                    if (response.success) {
-                        showToast('Request cancelled successfully', 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        showToast('Failed to cancel request: ' + response.message, 'error');
+                // Get the anti-forgery token from the page
+                const token = $('input[name="__RequestVerificationToken"]').val();
+
+                // Show loading state
+                const $cancelButton = $(`button[onclick="cancelRequest(${requestId})"]`);
+                const originalButtonText = $cancelButton.html();
+                $cancelButton.prop('disabled', true)
+                            .html('<span class="spinner-border spinner-border-sm me-2"></span>Cancelling...');
+
+                $.ajax({
+                    url: `/MyRequests/Cancel/${requestId}`,
+                    type: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
+                    },
+                    data: {
+                        __RequestVerificationToken: token
+                    },
+                    success: function(response) {
+                        console.log('Raw response:', response); // This will help us see exactly what we're getting
+
+                        // Be very explicit about what constitutes success
+                        let isSuccess = false;
+                        let message = 'Request cancelled successfully';
+
+                        // Handle different response formats your server might return
+                        if (typeof response === 'object' && response !== null) {
+                            // Check for explicit success indicators
+                            isSuccess = response.success === true ||
+                                       response.isSuccess === true ||
+                                       response.Success === true;
+
+                            // Extract the message if available
+                            if (response.message) message = response.message;
+                            else if (response.Message) message = response.Message;
+                        } else if (typeof response === 'string') {
+                            // Sometimes servers return plain text success messages
+                            isSuccess = true;
+                            message = response;
+                        } else {
+                            // If we get here and the AJAX call reached 'success', assume it worked
+                            isSuccess = true;
+                        }
+
+                        if (isSuccess) {
+                            // Explicitly show success toast
+                            showToast(message, 'success');
+
+                            // Refresh the page after a brief delay to show the success message
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            // Handle case where server returned success HTTP status but indicates failure in response
+                            showToast(message || 'Failed to cancel request', 'error');
+                            $cancelButton.prop('disabled', false).html(originalButtonText);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Cancel request failed:', {
+                            status: xhr.status,
+                            responseText: xhr.responseText,
+                            error: error
+                        });
+
+                        // Extract meaningful error message
+                        let errorMessage = 'Failed to cancel request';
+
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                errorMessage = response.message || response.error || errorMessage;
+                            } catch (e) {
+                                if (xhr.responseText.length < 200 && !xhr.responseText.includes('<')) {
+                                    errorMessage = xhr.responseText;
+                                }
+                            }
+                        }
+
+                        showToast(errorMessage, 'error');
+                        $cancelButton.prop('disabled', false).html(originalButtonText);
                     }
-                }).fail(function() {
-                    showToast('Failed to cancel request', 'error');
                 });
             }
         }

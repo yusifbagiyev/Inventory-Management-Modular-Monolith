@@ -222,7 +222,7 @@
                                                     </a>
                                                 }
 
-                                                @if (!route.IsCompleted)
+                                                @if ((User.HasPermission("route.complete") && !route.IsCompleted))
                                                 {
                                                     <button type="button" class="btn btn-sm btn-success"
                                                             onclick="completeRoute(@route.Id)" title="Complete">

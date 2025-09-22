@@ -109,7 +109,7 @@ namespace RouteService.Domain.Entities
 
 
         public static InventoryRoute CreateUpdate(
-            ExistingProduct existingProduct,
+            ExistingProduct changedProduct,
             ProductSnapshot updatedProduct,
             int departmentId,
             string departmentName,
@@ -121,11 +121,11 @@ namespace RouteService.Domain.Entities
             {
                 RouteType = RouteType.Update,
                 ProductSnapshot = updatedProduct,
-                FromDepartmentId = existingProduct.DepartmentId,
-                FromDepartmentName = existingProduct.DepartmentName,
+                FromDepartmentId = changedProduct.DepartmentId,
+                FromDepartmentName = changedProduct.DepartmentName,
                 ToDepartmentId = departmentId,
                 ToDepartmentName = departmentName,
-                FromWorker = existingProduct.Worker,
+                FromWorker = changedProduct.Worker,
                 ToWorker = worker,
                 ImageUrl = imageUrl,
                 Notes = notes,

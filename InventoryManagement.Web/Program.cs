@@ -1,5 +1,6 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
+using InventoryManagement.Web.Services;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -38,6 +39,7 @@ try
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.IOTimeout = TimeSpan.FromSeconds(10); // Add timeout for session operations
     });
 
 
@@ -107,6 +109,9 @@ try
     builder.Services.AddSignalR();
 
     builder.Services.AddMemoryCache();
+
+    builder.Services.AddHostedService<TokenRefreshBackgroundService>();
+
 
     var app = builder.Build();
 

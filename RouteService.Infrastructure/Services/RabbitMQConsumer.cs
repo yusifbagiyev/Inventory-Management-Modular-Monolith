@@ -206,7 +206,7 @@ namespace RouteService.Infrastructure.Services
         }
 
 
-        private async Task ProcessProductUpdated(ProductUpdatedEvent existingProduct)
+        private async Task ProcessProductUpdated(ProductUpdatedEvent receivedProduct)
         {
             using var scope = _serviceProvider.CreateScope();
             var repository = scope.ServiceProvider.GetRequiredService<IInventoryRouteRepository>();
@@ -215,38 +215,51 @@ namespace RouteService.Infrastructure.Services
             var productClient = scope.ServiceProvider.GetRequiredService<IProductServiceClient>();
 
             // Get current product details
-            var product = await productClient.GetProductByIdAsync(existingProduct.Product.ProductId);
+            var product = await productClient.GetProductByIdAsync(receivedProduct.Product.Id);
             if (product == null) return;
 
             string? imageUrl = product.ImageUrl;
 
             // Upload image if data is provided
-            if (existingProduct.ImageData != null && existingProduct.ImageData.Length > 0)
+            if (receivedProduct.ImageData != null && receivedProduct.ImageData.Length > 0)
             {
-                using var stream = new MemoryStream(existingProduct.ImageData);
+                using var stream = new MemoryStream(receivedProduct.ImageData);
                 imageUrl = await imageService.UploadImageAsync(
                     stream,
-                    existingProduct.ImageFileName ?? $"image-{DateTime.Now}.jpg",
-                    existingProduct.Product.InventoryCode);
+                    receivedProduct.ImageFileName ?? $"image-{DateTime.Now}.jpg",
+                    receivedProduct.Product.InventoryCode);
             }
 
             var updatedProduct = new ProductSnapshot(
-                existingProduct.Product.ProductId,
-                existingProduct.Product.InventoryCode,
+                receivedProduct.Product.Id,
+                receivedProduct.Product.InventoryCode,
                 product.Model,
                 product.Vendor,
                 product.CategoryName,
                 product.IsWorking);
 
+            var changedProduct = new ExistingProduct(
+                receivedProduct.Product.Id,
+                receivedProduct.Product.InventoryCode,
+                receivedProduct.Product.CategoryId,
+                receivedProduct.Product.CategoryName,
+                receivedProduct.Product.DepartmentId,
+                receivedProduct.Product.DepartmentName,
+                receivedProduct.Product.Worker,
+                receivedProduct.Product.Description,
+                receivedProduct.Product.IsActive,
+                receivedProduct.Product.IsNewItem,
+                receivedProduct.Product.IsWorking);
+
             // Create an update route entry
             var route = InventoryRoute.CreateUpdate(
-                existingProduct.Product,
+                changedProduct,
                 updatedProduct,
                 product.DepartmentId,
                 product.DepartmentName,
                 product.Worker,
                 imageUrl,
-                $"Product updated: {existingProduct.Changes}");
+                $"Product updated: {receivedProduct.Changes}");
 
             await repository.AddAsync(route);
             route.Complete();
