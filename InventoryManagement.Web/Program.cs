@@ -110,8 +110,6 @@ try
 
     builder.Services.AddMemoryCache();
 
-    builder.Services.AddHostedService<TokenRefreshBackgroundService>();
-
 
     var app = builder.Build();
 
