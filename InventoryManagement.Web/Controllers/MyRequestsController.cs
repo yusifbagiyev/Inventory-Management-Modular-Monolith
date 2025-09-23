@@ -53,7 +53,7 @@ namespace InventoryManagement.Web.Controllers
                     return Forbid();
                 }
 
-                return View(request);
+                return PartialView("~/Views/Approvals/_ApprovalDetails.cshtml", request);
             }
             catch (Exception ex)
             {
