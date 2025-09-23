@@ -59,20 +59,24 @@ namespace InventoryManagement.Web.Services
             var tokenValidation = ValidateToken(currentToken);
             if (tokenValidation.IsValid)
             {
-                _logger.LogDebug("Current token is still valid for {Minutes:F2} minutes",
-                    tokenValidation.TimeUntilExpiry.TotalMinutes);
                 return currentToken;
             }
 
-            // Use timeout for refresh operation
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(RefreshTimeoutSeconds));
+            _logger.LogInformation("Token expired or expiring soon, attempting refresh");
 
+            var refreshToken = context.Session.GetString("RefreshToken")
+                ?? context.Request.Cookies["refresh_token"];
 
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                _logger.LogWarning("No refresh token available for renewal");
+                return null;
+            }
+
+            // Attempt refresh with proper error handling
             try
             {
-                _logger.LogInformation("Token expired or expiring soon, attempting refresh");
-                var refreshSuccess = await RefreshTokenWithTimeoutAsync(context, cts.Token);
-
+                var refreshSuccess = await RefreshTokenAsync();
                 if (refreshSuccess)
                 {
                     var newToken = GetCurrentToken(context);
@@ -80,79 +84,13 @@ namespace InventoryManagement.Web.Services
                     return newToken;
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
-                _logger.LogError("Token refresh operation timed out after {Timeout} seconds", RefreshTimeoutSeconds);
+                _logger.LogError(ex, "Token refresh failed");
             }
 
             _logger.LogWarning("Failed to refresh expired token");
             return null;
-        }
-
-
-        private async Task<bool> RefreshTokenWithTimeoutAsync(HttpContext context, CancellationToken cancellationToken)
-        {
-            // Try to acquire the semaphore with timeout
-            if (!await _refreshSemaphore.WaitAsync(100, cancellationToken))
-            {
-                _logger.LogDebug("Could not acquire refresh semaphore, another refresh in progress");
-
-                // Wait a bit and check if refresh succeeded
-                await Task.Delay(500, cancellationToken);
-                return DateTime.UtcNow - _lastRefreshAttempt < TimeSpan.FromSeconds(5);
-            }
-
-            try
-            {
-                // Check if we recently refreshed
-                if (DateTime.UtcNow - _lastRefreshAttempt < TimeSpan.FromSeconds(5))
-                {
-                    _logger.LogDebug("Token was recently refreshed, skipping");
-                    return true;
-                }
-
-                _lastRefreshAttempt = DateTime.UtcNow;
-
-                var tokenInfo = GetTokenInfo(context);
-                if (string.IsNullOrEmpty(tokenInfo.AccessToken) ||
-                    string.IsNullOrEmpty(tokenInfo.RefreshToken))
-                {
-                    _logger.LogWarning("Missing tokens for refresh");
-                    return false;
-                }
-
-                _logger.LogInformation("Attempting to refresh token");
-
-                // Call auth service with cancellation token support
-                var refreshTask = _authService.RefreshTokenAsync(
-                    tokenInfo.AccessToken,
-                    tokenInfo.RefreshToken);
-
-                var completedTask = await Task.WhenAny(
-                    refreshTask,
-                    Task.Delay(TimeSpan.FromSeconds(RefreshTimeoutSeconds), cancellationToken));
-
-                if (completedTask != refreshTask)
-                {
-                    _logger.LogError("Token refresh timed out");
-                    return false;
-                }
-
-                var newTokens = await refreshTask;
-
-                if (newTokens == null || string.IsNullOrEmpty(newTokens.AccessToken))
-                {
-                    _logger.LogError("Token refresh returned invalid tokens");
-                    return false;
-                }
-
-                StoreTokens(newTokens, tokenInfo.RememberMe);
-                return true;
-            }
-            finally
-            {
-                _refreshSemaphore.Release();
-            }
         }
 
 
@@ -162,7 +100,7 @@ namespace InventoryManagement.Web.Services
         private async Task<bool> CoordinatedRefreshAsync(HttpContext context)
         {
             var sessionId = context.Session.Id;
-
+            await Task.Delay(1);
             lock (_refreshLock)
             {
                 // Check if a refresh is already in progress for this session
@@ -178,6 +116,8 @@ namespace InventoryManagement.Web.Services
                     _logger.LogDebug("Recent successful refresh detected, skipping new refresh attempt");
                     // Check if the token was actually refreshed
                     var currentToken = GetCurrentToken(context);
+                    if(string.IsNullOrEmpty(currentToken)) return false;
+
                     var validation = ValidateToken(currentToken);
                     return validation.IsValid;
                 }
@@ -185,6 +125,7 @@ namespace InventoryManagement.Web.Services
                 // Start a new refresh operation
                 var refreshTask = PerformRefreshAsync();
                 _refreshOperations[sessionId] = refreshTask;
+
 
                 // Clean up the operation after completion
                 refreshTask.ContinueWith(t =>
@@ -349,6 +290,9 @@ namespace InventoryManagement.Web.Services
         /// <summary>
         /// Stores tokens with explicit Remember Me flag
         /// </summary>
+
+        // In TokenManager.cs, update the StoreTokens method:
+
         private void StoreTokens(TokenDto tokens, bool rememberMe)
         {
             var context = _httpContextAccessor.HttpContext;
@@ -356,17 +300,20 @@ namespace InventoryManagement.Web.Services
 
             try
             {
-                // Always store in session for immediate availability
+                // Critical: Store in session FIRST for immediate availability
                 context.Session.SetString("JwtToken", tokens.AccessToken);
                 context.Session.SetString("RefreshToken", tokens.RefreshToken);
                 context.Session.SetString("UserData", JsonConvert.SerializeObject(tokens.User));
                 context.Session.SetString("TokenExpiry", tokens.ExpiresAt.ToString("O"));
 
-                // Store in HttpContext.Items for immediate use within the same request
+                // Force session to commit immediately
+                context.Session.CommitAsync().GetAwaiter().GetResult();
+
+                // Then store in HttpContext.Items for the current request
                 context.Items["JwtToken"] = tokens.AccessToken;
                 context.Items["RefreshToken"] = tokens.RefreshToken;
 
-                // Store in cookies only if Remember Me was originally selected
+                // Finally update cookies if Remember Me was selected
                 if (rememberMe)
                 {
                     var cookieOptions = new CookieOptions
@@ -374,27 +321,42 @@ namespace InventoryManagement.Web.Services
                         HttpOnly = true,
                         Secure = context.Request.IsHttps,
                         SameSite = SameSiteMode.Lax,
-                        Expires = DateTimeOffset.UtcNow.AddDays(30)
+                        Expires = DateTimeOffset.UtcNow.AddDays(30),
+                        IsEssential = true // Mark as essential for GDPR compliance
                     };
 
+                    // Delete old cookies first to ensure clean update
+                    context.Response.Cookies.Delete("jwt_token");
+                    context.Response.Cookies.Delete("refresh_token");
+                    context.Response.Cookies.Delete("user_data");
+
+                    // Then append new cookies
                     context.Response.Cookies.Append("jwt_token", tokens.AccessToken, cookieOptions);
                     context.Response.Cookies.Append("refresh_token", tokens.RefreshToken, cookieOptions);
                     context.Response.Cookies.Append("user_data",
                         JsonConvert.SerializeObject(tokens.User), cookieOptions);
 
-                    _logger.LogDebug("Tokens stored in session and cookies");
+                    _logger.LogDebug("Tokens stored in session and cookies (RememberMe=true)");
                 }
                 else
                 {
-                    _logger.LogDebug("Tokens stored in session only");
+                    // If not remembering, ensure cookies are deleted
+                    if (context.Request.Cookies.ContainsKey("jwt_token"))
+                    {
+                        context.Response.Cookies.Delete("jwt_token");
+                        context.Response.Cookies.Delete("refresh_token");
+                        context.Response.Cookies.Delete("user_data");
+                    }
+
+                    _logger.LogDebug("Tokens stored in session only (RememberMe=false)");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error storing tokens");
+                throw; // Re-throw to ensure calling code knows about the failure
             }
         }
-
 
 
         /// <summary>
@@ -435,6 +397,10 @@ namespace InventoryManagement.Web.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error clearing tokens");
+            }
+            finally
+            {
+                await Task.Delay(1) ;
             }
         }
 

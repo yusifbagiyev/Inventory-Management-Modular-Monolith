@@ -1,5 +1,7 @@
-﻿using InventoryManagement.Web.Services.Interfaces;
+﻿using InventoryManagement.Web.Services;
+using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace InventoryManagement.Web.Middleware
 {
@@ -16,7 +18,7 @@ namespace InventoryManagement.Web.Middleware
             _logger = logger;
         }
 
-        public async Task InvokeAsync(HttpContext context, ITokenManager tokenRefreshService)
+        public async Task InvokeAsync(HttpContext context, ITokenManager tokenManager)
         {
             // Skip for static files and auth pages
             if (IsStaticFileRequest(context) || IsAuthPage(context))
@@ -27,34 +29,77 @@ namespace InventoryManagement.Web.Middleware
 
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                SynchronizeTokenStorage(context);
+                await SynchronizeAndValidateTokens(context, tokenManager);
             }
 
             await _next(context);
         }
 
-        private void SynchronizeTokenStorage(HttpContext context)
+        private async Task SynchronizeAndValidateTokens(HttpContext context, ITokenManager tokenManager)
         {
-            // If we have cookies but no session, restore to session
-            if (string.IsNullOrEmpty(context.Session.GetString("JwtToken")) &&
-                !string.IsNullOrEmpty(context.Request.Cookies["jwt_token"]))
+            var sessionToken = context.Session.GetString("JwtToken");
+            var cookieToken = context.Request.Cookies["jwt_token"];
+
+            // If session is empty but cookie exists, restore from cookie
+            if (string.IsNullOrEmpty(sessionToken) && !string.IsNullOrEmpty(cookieToken))
             {
-                context.Session.SetString("JwtToken", context.Request.Cookies["jwt_token"]!);
+                _logger.LogInformation("Restoring session from cookies after restart");
 
-                var refreshToken = context.Request.Cookies["refresh_token"];
-                if (!string.IsNullOrEmpty(refreshToken))
+                // Validate the cookie token is still valid
+                try
                 {
-                    context.Session.SetString("RefreshToken", refreshToken);
-                }
+                    var refreshToken = context.Request.Cookies["refresh_token"];
+                    if (!string.IsNullOrEmpty(refreshToken))
+                    {
+                        // Try to refresh the token to ensure it's valid
+                        var validToken = await tokenManager.GetValidTokenAsync();
+                        if (!string.IsNullOrEmpty(validToken))
+                        {
+                            // Token is valid or successfully refreshed
+                            context.Session.SetString("JwtToken", validToken);
+                            context.Session.SetString("RefreshToken", refreshToken);
 
-                var userData = context.Request.Cookies["user_data"];
-                if (!string.IsNullOrEmpty(userData))
+                            var userData = context.Request.Cookies["user_data"];
+                            if (!string.IsNullOrEmpty(userData))
+                            {
+                                context.Session.SetString("UserData", userData);
+                            }
+
+                            _logger.LogInformation("Successfully restored and validated tokens from cookies");
+                        }
+                        else
+                        {
+                            // Token is invalid, force re-login
+                            await ClearAuthenticationAsync(context);
+                        }
+                    }
+                }
+                catch (Exception ex)
                 {
-                    context.Session.SetString("UserData", userData);
+                    _logger.LogError(ex, "Failed to restore tokens from cookies");
+                    await ClearAuthenticationAsync(context);
                 }
-
-                _logger.LogDebug("Synchronized tokens from cookies to session");
             }
+            // If session exists, validate it's still valid
+            else if (!string.IsNullOrEmpty(sessionToken))
+            {
+                var validToken = await tokenManager.GetValidTokenAsync();
+                if (string.IsNullOrEmpty(validToken))
+                {
+                    await ClearAuthenticationAsync(context);
+                }
+            }
+        }
+
+        private async Task ClearAuthenticationAsync(HttpContext context)
+        {
+            context.Session.Clear();
+            context.Response.Cookies.Delete("jwt_token");
+            context.Response.Cookies.Delete("refresh_token");
+            context.Response.Cookies.Delete("user_data");
+
+            // Sign out from cookie authentication
+            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
 
         private bool IsStaticFileRequest(HttpContext context)

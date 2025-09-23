@@ -53,52 +53,6 @@ namespace InventoryManagement.Web.Services
         }
 
 
-        private string? GetCurrentAccessToken()
-        {
-            return _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
-                ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
-                ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
-        }
-
-        private string? GetCurrentRefreshToken()
-        {
-            return _httpContextAccessor.HttpContext?.Items["RefreshToken"] as string
-                ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken")
-                ?? _httpContextAccessor.HttpContext?.Request.Cookies["refresh_token"];
-        }
-
-        private void StoreTokens(TokenDto tokenDto)
-        {
-            var context=_httpContextAccessor.HttpContext;
-            if (context == null) return;
-
-            // Update in HttpContext.Items for immediate use
-            context.Items["JwtToken"]=tokenDto.AccessToken;
-            context.Items["RefreshToken"]= tokenDto.RefreshToken;
-
-            // Update in session
-            context.Session.SetString("JwtToken",tokenDto.AccessToken);
-            context.Session.SetString("RefreshToken", tokenDto.RefreshToken);
-            context.Session.SetString("UserData", JsonConvert.SerializeObject(tokenDto.User));
-
-            // Update cookies if they exists (Remember me)
-            if (context.Request.Cookies.ContainsKey("jwt_token"))
-            {
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = context.Request.IsHttps,
-                    SameSite = SameSiteMode.Lax,
-                    Expires = DateTimeOffset.Now.AddDays(30)
-                };
-
-                context.Response.Cookies.Append("jwt_token",tokenDto.AccessToken, cookieOptions);
-                context.Response.Cookies.Append("refresh_token",tokenDto.RefreshToken,cookieOptions);
-                context.Response.Cookies.Append("user_data",JsonConvert.SerializeObject(tokenDto.User),cookieOptions);
-            }
-        }
-
-
         public async Task<T?> GetAsync<T>(string endpoint)
         {
             AddAuthorizationHeader();
@@ -111,7 +65,7 @@ namespace InventoryManagement.Web.Services
 
                 var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-                if (refreshResult != null)
+                if (refreshResult)
                 {
                     AddAuthorizationHeader();
                     response = await _httpClient.GetAsync(endpoint);
@@ -152,7 +106,7 @@ namespace InventoryManagement.Web.Services
             {
                 var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-                if (!refreshResult)
+                if (refreshResult)
                 {
                     AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
@@ -209,7 +163,7 @@ namespace InventoryManagement.Web.Services
             {
                 var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-                if (!refreshResult)
+                if (refreshResult)
                 {
                     AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
@@ -234,7 +188,7 @@ namespace InventoryManagement.Web.Services
 
             var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (!refreshResult)
+            if (refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.PutAsync(endpoint, content);
@@ -259,7 +213,7 @@ namespace InventoryManagement.Web.Services
 
             var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (!refreshResult)
+            if (refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.PutAsync(endpoint, content);
@@ -279,7 +233,7 @@ namespace InventoryManagement.Web.Services
 
             var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (!refreshResult)
+            if (refreshResult)
             {
                 AddAuthorizationHeader();
                 response = await _httpClient.DeleteAsync(endpoint);
@@ -358,6 +312,7 @@ namespace InventoryManagement.Web.Services
             {
                 return HandleApprovalResponse<T>(responseContent);
             }
+
             if (!response.IsSuccessStatusCode)
             {
                 return new ApiResponse<T>
@@ -367,6 +322,8 @@ namespace InventoryManagement.Web.Services
                     Data = default
                 };
             }
+
+            await Task.Delay(1); // Simulate async work if needed
 
             // Handle NoContent responses
             if (response.StatusCode == HttpStatusCode.NoContent)
@@ -385,6 +342,7 @@ namespace InventoryManagement.Web.Services
             };
         }
 
+
         private bool IsApprovalResponse(string responseContent)
         {
             try
@@ -400,6 +358,7 @@ namespace InventoryManagement.Web.Services
                 return false;
             }
         }
+
 
         private ApiResponse<T> HandleApprovalResponse<T> (string responseContent)
         {
@@ -427,6 +386,7 @@ namespace InventoryManagement.Web.Services
                 };
             }
         }
+
 
         private string ParseErrorMessage(string responseContent, HttpStatusCode statusCode)
         {
@@ -466,6 +426,7 @@ namespace InventoryManagement.Web.Services
             return GetDefaultErrorMessage(statusCode);
         }
 
+
         private string GetDefaultErrorMessage(HttpStatusCode statusCode)
         {
             return statusCode switch
@@ -479,6 +440,7 @@ namespace InventoryManagement.Web.Services
                 _ => $"Request failed with status {statusCode}"
             };
         }
+
 
         // Throw appropriate exception based on HTTP status
         private Task ThrowHttpRequestException(HttpResponseMessage response, string content)
