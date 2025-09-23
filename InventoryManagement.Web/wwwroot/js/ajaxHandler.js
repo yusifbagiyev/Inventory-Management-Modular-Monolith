@@ -93,9 +93,6 @@
                     processData: false,
                     contentType: false,
                     success: function (response, textStatus, xhr) {
-                        // Always restore button first
-                        restoreButton();
-
                         // Handle different response types
                         const contentType = xhr.getResponseHeader('content-type') || '';
 
