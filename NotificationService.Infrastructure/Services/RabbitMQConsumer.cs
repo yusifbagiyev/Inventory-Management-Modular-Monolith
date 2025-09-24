@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
 using NotificationService.Application.Events;
+using NotificationService.Application.Extensions;
 using NotificationService.Application.Interfaces;
 using NotificationService.Application.Services;
 using NotificationService.Domain.Entities;
@@ -74,6 +75,7 @@ namespace NotificationService.Infrastructure.Services
                 // Bind all event types we want to listen to
                 _channel.QueueBind(_queueName, "inventory-events", "approval.request.created");
                 _channel.QueueBind(_queueName, "inventory-events", "approval.request.processed");
+                _channel.QueueBind(_queueName, "inventory-events", "approval.request.cancelled");
                 _channel.QueueBind(_queueName, "inventory-events", "product.created");
                 _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
                 _channel.QueueBind(_queueName, "inventory-events", "product.updated");
@@ -130,6 +132,9 @@ namespace NotificationService.Infrastructure.Services
                     break;
                 case "approval.request.processed":
                     await HandleApprovalRequestProcessed(message);
+                    break;
+                case "approval.request.cancelled":
+                    await HandleApprovalRequestCancelled(message);
                     break;
                 case "product.created":
                     await HandleProductCreated(message);
@@ -248,6 +253,57 @@ namespace NotificationService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error handling approval processed event");
+            }
+        }
+
+
+        private async Task HandleApprovalRequestCancelled(string message)
+        {
+            try
+            {
+                var cancelEvent = JsonSerializer.Deserialize<ApprovalRequestCancelledEvent>(message);
+                if (cancelEvent == null) return;
+
+                using var scope = _serviceProvider.CreateScope();
+                var notificationRepo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+                // Find and delete notifications related to this approval request
+                var notifications = await notificationRepo.GetByUserIdAsync(cancelEvent.RequestedById, false);
+
+                foreach (var notification in notifications)
+                {
+                    // Check if this notification is related to the cancelled request
+                    if (notification.Data?.Contains($"\"approvalRequestId\":{cancelEvent.RequestId}") == true ||
+                        notification.Data?.Contains($"\"RequestId\":{cancelEvent.RequestId}") == true)
+                    {
+                        await notificationRepo.DeleteAsync(notification);
+                        _logger.LogInformation($"Deleted notification {notification.Id} for cancelled request {cancelEvent.RequestId}");
+                    }
+                }
+
+                // Also delete admin notifications
+                var adminUsers = await userService.GetUsersAsync("Admin");
+                foreach (var admin in adminUsers)
+                {
+                    var adminNotifications = await notificationRepo.GetByUserIdAsync(admin.Id, false);
+
+                    foreach (var notification in adminNotifications)
+                    {
+                        if (notification.Data?.Contains($"\"approvalRequestId\":{cancelEvent.RequestId}") == true)
+                        {
+                            await notificationRepo.DeleteAsync(notification);
+                            _logger.LogInformation($"Deleted admin notification {notification.Id} for cancelled request {cancelEvent.RequestId}");
+                        }
+                    }
+                }
+
+                await unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling approval request cancellation");
             }
         }
 
@@ -673,26 +729,6 @@ namespace NotificationService.Infrastructure.Services
             _channel?.Close();
             _connection?.Close();
             base.Dispose();
-        }
-    }
-
-    // Extension method for title case
-    public static class StringExtensions
-    {
-        public static string ToTitleCase(this string str)
-        {
-            if (string.IsNullOrEmpty(str))
-                return str;
-
-            var words = str.Split(' ');
-            for (int i = 0; i < words.Length; i++)
-            {
-                if (words[i].Length > 0)
-                {
-                    words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
-                }
-            }
-            return string.Join(" ", words);
         }
     }
 }

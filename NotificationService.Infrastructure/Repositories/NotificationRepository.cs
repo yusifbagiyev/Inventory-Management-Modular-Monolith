@@ -46,5 +46,11 @@ namespace NotificationService.Infrastructure.Repositories
             return await _context.Notifications
                 .CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
         }
+
+        public Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
+        {
+            _context.Notifications.Remove(notification);
+            return Task.CompletedTask;
+        }
     }
 }
