@@ -1,6 +1,9 @@
 ﻿window.AjaxHandler = (function () {
     'use strict';
 
+    // Add a registry to track form submission states
+    const submissionStates = new WeakMap();
+
     function handleForm(formSelector, options) {
         const defaults = {
             validateBeforeSubmit: true,
@@ -26,30 +29,50 @@
         // Handle each form individually to avoid conflicts
         $forms.each(function () {
             const $individualForm = $(this);
+            const formElement = this;
 
-            // Find the submit button ONLY within THIS specific form
-            // We use a more specific search that excludes nested forms
-            const $submitBtnInThisForm = $individualForm.find('button[type="submit"]').filter(function () {
-                // Make sure this button is a direct child of THIS form, not a nested form
-                return $(this).closest('form')[0] === $individualForm[0];
-            });
 
-            // If no submit button found in this form, skip it
-            if (!$submitBtnInThisForm.length) {
-                console.warn('No submit button found in form:', $individualForm);
-                return; // Skip this form
+            // Initialize submission state for this form
+            if (!submissionStates.has(formElement)) {
+                submissionStates.set(formElement, { isSubmitting: false });
             }
 
-            // Store the original state of THIS form's button
+            // Remove any existing handlers first (important!)
+            $individualForm.off('submit.ajaxHandler');
+
+            // Find submit button for this specific form
+            const $submitBtnInThisForm = $individualForm.find('button[type="submit"]').filter(function () {
+                return $(this).closest('form')[0] === formElement;
+            });
+
+            if (!$submitBtnInThisForm.length) {
+                console.warn('No submit button found in form:', $individualForm);
+                return;
+            }
+
+            // Store original button state
             const originalButtonHtml = $submitBtnInThisForm.html();
             const originalButtonDisabled = $submitBtnInThisForm.prop('disabled');
 
-            // Attach submit handler to THIS specific form
-            $individualForm.off('submit.ajaxHandler').on('submit.ajaxHandler', function (e) {
-                e.preventDefault();
-                const form = this;
 
-                // Get the submit button for THIS form again (in case DOM changed)
+            // Attach the submit handler
+            $individualForm.on('submit.ajaxHandler', function (e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling
+
+                const form = this;
+                const formState = submissionStates.get(form);
+
+                // Check if already submitting
+                if (formState.isSubmitting) {
+                    console.log('Form is already being submitted, ignoring duplicate submission');
+                    return false;
+                }
+
+                // Mark as submitting
+                formState.isSubmitting = true;
+
+                // Get the submit button for THIS form
                 const $currentSubmitBtn = $(form).find('button[type="submit"]').filter(function () {
                     return $(this).closest('form')[0] === form;
                 });
@@ -58,10 +81,12 @@
                 if (settings.validateBeforeSubmit) {
                     if (!form.checkValidity()) {
                         form.reportValidity();
+                        formState.isSubmitting = false;
                         return false;
                     }
 
                     if ($.validator && !$(form).valid()) {
+                        formState.isSubmitting = false;
                         return false;
                     }
                 }
@@ -69,7 +94,10 @@
                 // Call before submit hook
                 if (settings.onBeforeSubmit) {
                     const shouldContinue = settings.onBeforeSubmit(form);
-                    if (shouldContinue === false) return false;
+                    if (shouldContinue === false) {
+                        formState.isSubmitting = false;
+                        return false;
+                    }
                 }
 
                 // Disable button and show loading
@@ -79,10 +107,11 @@
                 // Prepare form data
                 const formData = new FormData(form);
 
-                // Helper function to restore THIS form's button
+                // Helper function to restore button
                 const restoreButton = () => {
                     $currentSubmitBtn.prop('disabled', originalButtonDisabled)
                         .html(originalButtonHtml);
+                    formState.isSubmitting = false; // Reset submission state
                 };
 
                 // Submit form via AJAX
@@ -101,22 +130,25 @@
                         } else {
                             handleSuccess(response, form, settings);
                         }
+                        restoreButton(); // Always restore after success
                     },
                     error: function (xhr, status, error) {
-                        // Always restore button on error
-                        restoreButton();
+                        restoreButton(); // Always restore on error
                         handleError(xhr, form, settings);
                     },
                     complete: function () {
-                        // Failsafe: Always ensure button is restored after 3 seconds
+                        // Failsafe: Always ensure button is restored and state is reset
                         setTimeout(() => {
                             restoreButton();
                         }, 3000);
                     }
                 });
+
+                return false; // Prevent default form submission
             });
         });
     }
+
 
     // Simplified handleSuccess function
     function handleSuccess(response, form, settings) {

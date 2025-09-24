@@ -175,11 +175,12 @@
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
+    
     <script>
          // Global notification variables
          let notificationConnection = null;
          let reconnectAttempts = 0;
-         const maxReconnectAttempts = 5;
+         const maxRetries = 10;
 
          // Store whether user is admin for JavaScript usage
          const isAdmin=@(User.IsInRole("Admin") ? "true" : "false");
@@ -232,13 +233,11 @@
                  })
                  .withAutomaticReconnect({
             nextRetryDelayInMilliseconds: retryContext => {
-                if (retryContext.elapsedMilliseconds < 60000) {
-                    // If we've been reconnecting for less than 60 seconds, retry quickly
-                    return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 10000);
-                } else {
-                    // If we've been reconnecting for more than 60 seconds, retry every 10 seconds
-                    return 10000;
+                connectionRetryCount++;
+                if (connectionRetryCount > maxRetries) {
+                    return null; // Stop retrying after max attempts
                 }
+                return Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
             }
         })
         .configureLogging(signalR.LogLevel.Information)
@@ -247,105 +246,120 @@
             // Set up handlers before starting
              setupMessageHandlers();
 
-            // Start connection with retry logic
-             startConnectionWithRetry();
-         }
+                    // Handle connection state changes
+            window.notificationConnection.onreconnecting(() => {
+                console.log('SignalR connection lost. Attempting to reconnect...');
+                showToast('Connection lost. Reconnecting...', 'warning');
+            });
+
+            window.notificationConnection.onreconnected((connectionId) => {
+                connectionRetryCount = 0; // Reset retry count on successful reconnection
+                console.log('SignalR reconnected:', connectionId);
+                showToast('Connection restored', 'success');
+
+                // Reload notifications after reconnection
+                loadRecentNotifications();
+                loadNotificationCount();
+            });
+
+            window.notificationConnection.onclose((error) => {
+                console.error('SignalR connection closed:', error);
+                if (connectionRetryCount < maxRetries) {
+                    setTimeout(() => {
+                        startConnectionWithRetry();
+                    }, 5000);
+                } else {
+                    showToast('Unable to connect to notification service', 'error');
+                }
+            });
+
+            // Start the connection
+            startConnectionWithRetry();
+        }
 
 
          // Setup SignalR message handlers
          function setupMessageHandlers() {
-             if (!window.notificationConnection) return;
+            if (!window.notificationConnection) return;
 
+            // Handle successful connection
             window.notificationConnection.on("ConnectionEstablished", function(data) {
                 console.log('SignalR connection established:', data);
-        
-                // Store connection info if needed
-                if (data.connectionId) {
-                    window.currentConnectionId = data.connectionId;
-                }
-        
-                // This is a silent connection confirmation, no user notification needed
-                // since data.silent is true from the server
+
+                // Store user and group info for debugging
+                window.notificationInfo = {
+                    userId: data.userId,
+                    userGroup: data.userGroup,
+                    roleGroups: data.roleGroups,
+                    connectionId: data.connectionId
+                };
+
+                console.log('Joined groups:', data.userGroup, data.roleGroups);
             });
 
             // Handle incoming notifications
             window.notificationConnection.on("ReceiveNotification", function(notification) {
-                 console.log('Notification received:', notification);
+                console.log('Notification received:', notification);
 
-                 if (!notification.isTest && !notification.silent) {
-                    playNotificationSound();
-                    showToast(`${notification.title}: ${notification.message}`,
-                    getNotificationType(notification.type));
-                }
+                // Always process the notification
+                playNotificationSound();
+                showToast(`${notification.title}: ${notification.message}`,
+                         getNotificationType(notification.type));
 
-                 // Update notification count badge
-                 incrementNotificationCount();
+                // Update notification count and list
+                incrementNotificationCount();
+                loadRecentNotifications();
 
-                 loadRecentNotifications(); // Refresh the dropdown
-
-                 // Update pending approvals count for admin users
-                 if (isAdmin && notification.type === 'ApprovalRequest') {
+                // Special handling for approval-related notifications
+                if (notification.type === 'ApprovalRequest' && isAdmin) {
                     loadPendingApprovalsCount();
 
                     // If on approvals page, refresh the list
                     if (window.location.pathname.includes('/Approvals')) {
-                        if (typeof refreshApprovalsList === 'function') {
-                            refreshApprovalsList();
+                        // Trigger a refresh of the approvals list if the page has this function
+                        if (typeof window.refreshApprovalsList === 'function') {
+                            window.refreshApprovalsList();
+                        } else {
+                            // Fallback: reload the page
+                            location.reload();
                         }
                     }
                 }
-             });
 
-             // Handle connection established (fix casing)
-            window.notificationConnection.onreconnected(function(connectionId) {
-            console.log('SignalR reconnected:', connectionId);
-
-            // Re-join user group after reconnection
-            window.notificationConnection.invoke("JoinUserGroup")
-                .catch(err => console.error('Error joining user group:', err));
-
-            // Reload notifications after reconnect
-            loadRecentNotifications();
-            loadNotificationCount();
+                // Handle approval response notifications (for users)
+                if (notification.type === 'ApprovalResponse') {
+                    // If on MyRequests page, refresh the list
+                    if (window.location.pathname.includes('/MyRequests')) {
+                        location.reload();
+                    }
+                }
             });
-
-            // Handle disconnection
-            window.notificationConnection.onclose(function(error) {
-                console.warn('SignalR disconnected:', error);
-
-                    // Attempt to reconnect after 5 seconds
-                    setTimeout(() => {
-                        startConnectionWithRetry();
-                    }, 5000);
-                });
-            }
+        }
 
 
          // Start SignalR connection
-         function startConnectionWithRetry(retryCount = 0) {
-             if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                 console.log('SignalR already connected');
-                 return;
-             }
+        function startConnectionWithRetry() {
+            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
+                console.log('SignalR already connected');
+                return;
+            }
 
-             window.notificationConnection.start()
+            window.notificationConnection.start()
                 .then(() => {
                     console.log('SignalR connected successfully');
-                    reconnectAttempts = 0;
-
-                    // Join user group immediately after connection
-                    window.notificationConnection.invoke("JoinUserGroup")
-                        .then(() => console.log('Joined user group successfully'))
-                        .catch(err => console.error('Error joining user group:', err));
+                    connectionRetryCount = 0; // Reset retry count on success
                 })
                 .catch(err => {
                     console.error('SignalR connection error:', err);
-                    if (retryCount < 5) {
-                        const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-                        console.log(`Retrying connection in ${delay}ms...`);
-                        setTimeout(() => startConnectionWithRetry(retryCount + 1), delay);
+                    connectionRetryCount++;
+
+                    if (connectionRetryCount < maxRetries) {
+                        const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
+                        console.log(`Retrying connection in ${delay}ms... (Attempt ${connectionRetryCount}/${maxRetries})`);
+                        setTimeout(() => startConnectionWithRetry(), delay);
                     } else {
-                        console.error('Failed to establish SignalR connection after 5 attempts');
+                        console.error('Failed to establish SignalR connection after maximum retries');
+                        showToast('Unable to connect to notification service', 'error');
                     }
                 });
         }

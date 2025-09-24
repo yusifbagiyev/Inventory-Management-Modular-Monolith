@@ -186,65 +186,214 @@
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-        function previewImage(input, previewId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    $('#' + previewId).attr('src', e.target.result).show();
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-                function removeCurrentImage() {
-            $('#currentImageContainer').hide();
-            $('#RemoveImage').val('true');
-            $('#newImageUpload').show();
-        }
+        // Create a namespace for this page to avoid global conflicts
+        (function() {
+            'use strict';
 
-        function confirmDelete(id) {
-            $('#deleteModal').modal('show');
-        }
+            // Track if form is currently being submitted
+            let isSubmitting = false;
+            let routeId = @Model.Id;  // Store the route ID for use in delete function
 
-        function deleteRoute() {
-            $('#deleteModal').modal('hide');
-
-            $.ajax({
-                url: '/Routes/DeleteWithRollback/' + routeId,
-                type: 'POST',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function(response) {
-                    showToast('Route deleted successfully. Product has been reverted to previous state.', 'success');
-                    setTimeout(() => window.location.href = '/Routes', 2000);
-                },
-                error: function(xhr) {
-                    const errorMsg = ErrorHandler.parseErrorMessage(xhr, 'Failed to delete route');
-                    showToast(errorMsg, 'error');
-                }
+            // Initialize the form handler when document is ready
+            $(document).ready(function() {
+                initializeEditForm();
+                initializeImageHandlers();
+                initializeDeleteHandlers();
             });
-        }
 
-        $(document).ready(function() {
-            // Handle form submission with AJAX
-            AjaxHandler.handleForm('#editRouteForm', {
-                successMessage: 'Route updated successfully!',
-                successRedirect: '/Routes',
-                onSuccess: function(response) {
-                    if (response.isApprovalRequest) {
-                        showToast(response.message || 'Update submitted for approval', 'info');
-                        setTimeout(() => window.location.href = '/Routes', 2000);
-                        return false; // Prevent default redirect
+            // Function to initialize the edit form with proper safeguards
+            function initializeEditForm() {
+                const $form = $('#editRouteForm');
+
+                // Ensure the form exists before proceeding
+                if (!$form.length) {
+                    console.error('Edit form not found');
+                    return;
+                }
+
+                // This is crucial to prevent duplicate handlers
+                $form.off('submit');
+                $form.off('submit.ajaxHandler');
+
+                // Also remove any click handlers on the submit button
+                const $submitBtn = $('#submitBtn');
+                $submitBtn.off('click');
+
+                // Add a click handler to the submit button to prevent double-clicks
+                $submitBtn.on('click', function(e) {
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Form is already being submitted, preventing double click');
+                        return false;
                     }
-                    return true;
-                },
-                onError: function(errorMessage, response) {
-                    // Reset button state on error
-                    const $submitBtn = $('#submitBtn');
-                    $submitBtn.prop('disabled', false)
-                        .html('<i class="fas fa-save"></i> Save Changes');
-                }
-            });
-        });
+                });
+
+                // Initialize the AjaxHandler with proper configuration
+                AjaxHandler.handleForm('#editRouteForm', {
+                    successMessage: 'Route updated successfully!',
+                    successRedirect: '/Routes',
+                    redirectDelay: 2000,
+
+                    onBeforeSubmit: function(form) {
+                        // Check if already submitting
+                        if (isSubmitting) {
+                            console.log('Blocking duplicate submission attempt');
+                            return false;
+                        }
+
+                        // Set the submission flag
+                        isSubmitting = true;
+
+                        // Log for debugging
+                        console.log('Starting route update submission');
+
+                        return true; // Allow submission to proceed
+                    },
+
+                    onSuccess: function(response) {
+                        console.log('Route update response received:', response);
+
+                        // Check if this is an approval request
+                        if (response.isApprovalRequest ||
+                            response.status === 'PendingApproval' ||
+                            response.approvalRequestId) {
+
+                            showToast(
+                                response.message || 'Update submitted for approval',
+                                'info'
+                            );
+
+                            // Redirect after showing the message
+                            setTimeout(() => {
+                                window.location.href = '/Routes';
+                            }, 2000);
+
+                            return false; // Prevent default redirect
+                        }
+
+                        // For direct updates (admin users)
+                        showToast('Route updated successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/Routes';
+                        }, 1500);
+
+                        return false; // We're handling the redirect ourselves
+                    },
+
+                    onError: function(errorMessage, response) {
+                        console.error('Route update error:', errorMessage, response);
+
+                        // Reset submission flag on error
+                        isSubmitting = false;
+
+                        // Reset button state
+                        const $submitBtn = $('#submitBtn');
+                        $submitBtn.prop('disabled', false)
+                            .html('<i class="fas fa-save"></i> Save Changes');
+
+                        // Show error message
+                        showToast(errorMessage || 'Failed to update route', 'error');
+                    }
+                });
+
+                // Add an additional safeguard: intercept the form's native submit
+                $form.on('submit', function(e) {
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Preventing native form submission during Ajax processing');
+                        return false;
+                    }
+                });
+            }
+
+            // Function to handle image preview and removal
+            function initializeImageHandlers() {
+                // Image preview function
+                window.previewImage = function(input, previewId) {
+                    if (input.files && input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            $('#' + previewId).attr('src', e.target.result).show();
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                };
+
+                // Remove current image function
+                window.removeCurrentImage = function() {
+                    $('#currentImageContainer').hide();
+                    $('#RemoveImage').val('true');
+                    $('#newImageUpload').show();
+                };
+            }
+
+            // Function to handle delete operations
+            function initializeDeleteHandlers() {
+                // Confirm delete function
+                window.confirmDelete = function(id) {
+                    // Store the route ID for use in deleteRoute
+                    window.currentDeleteRouteId = id;
+                    $('#deleteModal').modal('show');
+                };
+
+                // Delete route function
+                window.deleteRoute = function() {
+                    // Prevent multiple delete attempts
+                    if (isSubmitting) {
+                        console.log('Already processing a request');
+                        return;
+                    }
+
+                    isSubmitting = true;
+                    $('#deleteModal').modal('hide');
+
+                    const deleteRouteId = window.currentDeleteRouteId || routeId;
+
+                    $.ajax({
+                        url: '/Routes/Delete',
+                        type: 'POST',
+                        data: {
+                            id: deleteRouteId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(response) {
+                            showToast(
+                                'Route deleted successfully. Product has been reverted to previous state.',
+                                'success'
+                            );
+                            setTimeout(() => {
+                                window.location.href = '/Routes';
+                            }, 2000);
+                        },
+                        error: function(xhr) {
+                            isSubmitting = false;
+
+                            let errorMsg = 'Failed to delete route';
+                            try {
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    errorMsg = xhr.responseJSON.error;
+                                } else if (xhr.responseText) {
+                                    const response = JSON.parse(xhr.responseText);
+                                    errorMsg = response.message || response.error || errorMsg;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing error response:', e);
+                            }
+
+                            showToast(errorMsg, 'error');
+                        }
+                    });
+                };
+
+                // Ensure delete modal doesn't interfere with form submission
+                $('#deleteModal').on('hidden.bs.modal', function() {
+                    // Clear any stored route ID
+                    window.currentDeleteRouteId = null;
+                });
+            }
+
+        })(); // End of page-specific namespace
     </script>
 }

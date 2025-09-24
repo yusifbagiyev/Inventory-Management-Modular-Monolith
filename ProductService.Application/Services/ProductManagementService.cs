@@ -188,6 +188,7 @@ namespace ProductService.Application.Services
             return await _mediator.Send(new GetProductByIdQuery(id)) ??
                 throw new NotFoundException($"Product with ID {id} not found");
         }
+
         private async Task ValidateProductDoesNotExist(int inventoryCode)
         {
             var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
@@ -199,6 +200,7 @@ namespace ProductService.Application.Services
                 throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists");
             }
         }
+
         private async Task<Dictionary<string, object>> BuildCreateProductActionData(CreateProductDto dto)
         {
             var actionData = new Dictionary<string, object>
@@ -275,6 +277,7 @@ namespace ProductService.Application.Services
             
             return updateData;
         }
+
         public async Task<List<string>> TrackWhatChanges(ProductDto existingProduct, UpdateProductDto updatedProduct)
         {
             ArgumentNullException.ThrowIfNull(existingProduct);
@@ -304,12 +307,14 @@ namespace ProductService.Application.Services
 
             return changes;
         }
+
         public async Task<string?> GetCategoryNameAsync(int categoryId)
         {
             var categoryName = await _categoryRepository.GetByIdAsync(categoryId)
                 ?? throw new NotFoundException($"Category was not found with ID: {categoryId}");
             return categoryName?.Name;
         }
+
         public async Task<string?> GetDepartmentNameAsync(int departmentId)
         {
             var departmentName = await _departmentRepository.GetByIdAsync(departmentId)

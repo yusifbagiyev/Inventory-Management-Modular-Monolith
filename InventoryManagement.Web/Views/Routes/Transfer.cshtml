@@ -296,7 +296,8 @@
                     if (formState.inventoryCode) {
                         $('#inventoryCodeInput').trigger('input');
                     }
-                } catch (e) {
+                } 
+                catch (e) {
                     console.error('Error restoring form state:', e);
                 }
             }
@@ -331,7 +332,8 @@
                     hideProductInfo();
                     hideTransferFields();
                 }
-            } catch (error) {
+            } 
+            catch (error) {
                 hideSearching();
                 currentProductId = null;
 
@@ -392,7 +394,8 @@
                     showTransferFields();
                     hideError();
                 }
-            } catch (error) {
+            } 
+            catch (error) {
                 console.error('Failed to check pending routes:', error);
                 // Continue anyway if check fails
                 showTransferFields();
