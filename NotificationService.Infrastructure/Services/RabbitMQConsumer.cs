@@ -699,10 +699,12 @@ namespace NotificationService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
+            var users = await userService.GetUsersAsync("User");
             var operators = await userService.GetUsersAsync("Operator");
             var admins = await userService.GetUsersAsync("Admin");
 
-            return operators.Select(u => u.Id)
+            return users.Select(u=>u.Id)
+                .Union(operators.Select(u => u.Id))
                 .Union(admins.Select(u => u.Id))
                 .Distinct()
                 .ToList();

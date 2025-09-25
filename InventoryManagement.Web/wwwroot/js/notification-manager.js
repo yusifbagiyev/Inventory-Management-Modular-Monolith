@@ -149,8 +149,7 @@
                 userId: data.userId,
                 userName: data.userName,
                 userGroup: data.userGroup,
-                roleGroups: data.roleGroups,
-                connectionId: data.connectionId
+                roleGroups: data.roleGroups
             };
 
             console.log('Connected as:', data.userName, 'Groups:', [data.userGroup, ...data.roleGroups]);

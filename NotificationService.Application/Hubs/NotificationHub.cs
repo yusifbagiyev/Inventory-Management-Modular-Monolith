@@ -33,7 +33,10 @@ namespace NotificationService.Application.Hubs
                 var userId = Context.User?.FindFirst("UserId")?.Value
                     ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                var userName = Context.User?.Identity?.Name ?? "Unknown";
+                var userName = Context.User?.Identity?.Name
+                    ?? Context.User?.FindFirst(ClaimTypes.Name)?.Value
+                    ?? Context.User?.FindFirst("name")?.Value
+                    ?? "Unknown";
 
                 if (!string.IsNullOrEmpty(userId))
                 {
@@ -74,7 +77,7 @@ namespace NotificationService.Application.Hubs
                 }
                 else
                 {
-                    _logger.LogWarning($"User connected but no userId found in claims");
+                    _logger.LogWarning($"User connected but no userId found in claims. Available claims: {string.Join(", ", Context.User?.Claims?.Select(c => c.Type) ?? Enumerable.Empty<string>())}");
                 }
             }
             catch (Exception ex)
