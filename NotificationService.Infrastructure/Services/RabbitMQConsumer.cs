@@ -1,6 +1,4 @@
-﻿using System.Text;
-using System.Text.Json;
-using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,6 +12,9 @@ using NotificationService.Domain.Entities;
 using NotificationService.Domain.Repositories;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace NotificationService.Infrastructure.Services
 {
@@ -164,12 +165,15 @@ namespace NotificationService.Infrastructure.Services
                 // Get all admin users
                 using var scope = _serviceProvider.CreateScope();
                 var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+
                 var adminUsers = await userService.GetUsersAsync("Admin");
+                _logger.LogInformation($"Found {adminUsers.Count} admin users to notify");
 
                 var readableType = GetReadableRequestType(approvalEvent.RequestType);
                 var actionDescription = GetActionDescription(approvalEvent.RequestType);
 
-                foreach (var admin in adminUsers)
+                var tasks = adminUsers.Select(async admin =>
                 {
                     var notification = new Notification(
                         admin.Id,
@@ -185,7 +189,16 @@ namespace NotificationService.Infrastructure.Services
                     );
 
                     await SaveAndSendNotification(notification);
-                }
+                });
+
+                await Task.WhenAll(tasks);
+
+                // Also send a broadcast to all admins via role group for redundancy
+                await hubContext.Clients.Group("role-Admin").SendAsync("RefreshApprovals", new
+                {
+                    requestId = approvalEvent.RequestId,
+                    requestType = approvalEvent.RequestType
+                });
             }
             catch (Exception ex)
             {
@@ -255,7 +268,6 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogError(ex, "Error handling approval processed event");
             }
         }
-
 
         private async Task HandleApprovalRequestCancelled(string message)
         {
@@ -455,26 +467,26 @@ namespace NotificationService.Infrastructure.Services
 
                 await repository.AddAsync(notification);
                 await unitOfWork.SaveChangesAsync();
-
                 _logger.LogInformation($"✅ Notification saved to database for user {notification.UserId}");
 
-                // Send via SignalR
-                var groupName = $"user-{notification.UserId}";
-
-                await hubContext.Clients.Group(groupName).SendAsync("ReceiveNotification", new NotificationDto
+                // Prepare the notification DTO for SignalR
+                var notificationDto = new
                 {
-                    Id = notification.Id,
-                    Type = notification.Type,
-                    Title = notification.Title,
-                    Message = notification.Message,
-                    CreatedAt = notification.CreatedAt,
-                    IsRead = notification.IsRead,
-                    Data = notification.Data
-                });
+                    id = notification.Id,
+                    type = notification.Type,
+                    title = notification.Title,
+                    message = notification.Message,
+                    createdAt = notification.CreatedAt,
+                    isRead = notification.IsRead,
+                    data = notification.Data
+                };
 
-                _logger.LogInformation($"📤 Notification sent via SignalR to group {groupName}");
+                var userGroup = $"user-{notification.UserId}";
 
-                _logger.LogInformation($"📦 Notification content: Type={notification.Type}, Title={notification.Title}");
+                await hubContext.Clients.Group(userGroup).SendAsync("ReceiveNotification", notificationDto);
+
+                _logger.LogInformation($"📤 Notification sent via SignalR to group {userGroup}");
+                _logger.LogInformation($"📦 Notification content: Type={notification.Type}, Title={notification.Title}, Message={notification.Message}");
             }
             catch (Exception ex)
             {

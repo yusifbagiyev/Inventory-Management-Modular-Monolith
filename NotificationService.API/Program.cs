@@ -59,20 +59,26 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
-builder.Services.AddSignalR();
-builder.Services.AddHealthChecks();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5051", "https://localhost:7171","http://localhost:5000")
+        var allowedOrigins = builder.Environment.IsDevelopment()
+            ? new[] { "http://localhost:5051", "https://localhost:7171", "http://localhost:5000" }
+            : new[] { "https://inventory166.az", "https://www.inventory166.az" };
+
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials()
-              .SetIsOriginAllowed(_=>true);
+              .AllowCredentials(); // Critical for SignalR
     });
+});
+
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
 });
 
 
@@ -146,7 +152,7 @@ app.UseCors("AllowWebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<NotificationHub>("/notificationHub");
+app.MapHub<NotificationHub>("/notificationHub").RequireAuthorization();
 
 using (var scope = app.Services.CreateScope())
 {

@@ -4,7 +4,7 @@
     // Detect the current environment based on the hostname
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    const isProduction = hostname.includes('inventory166.az') || hostname.includes('www.inventory166.az');
+    const isProduction = hostname.includes('inventory166.az');
     const isDevelopment = !isProduction;
 
     // Create the base configuration
@@ -23,15 +23,16 @@
         // SignalR hub configuration
         signalR: {
             notificationHub: isDevelopment
-                ? 'http://localhost:5005/notificationHub'
-                : '/notificationHub',
+                ? 'http://localhost:5005/notificationHub'  // Direct to NotificationService
+                : '/notificationHub',  // Through reverse proxy in production
 
             // Connection options
             options: {
-                skipNegotiation: isProduction,
-                transport: isProduction
-                    ? signalR.HttpTransportType.WebSockets
-                    : undefined
+                skipNegotiation: false,
+                transport: signalR.HttpTransportType.WebSockets |
+                    signalR.HttpTransportType.ServerSentEvents |
+                    signalR.HttpTransportType.LongPolling,
+                withCredentials: true
             }
         },
 

@@ -169,211 +169,130 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
+    <script src="~/js/notification-manager.js" asp-append-version="true"></script>
     @if (User.IsInRole("Admin"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
-    
     <script>
-         // Global notification variables
-         let notificationConnection = null;
-         let reconnectAttempts = 0;
-         const maxRetries = 10;
+        // Initialize application when document is ready
+        $(document).ready(function() {
+            // Initialize sidebar toggle
+            $('#menu-toggle').click(function(e) {
+                e.preventDefault();
+                $('body').toggleClass('sidebar-toggled');
+                $('#wrapper').toggleClass('toggled');
 
-         // Store whether user is admin for JavaScript usage
-         const isAdmin=@(User.IsInRole("Admin") ? "true" : "false");
-
-         $(document).ready(function() {
-             // Sidebar toggle
-             $('#menu-toggle').click(function(e) {
-             e.preventDefault();
-             $('body').toggleClass('sidebar-toggled');
-             $('#wrapper').toggleClass('toggled');
-
-             // Adjust main content margin
-             if ($('#wrapper').hasClass('toggled')) {
-                 $('.main-content').css('margin-left', '0');
-             } else {
-                 $('.main-content').css('margin-left', 'var(--sidebar-width)');
-             }
-         });
-
-             // Only initialize notifications if user is authenticated
-         const jwtToken=$('#jwtToken').val();
-             if (jwtToken) {
-                 initializeNotifications();
-                 setupNotificationHandlers();
-                 loadNotificationCount();
-                 loadRecentNotifications();
-
-                 // Check for pending approvals if admin
-                 if (isAdmin) {
-                     loadPendingApprovalsCount();
-                 }
-             }
-         });
-
-         function initializeNotifications() {
-             const token = $('#jwtToken').val();
-             if (!token) {
-                 console.error('No JWT token available');
-                 return;
-             }
-
-             const hubUrl = window.location.protocol + '//' + window.location.host + '/notificationHub';
-
-             window.notificationConnection = new signalR.HubConnectionBuilder()
-                 .withUrl(hubUrl, {
-                     accessTokenFactory: () => $('#jwtToken').val(),
-                     transport: signalR.HttpTransportType.WebSockets |
-                               signalR.HttpTransportType.ServerSentEvents |
-                               signalR.HttpTransportType.LongPolling
-                 })
-                 .withAutomaticReconnect({
-            nextRetryDelayInMilliseconds: retryContext => {
-                connectionRetryCount++;
-                if (connectionRetryCount > maxRetries) {
-                    return null; // Stop retrying after max attempts
-                }
-                return Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
-            }
-        })
-        .configureLogging(signalR.LogLevel.Information)
-        .build();
-
-            // Set up handlers before starting
-             setupMessageHandlers();
-
-                    // Handle connection state changes
-            window.notificationConnection.onreconnecting(() => {
-                console.log('SignalR connection lost. Attempting to reconnect...');
-                showToast('Connection lost. Reconnecting...', 'warning');
-            });
-
-            window.notificationConnection.onreconnected((connectionId) => {
-                connectionRetryCount = 0; // Reset retry count on successful reconnection
-                console.log('SignalR reconnected:', connectionId);
-                showToast('Connection restored', 'success');
-
-                // Reload notifications after reconnection
-                loadRecentNotifications();
-                loadNotificationCount();
-            });
-
-            window.notificationConnection.onclose((error) => {
-                console.error('SignalR connection closed:', error);
-                if (connectionRetryCount < maxRetries) {
-                    setTimeout(() => {
-                        startConnectionWithRetry();
-                    }, 5000);
+                if ($('#wrapper').hasClass('toggled')) {
+                    $('.main-content').css('margin-left', '0');
                 } else {
-                    showToast('Unable to connect to notification service', 'error');
+                    $('.main-content').css('margin-left', 'var(--sidebar-width)');
                 }
             });
 
-            // Start the connection
-            startConnectionWithRetry();
-        }
+            // Initialize notifications if user is authenticated
+            const jwtToken = $('#jwtToken').val();
+            if (jwtToken) {
+                // Pass the admin status to the notification manager
+                const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
 
+                // Initialize the notification system
+                NotificationManager.initialize(isAdmin);
 
-         // Setup SignalR message handlers
-         function setupMessageHandlers() {
-            if (!window.notificationConnection) return;
+                // Set up UI handlers for notifications
+                setupNotificationUIHandlers();
 
-            // Handle successful connection
-            window.notificationConnection.on("ConnectionEstablished", function(data) {
-                console.log('SignalR connection established:', data);
-
-                // Store user and group info for debugging
-                window.notificationInfo = {
-                    userId: data.userId,
-                    userGroup: data.userGroup,
-                    roleGroups: data.roleGroups,
-                    connectionId: data.connectionId
-                };
-
-                console.log('Joined groups:', data.userGroup, data.roleGroups);
-            });
-
-            // Handle incoming notifications
-            window.notificationConnection.on("ReceiveNotification", function(notification) {
-                console.log('Notification received:', notification);
-
-                // Always process the notification
-                playNotificationSound();
-                showToast(`${notification.title}: ${notification.message}`,
-                         getNotificationType(notification.type));
-
-                // Update notification count and list
-                incrementNotificationCount();
+                // Load initial data
+                loadNotificationCount();
                 loadRecentNotifications();
 
-                // Special handling for approval-related notifications
-                if (notification.type === 'ApprovalRequest' && isAdmin) {
+                if (isAdmin) {
                     loadPendingApprovalsCount();
-
-                    // If on approvals page, refresh the list
-                    if (window.location.pathname.includes('/Approvals')) {
-                        // Trigger a refresh of the approvals list if the page has this function
-                        if (typeof window.refreshApprovalsList === 'function') {
-                            window.refreshApprovalsList();
-                        } else {
-                            // Fallback: reload the page
-                            location.reload();
-                        }
-                    }
                 }
+            }
+        });
 
-                // Handle approval response notifications (for users)
-                if (notification.type === 'ApprovalResponse') {
-                    // If on MyRequests page, refresh the list
-                    if (window.location.pathname.includes('/MyRequests')) {
-                        location.reload();
-                    }
+        // Notification UI Handlers (separated from the manager)
+        function setupNotificationUIHandlers() {
+            // Handle notification icon click
+            $('#notificationIcon').on('click', function(e) {
+                e.preventDefault();
+                loadRecentNotifications();
+            });
+
+            // Handle mark all as read
+            $('#markAllAsRead').on('click', function(e) {
+                e.preventDefault();
+                markAllNotificationsAsRead();
+            });
+
+            // Handle individual notification clicks
+            $(document).on('click', '.notification-item', function() {
+                const notificationId = $(this).data('id');
+                if (notificationId) {
+                    markNotificationAsRead(notificationId);
                 }
             });
         }
 
+        // Notification UI Functions (keep these global for access from notification-manager)
+        window.loadNotificationCount = function() {
+            $.ajax({
+                url: '/Notifications/GetUnreadCount',
+                type: 'GET',
+                success: function(count) {
+                    updateNotificationBadge(count);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load notification count:', error);
+                }
+            });
+        };
 
-         // Start SignalR connection
-        function startConnectionWithRetry() {
-            if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                console.log('SignalR already connected');
-                return;
+        window.loadRecentNotifications = function() {
+            $('#notificationList').html(`
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `);
+
+            $.ajax({
+                url: '/Notifications/GetRecentNotifications',
+                type: 'GET',
+                success: function(notifications) {
+                    renderNotifications(notifications);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load notifications:', error);
+                    $('#notificationList').html(`
+                        <div class="notification-empty">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p class="mb-0">Failed to load notifications</p>
+                        </div>
+                    `);
+                }
+            });
+        };
+
+        window.loadPendingApprovalsCount = function() {
+            if (typeof loadPendingApprovalsCount !== 'undefined') {
+                // This function is in admin-approvals.js
+                loadPendingApprovalsCount();
             }
+        };
 
-            window.notificationConnection.start()
-                .then(() => {
-                    console.log('SignalR connected successfully');
-                    connectionRetryCount = 0; // Reset retry count on success
-                })
-                .catch(err => {
-                    console.error('SignalR connection error:', err);
-                    connectionRetryCount++;
+        window.incrementNotificationCount = function() {
+            const $badge = $('#notificationBadge');
+            const current = parseInt($badge.text()) || 0;
+            updateNotificationBadge(current + 1);
+        };
 
-                    if (connectionRetryCount < maxRetries) {
-                        const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
-                        console.log(`Retrying connection in ${delay}ms... (Attempt ${connectionRetryCount}/${maxRetries})`);
-                        setTimeout(() => startConnectionWithRetry(), delay);
-                    } else {
-                        console.error('Failed to establish SignalR connection after maximum retries');
-                        showToast('Unable to connect to notification service', 'error');
-                    }
-                });
-        }
-
-
-         function testSignalRConnection() {
-             // Send a test message to verify connection
-             if (window.notificationConnection.state === signalR.HubConnectionState.Connected) {
-                 console.log('SignalR connection test: Connected');
-             }
-         }
-
-         // Fixed notification sound function
-         function playNotificationSound() {
+        window.playNotificationSound = function() {
             try {
                 const audio = new Audio('/sounds/notify.mp3');
                 audio.volume = 0.5;
@@ -382,272 +301,188 @@
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
                         console.log('Could not play notification sound:', error);
-                        // Try playing after user interaction if blocked
-                        $(document).one('click', function() {
-                            audio.play().catch(e => console.log('Audio still blocked:', e));
-                        });
                     });
                 }
             } catch (error) {
                 console.error('Error playing notification sound:', error);
             }
+        };
+
+        window.getNotificationType = function(type) {
+            const types = {
+                'ApprovalRequest': 'warning',
+                'ApprovalResponse': 'success',
+                'ProductUpdate': 'info',
+                'RouteUpdate': 'info',
+                'RouteCompleted': 'success',
+                'TransferCompleted': 'success',
+                'System': 'secondary'
+            };
+            return types[type] || 'info';
+        };
+
+        // Helper Functions
+        function renderNotifications(notifications) {
+            let html = '';
+
+            if (!notifications || notifications.length === 0) {
+                html = `
+                    <div class="notification-empty">
+                        <i class="fas fa-bell-slash"></i>
+                        <p class="mb-0">No new notifications</p>
+                    </div>
+                `;
+            } else {
+                notifications.forEach(function(notification) {
+                    html += createNotificationItem(notification);
+                });
+            }
+
+            $('#notificationList').html(html);
         }
 
-         function setupNotificationHandlers() {
-             // Notification bell click handler
-             $('#notificationIcon').on('click', function(e) {
-                 e.preventDefault();
-                 loadRecentNotifications();
-             });
+        function createNotificationItem(notification) {
+            const timeAgo = formatTimeAgo(notification.createdAt);
+            const unreadClass = notification.isRead ? '' : 'unread';
+            const icon = getNotificationIcon(notification.type);
+            const iconColor = getNotificationIconColor(notification.type);
 
-             // Mark all as read handler
-             $('#markAllAsRead').on('click', function(e) {
-                 e.preventDefault();
-                 markAllAsRead();
-             });
-         }
+            return `
+                <div class="notification-item ${unreadClass}" data-id="${notification.id}">
+                    <div class="d-flex align-items-start">
+                        <div class="notification-icon ${iconColor} me-3">
+                            <i class="${icon} text-white"></i>
+                        </div>
+                        <div class="notification-content">
+                            <h6>${escapeHtml(notification.title)}</h6>
+                            <p>${escapeHtml(notification.message)}</p>
+                            <div class="notification-time">
+                                <i class="fas fa-clock me-1"></i>
+                                ${timeAgo}
+                                ${!notification.isRead ? '<span class="notification-dot ms-2"></span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
-         function loadNotificationCount() {
-             $.ajax({
-                 url: '/Notifications/GetUnreadCount',
-                 type: 'GET',
-                 success: function(count) {
-                     updateNotificationBadge(count);
-                 },
-                 error: function(xhr, status, error) {
-                     console.error('Failed to load notification count:', error);
-                 }
-             });
-         }
+        function markNotificationAsRead(notificationId) {
+            $.ajax({
+                url: '/Notifications/MarkAsRead',
+                type: 'POST',
+                data: JSON.stringify(notificationId),
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
+                },
+                success: function(response) {
+                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    loadNotificationCount();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to mark notification as read:', error);
+                }
+            });
+        }
 
-         function loadRecentNotifications() {
-             $('#notificationList').html(`
-                 <div class="text-center py-3">
-                     <div class="spinner-border spinner-border-sm text-primary" role="status">
-                         <span class="visually-hidden">Loading...</span>
-                     </div>
-                 </div>
-             `);
+        function markAllNotificationsAsRead() {
+            const token = $('input[name="__RequestVerificationToken"]').first().val();
 
-             $.ajax({
-                 url: '/Notifications/GetRecentNotifications',
-                 type: 'GET',
-                 success: function(notifications) {
-                     renderNotifications(notifications);
-                 },
-                 error: function(xhr, status, error) {
-                     console.error('Failed to load notifications:', error);
-                     $('#notificationList').html(`
-                         <div class="notification-empty">
-                             <i class="fas fa-exclamation-circle"></i>
-                             <p class="mb-0">Failed to load notifications</p>
-                         </div>
-                     `);
-                 }
-             });
-         }
+            $.ajax({
+                url: '/Notifications/MarkAllAsRead',
+                type: 'POST',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    $('.notification-item').removeClass('unread');
+                    $('.notification-dot').remove();
+                    updateNotificationBadge(0);
+                    showToast('All notifications marked as read', 'success');
 
-         function renderNotifications(notifications) {
-             let html = '';
+                    if ($('.notification-dropdown').hasClass('show')) {
+                        loadRecentNotifications();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to mark all as read:', error);
+                    showToast('Failed to mark notifications as read', 'error');
+                }
+            });
+        }
 
-             if (!notifications || notifications.length === 0) {
-                 html = `
-                     <div class="notification-empty">
-                         <i class="fas fa-bell-slash"></i>
-                         <p class="mb-0">No new notifications</p>
-                     </div>
-                 `;
-             } else {
-                 notifications.forEach(function(notification) {
-                     html += createNotificationItem(notification);
-                 });
-             }
+        function updateNotificationBadge(count) {
+            const $badge = $('#notificationBadge');
+            const $sidebarBadge = $('#sidebarUnreadCount');
+            count = parseInt(count) || 0;
 
-             $('#notificationList').html(html);
-         }
+            if (count > 0) {
+                $badge.text(count > 99 ? '99+' : count).show();
+                $sidebarBadge.text(count > 99 ? '99+' : count).show();
+            } else {
+                $badge.hide();
+                $sidebarBadge.hide();
+            }
+        }
 
-         function createNotificationItem(notification) {
-             const timeAgo = formatTimeAgo(notification.createdAt);
-             const unreadClass = notification.isRead ? '' : 'unread';
-             const icon = getNotificationIcon(notification.type);
-             const iconColor = getNotificationIconColor(notification.type);
+        function getNotificationIcon(type) {
+            const icons = {
+                'ApprovalRequest': 'fas fa-clock',
+                'ApprovalResponse': 'fas fa-check-circle',
+                'ProductUpdate': 'fas fa-box',
+                'RouteUpdate': 'fas fa-route',
+                'RouteCompleted': 'fas fa-check-double',
+                'TransferCompleted': 'fas fa-exchange-alt',
+                'System': 'fas fa-info-circle'
+            };
+            return icons[type] || 'fas fa-bell';
+        }
 
-             return `
-                 <div class="notification-item ${unreadClass}" data-id="${notification.id}" onclick="markAsRead(${notification.id})">
-                     <div class="d-flex align-items-start">
-                         <div class="notification-icon ${iconColor} me-3">
-                             <i class="${icon} text-white"></i>
-                         </div>
-                         <div class="notification-content">
-                             <h6>${escapeHtml(notification.title)}</h6>
-                             <p>${escapeHtml(notification.message)}</p>
-                             <div class="notification-time">
-                                 <i class="fas fa-clock me-1"></i>
-                                 ${timeAgo}
-                                 ${!notification.isRead ? '<span class="notification-dot ms-2"></span>' : ''}
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-             `;
-         }
+        function getNotificationIconColor(type) {
+            const colors = {
+                'ApprovalRequest': 'bg-warning',
+                'ApprovalResponse': 'bg-success',
+                'ProductUpdate': 'bg-info',
+                'RouteUpdate': 'bg-primary',
+                'RouteCompleted': 'bg-success',
+                'TransferCompleted': 'bg-success',
+                'System': 'bg-secondary'
+            };
+            return colors[type] || 'bg-primary';
+        }
 
-         function markAsRead(notificationId) {
-             $.ajax({
-                 url: '/Notifications/MarkAsRead',
-                 type: 'POST',
-                 data: JSON.stringify(notificationId),
-                 contentType: 'application/json',
-                 headers: {
-                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val(),
-                     'Content-Type': 'application/json'
-                 },
-                 success: function(response) {
-                         $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
-                             loadNotificationCount();
-                 },
-                 error: function(xhr, status, error) {
-                         const errorMessage = ErrorHandler.parseErrorMessage(xhr, 'Failed to mark notification as read');
-                         showToast(errorMessage, 'error');
-                 }
-             });
-         }
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSecs = Math.floor(diffMs / 1000);
+            const diffMins = Math.floor(diffSecs / 60);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
 
-         function markAllAsRead() {
-                          // Find the first available CSRF token
-             var token = $('input[name="__RequestVerificationToken"]').first().val();
-                  if (!token) {
-             // If no token found in forms, create a temporary form to get one
-             var tempForm = $('<form>').html('@Html.AntiForgeryToken()');
-             token = tempForm.find('input[name="__RequestVerificationToken"]').val();
-             }
-                     $.ajax({
-                 url: '/Notifications/MarkAllAsRead',
-                 type: 'POST',
-                 headers: {
-                     'RequestVerificationToken': token
-                 },
-                 success: function(response) {
-                     $('.notification-item').removeClass('unread');
-                     $('.notification-dot').remove();
-                     updateNotificationBadge(0);
-                     showToast('All notifications marked as read', 'success');
+            if (diffSecs < 60) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 30) return `${diffDays}d ago`;
 
-                     // Reload notifications if dropdown is open
-                     if ($('.notification-dropdown').hasClass('show')) {
-                         loadRecentNotifications();
-                     }
-                 },
-                 error: function(xhr, status, error) {
-                     console.error('Mark all as read failed:', xhr.responseText);
-                     showToast('Failed to mark notifications as read', 'error');
-                 }
-             });
-         }
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+        }
 
-         function updateNotificationBadge(count) {
-             const $badge = $('#notificationBadge');
-             const $sidebarBadge = $('#sidebarUnreadCount');
-             count = parseInt(count) || 0;
-
-             if (count > 0) {
-                 $badge.text(count > 99 ? '99+' : count).show();
-                 $sidebarBadge.text(count > 99 ? '99+' : count).show();
-             } else {
-                 $badge.hide();
-                 $sidebarBadge.hide();
-             }
-         }
-
-         function incrementNotificationCount() {
-             const $badge = $('#notificationBadge');
-             const current = parseInt($badge.text()) || 0;
-             updateNotificationBadge(current + 1);
-         }
-
-         function decrementNotificationCount() {
-             const $badge = $('#notificationBadge');
-             const current = parseInt($badge.text()) || 0;
-             if (current > 0) {
-                 updateNotificationBadge(current - 1);
-             }
-         }
-
-         // Helper functions
-         function formatTimeAgo(dateString) {
-             const date = new Date(dateString);
-             const now = new Date();
-             const diffMs = now - date;
-             const diffSecs = Math.floor(diffMs / 1000);
-             const diffMins = Math.floor(diffSecs / 60);
-             const diffHours = Math.floor(diffMins / 60);
-             const diffDays = Math.floor(diffHours / 24);
-
-             if (diffSecs < 60) return 'just now';
-             if (diffMins < 60) return `${diffMins}m ago`;
-             if (diffHours < 24) return `${diffHours}h ago`;
-             if (diffDays < 30) return `${diffDays}d ago`;
-
-             return date.toLocaleDateString('en-US', {
-                 month: 'short',
-                 day: 'numeric',
-                 year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-             });
-         }
-
-         function getNotificationIcon(type) {
-             const icons = {
-                 'ApprovalRequest': 'fas fa-clock',
-                 'ApprovalResponse': 'fas fa-check-circle',
-                 'ProductUpdate': 'fas fa-box',
-                 'RouteUpdate': 'fas fa-route',
-                 'RouteCompleted':'fas fa-check-double',
-                 'TransferCompleted':'fas fa-exchange-alt',
-                 'System': 'fas fa-info-circle'
-             };
-             return icons[type] || 'fas fa-bell';
-         }
-
-         function getNotificationType(type) {
-             const types = {
-                 'ApprovalRequest': 'warning',
-                 'ApprovalResponse': 'success',
-                 'ProductUpdate': 'info',
-                 'RouteUpdate': 'info',
-                 'RouteCompleted': 'success',
-                 'TransferCompleted': 'success',
-                 'System': 'secondary'
-             };
-             return types[type] || 'info';
-         }
-
-         function getNotificationIconColor(type) {
-             const colors = {
-                 'ApprovalRequest': 'bg-warning',
-                 'ApprovalResponse': 'bg-success',
-                 'ProductUpdate': 'bg-info',
-                 'RouteUpdate': 'bg-primary',
-                 'RouteCompleted':'bg-success',
-                 'TransferCompleted':'bg-success',
-                 'System': 'bg-secondary'
-             };
-             return colors[type] || 'bg-primary';
-         }
-
-         function escapeHtml(text) {
-             const map = {
-                 '&': '&amp;',
-                 '<': '&lt;',
-                 '>': '&gt;',
-                 '"': '&quot;',
-                 "'": '&#039;'
-             };
-             return text.replace(/[&<>"']/g, m => map[m]);
-         }
-
-         function toggleSidebar() {
-               document.body.classList.toggle('sidebar-open');
-          }
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+        }
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

@@ -1,6 +1,5 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
-using InventoryManagement.Web.Services;
 using NotificationService.Application.Services;
 using Serilog;
 using Serilog.Events;
@@ -75,7 +74,6 @@ try
         };
     });
 
-
     // Configure CORS properly for production
     builder.Services.AddCors(options =>
     {
@@ -137,9 +135,6 @@ try
 
     app.UseAuthentication();
     app.UseAuthorization();
-
-    app.MapHub<NotificationHub>("/notificationHub");
-
 
     app.MapControllerRoute(
         name: "default",
