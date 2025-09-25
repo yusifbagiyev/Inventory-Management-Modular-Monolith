@@ -3,17 +3,31 @@
 
     let connection = null;
     let connectionRetryCount = 0;
-    const maxRetries = 10;
+    const maxRetries = 5; // Reduced from 10 to prevent excessive retries
     let connectionState = 'disconnected';
     let reconnectTimeout = null;
+    let isInitialized = false; // Flag to prevent multiple initializations
 
-    // Initialize the notification system
+    // Track recent notifications to prevent duplicates
+    const recentNotifications = new Map();
+    const DUPLICATE_CHECK_WINDOW = 5000; // 5 seconds
+
+    // Initialize the notification system (with duplicate protection)
     function initialize(isAdmin) {
+        // Prevent multiple initializations
+        if (isInitialized) {
+            console.log('NotificationManager already initialized, skipping');
+            return;
+        }
+
         const token = $('#jwtToken').val();
         if (!token) {
             console.log('No JWT token available, skipping notification initialization');
             return;
         }
+
+        // Mark as initialized before proceeding
+        isInitialized = true;
 
         // Store admin status passed from the page
         window.isAdmin = isAdmin;
@@ -22,11 +36,18 @@
         establishConnection();
     }
 
-    // Establish SignalR connection
+    // Establish SignalR connection with improved error handling
     function establishConnection() {
         if (connection && connection.state === signalR.HubConnectionState.Connected) {
             console.log('Already connected to notification hub');
             return;
+        }
+
+        // Clean up any existing connection first
+        if (connection) {
+            console.log('Cleaning up existing connection');
+            connection.stop();
+            connection = null;
         }
 
         const hubUrl = AppConfig.signalR.notificationHub;
@@ -37,6 +58,9 @@
             .withUrl(hubUrl, {
                 accessTokenFactory: () => {
                     const token = $('#jwtToken').val();
+                    if (!token) {
+                        throw new Error('No authentication token available');
+                    }
                     return token;
                 },
                 transport: signalR.HttpTransportType.WebSockets |
@@ -47,12 +71,13 @@
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds: retryContext => {
                     if (retryContext.previousRetryCount >= maxRetries) {
-                        return null;
+                        return null; // Stop trying after max retries
                     }
-                    return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 16000);
                 }
             })
-            .configureLogging(signalR.LogLevel.Information)
+            .configureLogging(signalR.LogLevel.Warning) // Reduced logging to avoid noise
             .build();
 
         // Set up event handlers before starting
@@ -77,32 +102,41 @@
             console.log('SignalR reconnected successfully:', connectionId);
             showToast('Connection restored', 'success');
 
-            // Reload notifications after reconnection
-            loadRecentNotifications();
-            loadNotificationCount();
+            // Reload data after reconnection, but with a delay to avoid overwhelming the server
+            setTimeout(() => {
+                loadRecentNotifications();
+                loadNotificationCount();
 
-            if (window.isAdmin) {
-                loadPendingApprovalsCount();
-            }
+                if (window.isAdmin) {
+                    // Use the debounced version to avoid rapid calls
+                    debouncedLoadPendingApprovalsCount();
+                }
+            }, 1000);
         });
 
         connection.onclose((error) => {
             connectionState = 'disconnected';
             console.error('SignalR connection closed:', error);
 
-            // Try to reconnect after a delay
+            // Only try to reconnect if we haven't exceeded max retries
             if (connectionRetryCount < maxRetries) {
                 reconnectTimeout = setTimeout(() => {
-                    console.log('Attempting manual reconnection...');
+                    console.log(`Attempting manual reconnection... (${connectionRetryCount + 1}/${maxRetries})`);
+                    connectionRetryCount++;
                     startConnection();
                 }, 5000);
             } else {
+                console.error('Maximum reconnection attempts exceeded');
                 showToast('Unable to connect to notification service', 'error');
+                // Reset for potential future retry attempts
+                setTimeout(() => {
+                    connectionRetryCount = 0;
+                }, 60000); // Reset after 1 minute
             }
         });
     }
 
-    // Set up message handlers
+    // Set up message handlers with duplicate prevention
     function setupMessageHandlers() {
         // Connection established confirmation
         connection.on("ConnectionEstablished", function (data) {
@@ -121,60 +155,122 @@
 
             console.log('Connected as:', data.userName, 'Groups:', [data.userGroup, ...data.roleGroups]);
 
-            // Initial load of notifications
-            loadRecentNotifications();
-            loadNotificationCount();
+            // Initial load of data (with slight delay to ensure UI is ready)
+            setTimeout(() => {
+                loadRecentNotifications();
+                loadNotificationCount();
+            }, 500);
         });
 
-
-        // Handle incoming notifications
+        // Handle incoming notifications with duplicate prevention
         connection.on("ReceiveNotification", function (notification) {
             console.log('📨 Notification received:', notification);
+
+            // Check for duplicate notifications
+            if (isDuplicateNotification(notification)) {
+                console.log('Duplicate notification detected, ignoring:', notification.id);
+                return;
+            }
+
+            // Track this notification
+            trackNotification(notification);
+
+            // Handle the notification
             handleIncomingNotification(notification);
         });
-
 
         // Handle pending notifications (sent when connecting)
         connection.on("ReceivePendingNotification", function (notification) {
             console.log('📬 Pending notification received:', notification);
-            // For pending notifications, we might not want to show toasts for each one
-            // Just update the UI
+
+            // For pending notifications, we don't want to show individual toasts
+            // Just update the badge count
             window.incrementNotificationCount();
         });
-
 
         // Pending notifications complete
         connection.on("PendingNotificationsComplete", function (data) {
             console.log(`📭 Received ${data.count} pending notifications`);
-            // Reload the notification list to show all pending notifications
-            window.loadRecentNotifications();
-            window.loadNotificationCount();
+
+            // Reload the notification list and count after receiving all pending
+            setTimeout(() => {
+                window.loadRecentNotifications();
+                window.loadNotificationCount();
+            }, 100);
         });
 
-
-        // Handle approval refresh (for admins)
+        // Handle approval refresh (for admins) with rate limiting
         connection.on("RefreshApprovals", function (data) {
             console.log('🔄 Refresh approvals signal received:', data);
-            if (window.isAdmin) {
-                loadPendingApprovalsCount();
 
-                // If on approvals page, refresh the list
+            if (window.isAdmin) {
+                // Use debounced function to prevent rapid successive calls
+                if (typeof debouncedLoadPendingApprovalsCount === 'function') {
+                    debouncedLoadPendingApprovalsCount();
+                } else if (typeof loadPendingApprovalsCount === 'function') {
+                    loadPendingApprovalsCount();
+                }
+
+                // If on approvals page, refresh the list (also with rate limiting)
                 if (window.location.pathname.includes('/Approvals')) {
-                    if (typeof window.refreshApprovalsList === 'function') {
-                        window.refreshApprovalsList();
-                    }
+                    // Debounce page refreshes to prevent excessive updates
+                    clearTimeout(window.approvalsPageRefreshTimeout);
+                    window.approvalsPageRefreshTimeout = setTimeout(() => {
+                        if (typeof window.refreshApprovalsList === 'function') {
+                            window.refreshApprovalsList();
+                        }
+                    }, 1000);
                 }
             }
         });
-
-
-        // Ping/Pong for connection health
-        connection.on("Pong", function (timestamp) {
-            console.log('🏓 Pong received:', timestamp);
-        });
     }
 
-    // Start the connection
+    // Check if notification is a duplicate
+    function isDuplicateNotification(notification) {
+        if (!notification || !notification.id) {
+            return false;
+        }
+
+        const notificationKey = `${notification.id}-${notification.type}`;
+        const now = Date.now();
+
+        // Check if we've seen this notification recently
+        if (recentNotifications.has(notificationKey)) {
+            const lastSeen = recentNotifications.get(notificationKey);
+            if (now - lastSeen < DUPLICATE_CHECK_WINDOW) {
+                return true; // This is a duplicate
+            }
+        }
+
+        return false;
+    }
+
+    // Track notification to prevent duplicates
+    function trackNotification(notification) {
+        if (!notification || !notification.id) {
+            return;
+        }
+
+        const notificationKey = `${notification.id}-${notification.type}`;
+        const now = Date.now();
+
+        // Store the current time for this notification
+        recentNotifications.set(notificationKey, now);
+
+        // Clean up old entries to prevent memory leaks
+        if (recentNotifications.size > 100) { // Keep only last 100 entries
+            const entries = Array.from(recentNotifications.entries());
+            entries.sort((a, b) => b[1] - a[1]); // Sort by timestamp, newest first
+
+            // Keep only the 50 most recent
+            recentNotifications.clear();
+            entries.slice(0, 50).forEach(([key, timestamp]) => {
+                recentNotifications.set(key, timestamp);
+            });
+        }
+    }
+
+    // Start the connection with better error handling
     function startConnection() {
         if (connectionState === 'connecting') {
             console.log('Connection already in progress');
@@ -189,20 +285,25 @@
                 connectionRetryCount = 0;
                 console.log('✅ SignalR connected successfully');
 
-                // Send a ping to verify connection
-                connection.invoke("Ping").catch(err => {
-                    console.error('Ping failed:', err);
-                });
+                // Clear any existing reconnect timeout
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
             })
             .catch(err => {
                 connectionState = 'disconnected';
-                connectionRetryCount++;
                 console.error('❌ SignalR connection failed:', err);
 
-                if (connectionRetryCount < maxRetries) {
+                // Only retry if we haven't exceeded the limit and it's not an auth error
+                if (connectionRetryCount < maxRetries && !isAuthError(err)) {
+                    connectionRetryCount++;
                     const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
-                    console.log(`Retrying connection in ${delay}ms... (Attempt ${connectionRetryCount}/${maxRetries})`);
-                    setTimeout(() => startConnection(), delay);
+                    console.log(`Retrying connection in ${delay}ms... (${connectionRetryCount}/${maxRetries})`);
+                    reconnectTimeout = setTimeout(() => startConnection(), delay);
+                } else if (isAuthError(err)) {
+                    console.error('Authentication error, user may need to login');
+                    showToast('Authentication expired. Please refresh the page.', 'warning');
                 } else {
                     console.error('Failed to establish SignalR connection after maximum retries');
                     showToast('Unable to connect to notification service', 'error');
@@ -210,39 +311,87 @@
             });
     }
 
-    // Handle incoming notification
-    function handleIncomingNotification(notification) {
-        // Play sound
-        window.playNotificationSound();
+    // Check if error is authentication-related
+    function isAuthError(error) {
+        const errorMessage = error.message || error.toString();
+        return errorMessage.includes('401') ||
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('authentication') ||
+            errorMessage.includes('token');
+    }
 
-        // Show toast
+    // Handle incoming notification with improved logic
+    function handleIncomingNotification(notification) {
+        // Play sound (but not too frequently)
+        if (shouldPlaySound()) {
+            window.playNotificationSound();
+        }
+
+        // Show toast with appropriate type
         const toastType = window.getNotificationType(notification.type);
         showToast(`${notification.title}: ${notification.message}`, toastType);
 
         // Update UI elements
         window.incrementNotificationCount();
-        window.loadRecentNotifications();
 
-        // Special handling for different notification types
-        if (notification.type === 'ApprovalRequest' && window.isAdmin) {
-            window.loadPendingApprovalsCount();
+        // Debounce the notification list reload to prevent excessive calls
+        clearTimeout(window.notificationListReloadTimeout);
+        window.notificationListReloadTimeout = setTimeout(() => {
+            window.loadRecentNotifications();
+        }, 500);
 
-            if (window.location.pathname.includes('/Approvals')) {
-                if (typeof window.refreshApprovalsList === 'function') {
-                    window.refreshApprovalsList();
-                } else {
-                    location.reload();
-                }
-            }
-        }
-        else if (notification.type === 'ApprovalResponse') {
-            if (window.location.pathname.includes('/MyRequests')) {
-                location.reload();
-            }
-        }
+        // Handle special notification types
+        handleSpecialNotifications(notification);
 
         // Trigger custom event for other parts of the application
         $(document).trigger('notification:received', [notification]);
+    }
+
+    // Handle special notification types with proper debouncing
+    function handleSpecialNotifications(notification) {
+        if (notification.type === 'ApprovalRequest' && window.isAdmin) {
+            // Use debounced function to prevent rapid calls
+            if (typeof debouncedLoadPendingApprovalsCount === 'function') {
+                debouncedLoadPendingApprovalsCount();
+            }
+
+            // Handle approvals page refresh with debouncing
+            if (window.location.pathname.includes('/Approvals')) {
+                clearTimeout(window.approvalsRefreshTimeout);
+                window.approvalsRefreshTimeout = setTimeout(() => {
+                    if (typeof window.refreshApprovalsList === 'function') {
+                        window.refreshApprovalsList();
+                    } else {
+                        // Only reload as last resort, and with user confirmation
+                        if (confirm('New approval requests available. Refresh page to see them?')) {
+                            location.reload();
+                        }
+                    }
+                }, 2000); // 2 second delay
+            }
+        }
+        else if (notification.type === 'ApprovalResponse') {
+            // Handle approval responses
+            if (window.location.pathname.includes('/MyRequests')) {
+                clearTimeout(window.myRequestsRefreshTimeout);
+                window.myRequestsRefreshTimeout = setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            }
+        }
+    }
+
+    // Prevent too frequent sound notifications
+    let lastSoundPlayed = 0;
+    function shouldPlaySound() {
+        const now = Date.now();
+        const timeSinceLastSound = now - lastSoundPlayed;
+
+        if (timeSinceLastSound > 2000) { // Minimum 2 seconds between sounds
+            lastSoundPlayed = now;
+            return true;
+        }
+        return false;
     }
 
     // Public API
@@ -253,12 +402,23 @@
         isConnected: () => connectionState === 'connected',
         reconnect: () => {
             if (connectionState !== 'connected' && connectionState !== 'connecting') {
+                console.log('Manual reconnection requested');
+                connectionRetryCount = 0; // Reset retry count for manual reconnection
                 establishConnection();
+            } else {
+                console.log('Already connected or connecting');
             }
         },
         disconnect: () => {
+            console.log('Manual disconnection requested');
+            isInitialized = false;
             if (connection) {
                 connection.stop();
+            }
+            // Clear any pending timeouts
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
             }
         }
     };

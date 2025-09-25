@@ -100,13 +100,6 @@ namespace NotificationService.Application.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        // Method to check connection status
-        public async Task<bool> Ping()
-        {
-            await Clients.Caller.SendAsync("Pong", DateTime.UtcNow);
-            return true;
-        }
-
         private async Task SendPendingNotifications(string userId)
         {
             try

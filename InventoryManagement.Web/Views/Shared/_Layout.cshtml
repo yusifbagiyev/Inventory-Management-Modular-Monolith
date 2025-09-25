@@ -210,7 +210,7 @@
                 loadRecentNotifications();
 
                 if (isAdmin) {
-                    loadPendingApprovalsCount();
+                    loadPendingApprovalsCountFromAPI();
                 }
             }
         });
@@ -279,10 +279,10 @@
             });
         };
 
-        window.loadPendingApprovalsCount = function() {
-            if (typeof loadPendingApprovalsCount !== 'undefined') {
-                // This function is in admin-approvals.js
-                loadPendingApprovalsCount();
+        window.loadPendingApprovalsCountFromAPI = function() {
+         // This function calls the actual implementation from admin-approvals.js
+            if (typeof loadPendingApprovalsCount === 'function') {
+            loadPendingApprovalsCount();
             }
         };
 
