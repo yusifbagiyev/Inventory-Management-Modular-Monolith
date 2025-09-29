@@ -19,7 +19,7 @@
                     Edit Product Information
                 </div>
                 <div class="card-body">
-                    <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editProductForm">
+                    <form asp-action="Edit" method="post" enctype="multipart/form-data">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                         <input type="hidden" asp-for="Id" />
                         <div class="row">
@@ -155,25 +155,10 @@
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // Use the specific form ID instead of generic 'form' selector
-            AjaxHandler.handleForm('#editProductForm', {  // <-- Changed from 'form' to '#editProductForm'
+            AjaxHandler.handleForm('form', { 
                 successMessage: 'Product updated successfully!',
                 successRedirect: '@Url.Action("Index")',
-                redirectDelay: 1500,
-                onSuccess: function(response) {
-                    if (response.isApprovalRequest) {
-                        showToast(response.message || 'Update submitted for approval', 'info');
-                        setTimeout(() => window.location.href = '@Url.Action("Index")', 2000);
-                        return false; // Prevent default redirect
-                    }
-                    return true;
-                },
-                onError: function(errorMessage, response) {
-                    // Reset button state on error
-                    const $submitBtn = $('#editProductForm button[type="submit"]');
-                    $submitBtn.prop('disabled', false)
-                        .html('<i class="fas fa-save"></i> Save Changes');
-                }
+                redirectDelay: 1500
             });
         });
 

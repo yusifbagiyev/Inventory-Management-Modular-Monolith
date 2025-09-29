@@ -188,9 +188,9 @@ namespace InventoryManagement.Web.Controllers
                     {
                         product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
                     }
+                    await LoadDropdowns(product);
                 }
 
-                await LoadDropdowns(product);
                 return View(product);
             }
             catch (Exception ex)

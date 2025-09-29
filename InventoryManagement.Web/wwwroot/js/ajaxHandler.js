@@ -3,7 +3,6 @@
 
     // Add a registry to track form submission states
     const submissionStates = new WeakMap();
-
     function handleForm(formSelector, options) {
         const defaults = {
             validateBeforeSubmit: true,
@@ -148,7 +147,6 @@
             });
         });
     }
-
 
     // Simplified handleSuccess function
     function handleSuccess(response, form, settings) {
