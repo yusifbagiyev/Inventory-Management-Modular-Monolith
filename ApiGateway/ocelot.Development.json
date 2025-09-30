@@ -150,38 +150,6 @@
             "AddHeadersToRequest": {
                 "Authorization": "Bearer {token}"
             }
-        },
-        {
-            "DownstreamPathTemplate": "/api/products/approved",
-            "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 5001
-                }
-            ],
-            "UpstreamPathTemplate": "/api/products/approved",
-            "UpstreamHttpMethod": [ "POST" ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer",
-                "AllowedScopes": []
-            }
-        },
-        {
-            "DownstreamPathTemplate": "/api/products/{id}/approved",
-            "DownstreamScheme": "http",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 5001
-                }
-            ],
-            "UpstreamPathTemplate": "/api/products/{id}/approved",
-            "UpstreamHttpMethod": [ "PUT", "DELETE" ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer",
-                "AllowedScopes": []
-            }
         }
     ],
     "GlobalConfiguration": {
