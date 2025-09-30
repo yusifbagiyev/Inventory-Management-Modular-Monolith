@@ -53,6 +53,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
+
         public async Task<T?> GetAsync<T>(string endpoint)
         {
             AddAuthorizationHeader();
@@ -91,6 +92,7 @@ namespace InventoryManagement.Web.Services
             await ThrowHttpRequestException(response, errorContent);
             return default; // This line won't be reached but satisfies compiler
         }
+
 
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
@@ -139,13 +141,9 @@ namespace InventoryManagement.Web.Services
             }
 
             // For non-success responses, return structured error
-            return new ApiResponse<TResponse>
-            {
-                IsSuccess = false,
-                Message = ParseErrorMessage(responseContent, response.StatusCode),
-                Data = default
-            };
+            return await ProcessResponse<TResponse>(response, responseContent);
         }
+
 
 
         public async Task<ApiResponse<T>> PostFormAsync<T>(
@@ -159,8 +157,10 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PostAsync(endpoint, content);
 
-            if (!response.IsSuccessStatusCode)
+            if(response.StatusCode==HttpStatusCode.Unauthorized)
             {
+                _logger.LogInformation("Received 401, attempting token refresh for POST {Endpoint}", endpoint);
+
                 var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
                 if (refreshResult)
@@ -168,13 +168,37 @@ namespace InventoryManagement.Web.Services
                     AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
                 }
+                else
+                {
+                    return new ApiResponse<T>
+                    {
+                        IsSuccess = false,
+                        Message = "Authentication failed - please login again"
+                    };
+                }
+
             }
-            
 
             var responseContent = await response.Content.ReadAsStringAsync();
 
+            if (response.IsSuccessStatusCode)
+            {
+                // Check if response indicates approval even with 200 OK
+                if (IsApprovalResponse(responseContent))
+                {
+                    return HandleApprovalResponse<T>(responseContent);
+                }
+
+                return new ApiResponse<T>
+                {
+                    IsSuccess = true,
+                    Data = JsonConvert.DeserializeObject<T>(responseContent)
+                };
+            }
+
             return await ProcessResponse<T>(response, responseContent);
         }
+
 
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
@@ -186,18 +210,42 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PutAsync(endpoint, content);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {   
+                _logger.LogInformation("Received 401, attempting token refresh for PUT {Endpoint}", endpoint);
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
-            if (refreshResult)
-            {
-                AddAuthorizationHeader();
-                response = await _httpClient.PutAsync(endpoint, content);
+                if (refreshResult)
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PutAsync(endpoint, content);
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
+                }
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
 
+            if (response.IsSuccessStatusCode)
+            {
+                // Check if response indicates approval even with 200 OK
+                if (IsApprovalResponse(responseContent))
+                {
+                    return HandleApprovalResponse<TResponse>(responseContent);
+                }
+
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = true,
+                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                };
+            }
+
             return await ProcessResponse<TResponse>(response, responseContent);
         }
+
 
 
         public async Task<ApiResponse<TResponse>> PutFormAsync<TResponse>(
@@ -211,18 +259,41 @@ namespace InventoryManagement.Web.Services
 
             var response = await _httpClient.PutAsync(endpoint, content);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
-
-            if (refreshResult)
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                AddAuthorizationHeader();
-                response = await _httpClient.PutAsync(endpoint, content);
+                _logger.LogInformation("Received 401, attempting token refresh for PUT {Endpoint}", endpoint);
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
+
+                if (refreshResult)
+                {
+                    AddAuthorizationHeader();
+                    response = await _httpClient.PutAsync(endpoint, content);
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
+                }
             }
 
             var responseContent = await response.Content.ReadAsStringAsync();
 
+            if (response.IsSuccessStatusCode)
+            {
+                // Check if response indicates approval even with 200 OK
+                if (IsApprovalResponse(responseContent))
+                {
+                    return HandleApprovalResponse<TResponse>(responseContent);
+                }
+                return new ApiResponse<TResponse>
+                {
+                    IsSuccess = true,
+                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                };
+            }
+
             return await ProcessResponse<TResponse>(response, responseContent);
         }
+
 
 
         public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
@@ -261,6 +332,7 @@ namespace InventoryManagement.Web.Services
                 Message = response.IsSuccessStatusCode ? null : $"Request failed with status {response.StatusCode}"
             };
         }
+
 
 
         private MultipartFormDataContent BuildMultipartContent(IFormCollection form,object? dataDto)
@@ -305,6 +377,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
+
         private async Task<ApiResponse<T>> ProcessResponse<T>(HttpResponseMessage response, string responseContent)
         {
             // Handle approval responses
@@ -343,6 +416,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
+
         private bool IsApprovalResponse(string responseContent)
         {
             try
@@ -358,6 +432,7 @@ namespace InventoryManagement.Web.Services
                 return false;
             }
         }
+
 
 
         private ApiResponse<T> HandleApprovalResponse<T> (string responseContent)
@@ -386,6 +461,7 @@ namespace InventoryManagement.Web.Services
                 };
             }
         }
+
 
 
         private string ParseErrorMessage(string responseContent, HttpStatusCode statusCode)
@@ -427,6 +503,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
+
         private string GetDefaultErrorMessage(HttpStatusCode statusCode)
         {
             return statusCode switch
@@ -440,6 +517,7 @@ namespace InventoryManagement.Web.Services
                 _ => $"Request failed with status {statusCode}"
             };
         }
+
 
 
         // Throw appropriate exception based on HTTP status
