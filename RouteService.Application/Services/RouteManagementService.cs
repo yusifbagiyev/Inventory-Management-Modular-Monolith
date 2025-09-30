@@ -8,6 +8,7 @@ using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
 using SharedServices.Identity;
+using System.Security.Claims;
 
 namespace RouteService.Application.Services
 {
@@ -65,6 +66,8 @@ namespace RouteService.Application.Services
             _logger.LogInformation($"Approval request {result.Id} created for transfer of product {dto.ProductId}");
             throw new ApprovalRequiredException(result.Id, "Transfer request has been submitted for approval");
         }
+
+
 
         public async Task UpdateRouteWithApprovalAsync(
             int id,
@@ -126,6 +129,8 @@ namespace RouteService.Application.Services
             throw new ApprovalRequiredException(result.Id, "Route update request submitted for approval");
         }
 
+
+
         public async Task DeleteRouteWithApprovalAsync(
             int id,
             int userId,
@@ -183,6 +188,7 @@ namespace RouteService.Application.Services
             throw new ApprovalRequiredException(result.Id, "Route deletion request submitted for approval");
         }
 
+
         private async Task<Dictionary<string, object>> BuildTransferApprovalData(TransferInventoryDto dto)
         {
             // Fetch comprehensive product information
@@ -230,6 +236,7 @@ namespace RouteService.Application.Services
             return actionData;
         }
 
+
         private async Task<Dictionary<string, object>> BuildRouteUpdateData(InventoryRouteDto existing, UpdateRouteDto updated)
         {
             var updateData = new Dictionary<string, object>
@@ -261,6 +268,7 @@ namespace RouteService.Application.Services
             return updateData;
         }
 
+
         private string BuildRouteChangeSummary(InventoryRouteDto existing, UpdateRouteDto updated)
         {
             var changes = new List<string>();
@@ -278,9 +286,35 @@ namespace RouteService.Application.Services
             return changes.Any() ? string.Join(", ", changes) : "No changes";
         }
 
+
+
         private string BuildTransferReason(ProductInfoDto product, DepartmentDto? from, DepartmentDto to)
         {
             return $"Transfer of {product.Model} ({product.InventoryCode}) from {from?.Name ?? "Unknown"} to {to.Name}";
+        }
+
+
+        public int GetUserId(ClaimsPrincipal User)
+        {
+            return int.Parse(User.FindFirst("UserId")?.Value ??
+               User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+
+
+
+        public string GetUserName(ClaimsPrincipal User)
+        {
+            return User.Identity?.Name ?? "Unknown";
+        }
+
+
+
+        public List<string> GetUserPermissions(ClaimsPrincipal User)
+        {
+            return User.Claims
+                .Where(c => c.Type == "permission")
+                .Select(c => c.Value)
+                .ToList();
         }
     }
 }

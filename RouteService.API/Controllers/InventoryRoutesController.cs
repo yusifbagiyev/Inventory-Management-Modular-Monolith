@@ -39,9 +39,9 @@ namespace RouteService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _routeManagementService.GetUserId(User);
+                var userName = _routeManagementService.GetUserName(User);
+                var userPermissions = _routeManagementService.GetUserPermissions(User);
 
                 var result = await _routeManagementService.TransferInventoryWithApprovalAsync(
                     dto, userId, userName, userPermissions);
@@ -52,9 +52,9 @@ namespace RouteService.API.Controllers
             {
                 return Accepted(new
                 {
-                    ApprovalRequestId = ex.ApprovalRequestId,
-                    Message = ex.Message,
-                    Status = ex.Status
+                    ex.ApprovalRequestId,
+                    ex.Message,
+                    ex.Status
                 });
             }
             catch (NotFoundException ex)
@@ -80,9 +80,9 @@ namespace RouteService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _routeManagementService.GetUserId(User);
+                var userName = _routeManagementService.GetUserName(User);
+                var userPermissions = _routeManagementService.GetUserPermissions(User);
 
                 await _routeManagementService.UpdateRouteWithApprovalAsync(
                     id, dto, userId, userName, userPermissions);
@@ -196,9 +196,9 @@ namespace RouteService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _routeManagementService.GetUserId(User);
+                var userName =_routeManagementService.GetUserName(User);
+                var userPermissions = _routeManagementService.GetUserPermissions(User);
 
                 await _routeManagementService.DeleteRouteWithApprovalAsync(
                     id, userId, userName, userPermissions);
@@ -209,9 +209,9 @@ namespace RouteService.API.Controllers
             {
                 return Accepted(new
                 {
-                    ApprovalRequestId = ex.ApprovalRequestId,
-                    Message = ex.Message,
-                    Status = ex.Status
+                    ex.ApprovalRequestId,
+                    ex.Message,
+                    ex.Status
                 });
             }
             catch (NotFoundException ex)
@@ -294,28 +294,6 @@ namespace RouteService.API.Controllers
         {
             var result = await _mediator.Send(new BatchDeleteRoutes.Command(dto));
             return Ok(result);
-        }
-
-
-
-        // Helper methods
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst("UserId")?.Value ??
-                           User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        }
-
-        private string GetUserName()
-        {
-            return User.Identity?.Name ?? "Unknown";
-        }
-
-        private List<string> GetUserPermissions()
-        {
-            return User.Claims
-                .Where(c => c.Type == "permission")
-                .Select(c => c.Value)
-                .ToList();
         }
     }
 }
