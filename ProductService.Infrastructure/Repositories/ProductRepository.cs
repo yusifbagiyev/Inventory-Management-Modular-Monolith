@@ -23,6 +23,7 @@ namespace ProductService.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         }
 
+
         public async Task<PagedResult<Product>> GetAllAsync(
             int pageNumber,
             int pageSize,
@@ -106,6 +107,7 @@ namespace ProductService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task<IEnumerable<Product>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
         {
             return await _context.Products
@@ -115,6 +117,7 @@ namespace ProductService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+
         public async Task<Product?> GetByInventoryCodeAsync(int inventoryCode, CancellationToken cancellationToken = default)
         {
             return await _context.Products
@@ -123,11 +126,13 @@ namespace ProductService.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.InventoryCode == inventoryCode, cancellationToken);
         }
 
+
         public async Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
         {
             await _context.Products.AddAsync(product, cancellationToken);
             return product;
         }
+
 
         public Task UpdateAsync(Product product, CancellationToken cancellationToken = default)
         {
@@ -135,11 +140,13 @@ namespace ProductService.Infrastructure.Repositories
             return Task.CompletedTask;
         }
 
+
         public Task DeleteAsync(Product product, CancellationToken cancellationToken = default)
         {
             _context.Products.Remove(product);
             return Task.CompletedTask;
         }
+
 
         public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
         {

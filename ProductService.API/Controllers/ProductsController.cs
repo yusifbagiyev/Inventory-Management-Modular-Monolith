@@ -80,9 +80,9 @@ namespace ProductService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _productManagementService.GetUserId(User);
+                var userName = _productManagementService.GetUserName(User);
+                var userPermissions = _productManagementService.GetUserPermissions(User);
 
                 var product = await _productManagementService.CreateProductWithApprovalAsync(
                     dto, userId, userName, userPermissions);
@@ -121,9 +121,9 @@ namespace ProductService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _productManagementService.GetUserId(User);
+                var userName = _productManagementService.GetUserName(User);
+                var userPermissions = _productManagementService.GetUserPermissions(User);
 
                 await _productManagementService.UpdateProductWithApprovalAsync(
                     id, dto, userId, userName, userPermissions);
@@ -161,9 +161,9 @@ namespace ProductService.API.Controllers
         {
             try
             {
-                var userId = GetUserId();
-                var userName = GetUserName();
-                var userPermissions = GetUserPermissions();
+                var userId = _productManagementService.GetUserId(User);
+                var userName = _productManagementService.GetUserName(User);
+                var userPermissions = _productManagementService.GetUserPermissions(User);
 
                 await _productManagementService.DeleteProductWithApprovalAsync(
                     id, userId, userName, userPermissions);
@@ -311,6 +311,8 @@ namespace ProductService.API.Controllers
         }
 
 
+
+
         [HttpPut("{id}/inventory-code")]
         [Permission(AllPermissions.ProductUpdate)]
         public async Task<IActionResult> UpdateInventoryCode(int id, [FromBody] UpdateInventoryCodeDto dto)
@@ -328,27 +330,6 @@ namespace ProductService.API.Controllers
             // Update only the inventory code
             await _mediator.Send(new UpdateProductInventoryCode.Command(id, dto.InventoryCode));
             return NoContent();
-        }
-
-
-
-        // Helper methods to extract user information
-        private int GetUserId()
-        {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        }
-
-        private string GetUserName()
-        {
-            return User.Identity?.Name ?? "Unknown";
-        }
-
-        private List<string> GetUserPermissions()
-        {
-            return User.Claims
-                .Where(c => c.Type == "permission")
-                .Select(c => c.Value)
-                .ToList();
         }
     }
 }

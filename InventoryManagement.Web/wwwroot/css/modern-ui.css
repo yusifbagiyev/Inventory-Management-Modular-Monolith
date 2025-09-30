@@ -298,3 +298,17 @@ body {
 .search-wrapper {
     display: none; /* Remove non-functional search */
 }
+
+.icon-badge {
+    position: relative;
+    display: inline-block;
+}
+
+.icon-badge .badge {
+    min-width: 18px;
+    height: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

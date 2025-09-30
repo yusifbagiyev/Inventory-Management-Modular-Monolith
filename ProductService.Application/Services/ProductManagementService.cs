@@ -11,6 +11,7 @@ using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
 using SharedServices.Identity;
+using System.Security.Claims;
 
 namespace ProductService.Application.Services
 {
@@ -78,6 +79,7 @@ namespace ProductService.Application.Services
         }
 
 
+
         public async Task<ProductDto> UpdateProductWithApprovalAsync(
             int id,
             UpdateProductDto dto,
@@ -136,6 +138,7 @@ namespace ProductService.Application.Services
         }
 
 
+
         public async Task DeleteProductWithApprovalAsync(
             int id,
             int userId,
@@ -183,11 +186,14 @@ namespace ProductService.Application.Services
         }
 
 
+
         private async Task<ProductDto> GetProductById(int id)
         {
             return await _mediator.Send(new GetProductByIdQuery(id)) ??
                 throw new NotFoundException($"Product with ID {id} not found");
         }
+
+
 
         private async Task ValidateProductDoesNotExist(int inventoryCode)
         {
@@ -200,6 +206,8 @@ namespace ProductService.Application.Services
                 throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists");
             }
         }
+
+
 
         private async Task<Dictionary<string, object>> BuildCreateProductActionData(CreateProductDto dto)
         {
@@ -244,6 +252,8 @@ namespace ProductService.Application.Services
             return actionData;
         }
 
+
+
         private async Task<Dictionary<string, object>> BuildUpdateProductActionData(UpdateProductDto dto)
         {
             var updateData = new Dictionary<string, object>
@@ -278,6 +288,8 @@ namespace ProductService.Application.Services
             return updateData;
         }
 
+
+
         public async Task<List<string>> TrackWhatChanges(ProductDto existingProduct, UpdateProductDto updatedProduct)
         {
             ArgumentNullException.ThrowIfNull(existingProduct);
@@ -308,6 +320,8 @@ namespace ProductService.Application.Services
             return changes;
         }
 
+
+
         public async Task<string?> GetCategoryNameAsync(int categoryId)
         {
             var categoryName = await _categoryRepository.GetByIdAsync(categoryId)
@@ -315,11 +329,37 @@ namespace ProductService.Application.Services
             return categoryName?.Name;
         }
 
+
+
         public async Task<string?> GetDepartmentNameAsync(int departmentId)
         {
             var departmentName = await _departmentRepository.GetByIdAsync(departmentId)
                 ?? throw new NotFoundException($"Department was not found with ID: {departmentId}");
             return departmentName.Name;
+        }
+
+
+
+        public int GetUserId(ClaimsPrincipal User)
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+
+
+
+        public string GetUserName(ClaimsPrincipal User)
+        {
+            return User.Identity?.Name ?? "Unknown";
+        }
+
+
+
+        public List<string> GetUserPermissions(ClaimsPrincipal User)
+        {
+            return User.Claims
+                .Where(c => c.Type == "permission")
+                .Select(c => c.Value)
+                .ToList();
         }
     }
 }

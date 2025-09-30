@@ -58,7 +58,9 @@
                                    data-bs-toggle="dropdown">
                                     <div class="icon-badge">
                                         <i class="far fa-bell"></i>
-                                        <span id="notificationBadge" class="badge-dot" style="display:none;"></span>
+                                        <span id="notificationBadge" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                                              style="display:none; font-size: 0.65rem; padding: 0.25em 0.5em;">
+                                        </span>
                                     </div>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end notification-dropdown modern-dropdown">
@@ -244,6 +246,7 @@
                 url: '/Notifications/GetUnreadCount',
                 type: 'GET',
                 success: function(count) {
+                    console.log('Loaded notification count:', count);
                     updateNotificationBadge(count);
                 },
                 error: function(xhr, status, error) {
@@ -252,7 +255,9 @@
             });
         };
 
-        window.loadRecentNotifications = function() {
+
+
+         window.loadRecentNotifications = function() {
             $('#notificationList').html(`
                 <div class="text-center py-3">
                     <div class="spinner-border spinner-border-sm text-primary" role="status">
@@ -265,7 +270,11 @@
                 url: '/Notifications/GetRecentNotifications',
                 type: 'GET',
                 success: function(notifications) {
+                    console.log('Loaded notifications:', notifications.length);
                     renderNotifications(notifications);
+
+                    // Also update the count after loading notifications
+                    loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to load notifications:', error);
@@ -286,10 +295,28 @@
             }
         };
 
-        window.incrementNotificationCount = function() {
-            const $badge = $('#notificationBadge');
-            const current = parseInt($badge.text()) || 0;
-            updateNotificationBadge(current + 1);
+         window.incrementNotificationCount = function() {
+            $.ajax({
+                url: '/Notifications/GetUnreadCount',
+                type: 'GET',
+                success: function(count) {
+                    updateNotificationBadge(count);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to get current count:', error);
+                    // Fallback: try to increment from current displayed value
+                    const $badge = $('#notificationBadge');
+                    const currentText = $badge.text().trim();
+
+                    if (currentText && currentText !== '99+') {
+                        const current = parseInt(currentText) || 0;
+                        updateNotificationBadge(current + 1);
+                    } else {
+                        // If we can't determine current count, just show indicator
+                        updateNotificationBadge(1);
+                    }
+                }
+            });
         };
 
         window.playNotificationSound = function() {
@@ -396,14 +423,20 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
+                    console.log('✅ All notifications marked as read');
+
+                    // Remove unread class from all items
                     $('.notification-item').removeClass('unread');
                     $('.notification-dot').remove();
-                    updateNotificationBadge(0);
-                    showToast('All notifications marked as read', 'success');
 
-                    if ($('.notification-dropdown').hasClass('show')) {
+                    updateNotificationBadge(0);
+
+                    // FIXED: Force reload the notification list to get fresh data
+                    setTimeout(function() {
                         loadRecentNotifications();
-                    }
+                    }, 300);
+
+                    showToast('All notifications marked as read', 'success');
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to mark all as read:', error);
@@ -417,14 +450,30 @@
             const $sidebarBadge = $('#sidebarUnreadCount');
             count = parseInt(count) || 0;
 
+            console.log('Updating notification badges to:', count);
+
             if (count > 0) {
-                $badge.text(count > 99 ? '99+' : count).show();
-                $sidebarBadge.text(count > 99 ? '99+' : count).show();
+                const displayCount = count > 99 ? '99+' : count;
+
+                // Update header badge
+                $badge.text(displayCount)
+                      .css('display', 'flex') // Use flex for better centering
+                      .show();
+
+                // Update sidebar badge
+                if ($sidebarBadge.length) {
+                    $sidebarBadge.text(displayCount).show();
+                }
             } else {
-                $badge.hide();
-                $sidebarBadge.hide();
+                // Hide badges when count is zero
+                $badge.hide().text('');
+
+                if ($sidebarBadge.length) {
+                    $sidebarBadge.hide().text('');
+                }
             }
         }
+
 
         function getNotificationIcon(type) {
             const icons = {

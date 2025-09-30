@@ -12,6 +12,7 @@
     const recentNotifications = new Map();
     const DUPLICATE_CHECK_WINDOW = 5000; // 5 seconds
 
+
     // Initialize the notification system (with duplicate protection)
     function initialize(isAdmin) {
         // Prevent multiple initializations
@@ -35,6 +36,7 @@
         console.log('Initializing notification system for ' + (isAdmin ? 'admin' : 'regular') + ' user');
         establishConnection();
     }
+
 
     // Establish SignalR connection with improved error handling
     function establishConnection() {
@@ -88,6 +90,8 @@
         startConnection();
     }
 
+
+
     // Set up connection lifecycle handlers
     function setupConnectionHandlers() {
         connection.onreconnecting((error) => {
@@ -135,6 +139,8 @@
             }
         });
     }
+
+
 
     // Set up message handlers with duplicate prevention
     function setupMessageHandlers() {
@@ -224,6 +230,8 @@
         });
     }
 
+
+
     // Check if notification is a duplicate
     function isDuplicateNotification(notification) {
         if (!notification || !notification.id) {
@@ -243,6 +251,8 @@
 
         return false;
     }
+
+
 
     // Track notification to prevent duplicates
     function trackNotification(notification) {
@@ -268,6 +278,8 @@
             });
         }
     }
+
+
 
     // Start the connection with better error handling
     function startConnection() {
@@ -310,6 +322,8 @@
             });
     }
 
+
+
     // Check if error is authentication-related
     function isAuthError(error) {
         const errorMessage = error.message || error.toString();
@@ -318,6 +332,8 @@
             errorMessage.includes('authentication') ||
             errorMessage.includes('token');
     }
+
+
 
     // Handle incoming notification with improved logic
     function handleIncomingNotification(notification) {
@@ -346,6 +362,8 @@
         $(document).trigger('notification:received', [notification]);
     }
 
+
+
     // Handle special notification types with proper debouncing
     function handleSpecialNotifications(notification) {
         if (notification.type === 'ApprovalRequest' && window.isAdmin) {
@@ -358,15 +376,9 @@
             if (window.location.pathname.includes('/Approvals')) {
                 clearTimeout(window.approvalsRefreshTimeout);
                 window.approvalsRefreshTimeout = setTimeout(() => {
-                    if (typeof window.refreshApprovalsList === 'function') {
-                        window.refreshApprovalsList();
-                    } else {
-                        // Only reload as last resort, and with user confirmation
-                        if (confirm('New approval requests available. Refresh page to see them?')) {
-                            location.reload();
-                        }
-                    }
-                }, 2000); // 2 second delay
+                    // Try to refresh the table data without full page reload
+                    refreshApprovalsTable();
+                }, 1500); // 1.5 second delay to batch multiple notifications
             }
         }
         else if (notification.type === 'ApprovalResponse') {
@@ -378,6 +390,106 @@
                 }, 1500);
             }
         }
+    }
+
+    function refreshApprovalsTable() {
+        console.log('🔄 Refreshing approvals table...');
+
+        // Check if DataTable exists
+        const table = $('#approvalsTable');
+        if (table.length && $.fn.DataTable.isDataTable(table)) {
+            // Show a subtle loading indicator
+            showSubtleLoader();
+
+            // Reload the entire page content for the approvals section
+            $.ajax({
+                url: window.location.pathname,
+                type: 'GET',
+                success: function (html) {
+                    // Extract just the table section from the response
+                    const $newContent = $(html);
+                    const $newTable = $newContent.find('#approvalsTable').closest('.card');
+                    const $newStats = $newContent.find('.row.mb-4').first(); // Statistics cards
+
+                    // Update statistics cards if they exist
+                    if ($newStats.length) {
+                        $('.row.mb-4').first().replaceWith($newStats);
+                    }
+
+                    // Update the table
+                    if ($newTable.length) {
+                        $('#approvalsTable').closest('.card').replaceWith($newTable);
+
+                        // Reinitialize DataTable
+                        $('#approvalsTable').DataTable({
+                            order: [[0, 'desc']],
+                            pageLength: 25
+                        });
+
+                        // Re-parse summaries for the new rows
+                        $('.request-summary').each(function () {
+                            const $this = $(this);
+                            const actionData = $this.data('action-data');
+                            const requestType = $this.closest('tr').find('.badge').first().text().trim();
+
+                            try {
+                                // Use the getRequestSummary function from the page
+                                const summary = getRequestSummary(requestType, actionData);
+                                $this.html(summary);
+                            } catch (e) {
+                                $this.html('<span class="text-danger">Error parsing data</span>');
+                            }
+                        });
+
+                        hideSubtleLoader();
+
+                        console.log('✅ Approvals table refreshed successfully');
+                    } else {
+                        // Fallback to full page reload if we can't find the table
+                        console.warn('Could not find table in response, reloading page');
+                        location.reload();
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Failed to refresh approvals table:', error);
+                    hideSubtleLoader();
+
+                    // Show error message and offer manual refresh
+                    showToast('New approvals available. Click to refresh.', 'warning', 10000)
+                        .addEventListener('click', function () {
+                            location.reload();
+                        });
+                }
+            });
+        } else {
+            // If no DataTable, just reload the page
+            console.log('No DataTable found, reloading page');
+            location.reload();
+        }
+    }
+
+
+
+    function showSubtleLoader() {
+        if (!$('.subtle-loader').length) {
+            const loader = $(`
+            <div class="subtle-loader" style="position: fixed; top: 70px; right: 20px; z-index: 9998; 
+                        background: rgba(255, 255, 255, 0.95); padding: 10px 20px; border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="text-muted" style="font-size: 0.9rem;">Updating...</span>
+            </div>
+        `);
+            $('body').append(loader);
+        }
+    }
+
+
+
+    function hideSubtleLoader() {
+        $('.subtle-loader').fadeOut(300, function () {
+            $(this).remove();
+        });
     }
 
     // Prevent too frequent sound notifications
@@ -392,6 +504,13 @@
         }
         return false;
     }
+
+
+    // Make functions available globally
+    window.refreshApprovalsTable = refreshApprovalsTable;
+    window.showSubtleLoader = showSubtleLoader;
+    window.hideSubtleLoader = hideSubtleLoader;
+
 
     // Public API
     return {
