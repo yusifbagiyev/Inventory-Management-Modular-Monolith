@@ -55,19 +55,6 @@ function previewImage(input, previewId) {
     }
 }
 
-// Format date helper
-function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
-}
-
-// Copy to clipboard
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(function () {
-        showToast('Copied to clipboard!', 'success');
-    });
-}
-
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
     // Ensure we have a valid type
@@ -125,6 +112,7 @@ function showToast(message, type = 'info', duration = 5000) {
     });
 }
 
+
 // Helper function to get toast icon
 function getToastIcon(type) {
     const icons = {
@@ -137,17 +125,6 @@ function getToastIcon(type) {
     return icons[type] || 'info-circle';
 }
 
-// Helper function to get toast title
-function getToastTitle(type) {
-    const titles = {
-        'success': 'Success',
-        'danger': 'Error',
-        'warning': 'Warning',
-        'info': 'Information',
-        'secondary': 'Notice'
-    };
-    return titles[type] || 'Notice';
-}
 
 // Helper function to escape HTML
 function escapeHtml(unsafe) {
@@ -182,34 +159,8 @@ function resetFormState(fromElement){
         }
     });
 }
-function loadRecentNotifications() {
-    $('#notificationList').html(`
-        <div class="text-center py-3">
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    `);
 
-    $.ajax({
-        url: '/Notifications/GetRecentNotifications',
-        type: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + $('#jwtToken').val()
-        },
-        success: function (notifications) {
-            renderNotifications(notifications);
-        },
-        error: function (xhr, status, error) {
-            console.error('Failed to load notifications:', error);
-            $('#notificationList').html(`
-                <div class="dropdown-item text-center py-3 text-danger">
-                    <i class="fas fa-exclamation-circle"></i> Failed to load notifications
-                </div>
-            `);
-        }
-    });
-}
+
 function showLoader() {
     if (!$('.loader-overlay').length) {
         $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
@@ -218,110 +169,4 @@ function showLoader() {
 
 function hideLoader() {
     $('.loader-overlay').remove();
-}
-
-// Update AJAX calls to show/hide loader
-$.ajaxSetup({
-    beforeSend: function () {
-        showLoader();
-    },
-    complete: function () {
-        hideLoader();
-    }
-});
-function handleApprovalResponse(response, entityType, successRedirect) {
-    // Debug logging
-    console.log('Response type:', typeof response);
-    console.log('Response:', response);
-
-    let isApprovalRequest = false;
-    let message = '';
-
-    // Handle different response formats
-    if (typeof response === 'string') {
-        try {
-            const parsed = JSON.parse(response);
-            response = parsed;
-        } catch (e) {
-            // If not JSON, assume direct success
-            showToast(`${entityType} created successfully!`, 'success');
-            setTimeout(() => window.location.href = successRedirect, 1500);
-            return;
-        }
-    }
-
-    // Check for approval indicators
-    if (response && typeof response === 'object') {
-        if (response.status === 'PendingApproval' ||
-            response.Status === 'PendingApproval' ||
-            response.approvalRequestId ||
-            response.ApprovalRequestId ||
-            response.message?.includes('approval') ||
-            response.Message?.includes('approval')) {
-            isApprovalRequest = true;
-            message = response.message || response.Message ||
-                `Your ${entityType.toLowerCase()} request has been submitted for approval. You will be notified once it's processed.`;
-        }
-    }
-
-    if (isApprovalRequest) {
-        showToast(message, 'info');
-    } else {
-        showToast(`${entityType} operation completed successfully!`, 'success');
-    }
-
-    setTimeout(() => window.location.href = successRedirect, 2000);
-}
-// Automatic token refresh every 8 minutes
-let tokenRefreshInterval;
-
-function startTokenRefresh() {
-    // Clear any existing interval
-    if (tokenRefreshInterval) {
-        clearInterval(tokenRefreshInterval);
-    }
-
-    // Set up refresh every 8 minutes (token expires in 10)
-    tokenRefreshInterval = setInterval(async function () {
-        try {
-            const response = await fetch('/Account/RefreshToken', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    console.log('Token refreshed successfully');
-                } else {
-                    console.warn('Token refresh failed:', data.message);
-                    if (data.message === 'No tokens available') {
-                        window.location.href = '/Account/Login';
-                    }
-                }
-            } else if (response.status === 401) {
-                // Session expired, redirect to login
-                window.location.href = '/Account/Login';
-            }
-        } catch (error) {
-            console.error('Error refreshing token:', error);
-        }
-    }, 8 * 60 * 1000); // 8 minutes
-}
-
-// Start refresh when page loads if authenticated
-$(document).ready(function () {
-    if ($('#jwtToken').val()) {
-        startTokenRefresh();
-    }
-});
-
-// Stop refresh when user logs out
-function stopTokenRefresh() {
-    if (tokenRefreshInterval) {
-        clearInterval(tokenRefreshInterval);
-        tokenRefreshInterval = null;
-    }
 }

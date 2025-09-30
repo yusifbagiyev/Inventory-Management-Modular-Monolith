@@ -31,7 +31,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
-        private void AddAuthorizationHeader()
+        private async Task AddAuthorizationHeader()
         {
             // Clear any existing authorization header
             _httpClient.DefaultRequestHeaders.Authorization = null;
@@ -40,6 +40,22 @@ namespace InventoryManagement.Web.Services
             var token = _httpContextAccessor.HttpContext?.Items["JwtToken"] as string
                 ?? _httpContextAccessor.HttpContext?.Session.GetString("JwtToken")
                 ?? _httpContextAccessor.HttpContext?.Request.Cookies["jwt_token"];
+
+            // If still no token but user is authenticated, try to get a valid token
+            if (string.IsNullOrEmpty(token) && _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true)
+            {
+                try
+                {
+                    using var scope = _httpContextAccessor.HttpContext.RequestServices.CreateScope();
+                    var tokenManager = scope.ServiceProvider.GetRequiredService<ITokenManager>();
+
+                    token = await tokenManager.GetValidTokenAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to get valid token from TokenManager");
+                }
+            }
 
             if (!string.IsNullOrEmpty(token))
             {
@@ -56,7 +72,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<T?> GetAsync<T>(string endpoint)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             var response = await _httpClient.GetAsync(endpoint);
 
@@ -68,7 +84,7 @@ namespace InventoryManagement.Web.Services
 
                 if (refreshResult)
                 {
-                    AddAuthorizationHeader();
+                    await AddAuthorizationHeader();
                     response = await _httpClient.GetAsync(endpoint);
                 }
                 else
@@ -97,7 +113,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -110,7 +126,7 @@ namespace InventoryManagement.Web.Services
 
                 if (refreshResult)
                 {
-                    AddAuthorizationHeader();
+                    await AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
                 }
                 else
@@ -151,7 +167,7 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto=null)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             using var content = BuildMultipartContent(form, dataDto);
 
@@ -165,7 +181,7 @@ namespace InventoryManagement.Web.Services
 
                 if (refreshResult)
                 {
-                    AddAuthorizationHeader();
+                    await AddAuthorizationHeader();
                     response = await _httpClient.PostAsync(endpoint, content);
                 }
                 else
@@ -203,7 +219,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -217,7 +233,7 @@ namespace InventoryManagement.Web.Services
 
                 if (refreshResult)
                 {
-                    AddAuthorizationHeader();
+                    await AddAuthorizationHeader();
                     response = await _httpClient.PutAsync(endpoint, content);
                 }
                 else
@@ -253,7 +269,7 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto = null)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             using var content = BuildMultipartContent(form, dataDto);
 
@@ -266,7 +282,7 @@ namespace InventoryManagement.Web.Services
 
                 if (refreshResult)
                 {
-                    AddAuthorizationHeader();
+                    await AddAuthorizationHeader();
                     response = await _httpClient.PutAsync(endpoint, content);
                 }
                 else
@@ -298,18 +314,26 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
         {
-            AddAuthorizationHeader();
+            await AddAuthorizationHeader();
 
             var response = await _httpClient.DeleteAsync(endpoint);
 
-            var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
-
-            if (refreshResult)
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
-                AddAuthorizationHeader();
-                response = await _httpClient.DeleteAsync(endpoint);
-            }
+                _logger.LogInformation("Received 401, attempting token refresh for DELETE {Endpoint}", endpoint);
+                var refreshResult = await _tokenRefreshService.RefreshTokenAsync();
 
+                if (refreshResult)
+                {
+                    await AddAuthorizationHeader();
+                    response = await _httpClient.DeleteAsync(endpoint);
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
+                }
+            }
+                
             if (response.StatusCode == HttpStatusCode.Accepted)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();

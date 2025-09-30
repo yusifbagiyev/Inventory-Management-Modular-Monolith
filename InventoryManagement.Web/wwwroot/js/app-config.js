@@ -15,7 +15,6 @@
 
         // API endpoints configuration
         api: {
-            // In production, everything goes through relative paths
             baseUrl: isDevelopment ? 'http://localhost:5000' : '',
             gateway: isDevelopment ? 'http://localhost:5000' : '/api',
         },
@@ -23,15 +22,15 @@
         // SignalR hub configuration
         signalR: {
             notificationHub: isDevelopment
-                ? 'http://localhost:5005/notificationHub'  // Direct to NotificationService
-                : '/notificationHub',  // Through reverse proxy in production
+                ? 'http://localhost:5005/notificationHub'
+                : '/notificationHub',
 
-            // Connection options
             options: {
                 skipNegotiation: false,
-                transport: signalR.HttpTransportType.WebSockets |
-                    signalR.HttpTransportType.ServerSentEvents |
-                    signalR.HttpTransportType.LongPolling,
+                transport: typeof signalR !== 'undefined' ?
+                    (signalR.HttpTransportType.WebSockets |
+                        signalR.HttpTransportType.ServerSentEvents |
+                        signalR.HttpTransportType.LongPolling) : 1,
                 withCredentials: true
             }
         },
@@ -61,11 +60,47 @@
         return `${this.api.gateway}/api/${endpoint}`;
     };
 
+    // Token management functionality
     config.tokenManagement = {
         refreshInProgress: false,
         refreshPromise: null,
 
-        // Centralized token refresh endpoint
+        // Get current token from various sources
+        getCurrentToken: function () {
+            return $('#jwtToken').val() ||
+                sessionStorage.getItem('JwtToken') ||
+                localStorage.getItem('jwt_token') ||
+                getCookie('jwt_token');
+        },
+
+        // Get refresh token
+        getRefreshToken: function () {
+            return sessionStorage.getItem('RefreshToken') ||
+                localStorage.getItem('refresh_token') ||
+                getCookie('refresh_token');
+        },
+
+        // Check if token is expired
+        isTokenExpired: function (token) {
+            if (!token) return true;
+
+            try {
+                const parts = token.split('.');
+                if (parts.length !== 3) return true;
+
+                const payload = JSON.parse(atob(parts[1]));
+                const exp = payload.exp * 1000; // Convert to milliseconds
+                const now = Date.now();
+
+                // Consider expired if less than 2 minutes remaining
+                return (exp - now) < 120000;
+            } catch (e) {
+                console.error('Error checking token expiry:', e);
+                return true;
+            }
+        },
+
+        // Refresh the token
         refreshToken: async function () {
             // If refresh is already in progress, return the existing promise
             if (this.refreshInProgress && this.refreshPromise) {
@@ -75,68 +110,129 @@
 
             this.refreshInProgress = true;
 
-            // Create the refresh promise
             this.refreshPromise = new Promise(async (resolve, reject) => {
                 try {
-                    const response = await fetch('/Account/RefreshToken', {
-                        method: 'POST',
+                    const currentToken = this.getCurrentToken();
+                    const refreshToken = this.getRefreshToken();
+
+                    if (!currentToken || !refreshToken) {
+                        throw new Error('Missing tokens for refresh');
+                    }
+
+                    const response = await $.ajax({
+                        url: '/Account/RefreshToken',
+                        type: 'GET',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success && data.token) {
-                            //Update the token in the page
-                            $('#jwtToken').val(data.token);
-                            console.log('Token refreshed succesfully');
-                            resolve(data.token);
-                        } else {
-                            reject(new Error('Token refresh failed'));
+
+                    if (response && response.success && response.token) {
+                        // Update the token in various places
+                        $('#jwtToken').val(response.token);
+                        sessionStorage.setItem('JwtToken', response.token);
+
+                        if (response.refreshToken) {
+                            sessionStorage.setItem('RefreshToken', response.refreshToken);
                         }
+
+                        console.log('Token refreshed successfully');
+                        resolve(response.token);
                     } else {
-                        reject(new Error('Token refresh request failed'));
+                        throw new Error('Token refresh failed - invalid response');
                     }
                 } catch (error) {
+                    console.error('Token refresh error:', error);
+
+                    // If refresh fails, redirect to login
+                    if (error.status === 401 || error.responseJSON?.message === 'No tokens available') {
+                        setTimeout(() => {
+                            window.location.href = '/Account/Login';
+                        }, 1000);
+                    }
+
                     reject(error);
                 } finally {
                     this.refreshInProgress = false;
                     this.refreshPromise = null;
                 }
             });
+
             return this.refreshPromise;
         },
 
-        // Get current token with auto-refresh
+        // Get a valid token (refresh if needed)
         getValidToken: async function () {
-            const currentToken = $('#jwtToken').val();
+            const currentToken = this.getCurrentToken();
 
             if (!currentToken) {
-                throw new Error('No token available');
+                console.warn('No token available');
+                throw new Error('No authentication token available');
             }
 
-            // Check if token is expired or about to expire (within 2 minutes)
-            try {
-                const tokenParts = currentToken.split('.');
-                if (tokenParts.length === 3) {
-                    const payload = JSON.parse(atob(tokenParts[1]));
-                    const exp = payload.exp * 1000; // Convert to milliseconds
-                    const now = Date.now();
-                    const timeUntilExpiry = exp - now;
-
-                    // If token expires in less than 2 minutes, refresh it
-                    if (timeUntilExpiry < 120000) {
-                        console.log('Token expiring soon, refreshing...');
-                        return await this.refreshToken();
-                    }
+            // Check if token is expired or about to expire
+            if (this.isTokenExpired(currentToken)) {
+                console.log('Token expired or expiring soon, refreshing...');
+                try {
+                    return await this.refreshToken();
+                } catch (error) {
+                    console.error('Failed to refresh token:', error);
+                    throw error;
                 }
-            } catch (e) {
-                console.error('Error checking token expiry:', e);
             }
 
             return currentToken;
+        },
+
+        // Setup automatic token refresh
+        setupAutoRefresh: function () {
+            // Clear any existing interval
+            if (window.tokenRefreshInterval) {
+                clearInterval(window.tokenRefreshInterval);
+            }
+
+            // Check token every minute
+            window.tokenRefreshInterval = setInterval(async () => {
+                try {
+                    const token = this.getCurrentToken();
+                    if (token && this.isTokenExpired(token)) {
+                        console.log('Auto-refreshing expired token...');
+                        await this.refreshToken();
+                    }
+                } catch (error) {
+                    console.error('Auto-refresh failed:', error);
+                }
+            }, 60000); // Check every minute
+        },
+
+        // Clean up
+        cleanup: function () {
+            if (window.tokenRefreshInterval) {
+                clearInterval(window.tokenRefreshInterval);
+                window.tokenRefreshInterval = null;
+            }
         }
     };
+
+    // Helper function to get cookie value
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    // Initialize auto-refresh on load if user is authenticated
+    $(document).ready(function () {
+        if ($('#jwtToken').val()) {
+            config.tokenManagement.setupAutoRefresh();
+        }
+    });
+
+    // Clean up on page unload
+    $(window).on('beforeunload', function () {
+        config.tokenManagement.cleanup();
+    });
 
     return config;
 })();

@@ -42,9 +42,21 @@ namespace InventoryManagement.Web.Services
             if (IsTokenExpired(token))
             {
                 _logger.LogInformation("Token expired, refreshing...");
-                await RefreshTokenAsync();
+                var refreshSuccess= await RefreshTokenAsync();
+
+                if(refreshSuccess)
+                {
+                    token=context.Request.Cookies["jwt_token"]
+                        ?? context.Session.GetString("JwtToken");
+                }
+                else
+                {
+                    _logger.LogWarning("Token refresh failed");
+                    return null;
+                }
             }
-            return null;
+
+            return token;
         }
 
 

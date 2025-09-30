@@ -1,4 +1,6 @@
 ﻿using InventoryManagement.Web.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace InventoryManagement.Web.Middleware
 {
@@ -34,10 +36,22 @@ namespace InventoryManagement.Web.Middleware
 
                 if (string.IsNullOrEmpty(validToken))
                 {
-                    _logger.LogWarning("No valid token for authenticated user, redirecting to login");
+                    _logger.LogWarning("No valid token for authenticated user, clearing session and redirecting to login");
+
+                    // Clear authentication
+                    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    context.Session.Clear();
+
+                    // Clear cookies
+                    context.Response.Cookies.Delete("jwt_token");
+                    context.Response.Cookies.Delete("refresh_token");
+                    context.Response.Cookies.Delete("user_data");
+
                     context.Response.Redirect("/Account/Login");
                     return;
                 }
+                // Store the valid token in HttpContext.Items for use by other services
+                context.Items["JwtToken"] = validToken;
             }
 
             await _next(context);
