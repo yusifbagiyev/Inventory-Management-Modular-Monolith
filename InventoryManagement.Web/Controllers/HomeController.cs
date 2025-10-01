@@ -27,13 +27,15 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        // Replace the Dashboard action in HomeController.cs with this fixed version
+
         public async Task<IActionResult> Dashboard(string period = "week")
         {
             var model = new DashboardViewModel();
 
             try
             {
-                // Calculate date range based on period
+                // Calculate date range based on period - FIXED LOGIC
                 var now = DateTime.Now;
                 DateTime startDate;
                 DateTime endDate = now;
@@ -41,170 +43,328 @@ namespace InventoryManagement.Web.Controllers
                 switch (period.ToLower())
                 {
                     case "week":
-                        startDate = now.AddDays(-7);
+                        // Get the last 7 days including today
+                        startDate = now.Date.AddDays(-6); // Changed from -7 to -6 to include today
                         break;
                     case "month":
-                        startDate = now.AddMonths(-1);
+                        // Get the last 30 days
+                        startDate = now.Date.AddDays(-29); // Changed to -29 to get exactly 30 days including today
                         break;
                     case "6months":
-                        startDate = now.AddMonths(-6);
+                        // Get the last 6 months
+                        startDate = now.Date.AddMonths(-6);
                         break;
                     case "all":
+                        // Get all data from a reasonable start date
                         startDate = new DateTime(2020, 1, 1);
                         break;
                     default:
-                        startDate = now.AddDays(-7);
+                        startDate = now.Date.AddDays(-6);
                         period = "week";
                         break;
                 }
 
-                // Get routes for the specific period
-                var routesTask = _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
-                    $"api/inventoryroutes?pageSize=10000&pageNumber=1&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
+                // Log the date range for debugging
+                _logger?.LogInformation($"Dashboard period: {period}, Start: {startDate:yyyy-MM-dd}, End: {endDate:yyyy-MM-dd}");
 
-                // Get ALL products (we'll filter them appropriately)
+                // Get ALL products first (for reference)
                 var allProductsTask = _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
                     "api/products?pageSize=10000&pageNumber=1");
+
+                // Get routes for the specific period with proper date formatting
+                var routesTask = _apiService.GetAsync<PagedResultDto<RouteViewModel>>(
+                    $"api/inventoryroutes?pageSize=10000&pageNumber=1&startDate={startDate:yyyy-MM-dd}&endDate={endDate:yyyy-MM-dd}");
 
                 // Get departments and categories
                 var departmentsTask = _apiService.GetAsync<List<DepartmentViewModel>>("/api/departments");
                 var categoriesTask = _apiService.GetAsync<PagedResultDto<CategoryViewModel>>("/api/categories/paged?pageSize=1000");
 
-                await Task.WhenAll(routesTask, allProductsTask, departmentsTask, categoriesTask);
+                await Task.WhenAll(allProductsTask, routesTask, departmentsTask, categoriesTask);
 
                 var allProducts = await allProductsTask;
                 var routes = await routesTask;
                 var departments = await departmentsTask;
                 var categoriesResult = await categoriesTask;
 
-                // Process products based on period
-                if (allProducts != null)
+                // Process products based on period - IMPROVED LOGIC
+                if (allProducts != null && allProducts.Items != null)
                 {
-                    var products = allProducts.Items;
+                    var products = allProducts.Items.ToList();
 
                     if (period.ToLower() == "all")
                     {
-                        // For "all" period, show total products and active products
+                        // For "all" period, show total products
                         model.TotalProducts = products.Count();
                         model.ActiveProducts = products.Count(p => p.IsActive);
                     }
                     else
                     {
-                        // For specific periods, count products created in that period
-                        var productsInPeriod = products.Where(p =>
-                            p.CreatedAt >= startDate &&
-                            p.CreatedAt <= endDate).ToList();
+                        // For specific periods, we have two approaches:
+                        // 1. Products created in the period (new items)
+                        // 2. All active products (current inventory)
 
-                        model.TotalProducts = productsInPeriod.Count();
-                        model.ActiveProducts = productsInPeriod.Count(p => p.IsActive);
+                        // Count new products added in this period
+                        var newProductsInPeriod = products.Where(p =>
+                            p.CreatedAt.HasValue &&
+                            p.CreatedAt.Value >= startDate &&
+                            p.CreatedAt.Value <= endDate).ToList();
+
+                        // If no new products in period, show current active inventory
+                        if (newProductsInPeriod.Any())
+                        {
+                            model.TotalProducts = newProductsInPeriod.Count();
+                            model.ActiveProducts = newProductsInPeriod.Count(p => p.IsActive);
+                        }
+                        else
+                        {
+                            // Show current inventory stats with a note that no new products were added
+                            model.TotalProducts = 0; // No new products in this period
+                            model.ActiveProducts = products.Count(p => p.IsActive); // But show active inventory
+
+                            // Store this for the view to show appropriate message
+                            ViewBag.NoNewProducts = true;
+                            ViewBag.TotalInventory = products.Count();
+                        }
+
+                        // Also provide total inventory count for reference
+                        ViewBag.TotalInventoryCount = products.Count();
+                        ViewBag.ActiveInventoryCount = products.Count(p => p.IsActive);
                     }
                 }
 
-                // Process routes for the period
-                if (routes != null)
+                // Process routes for the period - FIXED
+                if (routes != null && routes.Items != null)
                 {
-                    var transferRoutes = routes.Items.Where(r => r.RouteTypeName == "Transfer").ToList();
+                    var allRoutes = routes.Items.ToList();
+
+                    // Filter for transfer routes only
+                    var transferRoutes = allRoutes.Where(r =>
+                        r.RouteTypeName == "Transfer" ||
+                        r.RouteType == "Transfer").ToList();
+
                     model.TotalRoutes = transferRoutes.Count();
                     model.CompletedTransfers = transferRoutes.Count(r => r.IsCompleted);
                     model.PendingTransfers = transferRoutes.Count(r => !r.IsCompleted);
+
+                    // Log for debugging
+                    _logger?.LogInformation($"Routes found: Total={allRoutes.Count()}, Transfers={transferRoutes.Count()}, Completed={model.CompletedTransfers}, Pending={model.PendingTransfers}");
+                }
+                else
+                {
+                    model.TotalRoutes = 0;
+                    model.CompletedTransfers = 0;
+                    model.PendingTransfers = 0;
                 }
 
-                // Process departments (period-aware)
-                if (departments != null && routes != null)
+                // Process departments with better data handling
+                if (departments != null && routes != null && routes.Items != null)
                 {
                     var activeDepartments = departments.Where(d => d.IsActive).ToList();
+                    var routesList = routes.Items.ToList();
 
                     model.DepartmentStats = activeDepartments.Select(d =>
                     {
-                        // Get all transfer routes TO this department in the period
-                        var transfersToThisDept =routes.Items
-                            .Where(r=>r.ToDepartmentId==d.Id &&
-                                      r.RouteTypeName=="Transfer" &&
-                                      r.CreatedAt>=startDate &&
-                                      r.CreatedAt<=endDate)
-                            .ToList();
+                        // Get all routes related to this department in the period
+                        var departmentRoutes = routesList.Where(r =>
+                            (r.ToDepartmentId == d.Id || r.FromDepartmentId == d.Id) &&
+                            r.RouteTypeName == "Transfer").ToList();
 
-                        // Count completed transfers (products received)
-                        var completedTransfers = transfersToThisDept
-                            .Where(r=> r.IsCompleted)
+                        // Count completed transfers TO this department
+                        var completedTransfersTo = routesList
+                            .Where(r => r.ToDepartmentId == d.Id &&
+                                       r.RouteTypeName == "Transfer" &&
+                                       r.IsCompleted)
                             .Count();
 
-                        // Get unique workers who received products in this department
-                        // This counts unique worker names from the transfers TO this department
-                        var uniqueWorkers = transfersToThisDept
-                            .Where(r => !string.IsNullOrEmpty(r.ToWorker))
-                            .Select(r => r.ToWorker!.Trim().ToLower()) // Normalize names for comparison
-                            .Distinct()
-                            .Count();
+                        // Get unique workers in this department from routes
+                        var uniqueWorkers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                        // Add workers from routes TO this department
+                        foreach (var route in routesList.Where(r => r.ToDepartmentId == d.Id))
+                        {
+                            if (!string.IsNullOrEmpty(route.ToWorker))
+                                uniqueWorkers.Add(route.ToWorker.Trim());
+                        }
+
+                        // Add workers from routes FROM this department
+                        foreach (var route in routesList.Where(r => r.FromDepartmentId == d.Id))
+                        {
+                            if (!string.IsNullOrEmpty(route.FromWorker))
+                                uniqueWorkers.Add(route.FromWorker.Trim());
+                        }
 
                         return new DepartmentStats
                         {
                             DepartmentName = d.Name,
-                            ProductCount = completedTransfers,
-                            ActiveWorkers = uniqueWorkers,
-                            PeriodTransfers=transfersToThisDept.Count()
+                            ProductCount = completedTransfersTo,
+                            ActiveWorkers = uniqueWorkers.Count,
+                            PeriodTransfers = departmentRoutes.Count()
                         };
                     })
-                    .Where(d=>d.ProductCount > 0 || d.PeriodTransfers > 0) // Only show departments with activity in the period
+                    .Where(d => d.PeriodTransfers > 0 || d.ProductCount > 0) // Only show active departments
                     .OrderByDescending(d => d.PeriodTransfers)
+                    .ThenByDescending(d => d.ProductCount)
                     .Take(5)
                     .ToList();
+
+                    // If no department activity in period, show top departments by current inventory
+                    if (!model.DepartmentStats.Any() && allProducts != null)
+                    {
+                        var productsList = allProducts?.Items?.ToList() ?? [];
+                        model.DepartmentStats = activeDepartments
+                            .Select(d => new DepartmentStats
+                            {
+                                DepartmentName = d.Name,
+                                ProductCount = productsList.Count(p => p.DepartmentId == d.Id),
+                                ActiveWorkers = productsList
+                                    .Where(p => p.DepartmentId == d.Id && !string.IsNullOrEmpty(p.Worker))
+                                    .Select(p => p.Worker?.Trim().ToLower())
+                                    .Distinct()
+                                    .Count(),
+                                PeriodTransfers = 0
+                            })
+                            .Where(d => d.ProductCount > 0)
+                            .OrderByDescending(d => d.ProductCount)
+                            .Take(5)
+                            .ToList();
+                    }
                 }
 
-                // Process categories (period-aware)
-                if (categoriesResult != null && allProducts != null)
+                // Process categories - IMPROVED
+                if (categoriesResult != null && categoriesResult.Items != null && allProducts != null)
                 {
                     var categories = categoriesResult.Items.Where(c => c.IsActive).ToList();
+                    var productsList = allProducts?.Items?.ToList() ?? [];
+
                     var colors = new[] {
-                        "#3B82F6", // Blue
-                        "#10B981", // Green
-                        "#F59E0B", // Yellow
-                        "#EF4444", // Red
-                        "#8B5CF6", // Purple
-                        "#EC4899", // Pink
-                        "#06B6D4", // Cyan
-                        "#14B8A6"  // Teal 
-                    };
+                "#3B82F6", "#10B981", "#F59E0B", "#EF4444",
+                "#8B5CF6", "#EC4899", "#06B6D4", "#14B8A6"
+            };
 
-                    model.CategoryDistributions = categories.Select((c, index) =>
+                    if (period.ToLower() == "all")
                     {
-                        // Count products in this category based on period
-                        var categoryProductCount = period.ToLower() == "all"
-                            ? allProducts.Items.Count(p => p.CategoryId == c.Id)
-                            : allProducts.Items.Count(p => p.CategoryId == c.Id && 
-                                p.IsNewItem && 
-                                p.CreatedAt >= startDate && 
-                                p.CreatedAt <= endDate);
-
-                        return new CategoryDistribution
+                        // For "all", show total distribution
+                        model.CategoryDistributions = categories.Select((c, index) =>
                         {
-                            CategoryName = c.Name,
-                            Count = categoryProductCount,
-                            Color = colors[index % colors.Length]
-                        };
-                    })
-                    .Where(c => c.Count > 0)
-                    .OrderByDescending(c => c.Count)
-                    .Take(8)
-                    .ToList();
+                            var count = productsList.Count(p => p.CategoryId == c.Id);
+                            return new CategoryDistribution
+                            {
+                                CategoryName = c.Name,
+                                Count = count,
+                                Color = colors[index % colors.Length]
+                            };
+                        })
+                        .Where(c => c.Count > 0)
+                        .OrderByDescending(c => c.Count)
+                        .Take(8)
+                        .ToList();
+                    }
+                    else
+                    {
+                        // For specific periods, show new products by category
+                        var newProductsInPeriod = productsList.Where(p =>
+                            p.CreatedAt.HasValue &&
+                            p.CreatedAt.Value >= startDate &&
+                            p.CreatedAt.Value <= endDate).ToList();
+
+                        if (newProductsInPeriod.Any())
+                        {
+                            model.CategoryDistributions = categories.Select((c, index) =>
+                            {
+                                var count = newProductsInPeriod.Count(p => p.CategoryId == c.Id);
+                                return new CategoryDistribution
+                                {
+                                    CategoryName = c.Name,
+                                    Count = count,
+                                    Color = colors[index % colors.Length]
+                                };
+                            })
+                            .Where(c => c.Count > 0)
+                            .OrderByDescending(c => c.Count)
+                            .Take(8)
+                            .ToList();
+                        }
+                        else
+                        {
+                            // If no new products, show current distribution
+                            model.CategoryDistributions = categories.Select((c, index) =>
+                            {
+                                var count = productsList.Count(p => p.CategoryId == c.Id && p.IsActive);
+                                return new CategoryDistribution
+                                {
+                                    CategoryName = c.Name,
+                                    Count = count,
+                                    Color = colors[index % colors.Length]
+                                };
+                            })
+                            .Where(c => c.Count > 0)
+                            .OrderByDescending(c => c.Count)
+                            .Take(8)
+                            .ToList();
+
+                            ViewBag.ShowingCurrentDistribution = true;
+                        }
+                    }
                 }
 
-                // Generate transfer activity data based on actual routes
-                model.TransferActivityData = GenerateTransferActivityData(routes?.Items?.ToList() ?? new List<RouteViewModel>(), period, startDate, endDate);
+                // Generate transfer activity data - IMPROVED
+                if (routes != null && routes.Items != null)
+                {
+                    model.TransferActivityData = GenerateTransferActivityData(
+                        routes.Items.ToList(),
+                        period,
+                        startDate,
+                        endDate);
+                }
+                else
+                {
+                    // Provide empty data structure
+                    model.TransferActivityData = new TransferActivityData
+                    {
+                        Labels = new List<string>(),
+                        CompletedData = new List<int>(),
+                        PendingData = new List<int>()
+                    };
+                }
 
-                // Set ViewBag data
+                // Set ViewBag data with additional debugging info
                 ViewBag.CurrentPeriod = period;
                 ViewBag.PeriodStartDate = startDate;
                 ViewBag.PeriodEndDate = endDate;
                 ViewBag.TotalDepartments = departments?.Count(d => d.IsActive) ?? 0;
                 ViewBag.TotalCategories = categoriesResult?.Items?.Count(c => c.IsActive) ?? 0;
 
+
                 return View(model);
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error loading dashboard");
-                return HandleException(ex, new DashboardViewModel());
+                _logger?.LogError(ex, $"Error loading dashboard for period: {period}");
+
+                // Return a model with default values instead of error page
+                model = new DashboardViewModel
+                {
+                    TotalProducts = 0,
+                    ActiveProducts = 0,
+                    TotalRoutes = 0,
+                    PendingTransfers = 0,
+                    CompletedTransfers = 0,
+                    DepartmentStats = new List<DepartmentStats>(),
+                    CategoryDistributions = new List<CategoryDistribution>(),
+                    TransferActivityData = new TransferActivityData
+                    {
+                        Labels = new List<string>(),
+                        CompletedData = new List<int>(),
+                        PendingData = new List<int>()
+                    }
+                };
+
+                ViewBag.ErrorMessage = "Unable to load some dashboard data. Please try refreshing the page.";
+                ViewBag.CurrentPeriod = period;
+                ViewBag.PeriodStartDate = DateTime.Now.AddDays(-7);
+                ViewBag.PeriodEndDate = DateTime.Now;
+
+                return View(model);
             }
         }
 

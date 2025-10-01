@@ -272,6 +272,103 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        $(document).ready(function() {
+            // Check if we have data for charts
+            checkDataAvailability();
+
+            // Add tooltips to period buttons
+            $('.btn-group button').each(function() {
+                const period = $(this).text().trim();
+                let tooltip = '';
+
+                switch(period) {
+                    case 'This Week':
+                        tooltip = 'Shows data from the last 7 days';
+                        break;
+                    case 'This Month':
+                        tooltip = 'Shows data from the last 30 days';
+                        break;
+                    case 'Last 6 Months':
+                        tooltip = 'Shows data from the last 6 months';
+                        break;
+                    case 'All Time':
+                        tooltip = 'Shows all historical data';
+                        break;
+                }
+
+                if (tooltip) {
+                    $(this).attr('data-bs-toggle', 'tooltip')
+                           .attr('data-bs-placement', 'bottom')
+                           .attr('title', tooltip);
+                }
+            });
+
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        });
+
+        function checkDataAvailability() {
+            // Check if there's no data and show helpful messages
+            const hasProducts = @(Model.TotalProducts > 0 ? "true" : "false");
+            const hasRoutes = @(Model.TotalRoutes > 0 ? "true" : "false");
+            const currentPeriod = '@currentPeriod';
+
+            if (!hasProducts && !hasRoutes && currentPeriod !== 'all') {
+                // Show a helpful message suggesting to check a different period
+                const suggestionHtml = `
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-lightbulb me-2"></i>No Activity in This Period
+                        </h5>
+                        <p>There's no recorded activity for the selected period. This could mean:</p>
+                        <ul class="mb-2">
+                            <li>No new products were added during this time</li>
+                            <li>No transfers or routes were created</li>
+                            <li>The system may have been inactive during this period</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Suggestion:</strong> Try selecting "All Time" to see historical data,
+                            or create some test data to populate the dashboard.
+                        </p>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+
+                // Insert after the period selector
+                $('.btn-group').parent().after(suggestionHtml);
+            }
+        }
+
+        // Enhanced period change function with loading indicator
+        function changePeriod(period) {
+            if (period === currentPeriod) {
+                return;
+            }
+
+            // Show better loading indicator
+            const loadingHtml = `
+                <div class="position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
+                    <div class="bg-white rounded-3 shadow-lg p-4 text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h6>Loading ${period === 'all' ? 'all' : period === '6months' ? 'last 6 months' : period} data...</h6>
+                        <small class="text-muted">Please wait</small>
+                    </div>
+                </div>
+                <div class="modal-backdrop fade show" style="z-index: 9998;"></div>
+            `;
+
+            $('body').append(loadingHtml);
+
+            // Navigate to the new period
+            window.location.href = '/Home/Dashboard?period=' + period;
+        }
+
         // Store the current period and data globally
         let currentPeriod = '@currentPeriod';
         let departmentChart, categoryChart, transferChart;
@@ -291,19 +388,6 @@
                 }
             });
         });
-
-        function changePeriod(period) {
-            // Don't reload if already on this period
-            if (period === currentPeriod) {
-                return;
-            }
-
-            // Show loading indicator
-            showSpinner();
-
-            // Navigate to the new period
-            window.location.href = '/Home/Dashboard?period=' + period;
-        }
 
         function initializeCharts() {
             initializeDepartmentChart();
