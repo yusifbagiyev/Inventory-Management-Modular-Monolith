@@ -1,26 +1,38 @@
 ﻿@model DashboardViewModel
 @{
-    var currentPeriod = ViewBag.CurrentPeriod as string ?? "week";
+    var currentPeriod = ViewBag.CurrentPeriod as string ?? "last7days";
     var totalDepartments = ViewBag.TotalDepartments ?? 0;
     var totalCategories = ViewBag.TotalCategories ?? 0;
+    var activeDepartmentsInPeriod = ViewBag.ActiveDepartmentsInPeriod ?? 0;
+    var activeCategoriesInPeriod = ViewBag.ActiveCategoriesInPeriod ?? 0;
     var startDate = ViewBag.PeriodStartDate as DateTime?;
     var endDate = ViewBag.PeriodEndDate as DateTime?;
+
+    // Determine period display name
+    var periodName = currentPeriod switch
+    {
+        "last7days" => "Last 7 Days",
+        "last30days" => "Last 30 Days",
+        "last6months" => "Last 6 Months",
+        "all" => "All Time",
+        _ => "Last 7 Days"
+    };
 }
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Dashboard</h1>
         <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "week" ? "active" : "")"
-                    onclick="changePeriod('week')">
-                This Week
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last7days" ? "active" : "")"
+                    onclick="changePeriod('last7days')">
+                Last 7 Days
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "month" ? "active" : "")"
-                    onclick="changePeriod('month')">
-                This Month
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last30days" ? "active" : "")"
+                    onclick="changePeriod('last30days')">
+                Last 30 Days
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "6months" ? "active" : "")"
-                    onclick="changePeriod('6months')">
+            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last6months" ? "active" : "")"
+                    onclick="changePeriod('last6months')">
                 Last 6 Months
             </button>
             <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "all" ? "active" : "")"
@@ -31,14 +43,16 @@
     </div>
 
     <!-- Period Info Banner -->
-    @if (startDate.HasValue && endDate.HasValue && currentPeriod != "all")
+    @if (startDate.HasValue && endDate.HasValue)
     {
         <div class="alert alert-info mb-4">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Period:</strong> @startDate.Value.ToString("MMM dd, yyyy") - @endDate.Value.ToString("MMM dd, yyyy")
+            <i class="fas fa-calendar-alt me-2"></i>
+            <strong>Viewing:</strong> @periodName
+            <span class="mx-2">|</span>
+            <strong>Date Range:</strong> @startDate.Value.ToString("MMM dd, yyyy") - @endDate.Value.ToString("MMM dd, yyyy")
             @if (currentPeriod != "all")
             {
-                <span class="ms-3"><em>Showing new products and activity for this period</em></span>
+                <span class="ms-3"><em>(Showing transfer activity and new products for this period)</em></span>
             }
         </div>
     }
@@ -57,12 +71,12 @@
                                 }
                                 else
                                 {
-                                    <text>New Products (@currentPeriod.Replace("6months", "6 Months"))</text>
+                                    <text>New Products Added</text>
                                 }
                             </p>
                             <h3 class="mb-0">@Model.TotalProducts.ToString("N0")</h3>
                             <p class="text-success mb-0">
-                                <i class="fas fa-arrow-up"></i> @Model.ActiveProducts active
+                                <i class="fas fa-check-circle"></i> @Model.ActiveProducts active
                             </p>
                         </div>
                         <div class="rounded-circle bg-primary-soft text-primary p-3">
@@ -78,14 +92,14 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Routes (@currentPeriod.Replace("6months", "6 Months"))</p>
+                            <p class="text-muted mb-2">Total Transfers</p>
                             <h3 class="mb-0">@Model.TotalRoutes.ToString("N0")</h3>
                             <p class="text-warning mb-0">
-                                <i class="fas fa-clock"></i> @Model.PendingTransfers pending
+                                <i class="fas fa-hourglass-half"></i> @Model.PendingTransfers pending
                             </p>
                         </div>
                         <div class="rounded-circle bg-success-soft text-success p-3">
-                            <i class="fas fa-route fa-2x"></i>
+                            <i class="fas fa-exchange-alt fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -97,10 +111,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Active Departments</p>
+                            <p class="text-muted mb-2">Departments</p>
                             <h3 class="mb-0">@totalDepartments</h3>
                             <p class="text-info mb-0">
-                                <i class="fas fa-users"></i> @Model.DepartmentStats.Sum(d => d.ActiveWorkers) workers (@currentPeriod.Replace("6months", "6 Months"))
+                                <i class="fas fa-chart-line"></i> @activeDepartmentsInPeriod active in period
                             </p>
                         </div>
                         <div class="rounded-circle bg-info-soft text-info p-3">
@@ -116,10 +130,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-2">Active Categories</p>
+                            <p class="text-muted mb-2">Categories</p>
                             <h3 class="mb-0">@totalCategories</h3>
                             <p class="text-secondary mb-0">
-                                <i class="fas fa-tags"></i> @Model.CategoryDistributions.Count with products (@currentPeriod.Replace("6months", "6 Months"))
+                                <i class="fas fa-chart-line"></i> @activeCategoriesInPeriod active in period
                             </p>
                         </div>
                         <div class="rounded-circle bg-warning-soft text-warning p-3">
@@ -137,79 +151,14 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Department Overview (@currentPeriod.Replace("6months", "6 Months"))</h5>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-primary active" data-chart="bar">Bar</button>
-                            <button type="button" class="btn btn-outline-primary" data-chart="line">Line</button>
-                        </div>
+                        <h5 class="mb-0">Transfer Activity (@periodName)</h5>
+                        <small class="text-muted">Completed vs Pending</small>
                     </div>
-                </div>
-                <div class="card-body">
-                    @if (Model.DepartmentStats.Any())
-                    {
-                        <div class="chart-container" style="position: relative; height: 300px;">
-                            <canvas id="departmentChart"></canvas>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No department data available for this period</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Category Distribution (@currentPeriod.Replace("6months", "6 Months"))</h5>
-                </div>
-                <div class="card-body">
-                    @if (Model.CategoryDistributions.Any())
-                    {
-                        <div class="chart-container" style="position: relative; height: 300px;">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                        <!-- Legend -->
-                        <div class="mt-3">
-                            @foreach (var category in Model.CategoryDistributions.Take(4))
-                            {
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <div class="d-flex align-items-center">
-                                        <div class="me-2" style="width: 12px; height: 12px; background-color: @category.Color; border-radius: 50%;"></div>
-                                        <small>@category.CategoryName</small>
-                                    </div>
-                                    <small class="text-muted">@category.Count</small>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No category data available for this period</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Activity and Performance Row -->
-    <div class="row">
-        <div class="col-xl-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Transfer Activity (@currentPeriod.Replace("6months", "6 Months"))</h5>
                 </div>
                 <div class="card-body">
                     @if (Model.TransferActivityData.Labels.Any())
                     {
-                        <div class="chart-container" style="position: relative; height: 250px;">
+                        <div class="chart-container" style="position: relative; height: 300px;">
                             <canvas id="transferChart"></canvas>
                         </div>
                     }
@@ -224,43 +173,108 @@
             </div>
         </div>
 
-        <div class="col-xl-6">
+        <div class="col-xl-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Top Departments by Products (@currentPeriod.Replace("6months", "6 Months"))</h5>
+                    <h5 class="mb-0">Categories in Transfers</h5>
+                    <small class="text-muted">Products transferred by category</small>
+                </div>
+                <div class="card-body">
+                    @if (Model.CategoryDistributions.Any())
+                    {
+                        <div class="chart-container" style="position: relative; height: 250px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <!-- Legend -->
+                        <div class="mt-3">
+                            @foreach (var category in Model.CategoryDistributions)
+                            {
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2" style="width: 18px; height: 18px; background-color: @category.Color; border-radius: 3px;"></div>
+                                        <small><strong>@category.CategoryName</strong></small>
+                                    </div>
+                                    <small class="text-muted"><strong>@category.Count</strong> transfers</small>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No transfers for this period</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Performance -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Top Departments by Transfer Activity</h5>
+                    <small class="text-muted">Departments with the most transfer activity during @periodName.ToLower()</small>
                 </div>
                 <div class="card-body">
                     @if (Model.DepartmentStats.Any())
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
                                         <th>Department</th>
-                                        <th>Products</th>
-                                        <th>Workers</th>
-                                        <th>Transfers</th>
+                                        <th class="text-center">
+                                            <i class="fas fa-exchange-alt me-1"></i>
+                                            Total Transfers
+                                        </th>
+                                        <th class="text-center">
+                                            <i class="fas fa-box me-1"></i>
+                                            Unique Products
+                                        </th>
+                                        <th class="text-center">
+                                            <i class="fas fa-users me-1"></i>
+                                            Active Workers
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var dept in Model.DepartmentStats.Take(5))
+                                    @foreach (var dept in Model.DepartmentStats)
                                     {
                                         <tr>
-                                            <td>@dept.DepartmentName</td>
-                                            <td><span class="badge bg-primary">@dept.ProductCount</span></td>
-                                            <td>@dept.ActiveWorkers</td>
-                                            <td><span class="badge bg-info">@dept.PeriodTransfers</span></td>
+                                            <td>
+                                                <i class="fas fa-building text-primary me-2"></i>
+                                                <strong>@dept.DepartmentName</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary rounded-pill px-3">@dept.PeriodTransfers</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success rounded-pill px-3">@dept.ProductCount</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info rounded-pill px-3">@dept.ActiveWorkers</span>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>Note:</strong> "Active" means the department participated in at least one transfer during this period.
+                            </small>
+                        </div>
                     }
                     else
                     {
                         <div class="text-center py-4">
-                            <i class="fas fa-table fa-2x text-muted mb-2"></i>
-                            <p class="text-muted">No department data available for this period</p>
+                            <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No department activity for this period</p>
                         </div>
                     }
                 </div>
@@ -272,187 +286,52 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        let transferChart, categoryChart;
+        const currentPeriod = '@currentPeriod';
+
         $(document).ready(function() {
-            // Check if we have data for charts
-            checkDataAvailability();
-
-            // Add tooltips to period buttons
-            $('.btn-group button').each(function() {
-                const period = $(this).text().trim();
-                let tooltip = '';
-
-                switch(period) {
-                    case 'This Week':
-                        tooltip = 'Shows data from the last 7 days';
-                        break;
-                    case 'This Month':
-                        tooltip = 'Shows data from the last 30 days';
-                        break;
-                    case 'Last 6 Months':
-                        tooltip = 'Shows data from the last 6 months';
-                        break;
-                    case 'All Time':
-                        tooltip = 'Shows all historical data';
-                        break;
-                }
-
-                if (tooltip) {
-                    $(this).attr('data-bs-toggle', 'tooltip')
-                           .attr('data-bs-placement', 'bottom')
-                           .attr('title', tooltip);
-                }
-            });
-
-            // Initialize tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl)
-            });
+            initializeCharts();
+            initializeTooltips();
         });
 
-        function checkDataAvailability() {
-            // Check if there's no data and show helpful messages
-            const hasProducts = @(Model.TotalProducts > 0 ? "true" : "false");
-            const hasRoutes = @(Model.TotalRoutes > 0 ? "true" : "false");
-            const currentPeriod = '@currentPeriod';
-
-            if (!hasProducts && !hasRoutes && currentPeriod !== 'all') {
-                // Show a helpful message suggesting to check a different period
-                const suggestionHtml = `
-                    <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <h5 class="alert-heading">
-                            <i class="fas fa-lightbulb me-2"></i>No Activity in This Period
-                        </h5>
-                        <p>There's no recorded activity for the selected period. This could mean:</p>
-                        <ul class="mb-2">
-                            <li>No new products were added during this time</li>
-                            <li>No transfers or routes were created</li>
-                            <li>The system may have been inactive during this period</li>
-                        </ul>
-                        <hr>
-                        <p class="mb-0">
-                            <strong>Suggestion:</strong> Try selecting "All Time" to see historical data,
-                            or create some test data to populate the dashboard.
-                        </p>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-
-                // Insert after the period selector
-                $('.btn-group').parent().after(suggestionHtml);
-            }
+        function initializeTooltips() {
+            $('[data-bs-toggle="tooltip"]').tooltip();
         }
 
-        // Enhanced period change function with loading indicator
         function changePeriod(period) {
-            if (period === currentPeriod) {
-                return;
-            }
+            if (period === currentPeriod) return;
 
-            // Show better loading indicator
-            const loadingHtml = `
-                <div class="position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
-                    <div class="bg-white rounded-3 shadow-lg p-4 text-center">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <h6>Loading ${period === 'all' ? 'all' : period === '6months' ? 'last 6 months' : period} data...</h6>
-                        <small class="text-muted">Please wait</small>
-                    </div>
-                </div>
-                <div class="modal-backdrop fade show" style="z-index: 9998;"></div>
-            `;
-
-            $('body').append(loadingHtml);
-
-            // Navigate to the new period
+            showLoadingOverlay();
             window.location.href = '/Home/Dashboard?period=' + period;
         }
 
-        // Store the current period and data globally
-        let currentPeriod = '@currentPeriod';
-        let departmentChart, categoryChart, transferChart;
-
-        $(document).ready(function() {
-            // Initialize charts with data from the server
-            initializeCharts();
-
-            // Chart type switcher
-            $('[data-chart]').click(function() {
-                const chartType = $(this).data('chart');
-                $(this).addClass('active').siblings().removeClass('active');
-
-                if (departmentChart) {
-                    departmentChart.config.type = chartType;
-                    departmentChart.update();
-                }
-            });
-        });
-
-        function initializeCharts() {
-            initializeDepartmentChart();
-            initializeCategoryChart();
-            initializeTransferChart();
+        function showLoadingOverlay() {
+            const overlay = `
+                <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                     style="background: rgba(255,255,255,0.95); z-index: 9999;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5>Loading dashboard data...</h5>
+                        <p class="text-muted">Please wait</p>
+                    </div>
+                </div>
+            `;
+            $('body').append(overlay);
         }
 
-        function initializeDepartmentChart() {
-            const ctx = document.getElementById('departmentChart');
-            if (!ctx) return;
-
-            const colors = {
-                primary: '#3B82F6',
-                success: '#10B981'
-            };
-
-            // Use data passed from the server
-            const departmentData = @Html.Raw(Json.Serialize(Model.DepartmentStats));
-
-            if (departmentData.length === 0) return;
-
-            departmentChart = new Chart(ctx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: departmentData.map(d => d.departmentName),
-                    datasets: [{
-                        label: 'Products',
-                        data: departmentData.map(d => d.productCount),
-                        backgroundColor: colors.primary,
-                        borderRadius: 8
-                    }, {
-                        label: 'Workers',
-                        data: departmentData.map(d => d.activeWorkers),
-                        backgroundColor: colors.success,
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                precision: 0
-                            }
-                        }
-                    }
-                }
-            });
+        function initializeCharts() {
+            initializeCategoryChart();
+            initializeTransferChart();
         }
 
         function initializeCategoryChart() {
             const ctx = document.getElementById('categoryChart');
             if (!ctx) return;
 
-            // Use data passed from the server
             const categoryData = @Html.Raw(Json.Serialize(Model.CategoryDistributions));
-
-            if (categoryData.length === 0) return;
+            if (!categoryData || categoryData.length === 0) return;
 
             categoryChart = new Chart(ctx.getContext('2d'), {
                 type: 'doughnut',
@@ -461,7 +340,9 @@
                     datasets: [{
                         data: categoryData.map(c => c.count),
                         backgroundColor: categoryData.map(c => c.color),
-                        borderWidth: 0
+                        borderWidth: 3,
+                        borderColor: '#fff',
+                        hoverOffset: 10
                     }]
                 },
                 options: {
@@ -470,9 +351,24 @@
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} transfers (${percentage}%)`;
+                                }
+                            }
                         }
                     },
-                    cutout: '70%'
+                    cutout: '65%'
                 }
             });
         }
@@ -481,70 +377,91 @@
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
 
-            // Use real data from the server
             const transferData = @Html.Raw(Json.Serialize(Model.TransferActivityData));
-
-            if (transferData.labels.length === 0) return;
-
-            const colors = {
-                success: '#10B981',
-                warning: '#F59E0B'
-            };
+            if (!transferData || !transferData.labels || transferData.labels.length === 0) return;
 
             transferChart = new Chart(ctx.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: transferData.labels,
-                    datasets: [{
-                        label: 'Completed',
-                        data: transferData.completedData,
-                        borderColor: colors.success,
-                        backgroundColor: colors.success + '20',
-                        tension: 0.4,
-                        fill: true
-                    }, {
-                        label: 'Pending',
-                        data: transferData.pendingData,
-                        borderColor: colors.warning,
-                        backgroundColor: colors.warning + '20',
-                        tension: 0.4,
-                        fill: true
-                    }]
+                    datasets: [
+                        {
+                            label: 'Completed',
+                            data: transferData.completedData,
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#10B981',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: 'Pending',
+                            data: transferData.pendingData,
+                            borderColor: '#F59E0B',
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#F59E0B',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
                         legend: {
                             position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                font: { size: 12, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                stepSize: Math.max(1, Math.ceil(Math.max(...transferData.completedData, ...transferData.pendingData) / 10))
+                                stepSize: 1,
+                                precision: 0,
+                                font: { size: 11 }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { size: 11 }
                             }
                         }
                     }
                 }
             });
-        }
-
-        function showSpinner() {
-            if (!$('.spinner-overlay').length) {
-                $('body').append(`
-                    <div class="spinner-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                `);
-            }
-        }
-
-        function hideSpinner() {
-            $('.spinner-overlay').remove();
         }
     </script>
     <style>
@@ -563,5 +480,38 @@
         .bg-warning-soft {
             background-color: rgba(245, 158, 11, 0.1);
         }
+
+        .card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+            .card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
+            }
+
+        .badge {
+            font-size: 0.875rem;
+            padding: 0.5em 0.85em;
+            font-weight: 600;
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+            .table tbody tr:hover {
+                background-color: rgba(59, 130, 246, 0.05);
+            }
     </style>
 }
