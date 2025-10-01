@@ -48,21 +48,6 @@ namespace InventoryManagement.Web.Controllers
                     data = response.Data
                 });
             }
-            if (response.IsSuccess)
-            {
-                TempData["Success"] = response.Message ?? "Operation completed successfully";
-            }
-
-            else if (response.IsApprovalRequest)
-            {
-                TempData["Info"] = response.Message ?? "Request submitted for approval";
-            }
-
-            else
-            {
-                TempData["Error"] = response.Message ?? "Operation failed";
-
-            }
             return RedirectToAction(redirectAction);
         }
 

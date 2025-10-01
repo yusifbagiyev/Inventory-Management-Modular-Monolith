@@ -333,21 +333,6 @@ namespace InventoryManagement.Web.Services
                     throw new UnauthorizedAccessException("Authentication failed - unable to refresh token");
                 }
             }
-                
-            if (response.StatusCode == HttpStatusCode.Accepted)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                dynamic? jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-                return new ApiResponse<bool>
-                {
-                    IsSuccess = false,
-                    IsApprovalRequest = true,
-                    Message = jsonResponse?.Message ?? "Request submitted for approval",
-                    ApprovalRequestId = jsonResponse?.ApprovalRequestId,
-                    Data = false
-                };
-            }
 
             return new ApiResponse<bool>
             {
