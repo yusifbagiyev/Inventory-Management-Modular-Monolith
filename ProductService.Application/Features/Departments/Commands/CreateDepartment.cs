@@ -28,7 +28,11 @@ namespace ProductService.Application.Features.Departments.Commands
 
             public async Task<DepartmentDto> Handle(Command request, CancellationToken cancellationToken)
             {
-                var department = new Department(request.DepartmentDto.Name, request.DepartmentDto.Description,request.DepartmentDto.IsActive);
+                var department = new Department(
+                    request.DepartmentDto.Name, 
+                    request.DepartmentDto.Description,
+                    request.DepartmentDto.DepartmentHead,
+                    request.DepartmentDto.IsActive);
 
                 await _departmentRepository.AddAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

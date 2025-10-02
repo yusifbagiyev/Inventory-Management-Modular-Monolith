@@ -184,6 +184,7 @@ namespace InventoryManagement.Web.Services
                     return HandleApprovalResponse<TResponse>(responseContent);
                 }
 
+
                 return new ApiResponse<TResponse>
                 {
                     IsSuccess = true,
@@ -320,6 +321,15 @@ namespace InventoryManagement.Web.Services
                 if (IsApprovalResponse(responseContent))
                 {
                     return HandleApprovalResponse<TResponse>(responseContent);
+                }
+
+
+                else if (string.IsNullOrEmpty(responseContent))
+                {
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = true
+                    };
                 }
 
                 return new ApiResponse<TResponse>

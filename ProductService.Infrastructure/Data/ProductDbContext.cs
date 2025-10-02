@@ -69,11 +69,11 @@ namespace ProductService.Infrastructure.Data
 
             // Seed Departments
             modelBuilder.Entity<Department>().HasData(
-                new { Id = 1, Name = "Warehouse A", Description = "Main storage warehouse", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 2, Name = "Warehouse B", Description = "Secondary storage facility", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 3, Name = "Office", Description = "Administrative office", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 4, Name = "Loading Dock", Description = "Shipping and receiving area", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 5, Name = "Maintenance", Description = "Equipment maintenance department", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null }
+                new { Id = 1, Name = "Warehouse A", Description = "Main storage warehouse", DepartmentHead = "John Smith", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
+                new { Id = 2, Name = "Warehouse B", Description = "Secondary storage facility", DepartmentHead = "Sarah Johnson", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
+                new { Id = 3, Name = "Office", Description = "Administrative office", DepartmentHead = "Michael Brown", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
+                new { Id = 4, Name = "Loading Dock", Description = "Shipping and receiving area", DepartmentHead = "David Wilson", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
+                new { Id = 5, Name = "Maintenance", Description = "Equipment maintenance department", DepartmentHead = "Emily Davis", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null }
             );
 
             // Seed Products

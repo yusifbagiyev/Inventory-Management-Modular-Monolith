@@ -33,6 +33,13 @@ namespace InventoryManagement.Web.Controllers
 
             try
             {
+                // Add validation for period parameter
+                var validPeriods = new[] { "last7days", "last30days", "last6months", "all" };
+                if (!validPeriods.Contains(period.ToLower()))
+                {
+                    period = "last7days";
+                }
+
                 // Calculate date range with proper period handling
                 var now = DateTime.Now;
                 DateTime startDate;
@@ -442,8 +449,11 @@ namespace InventoryManagement.Web.Controllers
                         completedData.Add(weekRoutes.Count(r => r.IsCompleted));
                         pendingData.Add(weekRoutes.Count(r => !r.IsCompleted));
 
-                        currentWeekStart = weekEnd;
+                        currentWeekStart = currentWeekStart.AddDays(7); // Changed from weekEnd
                         weekNumber++;
+
+                        // Safety check to prevent infinite loop
+                        if (weekNumber > 10) break;
                     }
                     break;
 

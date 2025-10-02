@@ -431,9 +431,16 @@
 
                     updateNotificationBadge(0);
 
+                    $('#sidebarUnreadCount').text('0').hide();
+                    $('.sidebar-nav .notification-badge').hide();
+
+                    // FIX: Update any other notification indicators
+                    $('.nav-link[href="/Notifications"] .badge').text('0').hide();
+
                     // FIXED: Force reload the notification list to get fresh data
                     setTimeout(function() {
                         loadRecentNotifications();
+                        loadNotificationCount(); // FIX: Also reload the count from server
                     }, 300);
 
                     showToast('All notifications marked as read', 'success');
@@ -446,32 +453,34 @@
         }
 
         function updateNotificationBadge(count) {
-            const $badge = $('#notificationBadge');
-            const $sidebarBadge = $('#sidebarUnreadCount');
             count = parseInt(count) || 0;
-
             console.log('Updating notification badges to:', count);
 
-            if (count > 0) {
-                const displayCount = count > 99 ? '99+' : count;
+            // List of all possible notification badge selectors
+            const badgeSelectors = [
+                '#notificationBadge',
+                '#sidebarUnreadCount',
+                '.sidebar-nav .notification-badge',
+                '.nav-link[href="/Notifications"] .badge',
+                '[data-notification-count]'
+            ];
 
-                // Update header badge
-                $badge.text(displayCount)
-                      .css('display', 'flex') // Use flex for better centering
-                      .show();
+            badgeSelectors.forEach(selector => {
+                const $element = $(selector);
+                if ($element.length) {
+                    if (count > 0) {
+                        const displayCount = count > 99 ? '99+' : count;
+                        $element.text(displayCount).show();
 
-                // Update sidebar badge
-                if ($sidebarBadge.length) {
-                    $sidebarBadge.text(displayCount).show();
+                        // Use appropriate display style
+                        if ($element.hasClass('badge')) {
+                            $element.css('display', 'inline-flex');
+                        }
+                    } else {
+                        $element.hide().text('');
+                    }
                 }
-            } else {
-                // Hide badges when count is zero
-                $badge.hide().text('');
-
-                if ($sidebarBadge.length) {
-                    $sidebarBadge.hide().text('');
-                }
-            }
+            });
         }
 
 
@@ -487,6 +496,7 @@
             };
             return icons[type] || 'fas fa-bell';
         }
+
 
         function getNotificationIconColor(type) {
             const colors = {

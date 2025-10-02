@@ -15,6 +15,10 @@ namespace InventoryManagement.Web.Models.ViewModels
         [MaxLength(500)]
         public string? Description { get; set; } = string.Empty;
 
+        [Display(Name = "Department Head")]
+        [MaxLength(100)]
+        public string? DepartmentHead { get; set; } = string.Empty;
+
         [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
 

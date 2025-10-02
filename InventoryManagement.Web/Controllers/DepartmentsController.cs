@@ -208,6 +208,7 @@ namespace InventoryManagement.Web.Controllers
                 var dto= new UpdateDepartmentDto
                 {
                     Name = model.Name,
+                    DepartmentHead = model.DepartmentHead,
                     Description = model.Description,
                     IsActive = model.IsActive
                 };

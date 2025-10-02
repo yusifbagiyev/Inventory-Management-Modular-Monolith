@@ -31,7 +31,7 @@ namespace ProductService.Application.Mappings
                 opt => opt.MapFrom(src => src.WorkerCount));
 
             CreateMap<CreateDepartmentDto, Department>()
-                .ConstructUsing(src => new Department(src.Name, src.Description,src.IsActive));
+                .ConstructUsing(src => new Department(src.Name, src.DepartmentHead, src.Description,src.IsActive));
         }
     }
 }

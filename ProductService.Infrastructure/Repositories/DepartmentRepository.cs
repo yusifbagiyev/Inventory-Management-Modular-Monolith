@@ -44,6 +44,7 @@ namespace ProductService.Infrastructure.Repositories
                 search = search.Trim();
                 query = query.Where(r =>
                     EF.Functions.ILike(r.Name, $"%{search}%") ||
+                    (r.DepartmentHead !=null && EF.Functions.ILike(r.DepartmentHead,$"%{search}%")) ||
                     (r.Description!=null&&EF.Functions.ILike(r.Description, $"%{search}%"))
                 );
             }

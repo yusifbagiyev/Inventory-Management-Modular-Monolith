@@ -34,6 +34,13 @@
                             <span asp-validation-for="Description" class="text-danger"></span>
                         </div>
 
+                        <div class="mb-3">
+                            <label asp-for="DepartmentHead" class="form-label"></label>
+                            <input asp-for="DepartmentHead" class="form-control" placeholder="Enter department head name" />
+                            <span asp-validation-for="DepartmentHead" class="text-danger"></span>
+                            <small class="form-text text-muted">This person will appear in exported documents</small>
+                        </div>
+
                         <div class="form-check mb-3">
                             <input asp-for="IsActive" class="form-check-input" />
                             <label asp-for="IsActive" class="form-check-label"></label>
