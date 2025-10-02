@@ -11,7 +11,7 @@
         <li class="breadcrumb-item active">Departments</li>
     </ol>
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards (unchanged) -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-start-3 border-start-primary shadow-sm">
@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    <!-- Filter Card -->
+    <!-- Filter Card (unchanged) -->
     <div class="card shadow-sm mb-4">
         <div class="card-body p-3">
             <div class="row g-3 align-items-center">
@@ -120,7 +120,7 @@
         </div>
     </div>
 
-    <!-- Departments Table -->
+    <!-- Departments Table - MODIFIED -->
     <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0 py-3">
             <div class="row align-items-center">
@@ -148,6 +148,7 @@
                         <thead>
                             <tr>
                                 <th>Department</th>
+                                <th>Department Head</th>
                                 <th>Description</th>
                                 <th class="text-center">Products</th>
                                 <th class="text-center">Workers</th>
@@ -171,8 +172,21 @@
                                         </div>
                                     </td>
                                     <td>
+                                        @if (!string.IsNullOrEmpty(department.DepartmentHead))
+                                        {
+                                            <span class="text-dark">@department.DepartmentHead</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fst-italic">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td>
                                         <div class="text-truncate" style="max-width: 300px;">
-                                            @(department.Description ?? "No description")
+                                            @if (!string.IsNullOrEmpty(department.Description))
+                                            {
+                                                @department.Description
+                                            }
                                         </div>
                                     </td>
                                     <td class="text-center">
@@ -240,7 +254,7 @@
     </div>
 </div>
 
-<!-- Delete Modal -->
+<!-- Delete Modal (unchanged) -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -274,15 +288,12 @@
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // Store all category elements for filtering
             const allDepartments = Array.from(document.querySelectorAll('#departmentsTable tr'));
 
-            // Filter change handlers
             $('#statusFilter, #sortBy').on('change', function() {
                 filterDepartments();
             });
 
-            // Restore filter values from URL
             restoreFilterValues();
         });
 
@@ -290,12 +301,9 @@
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
 
-            // Get all rows
             const allRows = Array.from(document.querySelectorAll('#departmentsTable tr'));
 
-            // Filter rows
             let visibleRows = allRows.filter(row => {
-                // Status filter
                 const isActive = row.querySelector('.badge.bg-success-soft') !== null;
                 const matchesStatus = !statusFilter ||
                     (statusFilter === 'active' && isActive) ||
@@ -304,7 +312,6 @@
                 return matchesSearch && matchesStatus;
             });
 
-            // Sort rows
             visibleRows.sort((a, b) => {
                 switch(sortBy) {
                     case 'name':
@@ -316,25 +323,23 @@
                         const productsB = parseInt(b.querySelector('.badge.bg-primary')?.textContent) || 0;
                         return productsB - productsA;
                     case 'created':
-                        const dateA = a.querySelector('td:nth-child(5) .text-muted')?.textContent || '';
-                        const dateB = b.querySelector('td:nth-child(5) .text-muted')?.textContent || '';
+                        const dateA = a.querySelector('td:nth-child(7) .text-muted')?.textContent || '';
+                        const dateB = b.querySelector('td:nth-child(7) .text-muted')?.textContent || '';
                         return new Date(dateB) - new Date(dateA);
                     default:
                         return 0;
                 }
             });
 
-            // Update table
             const tbody = document.getElementById('departmentsTable');
             tbody.innerHTML = '';
             visibleRows.forEach(row => tbody.appendChild(row));
 
-            // Show/hide empty state
             if (visibleRows.length === 0) {
                 if (!document.getElementById('noResults')) {
                     tbody.innerHTML = `
                         <tr id="noResults">
-                            <td colspan="6" class="text-center py-4">
+                            <td colspan="8" class="text-center py-4">
                                 <i class="fas fa-search fa-2x text-muted mb-2"></i>
                                 <p class="text-muted">No departments found matching your filters</p>
                             </td>
@@ -352,7 +357,7 @@
             }
         }
 
-                function applyFilters() {
+        function applyFilters() {
             const searchTerm = $('#searchInput').val().trim();
             const params = new URLSearchParams();
 
@@ -367,14 +372,10 @@
         }
 
         function resetFilters() {
-            // Clear all input fields
             $('#searchInput').val('');
-
-            // Reload the page without parameters to refresh items
             window.location.href = window.location.pathname;
         }
 
-        // Enable search on Enter key
         $('#searchInput').on('keypress', function(e) {
             if (e.which === 13) {
                 applyFilters();
@@ -382,7 +383,7 @@
         });
 
         function deleteDepartment(id, name) {
-            $('#categoryName').text(name);
+            $('#departmentName').text(name);
             $('#deleteForm').attr('action', '/Departments/Delete/' + id);
             $('#deleteModal').modal('show');
         }

@@ -488,7 +488,7 @@ function exportDepartmentsToPDF() {
     const tableClone = table.cloneNode(true);
     tableClone.id = 'departmentsPdfTable';
 
-    // Remove actions column
+    // Remove actions column (last column)
     const headers = tableClone.querySelectorAll('th');
     headers[headers.length - 1].remove();  // Remove Actions header
 
@@ -499,29 +499,51 @@ function exportDepartmentsToPDF() {
         }
     });
 
-    // Clean up content
+    // Clean up Department column (first column) - remove icon
     tableClone.querySelectorAll('td:first-child').forEach(cell => {
-        const textDiv = cell.querySelector('div:last-child');
+        const textDiv = cell.querySelector('.fw-semibold');
         if (textDiv) {
-            cell.innerHTML = textDiv.outerHTML;
+            cell.innerHTML = `<strong>${textDiv.textContent}</strong>`;
+        }
+    });
+
+    // Clean up Department Head column (second column) - simplify text
+    tableClone.querySelectorAll('td:nth-child(2)').forEach(cell => {
+        const text = cell.textContent.trim();
+        if (text === 'Not assigned') {
+            cell.innerHTML = '<span style="color: #999; font-style: italic;">Not assigned</span>';
+        } else {
+            cell.innerHTML = text;
+        }
+    });
+
+    // Clean up Description column (third column) - simplify text
+    tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
+        const text = cell.textContent.trim();
+        if (text === 'No description provided') {
+            cell.innerHTML = '<span style="color: #999; font-style: italic;">None</span>';
+        } else {
+            // Keep the description as is, but remove any extra whitespace
+            cell.innerHTML = text;
         }
     });
 
     // Remove icons from status column
     tableClone.querySelectorAll('.badge i').forEach(icon => icon.remove());
 
-    // Set column widths
+    // Set column widths for proper PDF layout
     const customStyles = `
         #departmentsPdfTable {
             table-layout: fixed;
             width: 100%;
         }
-        #departmentsPdfTable th:nth-child(1) { width: 25%; }  /* Department */
-        #departmentsPdfTable th:nth-child(2) { width: 15%; }  /* Description */
-        #departmentsPdfTable th:nth-child(3) { width: 15%; }  /* Products */
-        #departmentsPdfTable th:nth-child(4) { width: 15%; }  /* Workers */
-        #departmentsPdfTable th:nth-child(5) { width: 15%; }  /* Status */
-        #departmentsPdfTable th:nth-child(6) { width: 15%; }  /* Created */
+        #departmentsPdfTable th:nth-child(1) { width: 18%; }  /* Department */
+        #departmentsPdfTable th:nth-child(2) { width: 15%; }  /* Department Head */
+        #departmentsPdfTable th:nth-child(3) { width: 22%; }  /* Description */
+        #departmentsPdfTable th:nth-child(4) { width: 12%; }  /* Products */
+        #departmentsPdfTable th:nth-child(5) { width: 12%; }  /* Workers */
+        #departmentsPdfTable th:nth-child(6) { width: 12%; }  /* Status */
+        #departmentsPdfTable th:nth-child(7) { width: 12%; }  /* Created */
     `;
 
     exportToPDF(tableClone.outerHTML, 'departments_export.pdf', 'Departments Report', customStyles);

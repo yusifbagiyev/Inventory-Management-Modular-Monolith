@@ -21,9 +21,28 @@
                 </div>
                 <div class="card-body">
                     <h5 class="card-title">@Model.Name</h5>
-                    <p class="card-text">@Model.Description</p>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <p class="card-text">@Model.Description</p>
+                    }
+                    else
+                    {
+                        <p class="card-text text-muted fst-italic">No description provided</p>
+                    }
 
                     <table class="table table-borderless">
+                        @if (!string.IsNullOrEmpty(Model.DepartmentHead))
+                        {
+                            <tr>
+                                <th>Department Head:</th>
+                                <td>
+                                    <span class="badge bg-info text-dark">
+                                        <i class="fas fa-user-tie me-1"></i>@Model.DepartmentHead
+                                    </span>
+                                </td>
+                            </tr>
+                        }
                         <tr>
                             <th>Status:</th>
                             <td>
