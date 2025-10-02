@@ -1,6 +1,6 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
-using NotificationService.Application.Services;
+using InventoryManagement.Web.Services;
 using Serilog;
 using Serilog.Events;
 
@@ -32,19 +32,26 @@ try
 
     builder.Services.AddCustomAuthentication(builder.Configuration);
 
+    builder.Services.AddDistributedMemoryCache(); // Add this for better session handling
     builder.Services.AddSession(options =>
     {
         options.IdleTimeout = TimeSpan.FromDays(7);
+        options.Cookie.Name = ".InventoryManagement.Session";
         options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.IOTimeout = TimeSpan.FromSeconds(10); // Add timeout for session operations
+        options.IOTimeout = TimeSpan.FromSeconds(30);
     });
+
+    builder.Services.AddHostedService<TokenRefreshBackgroundService>();
 
 
     builder.Services.ConfigureApplicationCookie(options =>
     {
-        options.ExpireTimeSpan = TimeSpan.FromHours(2);
+        options.ExpireTimeSpan = TimeSpan.FromDays(1); // Increased from 2 hours
         options.SlidingExpiration = true;
 
         options.Events.OnRedirectToLogin = context =>
@@ -99,7 +106,14 @@ try
         });
     });
 
-    builder.Services.AddHttpClient();
+
+    builder.Services.AddHttpClient<ApiService>(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30);
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+    });
+
+
     builder.Services.AddHttpContextAccessor();
 
     builder.Services.AddCustomServices();

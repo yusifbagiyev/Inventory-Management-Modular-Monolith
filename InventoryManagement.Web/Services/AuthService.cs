@@ -54,7 +54,7 @@ namespace InventoryManagement.Web.Services
         {
             try
             {
-                var refreshDto = new RefreshTokenDto
+                var refreshDto = new 
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken
@@ -63,15 +63,32 @@ namespace InventoryManagement.Web.Services
                 var json = JsonConvert.SerializeObject(refreshDto);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+                // Don't send authorization header for refresh endpoint
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+
                 var response = await _httpClient.PostAsync("api/auth/refresh", content);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<TokenDto>(responseContent);
+                    var result= JsonConvert.DeserializeObject<TokenDto>(responseContent);
+
+                    if (result != null && !string.IsNullOrEmpty(result.AccessToken))
+                    {
+                        _logger.LogInformation("Token refresh successful");
+                        return result;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Token refresh returned invalid data");
+                        return null;
+                    }
                 }
 
-                _logger.LogWarning($"Token refresh failed with status code: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Token refresh failed with status {Status}: {Content}",
+                    response.StatusCode, errorContent);
+
                 return null;
             }
             catch (Exception ex)
