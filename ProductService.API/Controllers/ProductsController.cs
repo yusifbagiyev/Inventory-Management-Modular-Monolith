@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
+using ProductService.Application.Features.Departments.Queries;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
@@ -330,6 +331,101 @@ namespace ProductService.API.Controllers
             // Update only the inventory code
             await _mediator.Send(new UpdateProductInventoryCode.Command(id, dto.InventoryCode));
             return NoContent();
+        }
+
+
+
+        [HttpGet("{id}/statistics")]
+        [Permission(AllPermissions.ProductView)]
+        public async Task<ActionResult<DepartmentStatisticsDto>> GetDepartmentStatistics(int id)
+        {
+            var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
+            if (department == null)
+                return NotFound();
+
+            var products = await _mediator.Send(new GetAllProductsQuery(
+                pageNumber: 1,
+                PageSize: 10000,
+                departmentId: id));
+
+            var statistics = new
+            {
+                TotalProducts = products.TotalCount,
+                ActiveProducts = products.Items.Count(p => p.IsActive),
+                WorkingProducts = products.Items.Count(p => p.IsWorking),
+                NewItems = products.Items.Count(p => p.IsNewItem),
+                AssignedWorkers = products.Items
+                    .Where(p => !string.IsNullOrEmpty(p.Worker))
+                    .Select(p => p.Worker)
+                    .Distinct()
+                    .Count(),
+                CategoryBreakdown = products.Items
+                    .GroupBy(p => p.CategoryName)
+                    .Select(g => new { Category = g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count)
+                    .ToList()
+            };
+
+            return Ok(statistics);
+        }
+
+        public record DepartmentStatisticsDto
+        {
+            /// <summary>
+            /// Total number of products assigned to this department
+            /// </summary>
+            public int TotalProducts { get; set; }
+
+            /// <summary>
+            /// Number of products marked as active/available
+            /// </summary>
+            public int ActiveProducts { get; set; }
+
+            /// <summary>
+            /// Number of products that are currently in working condition
+            /// </summary>
+            public int WorkingProducts { get; set; }
+
+            /// <summary>
+            /// Number of products marked as new items
+            /// </summary>
+            public int NewItems { get; set; }
+
+            /// <summary>
+            /// Count of unique workers who have products assigned to them
+            /// </summary>
+            public int AssignedWorkers { get; set; }
+
+            /// <summary>
+            /// Breakdown of products by category with counts
+            /// </summary>
+            public List<CategoryBreakdownDto> CategoryBreakdown { get; set; } = new();
+
+            /// <summary>
+            /// List of all unique workers in this department
+            /// </summary>
+            public List<string> WorkerList { get; set; } = new();
+        }
+
+        /// <summary>
+        /// Represents the count of products within a specific category
+        /// </summary>
+        public record CategoryBreakdownDto
+        {
+            /// <summary>
+            /// Name of the category
+            /// </summary>
+            public string Category { get; set; } = string.Empty;
+
+            /// <summary>
+            /// Number of products in this category
+            /// </summary>
+            public int Count { get; set; }
+
+            /// <summary>
+            /// Percentage of total products this category represents
+            /// </summary>
+            public decimal Percentage { get; set; }
         }
     }
 }

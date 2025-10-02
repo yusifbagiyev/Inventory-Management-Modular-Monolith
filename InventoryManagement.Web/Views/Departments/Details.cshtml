@@ -73,6 +73,10 @@
                         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
                             <i class="fas fa-edit"></i> Edit Department
                         </a>
+                        <a asp-action="ExportToWord" asp-route-id="@Model.Id"
+                           class="btn btn-success">
+                            <i class="fas fa-file-word"></i> Export to Word
+                        </a>
                         <a asp-action="Index" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> Back to List
                         </a>

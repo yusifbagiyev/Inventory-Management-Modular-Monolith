@@ -12,15 +12,18 @@ namespace InventoryManagement.Web.Controllers
     {
         private readonly IApiService _apiService;
         private readonly IUrlService _urlService;
+        private readonly IWordExportService _wordExportService;
 
         public DepartmentsController(
             IApiService apiService, 
             ILogger<DepartmentsController> logger,
-            IUrlService urlService)
+            IUrlService urlService,
+            IWordExportService wordExportService)
             : base(logger)
         {
             _apiService = apiService;
             _urlService = urlService;
+            _wordExportService = wordExportService;
         }
 
         public async Task<IActionResult> Index(
@@ -230,6 +233,50 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
+                return HandleException(ex);
+            }
+        }
+
+
+
+        [HttpGet("{id}/export-word")]
+        public async Task<IActionResult> ExportToWord(int id)
+        {
+            try
+            {
+                // Get department details
+                var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
+                if (department == null)
+                    return NotFound();
+
+                // Get products for this department
+                var products=await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
+                                $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
+
+                var departmentProducts=products?.Items?.ToList() ?? new List<ProductViewModel>();
+
+                // Update the image URLs for display (though we won't include images in Word)
+                foreach(var product in departmentProducts)
+                {
+                    if (!string.IsNullOrEmpty(product.ImageUrl))
+                    {
+                        product.FullImageUrl=_urlService.GetImageUrl(product.ImageUrl);
+                    }
+                }
+
+                // Generate Word document
+                var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(department, departmentProducts);
+
+                // Return as downloadable file
+                var fileName = $"{department.Name}_Inventory_{DateTime.Now:yyyyMMdd}.docx";
+
+                return File(fileBytes,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error exporting department {DepartmentId} to Word", id);
                 return HandleException(ex);
             }
         }
