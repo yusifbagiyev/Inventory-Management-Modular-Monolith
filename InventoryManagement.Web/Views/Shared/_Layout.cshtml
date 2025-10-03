@@ -162,6 +162,8 @@
         </div>
     </div>
 
+    <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
+
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -194,20 +196,26 @@
             });
 
             // Initialize notifications if user is authenticated
-                @if (User.Identity?.IsAuthenticated ?? false)
-                {
-                        <text>
-                        const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
-                        NotificationManager.initialize(isAdmin);
-                        setupNotificationUIHandlers();
-                        loadNotificationCount();
-                        loadRecentNotifications();
-                        if (isAdmin) {
-                            loadPendingApprovalsCountFromAPI();
-                        }
-                        </text>
+            const jwtToken = $('#jwtToken').val();
+            if (jwtToken) {
+                // Pass the admin status to the notification manager
+                const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
+
+                // Initialize the notification system
+                NotificationManager.initialize(isAdmin);
+
+                // Set up UI handlers for notifications
+                setupNotificationUIHandlers();
+
+                // Load initial data
+                loadNotificationCount();
+                loadRecentNotifications();
+
+                if (isAdmin) {
+                    loadPendingApprovalsCountFromAPI();
                 }
-            });
+            }
+        });
 
         // Notification UI Handlers (separated from the manager)
         function setupNotificationUIHandlers() {

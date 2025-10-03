@@ -7,6 +7,7 @@ function loadPendingApprovalsCount() {
     }
 
     isLoadingApprovals = true;
+    // Use the configuration to build the correct URL
     const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
 
     // Add a small delay to prevent rapid successive calls
@@ -14,6 +15,9 @@ function loadPendingApprovalsCount() {
         $.ajax({
             url: apiUrl,
             type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + $('#jwtToken').val()
+            },
             timeout: 10000, // 10 second timeout
             success: function (data) {
                 const count = data.totalCount || 0;
@@ -23,19 +27,36 @@ function loadPendingApprovalsCount() {
             error: function (xhr, status, error) {
                 console.error('❌ Failed to load pending approvals:', {
                     status: xhr.status,
-                    error: error
+                    error: error,
+                    responseText: xhr.responseText
                 });
 
+                // Handle different error scenarios gracefully
                 if (xhr.status === 401) {
-                    console.warn('Authentication expired, redirecting to login');
-                    window.location.href = '/Account/Login';
+                    console.warn('Authentication expired, user needs to login');
+                    // Don't show error toast for auth issues, just log it
+                } else if (xhr.status === 403) {
+                    console.warn('User does not have permission to view approvals');
+                } else if (xhr.status === 0 || status === 'timeout') {
+                    console.error('Network error or timeout occurred');
+                    // Could show a subtle indicator that data is stale
+                } else {
+                    // Only log technical errors in development
+                    if (AppConfig.environment === 'development') {
+                        console.error('API URL:', apiUrl);
+                        console.error('Response:', xhr.responseText);
+                    }
                 }
+
+                // Keep the last known count visible instead of hiding it
+                // This provides better user experience than showing zero
             },
             complete: function () {
+                // Always reset the loading flag, even if the request failed
                 isLoadingApprovals = false;
             }
         });
-    }, 250);
+    }, 250); // 250ms delay to debounce rapid calls
 }
 
 function updatePendingApprovalsCount(count) {
