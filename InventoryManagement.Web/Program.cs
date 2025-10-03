@@ -35,34 +35,25 @@ try
     builder.Services.AddDistributedMemoryCache(); // Add this for better session handling
     builder.Services.AddSession(options =>
     {
-        options.IdleTimeout = TimeSpan.FromHours(8);
+        options.IdleTimeout = TimeSpan.FromDays(7);
         options.Cookie.Name = ".InventoryManagement.Session";
-        options.Cookie.HttpOnly = true; // Prevent JavaScript access
+        options.Cookie.HttpOnly = true;
         options.Cookie.IsEssential = true;
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always; // Always require HTTPS in production
-        options.Cookie.SameSite = SameSiteMode.Strict; // CSRF protection
+            : CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
         options.IOTimeout = TimeSpan.FromSeconds(30);
     });
 
     builder.Services.AddHostedService<TokenRefreshBackgroundService>();
 
 
-    // Configure cookie authentication with security
     builder.Services.ConfigureApplicationCookie(options =>
     {
-        options.Cookie.Name = ".InventoryManagement.Auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan = TimeSpan.FromDays(1); // Increased from 2 hours
         options.SlidingExpiration = true;
-        options.LoginPath = "/Account/Login";
-        options.LogoutPath = "/Account/Logout";
-        options.AccessDeniedPath = "/Account/AccessDenied";
 
-        // Handle AJAX requests properly
         options.Events.OnRedirectToLogin = context =>
         {
             if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -75,8 +66,20 @@ try
             }
             return Task.CompletedTask;
         };
-    });
 
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                context.Response.StatusCode = 403;
+            }
+            else
+            {
+                context.Response.Redirect(context.RedirectUri);
+            }
+            return Task.CompletedTask;
+        };
+    });
 
     // Configure CORS properly for production
     builder.Services.AddCors(options =>

@@ -60,95 +60,86 @@ namespace InventoryManagement.Web.Controllers
         {
             ViewData["ReturnUrl"] = returnUrl;
 
-            if (!ModelState.IsValid)
+            if (ModelState.IsValid)
             {
-                return View(model);
-            }
-
-            try
-            {
-                // Perform login
-                var result = await _authService.LoginAsync(model.Username, model.Password);
-
-                if (result != null && !string.IsNullOrEmpty(result.AccessToken))
+                try
                 {
-                    // CRITICAL: Store tokens ONLY in server-side session for security
-                    HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                    HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                    HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-
-                    // Generate token version for rotation tracking
-                    var tokenVersion = Guid.NewGuid().ToString();
-                    HttpContext.Session.SetString("TokenVersion", tokenVersion);
-
-                    // Set version cookie (HttpOnly) for client-side version checking
-                    var versionCookieOptions = new CookieOptions
+                    var result = await _authService.LoginAsync(model.Username, model.Password);
+                    if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                     {
-                        HttpOnly = true,
-                        Secure = HttpContext.Request.IsHttps,
-                        SameSite = SameSiteMode.Strict, // Strict for CSRF protection
-                        Expires = DateTimeOffset.UtcNow.AddDays(1)
-                    };
-                    Response.Cookies.Append("token_version", tokenVersion, versionCookieOptions);
+                        // Always store in session for immediate use
+                        HttpContext.Session.SetString("JwtToken", result.AccessToken);
+                        HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
+                        HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
 
-                    // Create authentication cookie with claims
-                    var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
-                        new Claim(ClaimTypes.Name, result.User.Username),
-                        new Claim(ClaimTypes.Email, result.User.Email),
-                        new Claim("FirstName", result.User.FirstName),
-                        new Claim("LastName", result.User.LastName)
-                    };
+                        // Store in cookies if Remember Me is checked
+                        if (model.RememberMe)
+                        {
+                            var cookieOptions = new CookieOptions
+                            {
+                                HttpOnly = true,
+                                // Only require HTTPS in production
+                                Secure = HttpContext.Request.IsHttps,
+                                SameSite = SameSiteMode.Lax, // Changed from Strict to allow OAuth flows
+                                Expires = DateTimeOffset.Now.AddDays(30)
+                            };
 
-                    foreach (var role in result.User.Roles)
-                    {
-                        claims.Add(new Claim(ClaimTypes.Role, role));
+                            Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
+                            Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
+                            Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
+                        }
+                        // Create claims for cookie authentication
+                        var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                    new Claim(ClaimTypes.Name, result.User.Username),
+                    new Claim(ClaimTypes.Email, result.User.Email),
+                    new Claim("FirstName", result.User.FirstName),
+                    new Claim("LastName", result.User.LastName),
+                    new Claim("RememberMe", model.RememberMe.ToString())
+                };
+
+                        foreach (var role in result.User.Roles)
+                        {
+                            claims.Add(new Claim(ClaimTypes.Role, role));
+                        }
+
+                        foreach (var permission in result.User.Permissions)
+                        {
+                            claims.Add(new Claim("permission", permission));
+                        }
+
+                        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                        var authProperties = new AuthenticationProperties
+                        {
+                            IsPersistent = model.RememberMe,
+                            ExpiresUtc = model.RememberMe ?
+                                DateTimeOffset.Now.AddDays(30) :
+                                DateTimeOffset.Now.AddHours(8)
+                        };
+
+                        await HttpContext.SignInAsync(
+                            CookieAuthenticationDefaults.AuthenticationScheme,
+                            new ClaimsPrincipal(claimsIdentity),
+                            authProperties);
+
+                        _logger.LogInformation($"User {model.Username} logged in successfully with RememberMe={model.RememberMe}");
+
+                        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                        {
+                            return Redirect(returnUrl);
+                        }
+
+                        return RedirectToAction("Dashboard", "Home");
                     }
 
-                    foreach (var permission in result.User.Permissions)
-                    {
-                        claims.Add(new Claim("permission", permission));
-                    }
-
-                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-                    // Set authentication properties based on Remember Me
-                    var authProperties = new AuthenticationProperties
-                    {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = model.RememberMe ?
-                            DateTimeOffset.UtcNow.AddDays(7) : // 7 days for Remember Me
-                            DateTimeOffset.UtcNow.AddHours(8), // 8 hours for normal session
-                        AllowRefresh = true
-                    };
-
-                    await HttpContext.SignInAsync(
-                        CookieAuthenticationDefaults.AuthenticationScheme,
-                        new ClaimsPrincipal(claimsIdentity),
-                        authProperties);
-
-                    _logger.LogInformation("User {Username} logged in successfully from IP {IP}",
-                        model.Username, HttpContext.Connection.RemoteIpAddress);
-
-                    // Validate and sanitize return URL to prevent open redirect attacks
-                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                    {
-                        return Redirect(returnUrl);
-                    }
-
-                    return RedirectToAction("Dashboard", "Home");
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
                 }
-
-                _logger.LogWarning("Failed login attempt for username: {Username} from IP {IP}",
-                    model.Username, HttpContext.Connection.RemoteIpAddress);
-
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Login error for username: {Username}", model.Username);
-                ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Login error");
+                    ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
+                }
             }
 
             return View(model);
@@ -160,47 +151,18 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            var username = User.Identity?.Name;
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
 
-            try
+            // Clear the JWT cookies
+            if (Request.Cookies.ContainsKey("jwt_token"))
             {
-                // Clear server-side session completely
-                HttpContext.Session.Clear();
-
-                // Sign out from cookie authentication
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-                // Clear ALL authentication-related cookies
-                var cookiesToClear = new[]
-                {
-                    "token_version",
-                    ".AspNetCore.Session",
-                    ".InventoryManagement.Session",
-                    ".AspNetCore.Cookies"
-                };
-
-                foreach (var cookieName in cookiesToClear)
-                {
-                    if (Request.Cookies.ContainsKey(cookieName))
-                    {
-                        Response.Cookies.Delete(cookieName, new CookieOptions
-                        {
-                            HttpOnly = true,
-                            Secure = Request.IsHttps,
-                            SameSite = SameSiteMode.Strict,
-                            Path = "/" // Ensure cookie is deleted from root path
-                        });
-                    }
-                }
-
-                _logger.LogInformation("User {Username} logged out successfully", username);
+                Response.Cookies.Delete("jwt_token");
+                Response.Cookies.Delete("refresh_token");
+                Response.Cookies.Delete("user_data");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during logout for user {Username}", username);
-            }
+            _logger.LogInformation("User logged out");
 
-            // Always redirect to login even if logout had issues
             return RedirectToAction("Login", "Account");
         }
 
