@@ -68,7 +68,7 @@ namespace NotificationService.Application.Hubs
                         userName = userName,
                         userGroup = userGroup,
                         roleGroups = roleGroups,
-                        timestamp = DateTime.UtcNow,
+                        timestamp = DateTime.Now,
                         message = "Connected to notification service successfully"
                     });
 

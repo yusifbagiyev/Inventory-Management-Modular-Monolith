@@ -8,6 +8,7 @@ namespace InventoryManagement.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
+        private const int MAX_INACTIVE_MINUTES = 60; // Force logout after 1 hour of inactivity
 
         public JwtMiddleware(
             RequestDelegate next,

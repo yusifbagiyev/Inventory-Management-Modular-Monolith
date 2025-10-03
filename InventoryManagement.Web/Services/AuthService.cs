@@ -19,10 +19,11 @@ namespace InventoryManagement.Web.Services
             _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
         }
 
-        public async Task<TokenDto?> LoginAsync(string username, string password)
+        public async Task<TokenDto?> LoginAsync(string username, string password, bool rememberMe = false)
         {
             try
             {
+                // Send login request (backend doesn't need to know about RememberMe)
                 var loginDto = new LoginDto
                 {
                     Username = username,
@@ -37,26 +38,36 @@ namespace InventoryManagement.Web.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<TokenDto>(responseContent);
+                    var result = JsonConvert.DeserializeObject<TokenDto>(responseContent);
+
+                    if (result != null)
+                    {
+                        // Set RememberMe from our parameter (frontend decision)
+                        result.RememberMe = rememberMe;
+                        _logger.LogInformation("Login successful for user: {Username}", username);
+                    }
+
+                    return result;
                 }
 
-                _logger.LogWarning($"Login failed with status code: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Login failed with status code: {StatusCode}, Response: {Response}",
+                    response.StatusCode, errorContent);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Login error");
+                _logger.LogError(ex, "Login error for user: {Username}", username);
                 return null;
             }
         }
 
-        public async Task<TokenDto?> RefreshTokenAsync(string accessToken, string refreshToken)
+        public async Task<TokenDto?> RefreshTokenAsync(string refreshToken)
         {
             try
             {
-                var refreshDto = new 
+                var refreshDto = new RefreshTokenDto
                 {
-                    AccessToken = accessToken,
                     RefreshToken = refreshToken
                 };
 
@@ -71,7 +82,7 @@ namespace InventoryManagement.Web.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var result= JsonConvert.DeserializeObject<TokenDto>(responseContent);
+                    var result = JsonConvert.DeserializeObject<TokenDto>(responseContent);
 
                     if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                     {
@@ -100,8 +111,6 @@ namespace InventoryManagement.Web.Services
 
         public Task<bool> LogoutAsync()
         {
-            // Since we're using JWT, logout is handled client-side
-            // by removing the token from storage
             return Task.FromResult(true);
         }
     }

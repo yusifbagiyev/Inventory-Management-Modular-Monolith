@@ -42,8 +42,15 @@ namespace InventoryManagement.Web.Services
 
             try
             {
-                // Get a valid token (will auto-refresh if needed)
-                var token = await _tokenManager.GetValidTokenAsync();
+                // Get token from session (via HttpContext.Items set by middleware)
+                var context = _httpContextAccessor.HttpContext;
+                var token = context?.Items["JwtToken"] as string;
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    // Fallback to session if not in Items
+                    token = context?.Session.GetString("JwtToken");
+                }
 
                 if (!string.IsNullOrEmpty(token))
                 {
@@ -60,6 +67,10 @@ namespace InventoryManagement.Web.Services
             {
                 _logger.LogError(ex, "Error setting authorization header");
                 return false;
+            }
+            finally
+            {
+                await Task.Delay(1);
             }
         }
 

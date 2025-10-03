@@ -79,7 +79,7 @@ namespace ApiGateway.Security
             {
                 lock (_lock)
                 {
-                    var now = DateTime.UtcNow;
+                    var now = DateTime.Now;
                     var windowStart = now.AddMinutes(-1);
 
                     // Remove old requests

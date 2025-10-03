@@ -30,22 +30,15 @@ namespace InventoryManagement.Web.Controllers
         {
             if (User.Identity?.IsAuthenticated ?? false)
             {
-                var token = HttpContext.Session.GetString("JwtToken");
-                if (!string.IsNullOrEmpty(token))
+                // Check if we have a valid token
+                var validToken = await _tokenManager.GetValidTokenAsync();
+                if (!string.IsNullOrEmpty(validToken))
                 {
-                    var validToken = await _tokenManager.GetValidTokenAsync();
-                    if (!string.IsNullOrEmpty(validToken))
-                    {
-                        return RedirectToAction("Index", "Home");
-                    }
+                    return RedirectToAction("Index", "Home");
                 }
 
-                // If we get here, token is invalid - clean up properly
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                HttpContext.Session.Clear();
-                Response.Cookies.Delete("jwt_token");
-                Response.Cookies.Delete("refresh_token");
-                Response.Cookies.Delete("user_data");
+                // If token is invalid, clean up and show login
+                await CleanupAuthenticationAsync();
             }
 
             ViewData["ReturnUrl"] = returnUrl;
@@ -64,31 +57,64 @@ namespace InventoryManagement.Web.Controllers
             {
                 try
                 {
-                    var result = await _authService.LoginAsync(model.Username, model.Password);
+                    var result = await _authService.LoginAsync(model.Username, model.Password, model.RememberMe);
                     if (result != null && !string.IsNullOrEmpty(result.AccessToken))
                     {
-                        // Always store in session for immediate use
+                        // SECURITY: Only store access token in session (server-side memory)
                         HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                        HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                        HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
 
-                        // Store in cookies if Remember Me is checked
-                        if (model.RememberMe)
+                        // Store minimal user info in session
+                        HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(new
                         {
-                            var cookieOptions = new CookieOptions
-                            {
-                                HttpOnly = true,
-                                // Only require HTTPS in production
-                                Secure = HttpContext.Request.IsHttps,
-                                SameSite = SameSiteMode.Lax, // Changed from Strict to allow OAuth flows
-                                Expires = DateTimeOffset.Now.AddDays(30)
-                            };
+                            result.User.Id,
+                            result.User.Username,
+                            result.User.Email,
+                            result.User.FirstName,
+                            result.User.LastName
+                        }));
 
-                            Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
-                            Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
-                            Response.Cookies.Append("user_data", JsonConvert.SerializeObject(result.User), cookieOptions);
+                        // Get the actual RememberMe value (use our parameter if result doesn't have it)
+                        var rememberMe = result.RememberMe ?? model.RememberMe;
+
+                        // SECURITY: Store refresh token in HttpOnly cookie
+                        var refreshCookieOptions = new CookieOptions
+                        {
+                            HttpOnly = true,
+                            Secure = Request.IsHttps,
+                            SameSite = SameSiteMode.Strict,
+                            Expires = rememberMe
+                                ? DateTimeOffset.UtcNow.AddDays(30)
+                                : DateTimeOffset.UtcNow.AddHours(1),
+                            Path = "/",
+                            IsEssential = true
+                        };
+                        Response.Cookies.Append("refresh_token", result.RefreshToken, refreshCookieOptions);
+
+                        // Store Remember Me preference
+                        if (rememberMe)
+                        {
+                            var rememberCookieOptions = new CookieOptions
+                            {
+                                HttpOnly = false,
+                                Secure = Request.IsHttps,
+                                SameSite = SameSiteMode.Strict,
+                                Expires = DateTimeOffset.UtcNow.AddDays(365),
+                                Path = "/"
+                            };
+                            Response.Cookies.Append("remember_me", "true", rememberCookieOptions);
+                            Response.Cookies.Append("username", model.Username, rememberCookieOptions);
                         }
-                        // Create claims for cookie authentication
+                        else
+                        {
+                            // Clear remember me cookies if user didn't check the box
+                            Response.Cookies.Delete("remember_me");
+                            Response.Cookies.Delete("username");
+                        }
+
+                        // Store last activity time
+                        HttpContext.Session.SetString("LastActivity", DateTime.UtcNow.ToString("o"));
+
+                        // Create authentication claims
                         var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
@@ -96,7 +122,8 @@ namespace InventoryManagement.Web.Controllers
                     new Claim(ClaimTypes.Email, result.User.Email),
                     new Claim("FirstName", result.User.FirstName),
                     new Claim("LastName", result.User.LastName),
-                    new Claim("RememberMe", model.RememberMe.ToString())
+                    new Claim("RememberMe", rememberMe.ToString()),
+                    new Claim("LoginTime", DateTime.UtcNow.ToString("o"))
                 };
 
                         foreach (var role in result.User.Roles)
@@ -110,12 +137,15 @@ namespace InventoryManagement.Web.Controllers
                         }
 
                         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
                         var authProperties = new AuthenticationProperties
                         {
-                            IsPersistent = model.RememberMe,
-                            ExpiresUtc = model.RememberMe ?
-                                DateTimeOffset.Now.AddDays(30) :
-                                DateTimeOffset.Now.AddHours(8)
+                            IsPersistent = rememberMe,
+                            ExpiresUtc = rememberMe
+                                ? DateTimeOffset.UtcNow.AddDays(30)
+                                : DateTimeOffset.UtcNow.AddHours(8),
+                            AllowRefresh = true,
+                            IssuedUtc = DateTimeOffset.UtcNow
                         };
 
                         await HttpContext.SignInAsync(
@@ -123,7 +153,10 @@ namespace InventoryManagement.Web.Controllers
                             new ClaimsPrincipal(claimsIdentity),
                             authProperties);
 
-                        _logger.LogInformation($"User {model.Username} logged in successfully with RememberMe={model.RememberMe}");
+                        _logger.LogInformation(
+                            "User {Username} logged in successfully with RememberMe={RememberMe}",
+                            model.Username,
+                            rememberMe);
 
                         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                         {
@@ -151,18 +184,8 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            HttpContext.Session.Clear();
-
-            // Clear the JWT cookies
-            if (Request.Cookies.ContainsKey("jwt_token"))
-            {
-                Response.Cookies.Delete("jwt_token");
-                Response.Cookies.Delete("refresh_token");
-                Response.Cookies.Delete("user_data");
-            }
-            _logger.LogInformation("User logged out");
-
+            _logger.LogInformation($"User - {User?.Identity?.Name} logged out");
+            await CleanupAuthenticationAsync(); 
             return RedirectToAction("Login", "Account");
         }
 
@@ -198,51 +221,55 @@ namespace InventoryManagement.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> RefreshToken()
         {
-            var accessToken = HttpContext.Session.GetString("JwtToken")
-                ?? Request.Cookies["jwt_token"];
-            var refreshToken = HttpContext.Session.GetString("RefreshToken")
-                ?? Request.Cookies["refresh_token"];
+            // Get refresh token from HttpOnly cookie
+            var refreshToken = Request.Cookies["refresh_token"];
 
-            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrEmpty(refreshToken))
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 {
-                    return Json(new { success = false, message = "No tokens available" });
+                    return Json(new { success = false, message = "No refresh token available" });
                 }
                 return RedirectToAction("Login");
             }
 
             try
             {
-                var result = await _authService.RefreshTokenAsync(accessToken, refreshToken);
+                var result = await _authService.RefreshTokenAsync(refreshToken);
 
                 if (result != null)
                 {
-                    // Update all storage locations
+                    // Update session with new access token
                     HttpContext.Session.SetString("JwtToken", result.AccessToken);
-                    HttpContext.Session.SetString("RefreshToken", result.RefreshToken);
-                    HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(result.User));
-
-                    // Update cookies if they exist
-                    if (Request.Cookies.ContainsKey("jwt_token"))
+                    HttpContext.Session.SetString("UserData", JsonConvert.SerializeObject(new
                     {
-                        var cookieOptions = new CookieOptions
-                        {
-                            HttpOnly = true,
-                            Secure = Request.IsHttps,
-                            SameSite = SameSiteMode.Lax,
-                            Expires = DateTimeOffset.Now.AddDays(30)
-                        };
+                        result.User.Id,
+                        result.User.Username,
+                        result.User.Email,
+                        result.User.FirstName,
+                        result.User.LastName
+                    }));
+                    HttpContext.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
 
-                        Response.Cookies.Append("jwt_token", result.AccessToken, cookieOptions);
-                        Response.Cookies.Append("refresh_token", result.RefreshToken, cookieOptions);
-                    }
+                    // Update refresh token cookie with new token (token rotation)
+                    var rememberMe = Request.Cookies["remember_me"] == "true";
+                    var refreshCookieOptions = new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = Request.IsHttps,
+                        SameSite = SameSiteMode.Strict,
+                        Expires = rememberMe
+                            ? DateTimeOffset.Now.AddDays(30)
+                            : DateTimeOffset.Now.AddHours(1),
+                        Path = "/",
+                        IsEssential = true
+                    };
+                    Response.Cookies.Append("refresh_token", result.RefreshToken, refreshCookieOptions);
 
                     return Json(new
                     {
                         success = true,
-                        token = result.AccessToken,
-                        refreshToken = result.RefreshToken
+                        token = result.AccessToken
                     });
                 }
             }
@@ -260,23 +287,22 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        [HttpGet]
-        public IActionResult GetCurrentToken()
+        private async Task CleanupAuthenticationAsync()
         {
-            try
-            {
-                var token = HttpContext.Session.GetString("JwtToken");
-                if (string.IsNullOrEmpty(token))
-                {
-                    return Json(new { success = false, message = "No token available" });
-                }
+            // Sign out from cookie authentication
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                return Json(new { success = true, token = token });
-            }
-            catch (Exception ex)
+            // Clear session
+            HttpContext.Session.Clear();
+
+            // Clear the refresh token cookie (but keep remember_me and username if they exist)
+            Response.Cookies.Delete("refresh_token", new CookieOptions
             {
-                return Json(new { success = false, message = "Error retrieving token" });
-            }
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
         }
     }
 }

@@ -321,7 +321,7 @@ namespace ApiGateway.Security
         public Task<WafValidationResult> ValidateAsync(HttpContext context)
         {
             var clientId = GetClientIdentifier(context);
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             lock (LockObject)
             {

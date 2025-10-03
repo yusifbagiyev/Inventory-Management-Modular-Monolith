@@ -47,7 +47,7 @@ namespace NotificationService.Application.Services
                     userId = userId,
                     userGroup = userGroup,
                     roleGroups = roles.Select(r => $"role-{r}").ToList(),
-                    timestamp = DateTime.UtcNow,
+                    timestamp = DateTime.Now,
                     message = "Connected successfully"
                 });
                 _logger.LogInformation($"User {userId} connected with ID {Context.ConnectionId}");
