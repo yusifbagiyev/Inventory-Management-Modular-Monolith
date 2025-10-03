@@ -55,15 +55,30 @@
         const hubUrl = AppConfig.signalR.notificationHub;
         console.log('Connecting to notification hub at:', hubUrl);
 
-        // Create the connection with proper configuration
+        // SECURITY FIX: Get token from server endpoint instead of DOM
         connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
-                accessTokenFactory: () => {
-                    const token = $('#jwtToken').val();
-                    if (!token) {
-                        throw new Error('No authentication token available');
+                accessTokenFactory: async () => {
+                    // Call server endpoint to get token - never exposed in browser
+                    try {
+                        const response = await fetch('/api/Connection/signalr-token', {
+                            method: 'GET',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get SignalR token');
+                        }
+
+                        const data = await response.json();
+                        return data.token;
+                    } catch (error) {
+                        console.error('Error getting SignalR token:', error);
+                        throw error;
                     }
-                    return token;
                 },
                 transport: signalR.HttpTransportType.WebSockets |
                     signalR.HttpTransportType.ServerSentEvents |
@@ -73,20 +88,16 @@
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds: retryContext => {
                     if (retryContext.previousRetryCount >= maxRetries) {
-                        return null; // Stop trying after max retries
+                        return null;
                     }
-                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
                     return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 16000);
                 }
             })
-            .configureLogging(signalR.LogLevel.Warning) // Reduced logging to avoid noise
+            .configureLogging(signalR.LogLevel.Warning)
             .build();
 
-        // Set up event handlers before starting
         setupConnectionHandlers();
         setupMessageHandlers();
-
-        // Start the connection
         startConnection();
     }
 

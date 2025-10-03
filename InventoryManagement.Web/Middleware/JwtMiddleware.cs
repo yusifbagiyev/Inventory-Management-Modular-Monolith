@@ -8,11 +8,8 @@ namespace InventoryManagement.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
-        private const int MAX_INACTIVE_MINUTES = 60; // Force logout after 1 hour of inactivity
 
-        public JwtMiddleware(
-            RequestDelegate next,
-            ILogger<JwtMiddleware> logger)
+        public JwtMiddleware(RequestDelegate next, ILogger<JwtMiddleware> logger)
         {
             _next = next;
             _logger = logger;
@@ -29,34 +26,57 @@ namespace InventoryManagement.Web.Middleware
 
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                using var scope=context.RequestServices.CreateScope();
-                var tokenManager=scope.ServiceProvider.GetRequiredService<ITokenManager>();
+                using var scope = context.RequestServices.CreateScope();
+                var tokenManager = scope.ServiceProvider.GetRequiredService<ITokenManager>();
 
-                // Simply get a valid token ( will auto-refresh if needed)
+                // SECURITY FIX: Check if session has token, if not, try to restore from refresh token
+                var sessionToken = context.Session.GetString("JwtToken");
+
+                if (string.IsNullOrEmpty(sessionToken))
+                {
+                    _logger.LogInformation("Session token missing, attempting to restore from refresh token");
+
+                    // Try to refresh the token using the refresh token cookie
+                    var refreshed = await tokenManager.RefreshTokenAsync();
+
+                    if (!refreshed)
+                    {
+                        _logger.LogWarning("Could not restore session, logging out user");
+                        await SignOutUser(context);
+                        context.Response.Redirect("/Account/Login");
+                        return;
+                    }
+
+                    // Token was successfully refreshed and stored in session
+                    sessionToken = context.Session.GetString("JwtToken");
+                }
+
+                // Get a valid token (will auto-refresh if needed)
                 var validToken = await tokenManager.GetValidTokenAsync();
 
                 if (string.IsNullOrEmpty(validToken))
                 {
-                    _logger.LogWarning("No valid token for authenticated user, clearing session and redirecting to login");
-
-                    // Clear authentication
-                    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                    context.Session.Clear();
-
-                    // Clear cookies
-                    context.Response.Cookies.Delete("jwt_token");
-                    context.Response.Cookies.Delete("refresh_token");
-                    context.Response.Cookies.Delete("user_data");
-
+                    _logger.LogWarning("No valid token available, logging out user");
+                    await SignOutUser(context);
                     context.Response.Redirect("/Account/Login");
                     return;
                 }
-                // Store the valid token in HttpContext.Items for use by other services
+
+                // Store the valid token in HttpContext.Items for server-side API calls
+                // This is NOT exposed to the client - only used by ApiService
                 context.Items["JwtToken"] = validToken;
             }
 
             await _next(context);
         }
+
+        private async Task SignOutUser(HttpContext context)
+        {
+            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            context.Session.Clear();
+            context.Response.Cookies.Delete("refresh_token");
+        }
+
         private bool IsStaticFile(HttpContext context)
         {
             var path = context.Request.Path.Value?.ToLower() ?? "";
@@ -68,7 +88,8 @@ namespace InventoryManagement.Web.Middleware
         {
             var path = context.Request.Path.Value?.ToLower() ?? "";
             return path.Contains("/account/login") ||
-                   path.Contains("/account/logout");
+                   path.Contains("/account/logout") ||
+                   path.Contains("/api/connection/signalr-token");
         }
     }
 }
