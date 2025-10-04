@@ -64,10 +64,6 @@ namespace InventoryManagement.Web.Controllers
                         period = "last7days";
                         break;
                 }
-
-                _logger?.LogInformation("Dashboard - Period: {Period}, Start: {Start}, End: {End}",
-                    period, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"));
-
                 // Fetch all data in parallel for better performance
                 var allProductsTask = _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
                     "api/products?pageSize=10000&pageNumber=1");
