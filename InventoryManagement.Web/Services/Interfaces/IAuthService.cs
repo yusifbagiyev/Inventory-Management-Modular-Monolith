@@ -5,6 +5,6 @@ namespace InventoryManagement.Web.Services.Interfaces
     public interface IAuthService
     {
         Task<TokenDto?> LoginAsync(string username, string password,bool rememberMe);
-        Task<TokenDto?> RefreshTokenAsync(string refreshToken);
+        Task<TokenDto?> RefreshTokenAsync(string refreshToken,string accessToken);
     }
 }

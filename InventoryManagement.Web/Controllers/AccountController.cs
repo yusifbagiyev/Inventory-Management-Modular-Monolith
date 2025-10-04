@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using DocumentFormat.OpenXml.InkML;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
@@ -83,8 +84,8 @@ namespace InventoryManagement.Web.Controllers
                             Secure = Request.IsHttps,
                             SameSite = SameSiteMode.Strict,
                             Expires = rememberMe
-                                ? DateTimeOffset.UtcNow.AddDays(30)
-                                : DateTimeOffset.UtcNow.AddHours(1),
+                                ? DateTimeOffset.Now.AddDays(30)
+                                : DateTimeOffset.Now.AddHours(1),
                             Path = "/",
                             IsEssential = true
                         };
@@ -98,7 +99,7 @@ namespace InventoryManagement.Web.Controllers
                                 HttpOnly = false,
                                 Secure = Request.IsHttps,
                                 SameSite = SameSiteMode.Strict,
-                                Expires = DateTimeOffset.UtcNow.AddDays(365),
+                                Expires = DateTimeOffset.Now.AddDays(365),
                                 Path = "/"
                             };
                             Response.Cookies.Append("remember_me", "true", rememberCookieOptions);
@@ -112,19 +113,19 @@ namespace InventoryManagement.Web.Controllers
                         }
 
                         // Store last activity time
-                        HttpContext.Session.SetString("LastActivity", DateTime.UtcNow.ToString("o"));
+                        HttpContext.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
 
                         // Create authentication claims
                         var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
-                    new Claim(ClaimTypes.Name, result.User.Username),
-                    new Claim(ClaimTypes.Email, result.User.Email),
-                    new Claim("FirstName", result.User.FirstName),
-                    new Claim("LastName", result.User.LastName),
-                    new Claim("RememberMe", rememberMe.ToString()),
-                    new Claim("LoginTime", DateTime.UtcNow.ToString("o"))
-                };
+                        {
+                            new Claim(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                            new Claim(ClaimTypes.Name, result.User.Username),
+                            new Claim(ClaimTypes.Email, result.User.Email),
+                            new Claim("FirstName", result.User.FirstName),
+                            new Claim("LastName", result.User.LastName),
+                            new Claim("RememberMe", rememberMe.ToString()),
+                            new Claim("LoginTime", DateTime.Now.ToString("o"))
+                        };
 
                         foreach (var role in result.User.Roles)
                         {
@@ -142,10 +143,10 @@ namespace InventoryManagement.Web.Controllers
                         {
                             IsPersistent = rememberMe,
                             ExpiresUtc = rememberMe
-                                ? DateTimeOffset.UtcNow.AddDays(30)
-                                : DateTimeOffset.UtcNow.AddHours(8),
+                                ? DateTimeOffset.Now.AddDays(30)
+                                : DateTimeOffset.Now.AddHours(8),
                             AllowRefresh = true,
-                            IssuedUtc = DateTimeOffset.UtcNow
+                            IssuedUtc = DateTimeOffset.Now
                         };
 
                         await HttpContext.SignInAsync(
@@ -223,8 +224,9 @@ namespace InventoryManagement.Web.Controllers
         {
             // Get refresh token from HttpOnly cookie
             var refreshToken = Request.Cookies["refresh_token"];
+            var accessToken = HttpContext.Session.GetString("jwt_token");
 
-            if (string.IsNullOrEmpty(refreshToken))
+            if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(accessToken))
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 {
@@ -235,7 +237,7 @@ namespace InventoryManagement.Web.Controllers
 
             try
             {
-                var result = await _authService.RefreshTokenAsync(refreshToken);
+                var result = await _authService.RefreshTokenAsync(refreshToken,accessToken);
 
                 if (result != null)
                 {

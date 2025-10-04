@@ -8,14 +8,19 @@ namespace InventoryManagement.Web.Services
     public class AuthService : IAuthService
     {
         private readonly HttpClient _httpClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
 
-        public AuthService(HttpClient httpClient, IConfiguration configuration, ILogger<AuthService> logger)
+        public AuthService(HttpClient httpClient, 
+            IConfiguration configuration, 
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<AuthService> logger)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
             _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
         }
 
@@ -62,12 +67,13 @@ namespace InventoryManagement.Web.Services
             }
         }
 
-        public async Task<TokenDto?> RefreshTokenAsync(string refreshToken)
+        public async Task<TokenDto?> RefreshTokenAsync(string refreshToken,string accessToken)
         {
             try
             {
                 var refreshDto = new RefreshTokenDto
                 {
+                    AccessToken = accessToken,
                     RefreshToken = refreshToken
                 };
 
@@ -107,11 +113,6 @@ namespace InventoryManagement.Web.Services
                 _logger.LogError(ex, "Token refresh error");
                 return null;
             }
-        }
-
-        public Task<bool> LogoutAsync()
-        {
-            return Task.FromResult(true);
         }
     }
 }

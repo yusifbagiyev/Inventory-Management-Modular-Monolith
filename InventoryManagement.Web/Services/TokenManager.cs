@@ -98,15 +98,16 @@ namespace InventoryManagement.Web.Services
 
                 // Get refresh token from HttpOnly cookie
                 var refreshToken = context.Request.Cookies["refresh_token"];
+                var currentAccessToken = context.Session.GetString("JwtToken");
 
-                if (string.IsNullOrEmpty(refreshToken))
+                if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(currentAccessToken))
                 {
-                    _logger.LogWarning("No refresh token available");
+                    _logger.LogWarning("Missing tokens for refresh");
                     return false;
                 }
 
                 _logger.LogInformation("Calling auth service to refresh token...");
-                var newTokens = await _authService.RefreshTokenAsync(refreshToken);
+                var newTokens = await _authService.RefreshTokenAsync(refreshToken,currentAccessToken);
 
                 if (newTokens == null || string.IsNullOrEmpty(newTokens.AccessToken))
                 {
@@ -154,7 +155,7 @@ namespace InventoryManagement.Web.Services
                 var handler = new JwtSecurityTokenHandler();
                 var jwtToken = handler.ReadJwtToken(token);
 
-                var expiryTime = jwtToken.ValidTo;
+                var expiryTime = jwtToken.ValidTo.ToLocalTime();
                 var now = DateTime.Now;
 
                 // Consider expired if less than 5 minutes remaining
