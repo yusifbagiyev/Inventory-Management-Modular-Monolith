@@ -6,7 +6,7 @@ namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("token")]
+    [Route("api/token")]
     public class TokenController : ControllerBase
     {
         private readonly ITokenManager _tokenManager;
