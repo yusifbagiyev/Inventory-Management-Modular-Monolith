@@ -194,19 +194,14 @@
 
                 async function loadUserPermissions() {
             try {
-                // FIX 2: Get the authentication token securely from the server
-                const token = await SecureTokenProvider.getToken();
-
-                // FIX 3: Build the proper API URL using your configuration
-                const apiUrl = AppConfig.buildApiUrl('auth/users/@Model.Id/permissions');
+                // Call the MVC controller action directly (no API gateway needed)
+                const url = '/UserManagement/GetUserPermissions?id=@Model.Id';
 
                 $.ajax({
-                    url: apiUrl,
+                    url: url,
                     type: 'GET',
-                    // FIX 4: Include the Authorization header with the Bearer token
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
+                    // For MVC controller actions, we don't need the Bearer token
+                    // The cookie authentication handles it automatically
                     success: function(data) {
                         console.log('Permissions loaded successfully:', data);
 
@@ -221,7 +216,6 @@
                     error: function(xhr, status, error) {
                         console.error('Failed to load permissions:', xhr.status, error);
 
-                        // Provide more specific error messages based on the status code
                         let errorMessage = 'Error loading permissions';
                         if (xhr.status === 401) {
                             errorMessage = 'Session expired. Please refresh the page.';
@@ -235,9 +229,9 @@
                     }
                 });
             } catch (error) {
-                console.error('Error getting authentication token:', error);
+                console.error('Error loading permissions:', error);
                 $('#permissionsContainer').html(
-                    '<p class="text-danger">Authentication error. Please refresh the page.</p>'
+                    '<p class="text-danger">Error loading permissions. Please refresh the page.</p>'
                 );
             }
         }
@@ -328,42 +322,39 @@
                 return; // User cancelled the action
             }
 
-            try {
-                // Get the authentication token securely
-                const token = await SecureTokenProvider.getToken();
-
-                // Build the proper API URL
-                const endpoint = isGranting ? 'grant-permission' : 'revoke-permission';
-                const apiUrl = AppConfig.buildApiUrl(`auth/users/@Model.Id/${endpoint}`);
+                    try {
+                // Call MVC controller action directly
+                const endpoint = isGranting ? 'GrantPermission' : 'RevokePermission';
+                const url = `/UserManagement/${endpoint}`;
 
                 $.ajax({
-                    url: apiUrl,
+                    url: url,
                     type: 'POST',
                     data: JSON.stringify({
+                        id: @Model.Id,
                         permissionName: permissionName
                     }),
                     contentType: 'application/json',
                     headers: {
-                        'Authorization': `Bearer ${token}`, // FIX 6: Added missing comma
                         'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                     },
                     success: function(response) {
-                        showToast(`Permission ${action}ed successfully`, 'success');
-                        // Reload the permissions list to show the updated state
-                        loadUserPermissions();
+                        if (response.success) {
+                            showToast(`Permission ${action}ed successfully`, 'success');
+                            loadUserPermissions(); // Reload to show updated state
+                        } else {
+                            showToast(response.message || `Failed to ${action} permission`, 'error');
+                        }
                     },
                     error: function(xhr) {
                         console.error('Failed to toggle permission:', xhr);
-
-                        const errorMsg = xhr.responseJSON?.message ||
-                                       xhr.responseJSON?.error ||
-                                       `Failed to ${action} permission`;
+                        const errorMsg = xhr.responseJSON?.message || `Failed to ${action} permission`;
                         showToast(errorMsg, 'error');
                     }
                 });
             } catch (error) {
-                console.error('Error getting authentication token:', error);
-                showToast('Authentication error. Please refresh the page.', 'error');
+                console.error('Error toggling permission:', error);
+                showToast('An error occurred. Please try again.', 'error');
             }
         }
     </script>
