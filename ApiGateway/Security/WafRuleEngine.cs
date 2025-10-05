@@ -58,7 +58,7 @@ namespace ApiGateway.Security
         }
     }
 
-    public class WafValidationResult
+    public record WafValidationResult
     {
         public bool IsValid { get; set; }
         public string? Reason { get; set; }

@@ -120,14 +120,14 @@ namespace ApiGateway.Security
             }
         }
 
-        private class ThrottleLimits
+        private record ThrottleLimits
         {
             public int RequestsPerMinute { get; set; }
             public int BurstSize { get; set; }
         }
     }
 
-    public class ThrottleResult
+    public record ThrottleResult
     {
         public bool IsAllowed { get; set; }
         public TimeSpan? RetryAfter { get; set; }

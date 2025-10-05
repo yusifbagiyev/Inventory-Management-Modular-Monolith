@@ -1,4 +1,5 @@
 using System.Text;
+using ApiGateway.Middleware;
 using ApiGateway.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -34,15 +35,23 @@ var environmentName = builder.Environment.EnvironmentName;
 builder.Services.AddSingleton<IWafRuleEngine, WafRuleEngine>();
 builder.Services.AddSingleton<IRequestThrottler, RequestThrottler>();
 
-
+builder.Services.AddHttpClient("OcelotHttpClient")
+    .ConfigureHttpClient(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30); // Prevent infinite waits
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        // Connection limits to prevent resource exhaustion
+        MaxConnectionsPerServer = 100,
+        // Timeout for individual operations
+        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true // Only for development!
+    });
 
 var environment=builder.Environment.EnvironmentName;
 //Add Ocelot configuration
 builder.Configuration.AddJsonFile("ocelot.json", optional: true, reloadOnChange: true)
                      .AddJsonFile($"ocelot.{environment}.json", optional: true, reloadOnChange: true);
-
-var logger = LoggerFactory.Create(config => config.AddConsole()).CreateLogger("Program");
-logger.LogInformation($"Loading Ocelot configuration for environment: {environment}");
 
 builder.Services.AddCors(options =>
 {
@@ -79,9 +88,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
+
 builder.Services.AddOcelot();
 
 var app = builder.Build();
+
+app.UseGlobalExceptionHandler();
 
 // Add forwarded headers support for proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
