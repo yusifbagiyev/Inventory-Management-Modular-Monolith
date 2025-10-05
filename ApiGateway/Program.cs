@@ -1,6 +1,5 @@
 using System.Text;
 using ApiGateway.Middleware;
-using ApiGateway.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
@@ -30,10 +29,6 @@ builder.Host.UseSerilog();
 Log.Information("Starting ApiGateway");
 
 var environmentName = builder.Environment.EnvironmentName;
-
-// Add security services
-builder.Services.AddSingleton<IWafRuleEngine, WafRuleEngine>();
-builder.Services.AddSingleton<IRequestThrottler, RequestThrottler>();
 
 builder.Services.AddHttpClient("OcelotHttpClient")
     .ConfigureHttpClient(client =>
