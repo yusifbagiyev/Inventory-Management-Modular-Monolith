@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using DocumentFormat.OpenXml.InkML;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
@@ -186,7 +185,7 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Logout()
         {
             _logger.LogInformation($"User - {User?.Identity?.Name} logged out");
-            await CleanupAuthenticationAsync(); 
+            await CleanupAuthenticationAsync();
             return RedirectToAction("Login", "Account");
         }
 
@@ -270,8 +269,7 @@ namespace InventoryManagement.Web.Controllers
 
                     return Json(new
                     {
-                        success = true,
-                        token = result.AccessToken
+                        success = true
                     });
                 }
             }
@@ -305,6 +303,9 @@ namespace InventoryManagement.Web.Controllers
                 SameSite = SameSiteMode.Strict,
                 Path = "/"
             });
+
+            Response.Cookies.Delete("remember_me");
+            Response.Cookies.Delete("username");
         }
     }
 }

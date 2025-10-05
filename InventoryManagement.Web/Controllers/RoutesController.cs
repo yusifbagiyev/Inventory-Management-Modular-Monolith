@@ -95,7 +95,6 @@ namespace InventoryManagement.Web.Controllers
         {
             var model = new TransferViewModel();
             await LoadTransferDropdowns(model);
-            ViewBag.JwtToken = HttpContext.Session.GetString("JwtToken");
             return View(model);
         }
 

@@ -1,12 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿using ApiGateway.Dto;
+using ApiGateway.Interfaces;
+using System.Collections.Concurrent;
 
 namespace ApiGateway.Security
 {
-    public interface IRequestThrottler
-    {
-        Task<ThrottleResult> ShouldThrottleAsync(HttpContext context);
-    }
-
     public class RequestThrottler : IRequestThrottler
     {
         private readonly ConcurrentDictionary<string, SlidingWindow> _windows = new();
@@ -119,18 +116,5 @@ namespace ApiGateway.Security
                 }
             }
         }
-
-        private record ThrottleLimits
-        {
-            public int RequestsPerMinute { get; set; }
-            public int BurstSize { get; set; }
-        }
-    }
-
-    public record ThrottleResult
-    {
-        public bool IsAllowed { get; set; }
-        public TimeSpan? RetryAfter { get; set; }
-        public string? Reason { get; set; }
     }
 }

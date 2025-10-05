@@ -35,7 +35,7 @@ namespace InventoryManagement.Web.Services
         }
 
 
-        private async Task<bool> SetAuthorizationHeaderAsync()
+        private bool SetAuthorizationHeader()
         {
             // Clear any existing authorization header
             _httpClient.DefaultRequestHeaders.Authorization = null;
@@ -77,7 +77,7 @@ namespace InventoryManagement.Web.Services
         public async Task<T?> GetAsync<T>(string endpoint)
         {
             // Ensure we have a valid token
-            if (!await SetAuthorizationHeaderAsync())
+            if (!SetAuthorizationHeader())
             {
                 _logger.LogWarning("Cannot proceed without valid token for {Endpoint}", endpoint);
                 throw new UnauthorizedAccessException("Authentication required");
@@ -104,7 +104,7 @@ namespace InventoryManagement.Web.Services
                     // Try to refresh
                     var refreshed = await _tokenManager.RefreshTokenAsync();
 
-                    if (refreshed && await SetAuthorizationHeaderAsync())
+                    if (refreshed && SetAuthorizationHeader())
                     {
                         // Retry the request with new token
                         response = await _httpClient.GetAsync(endpoint);
@@ -138,7 +138,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            if(!await SetAuthorizationHeaderAsync())
+            if(!SetAuthorizationHeader())
             {
                 return new ApiResponse<TResponse>
                 {
@@ -168,7 +168,7 @@ namespace InventoryManagement.Web.Services
 
                     var refreshed = await _tokenManager.RefreshTokenAsync();
                     
-                    if(refreshed&&await SetAuthorizationHeaderAsync())
+                    if(refreshed&& SetAuthorizationHeader())
                     {
                         response=await _httpClient.PostAsync(endpoint, content);
                     }
@@ -212,7 +212,7 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto=null)
         {
-            if(!await SetAuthorizationHeaderAsync())
+            if(! SetAuthorizationHeader())
             {
                 return new ApiResponse<T>
                 {
@@ -239,7 +239,7 @@ namespace InventoryManagement.Web.Services
 
                     var refreshed=await _tokenManager.RefreshTokenAsync();
 
-                    if(refreshed && await SetAuthorizationHeaderAsync())
+                    if(refreshed &&  SetAuthorizationHeader())
                     {
                         response=await _httpClient.PostAsync(endpoint, content);
                     }
@@ -278,7 +278,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            if(!await SetAuthorizationHeaderAsync())
+            if(! SetAuthorizationHeader())
             {
                 return new ApiResponse<TResponse>
                 {
@@ -307,7 +307,7 @@ namespace InventoryManagement.Web.Services
 
                     var refreshed = await _tokenManager.RefreshTokenAsync();
 
-                    if (refreshed && await SetAuthorizationHeaderAsync())
+                    if (refreshed &&  SetAuthorizationHeader())
                     {
                         response = await _httpClient.PutAsync(endpoint, content);
                     }
@@ -358,7 +358,7 @@ namespace InventoryManagement.Web.Services
             IFormCollection form,
             object? dataDto = null)
         {
-            if(!await SetAuthorizationHeaderAsync())
+            if(! SetAuthorizationHeader())
             {
                 return new ApiResponse<TResponse>
                 {
@@ -383,7 +383,7 @@ namespace InventoryManagement.Web.Services
                         context.Items[REQUEST_REFRESH_KEY] = true;
                     }
                     var refreshed = await _tokenManager.RefreshTokenAsync();
-                    if (refreshed && await SetAuthorizationHeaderAsync())
+                    if (refreshed &&  SetAuthorizationHeader())
                     {
                         response = await _httpClient.PutAsync(endpoint, content);
                     }
@@ -421,7 +421,7 @@ namespace InventoryManagement.Web.Services
 
         public async Task<ApiResponse<bool>> DeleteAsync(string endpoint)
         {
-            if(!await SetAuthorizationHeaderAsync())
+            if(! SetAuthorizationHeader())
             {
                 return new ApiResponse<bool>
                 {
@@ -447,7 +447,7 @@ namespace InventoryManagement.Web.Services
 
                     var refreshed = await _tokenManager.RefreshTokenAsync();
 
-                    if (refreshed && await SetAuthorizationHeaderAsync())
+                    if (refreshed &&  SetAuthorizationHeader())
                     {
                         response = await _httpClient.DeleteAsync(endpoint);
                     }
