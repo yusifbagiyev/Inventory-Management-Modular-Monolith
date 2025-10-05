@@ -111,21 +111,12 @@ namespace IdentityService.Infrastructure.Services
             if (!user.IsActive)
                 throw new UnauthorizedAccessException("User is inactive");
 
-            // Get the principal from the expired token
-            ClaimsPrincipal principal;
-            try
-            {
-                principal = _tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
-            }
-            catch
-            {
-                throw new UnauthorizedAccessException("Invalid access token");
-            }
 
-            // Verify the user from the access token matches the refresh token user
-            var userIdFromToken = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdFromToken != user.Id.ToString())
-                throw new UnauthorizedAccessException("Token mismatch");
+            // CHANGED: We don't strictly need to validate the access token anymore
+            // If the refresh token is valid, that's sufficient proof of identity
+            // This allows the system to recover from lost sessions
+
+            // Get the principal from the expired token
 
             // Generate new tokens
             var newAccessToken = await _tokenService.GenerateAccessToken(user);

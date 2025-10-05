@@ -1,5 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using InventoryManagement.Web.Services.Interfaces;
+using Newtonsoft.Json;
 
 namespace InventoryManagement.Web.Services
 {
@@ -98,13 +99,16 @@ namespace InventoryManagement.Web.Services
 
                 // Get refresh token from HttpOnly cookie
                 var refreshToken = context.Request.Cookies["refresh_token"];
-                var currentAccessToken = context.Session.GetString("JwtToken");
 
-                if (string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(currentAccessToken))
+                if (string.IsNullOrEmpty(refreshToken))
                 {
                     _logger.LogWarning("Missing tokens for refresh");
                     return false;
                 }
+
+                // IMPORTANT: Access token might be empty (session lost), but we can still refresh
+                // The identity service should accept empty/invalid access tokens with valid refresh tokens
+                var currentAccessToken = context.Session.GetString("JwtToken") ?? string.Empty;
 
                 _logger.LogInformation("Calling auth service to refresh token...");
                 var newTokens = await _authService.RefreshTokenAsync(refreshToken,currentAccessToken);
@@ -118,6 +122,18 @@ namespace InventoryManagement.Web.Services
                 // Store new access token in session only
                 context.Session.SetString("JwtToken", newTokens.AccessToken);
                 context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
+
+                if (newTokens.User != null)
+                {
+                    context.Session.SetString("UserData", JsonConvert.SerializeObject(new
+                    {
+                        newTokens.User.Id,
+                        newTokens.User.Username,
+                        newTokens.User.Email,
+                        newTokens.User.FirstName,
+                        newTokens.User.LastName
+                    }));
+                }
 
                 // Update refresh token cookie (token rotation)
                 var rememberMe = context.Request.Cookies["remember_me"] == "true";

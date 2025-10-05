@@ -58,12 +58,22 @@
         // Create the connection with proper configuration
         connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
-                accessTokenFactory: () => {
-                    const token = $('#jwtToken').val();
-                    if (!token) {
-                        throw new Error('No authentication token available');
+                accessTokenFactory: async () => {
+                    try {
+                        // SECURITY: Fetch token from secure server endpoint
+                        // Token is never stored in DOM, only in JavaScript memory temporarily
+                        const token = await SecureTokenProvider.getToken();
+
+                        if (!token) {
+                            throw new Error('No authentication token available');
+                        }
+
+                        console.log('Token provided to SignalR connection');
+                        return token;
+                    } catch (error) {
+                        console.error('Failed to get token for SignalR:', error);
+                        throw new Error('Authentication failed - please refresh the page');
                     }
-                    return token;
                 },
                 transport: signalR.HttpTransportType.WebSockets |
                     signalR.HttpTransportType.ServerSentEvents |
@@ -73,13 +83,12 @@
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds: retryContext => {
                     if (retryContext.previousRetryCount >= maxRetries) {
-                        return null; // Stop trying after max retries
+                        return null;
                     }
-                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
                     return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 16000);
                 }
             })
-            .configureLogging(signalR.LogLevel.Warning) // Reduced logging to avoid noise
+            .configureLogging(signalR.LogLevel.Warning)
             .build();
 
         // Set up event handlers before starting

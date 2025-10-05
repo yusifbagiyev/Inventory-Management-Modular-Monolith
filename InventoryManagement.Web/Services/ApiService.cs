@@ -42,8 +42,10 @@ namespace InventoryManagement.Web.Services
 
             try
             {
-                // Get token from session (via HttpContext.Items set by middleware)
                 var context = _httpContextAccessor.HttpContext;
+
+                // SECURITY: Token is only available from HttpContext.Items (set by middleware)
+                // or from session - never from JavaScript
                 var token = context?.Items["JwtToken"] as string;
 
                 if (string.IsNullOrEmpty(token))
@@ -67,10 +69,6 @@ namespace InventoryManagement.Web.Services
             {
                 _logger.LogError(ex, "Error setting authorization header");
                 return false;
-            }
-            finally
-            {
-                await Task.Delay(1);
             }
         }
 

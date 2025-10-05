@@ -162,8 +162,6 @@
         </div>
     </div>
 
-    <input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
-
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -174,7 +172,9 @@
 
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
+    <script src="~/js/token-provider.js" asp-append-version="true"></script>
     <script src="~/js/notification-manager.js" asp-append-version="true"></script>
+
     @if (User.IsInRole("Admin"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
@@ -195,13 +195,13 @@
                 }
             });
 
-            // Initialize notifications if user is authenticated
-            const jwtToken = $('#jwtToken').val();
-            if (jwtToken) {
+            const token = await SecureTokenProvider.getToken();
+
                 // Pass the admin status to the notification manager
                 const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
+                if(token){
 
-                // Initialize the notification system
+                    // Initialize the notification system
                 NotificationManager.initialize(isAdmin);
 
                 // Set up UI handlers for notifications
@@ -214,7 +214,7 @@
                 if (isAdmin) {
                     loadPendingApprovalsCountFromAPI();
                 }
-            }
+              }
         });
 
         // Notification UI Handlers (separated from the manager)

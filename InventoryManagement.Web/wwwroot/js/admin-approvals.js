@@ -1,62 +1,64 @@
 ﻿let isLoadingApprovals = false;
-function loadPendingApprovalsCount() {
-    // Prevent multiple simultaneous calls
+async function loadPendingApprovalsCount() {
     if (isLoadingApprovals) {
         console.log('Already loading approvals, skipping duplicate call');
         return;
     }
 
     isLoadingApprovals = true;
-    // Use the configuration to build the correct URL
     const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
 
-    // Add a small delay to prevent rapid successive calls
-    setTimeout(() => {
-        $.ajax({
-            url: apiUrl,
-            type: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + $('#jwtToken').val()
-            },
-            timeout: 10000, // 10 second timeout
-            success: function (data) {
-                const count = data.totalCount || 0;
-                updatePendingApprovalsCount(count);
-                console.log('✅ Loaded approval count:', count);
-            },
-            error: function (xhr, status, error) {
-                console.error('❌ Failed to load pending approvals:', {
-                    status: xhr.status,
-                    error: error,
-                    responseText: xhr.responseText
-                });
+    setTimeout(async () => {
+        try {
+            // SECURITY: Get token from secure provider instead of DOM
+            const token = await SecureTokenProvider.getToken();
 
-                // Handle different error scenarios gracefully
-                if (xhr.status === 401) {
-                    console.warn('Authentication expired, user needs to login');
-                    // Don't show error toast for auth issues, just log it
-                } else if (xhr.status === 403) {
-                    console.warn('User does not have permission to view approvals');
-                } else if (xhr.status === 0 || status === 'timeout') {
-                    console.error('Network error or timeout occurred');
-                    // Could show a subtle indicator that data is stale
-                } else {
-                    // Only log technical errors in development
-                    if (AppConfig.environment === 'development') {
-                        console.error('API URL:', apiUrl);
-                        console.error('Response:', xhr.responseText);
+            $.ajax({
+                url: apiUrl,
+                type: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}` // Use token from secure provider
+                },
+                timeout: 10000,
+                success: function (data) {
+                    const count = data.totalCount || 0;
+                    updatePendingApprovalsCount(count);
+                    console.log('✅ Loaded approval count:', count);
+                },
+                error: function (xhr, status, error) {
+                    console.error('❌ Failed to load pending approvals:', {
+                        status: xhr.status,
+                        error: error,
+                        responseText: xhr.responseText
+                    });
+
+                    if (xhr.status === 401) {
+                        console.warn('Authentication expired, user needs to login');
+                    } else if (xhr.status === 403) {
+                        console.warn('User does not have permission to view approvals');
+                    } else if (xhr.status === 0 || status === 'timeout') {
+                        console.error('Network error or timeout occurred');
+                    } else {
+                        if (AppConfig.environment === 'development') {
+                            console.error('API URL:', apiUrl);
+                            console.error('Response:', xhr.responseText);
+                        }
                     }
+                },
+                complete: function () {
+                    isLoadingApprovals = false;
                 }
+            });
+        } catch (error) {
+            console.error('Failed to get token:', error);
+            isLoadingApprovals = false;
 
-                // Keep the last known count visible instead of hiding it
-                // This provides better user experience than showing zero
-            },
-            complete: function () {
-                // Always reset the loading flag, even if the request failed
-                isLoadingApprovals = false;
+            // If token fetch fails, user likely needs to re-authenticate
+            if (error.message.includes('Unauthorized')) {
+                window.location.href = '/Account/Login';
             }
-        });
-    }, 250); // 250ms delay to debounce rapid calls
+        }
+    }, 250);
 }
 
 function updatePendingApprovalsCount(count) {
