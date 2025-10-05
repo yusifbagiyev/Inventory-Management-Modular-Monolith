@@ -174,7 +174,6 @@
         </div>
     </div>
 
-<input type="hidden" id="jwtToken" value="@Context.Session.GetString("JwtToken")" />
 
 @section Scripts {
     <script>
@@ -193,21 +192,54 @@
             });
         });
 
-                function loadUserPermissions() {
-            $.ajax({
-                url: '@Url.Action("GetUserPermissions", new { id = Model.Id })',
-                type: 'GET',
-                success: function(data) {
-                    if (data.error) {
-                        $('#permissionsContainer').html('<p class="text-danger">Failed to load permissions</p>');
-                        return;
+                async function loadUserPermissions() {
+            try {
+                // FIX 2: Get the authentication token securely from the server
+                const token = await SecureTokenProvider.getToken();
+
+                // FIX 3: Build the proper API URL using your configuration
+                const apiUrl = AppConfig.buildApiUrl('auth/users/@Model.Id/permissions');
+
+                $.ajax({
+                    url: apiUrl,
+                    type: 'GET',
+                    // FIX 4: Include the Authorization header with the Bearer token
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    success: function(data) {
+                        console.log('Permissions loaded successfully:', data);
+
+                        if (data.error) {
+                            $('#permissionsContainer').html(
+                                '<p class="text-danger">Failed to load permissions</p>'
+                            );
+                            return;
+                        }
+                        renderPermissions(data);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Failed to load permissions:', xhr.status, error);
+
+                        // Provide more specific error messages based on the status code
+                        let errorMessage = 'Error loading permissions';
+                        if (xhr.status === 401) {
+                            errorMessage = 'Session expired. Please refresh the page.';
+                        } else if (xhr.status === 403) {
+                            errorMessage = 'You do not have permission to view user permissions.';
+                        }
+
+                        $('#permissionsContainer').html(
+                            `<p class="text-danger">${errorMessage}</p>`
+                        );
                     }
-                    renderPermissions(data);
-                },
-                error: function() {
-                    $('#permissionsContainer').html('<p class="text-danger">Error loading permissions</p>');
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Error getting authentication token:', error);
+                $('#permissionsContainer').html(
+                    '<p class="text-danger">Authentication error. Please refresh the page.</p>'
+                );
+            }
         }
 
         function renderPermissions(permissions) {
@@ -288,13 +320,21 @@
             `;
         }
 
-        function togglePermission(permissionName, isGranting) {
+        async function togglePermission(permissionName, isGranting) {
             const action = isGranting ? 'grant' : 'remove';
             const message = `Are you sure you want to ${action} the "${permissionName}" permission?`;
 
-            if (confirm(message)) {
-            // Use the app configuration for proper URL
-            const apiUrl = AppConfig.buildApiUrl('auth/users/@Model.Id/' + (isGranting ? 'grant-permission' : 'revoke-permission'));
+            if (!confirm(message)) {
+                return; // User cancelled the action
+            }
+
+            try {
+                // Get the authentication token securely
+                const token = await SecureTokenProvider.getToken();
+
+                // Build the proper API URL
+                const endpoint = isGranting ? 'grant-permission' : 'revoke-permission';
+                const apiUrl = AppConfig.buildApiUrl(`auth/users/@Model.Id/${endpoint}`);
 
                 $.ajax({
                     url: apiUrl,
@@ -304,18 +344,26 @@
                     }),
                     contentType: 'application/json',
                     headers: {
-                        'Authorization': 'Bearer ' + $('#jwtToken').val(),
+                        'Authorization': `Bearer ${token}`, // FIX 6: Added missing comma
                         'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                     },
                     success: function(response) {
-                    showToast(`Permission ${action}ed successfully`, 'success');
-                    loadUserPermissions();
-                },
-                error: function(xhr) {
-                    const errorMsg = xhr.responseJSON?.message || `Failed to ${action} permission`;
-                    showToast(errorMsg, 'error');
-                }
-             });
+                        showToast(`Permission ${action}ed successfully`, 'success');
+                        // Reload the permissions list to show the updated state
+                        loadUserPermissions();
+                    },
+                    error: function(xhr) {
+                        console.error('Failed to toggle permission:', xhr);
+
+                        const errorMsg = xhr.responseJSON?.message ||
+                                       xhr.responseJSON?.error ||
+                                       `Failed to ${action} permission`;
+                        showToast(errorMsg, 'error');
+                    }
+                });
+            } catch (error) {
+                console.error('Error getting authentication token:', error);
+                showToast('Authentication error. Please refresh the page.', 'error');
             }
         }
     </script>

@@ -316,11 +316,13 @@
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
 
+                    const token = await SecureTokenProvider.getToken();
+
                     const response = await $.ajax({
                         url: apiUrl,
                         type: 'GET',
                         headers: {
-                            'Authorization': 'Bearer ' + $('#jwtToken').val()
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
@@ -374,11 +376,13 @@
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
 
+                    const token = await SecureTokenProvider.getToken();
+
                     const routes = await $.ajax({
                         url: apiUrl,
                         type: 'GET',
                         headers: {
-                            'Authorization': 'Bearer ' + $('#jwtToken').val()
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
@@ -405,11 +409,13 @@
                 try {
                     const apiUrl = AppConfig.buildApiUrl('inventoryroutes?pageSize=5&pageNumber=1');
 
+                    const token =await SecureTokenProvider.getToken();
+
                     const response = await $.ajax({
                         url: apiUrl,
                         type: 'GET',
                         headers: {
-                            'Authorization': 'Bearer ' + $('#jwtToken').val()
+                            'Authorization': `Bearer ${token}`
                         }
                     });
 
