@@ -6,6 +6,7 @@ using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SharedServices.Identity;
 
 namespace IdentityService.Infrastructure.Services
@@ -18,6 +19,7 @@ namespace IdentityService.Infrastructure.Services
         private readonly ITokenService _tokenService;
         private readonly IdentityDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             UserManager<User> userManager,
@@ -25,7 +27,8 @@ namespace IdentityService.Infrastructure.Services
             SignInManager<User> signInManager,
             ITokenService tokenService,
             IdentityDbContext context,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
@@ -33,6 +36,7 @@ namespace IdentityService.Infrastructure.Services
             _tokenService = tokenService;
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
         #region Authentication Methods
@@ -101,7 +105,7 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
         {
-            // Validate the refresh token
+            // Validate the refresh token first - this is the primary authentication proof
             var refreshToken = await _tokenService.GetRefreshTokenAsync(dto.RefreshToken);
             if (refreshToken == null || !refreshToken.IsActive)
                 throw new UnauthorizedAccessException("Invalid refresh token");
@@ -111,18 +115,43 @@ namespace IdentityService.Infrastructure.Services
             if (!user.IsActive)
                 throw new UnauthorizedAccessException("User is inactive");
 
+            // If an access token was provided, we can optionally validate it for extra security
+            // But we don't require it - the refresh token alone is sufficient proof of identity
+            if (!string.IsNullOrEmpty(dto.AccessToken))
+            {
+                try
+                {
+                    // Try to get the user ID from the access token to verify it matches
+                    var principal = _tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
+                    var tokenUserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // CHANGED: We don't strictly need to validate the access token anymore
-            // If the refresh token is valid, that's sufficient proof of identity
-            // This allows the system to recover from lost sessions
-
-            // Get the principal from the expired token
+                    // If the token has a user ID, verify it matches the refresh token's user
+                    if (!string.IsNullOrEmpty(tokenUserId) && int.TryParse(tokenUserId, out int parsedUserId))
+                    {
+                        if (parsedUserId != user.Id)
+                        {
+                            throw new UnauthorizedAccessException("Token user mismatch");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // If access token validation fails, we log it but continue
+                    // The refresh token is the source of truth here
+                    _logger?.LogWarning(ex, "Access token validation failed during refresh, but continuing with valid refresh token");
+                }
+            }
+            else
+            {
+                // This is the session restoration scenario
+                _logger?.LogInformation("Refresh token request without access token - restoring lost session for user {UserId}", user.Id);
+            }
 
             // Generate new tokens
             var newAccessToken = await _tokenService.GenerateAccessToken(user);
             var newRefreshToken = await _tokenService.GenerateRefreshToken();
 
-            // Revoke old refresh token and create new one
+            // Revoke old refresh token and create new one (token rotation for security)
             await _tokenService.RevokeRefreshTokenAsync(dto.RefreshToken, newRefreshToken);
             await _tokenService.CreateRefreshTokenAsync(user.Id, newRefreshToken);
 

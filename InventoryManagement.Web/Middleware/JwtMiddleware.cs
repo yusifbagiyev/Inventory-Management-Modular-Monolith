@@ -1,7 +1,6 @@
 ﻿using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace InventoryManagement.Web.Middleware
 {
@@ -9,7 +8,6 @@ namespace InventoryManagement.Web.Middleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<JwtMiddleware> _logger;
-        private const int MAX_INACTIVE_MINUTES = 60; // Force logout after 1 hour of inactivity
 
         public JwtMiddleware(
             RequestDelegate next,
@@ -21,111 +19,65 @@ namespace InventoryManagement.Web.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            // Skip for static files and auth pages
+            // Skip for static files and certain paths
             if (IsStaticFile(context) || IsAuthPage(context))
             {
                 await _next(context);
                 return;
             }
 
+            // NOW the user should be authenticated (because UseAuthentication ran first)
             if (context.User?.Identity?.IsAuthenticated == true)
             {
                 using var scope = context.RequestServices.CreateScope();
                 var tokenManager = scope.ServiceProvider.GetRequiredService<ITokenManager>();
 
-                // Check if session has a token
-                var currentToken = context.Session.GetString("JwtToken");
-
-                // CRITICAL FIX: If user is authenticated but session is empty,
-                // this means they have a valid auth cookie but session was lost
-                // (server restart, session timeout, etc.)
-                if (string.IsNullOrEmpty(currentToken))
+                try
                 {
-                    _logger.LogInformation("User authenticated but no token in session - attempting to restore from refresh token");
+                    // Try to get a valid token (this will auto-refresh if needed)
+                    var token = await tokenManager.GetValidTokenAsync();
 
-                    // Try to refresh the token to restore the session
-                    var refreshSuccess = await tokenManager.RefreshTokenAsync();
-
-                    if (refreshSuccess)
+                    if (!string.IsNullOrEmpty(token))
                     {
-                        // Session now has the new token, get it
-                        currentToken = context.Session.GetString("JwtToken");
-                        _logger.LogInformation("Successfully restored session from refresh token");
+                        // Store token in HttpContext.Items for use by ApiService
+                        context.Items["JwtToken"] = token;
+
+                        // Update last activity
+                        context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
+
+                        _logger.LogDebug("JWT token available for request to {Path}", context.Request.Path);
                     }
                     else
                     {
-                        _logger.LogWarning("Failed to restore session - refresh token may be expired");
-                        await ClearAuthenticationAndRedirect(context);
+                        _logger.LogWarning("Could not obtain valid JWT token for authenticated user {User}",
+                            context.User.Identity.Name);
+
+                        // User is authenticated (has valid cookie) but we can't get a JWT token
+                        // This might mean the refresh token expired
+                        await HandleTokenFailure(context);
                         return;
                     }
                 }
-
-                // Now validate the token we have
-                if (!string.IsNullOrEmpty(currentToken))
+                catch (Exception ex)
                 {
-                    // Check if token needs refresh (expiring soon)
-                    if (IsTokenExpiredOrExpiring(currentToken))
-                    {
-                        _logger.LogInformation("Token expiring soon, refreshing...");
-                        var refreshSuccess = await tokenManager.RefreshTokenAsync();
+                    _logger.LogError(ex, "Error managing JWT token for user {User}",
+                        context.User.Identity.Name);
 
-                        if (refreshSuccess)
-                        {
-                            currentToken = context.Session.GetString("JwtToken");
-                            _logger.LogInformation("Token refreshed successfully");
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Token refresh failed");
-                            await ClearAuthenticationAndRedirect(context);
-                            return;
-                        }
-                    }
-
-                    // Store valid token in HttpContext.Items for use by ApiService
-                    context.Items["JwtToken"] = currentToken;
-
-                    // Update last activity time
-                    context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
-                }
-                else
-                {
-                    // No token available even after refresh attempt
-                    _logger.LogWarning("No valid token available, clearing authentication");
-                    await ClearAuthenticationAndRedirect(context);
+                    await HandleTokenFailure(context);
                     return;
                 }
+            }
+            else
+            {
+                _logger.LogDebug("User not authenticated for request to {Path}", context.Request.Path);
             }
 
             await _next(context);
         }
 
-        private bool IsTokenExpiredOrExpiring(string token)
+        private async Task HandleTokenFailure(HttpContext context)
         {
-            try
-            {
-                var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(token);
-
-                var expiryTime = jwtToken.ValidTo.ToLocalTime();
-                var now = DateTime.Now;
-
-                // Refresh if less than 5 minutes remaining
-                var bufferTime = TimeSpan.FromMinutes(5);
-                var expiresIn = expiryTime - now;
-
-                return expiresIn <= bufferTime;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error parsing JWT token");
-                return true; // Treat parse errors as expired
-            }
-        }
-
-        private async Task ClearAuthenticationAndRedirect(HttpContext context)
-        {
-            // Clear all authentication state
+            // Clear authentication and redirect to login
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             context.Session.Clear();
 
@@ -137,14 +89,30 @@ namespace InventoryManagement.Web.Middleware
                 Path = "/"
             });
 
-            context.Response.Redirect("/Account/Login");
+            if (IsAjaxRequest(context.Request))
+            {
+                context.Response.StatusCode = 401;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{\"error\":\"Session expired\",\"redirectUrl\":\"/Account/Login\"}");
+            }
+            else
+            {
+                context.Response.Redirect("/Account/Login?returnUrl=" +
+                    Uri.EscapeDataString(context.Request.Path + context.Request.QueryString));
+            }
         }
 
         private bool IsStaticFile(HttpContext context)
         {
             var path = context.Request.Path.Value?.ToLower() ?? "";
             return path.Contains("/css/") || path.Contains("/js/") ||
-                   path.Contains("/images/") || path.Contains("/lib/");
+                   path.Contains("/images/") || path.Contains("/lib/") ||
+                   path.Contains("/sounds/") || path.Contains("favicon.ico") ||
+                   path.Contains(".css") || path.Contains(".js") ||
+                   path.Contains(".png") || path.Contains(".jpg") ||
+                   path.Contains(".jpeg") || path.Contains(".gif") ||
+                   path.Contains(".svg") || path.Contains(".woff") ||
+                   path.Contains(".woff2") || path.Contains(".ttf");
         }
 
         private bool IsAuthPage(HttpContext context)
@@ -152,7 +120,14 @@ namespace InventoryManagement.Web.Middleware
             var path = context.Request.Path.Value?.ToLower() ?? "";
             return path.Contains("/account/login") ||
                    path.Contains("/account/logout") ||
-                   path.Contains("/account/refreshtoken");
+                   path.Contains("/account/refreshtoken") ||
+                   path == "/" || path == "";
+        }
+
+        private bool IsAjaxRequest(HttpRequest request)
+        {
+            return request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                   request.Headers.Accept.ToString().Contains("application/json");
         }
     }
 }

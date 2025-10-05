@@ -31,8 +31,7 @@ namespace InventoryManagement.Web.Models.DTOs
     }
     public class RefreshTokenDto
     {
-        [Required]
-        public string AccessToken { get; init; } = string.Empty;
+        public string? AccessToken { get; init; } = string.Empty;
         [Required]
         public string RefreshToken { get; set; } = string.Empty;
     }

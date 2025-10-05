@@ -12,8 +12,6 @@ namespace InventoryManagement.Web.Services
         private static readonly SemaphoreSlim _refreshLock = new(1, 1);
         private static DateTime _lastRefreshAttempt = DateTime.MinValue;
         private const int REFRESH_COOLDOWN_SECONDS = 5;
-
-        // Track when the user's 30-day session should end (for Remember Me users)
         private const int MAX_SESSION_DAYS = 30;
 
         public TokenManager(
@@ -29,61 +27,89 @@ namespace InventoryManagement.Web.Services
         public async Task<string?> GetValidTokenAsync()
         {
             var context = _httpContextAccessor.HttpContext;
-            if (context == null) return null;
+            if (context == null)
+            {
+                _logger.LogWarning("No HTTP context available");
+                return null;
+            }
 
-            // Check if user's session has exceeded 30 days (for Remember Me users)
+            // Check if user is authenticated
+            if (!(context.User?.Identity?.IsAuthenticated ?? false))
+            {
+                _logger.LogDebug("User not authenticated, cannot provide token");
+                return null;
+            }
+
+            // Check if session has exceeded 30 days (for Remember Me users)
             if (await HasSessionExpiredAsync())
             {
-                _logger.LogInformation("User session exceeded 30 days, forcing logout");
+                _logger.LogInformation("User session exceeded {Days} days, forcing logout", MAX_SESSION_DAYS);
                 await ClearAllTokensAsync();
                 return null;
             }
 
-            // Get current token from session (server-side storage)
+            // Try to get token from session
             var token = context.Session.GetString("JwtToken");
 
+            // If no token in session, try to restore from refresh token
             if (string.IsNullOrEmpty(token))
             {
-                _logger.LogDebug("No token found in session");
-                return null;
-            }
+                _logger.LogInformation("No JWT token in session for authenticated user {User}, attempting restore",
+                    context.User.Identity.Name);
 
-            // Check if token needs refresh
-            if (IsTokenExpiredOrExpiring(token))
-            {
-                _logger.LogInformation("Token expired or expiring soon, attempting refresh...");
-                var refreshSuccess = await RefreshTokenAsync();
-
-                if (refreshSuccess)
+                var restored = await RefreshTokenAsync();
+                if (restored)
                 {
-                    // Get the newly refreshed token
                     token = context.Session.GetString("JwtToken");
-                    _logger.LogInformation("Successfully retrieved refreshed token");
+                    _logger.LogInformation("Successfully restored JWT token from refresh token");
                 }
                 else
                 {
-                    _logger.LogWarning("Token refresh failed, clearing invalid tokens");
+                    _logger.LogWarning("Failed to restore JWT token - refresh token may be invalid");
+                    return null;
+                }
+            }
+
+            // Check if token needs refresh (expiring soon)
+            if (!string.IsNullOrEmpty(token) && IsTokenExpiredOrExpiring(token))
+            {
+                _logger.LogInformation("JWT token expiring soon, refreshing...");
+                var refreshed = await RefreshTokenAsync();
+
+                if (refreshed)
+                {
+                    token = context.Session.GetString("JwtToken");
+                    _logger.LogInformation("JWT token refreshed successfully");
+                }
+                else
+                {
+                    _logger.LogWarning("Token refresh failed");
                     await ClearAllTokensAsync();
                     return null;
                 }
             }
 
             // Update last activity time
-            context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
+            if (!string.IsNullOrEmpty(token))
+            {
+                context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
+            }
 
             return token;
         }
 
         public async Task<bool> RefreshTokenAsync()
         {
-            // Implement cooldown
+            // Implement cooldown to prevent rapid refresh attempts
             var timeSinceLastRefresh = DateTime.Now - _lastRefreshAttempt;
             if (timeSinceLastRefresh.TotalSeconds < REFRESH_COOLDOWN_SECONDS)
             {
-                _logger.LogDebug("Refresh attempted too soon, skipping");
+                _logger.LogDebug("Refresh attempted too soon, skipping (cooldown: {Seconds}s)",
+                    REFRESH_COOLDOWN_SECONDS);
                 return false;
             }
 
+            // Use semaphore to prevent concurrent refresh attempts
             if (!await _refreshLock.WaitAsync(TimeSpan.FromSeconds(10)))
             {
                 _logger.LogWarning("Could not acquire refresh lock within timeout");
@@ -102,27 +128,29 @@ namespace InventoryManagement.Web.Services
 
                 if (string.IsNullOrEmpty(refreshToken))
                 {
-                    _logger.LogWarning("Missing tokens for refresh");
+                    _logger.LogWarning("No refresh token available in cookie");
                     return false;
                 }
 
-                // IMPORTANT: Access token might be empty (session lost), but we can still refresh
-                // The identity service should accept empty/invalid access tokens with valid refresh tokens
+                // Get current access token (may be empty if session was lost)
                 var currentAccessToken = context.Session.GetString("JwtToken") ?? string.Empty;
 
-                _logger.LogInformation("Calling auth service to refresh token...");
-                var newTokens = await _authService.RefreshTokenAsync(refreshToken,currentAccessToken);
+                _logger.LogInformation("Calling auth service to refresh JWT token...");
+
+                // Call identity service to refresh tokens
+                var newTokens = await _authService.RefreshTokenAsync(refreshToken, currentAccessToken);
 
                 if (newTokens == null || string.IsNullOrEmpty(newTokens.AccessToken))
                 {
-                    _logger.LogError("Token refresh failed - received invalid response");
+                    _logger.LogError("Token refresh failed - received invalid response from auth service");
                     return false;
                 }
 
-                // Store new access token in session only
+                // Store new access token in session
                 context.Session.SetString("JwtToken", newTokens.AccessToken);
                 context.Session.SetString("LastActivity", DateTime.Now.ToString("o"));
 
+                // Update user data if available
                 if (newTokens.User != null)
                 {
                     context.Session.SetString("UserData", JsonConvert.SerializeObject(new
@@ -135,7 +163,7 @@ namespace InventoryManagement.Web.Services
                     }));
                 }
 
-                // Update refresh token cookie (token rotation)
+                // Update refresh token cookie (token rotation for security)
                 var rememberMe = context.Request.Cookies["remember_me"] == "true";
                 var refreshCookieOptions = new CookieOptions
                 {
@@ -150,7 +178,7 @@ namespace InventoryManagement.Web.Services
                 };
                 context.Response.Cookies.Append("refresh_token", newTokens.RefreshToken, refreshCookieOptions);
 
-                _logger.LogInformation("Token refreshed and stored successfully");
+                _logger.LogInformation("JWT token refreshed and stored successfully");
                 return true;
             }
             catch (Exception ex)
@@ -174,7 +202,7 @@ namespace InventoryManagement.Web.Services
                 var expiryTime = jwtToken.ValidTo.ToLocalTime();
                 var now = DateTime.Now;
 
-                // Consider expired if less than 5 minutes remaining
+                // Refresh if less than 5 minutes remaining
                 var bufferTime = TimeSpan.FromMinutes(5);
                 var expiresIn = expiryTime - now;
 
@@ -190,7 +218,7 @@ namespace InventoryManagement.Web.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error parsing JWT token");
-                return true;
+                return true; // Treat parse errors as expired
             }
         }
 
@@ -215,7 +243,8 @@ namespace InventoryManagement.Web.Services
                     return true;
                 }
             }
-            await Task.Delay(1);
+
+            await Task.CompletedTask;
             return false;
         }
 
@@ -224,9 +253,10 @@ namespace InventoryManagement.Web.Services
             var context = _httpContextAccessor.HttpContext;
             if (context == null) return;
 
-            _logger.LogInformation("Clearing all stored tokens");
+            _logger.LogInformation("Clearing all stored tokens for user {User}",
+                context.User?.Identity?.Name ?? "unknown");
 
-            // Clear session
+            // Clear session data
             context.Session.Remove("JwtToken");
             context.Session.Remove("UserData");
             context.Session.Remove("LastActivity");
@@ -239,9 +269,6 @@ namespace InventoryManagement.Web.Services
                 SameSite = SameSiteMode.Strict,
                 Path = "/"
             });
-
-            // Note: We intentionally do NOT clear remember_me and username cookies
-            // This allows the user to be remembered without keeping their session active
 
             await Task.CompletedTask;
         }

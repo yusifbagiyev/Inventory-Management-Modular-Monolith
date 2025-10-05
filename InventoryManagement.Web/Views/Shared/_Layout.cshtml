@@ -195,11 +195,8 @@
                 }
             });
 
-            const token = await SecureTokenProvider.getToken();
-
                 // Pass the admin status to the notification manager
                 const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
-                if(token){
 
                     // Initialize the notification system
                 NotificationManager.initialize(isAdmin);
@@ -214,7 +211,6 @@
                 if (isAdmin) {
                     loadPendingApprovalsCountFromAPI();
                 }
-              }
         });
 
         // Notification UI Handlers (separated from the manager)

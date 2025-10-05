@@ -145,9 +145,11 @@ try
     app.UseSession();
 
     app.UseMiddleware<ExceptionHandlerMiddleware>();
-    app.UseMiddleware<JwtMiddleware>();
 
     app.UseAuthentication();
+      
+    app.UseMiddleware<JwtMiddleware>();
+
     app.UseAuthorization();
 
     app.MapControllerRoute(
