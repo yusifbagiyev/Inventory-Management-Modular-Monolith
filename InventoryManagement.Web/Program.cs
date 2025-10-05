@@ -42,7 +42,9 @@ try
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+
+        options.Cookie.MaxAge= TimeSpan.FromDays(7);
         options.IOTimeout = TimeSpan.FromSeconds(30);
     });
 

@@ -14,28 +14,40 @@
 
 
     // Initialize the notification system (with duplicate protection)
-    function initialize(isAdmin) {
+   async function initialize(isAdmin) {
         // Prevent multiple initializations
         if (isInitialized) {
             console.log('NotificationManager already initialized, skipping');
             return;
         }
 
-        const token = $('#jwtToken').val();
-        if (!token) {
-            console.log('No JWT token available, skipping notification initialization');
-            return;
-        }
+       // Check if user is authenticated by trying to validate their session
+       // This doesn't require checking for a token in the DOM
+       try {
+           const isAuthenticated = await SecureTokenProvider.isAuthenticated();
 
-        // Mark as initialized before proceeding
-        isInitialized = true;
+           if (!isAuthenticated) {
+               console.log('User not authenticated, skipping notification initialization');
+               return;
+           }
 
-        // Store admin status passed from the page
-        window.isAdmin = isAdmin;
+           // Mark as initialized before proceeding
+           isInitialized = true;
 
-        console.log('Initializing notification system for ' + (isAdmin ? 'admin' : 'regular') + ' user');
-        establishConnection();
-    }
+           // Store admin status passed from the page
+           window.isAdmin = isAdmin;
+
+           console.log('Initializing notification system for ' + (isAdmin ? 'admin' : 'regular') + ' user');
+
+           // Establish the connection - it will fetch the token when needed
+           establishConnection();
+
+       } catch (error) {
+           console.error('Failed to check authentication status:', error);
+           // Don't initialize if we can't verify authentication
+           return;
+       }
+   }
 
 
     // Establish SignalR connection with improved error handling

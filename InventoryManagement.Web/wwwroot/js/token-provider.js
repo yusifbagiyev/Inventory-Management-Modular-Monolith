@@ -71,11 +71,10 @@ window.SecureTokenProvider = (function () {
                 throw new Error('No token in response');
             }
 
-            // Cache the token for 5 minutes
-            // We use 5 minutes because tokens are valid for 60 minutes,
-            // and the server will auto-refresh if within 5 minutes of expiry
+            // Cache for 2 minutes instead of 5
+            // This ensures we get fresh tokens more frequently without overwhelming the server
             cachedToken = data.token;
-            tokenExpiryTime = Date.now() + (5 * 60 * 1000); // 5 minutes from now
+            tokenExpiryTime = Date.now() + (2 * 60 * 1000); // 2 minutes
 
             console.log('Token fetched and cached successfully');
             return cachedToken;

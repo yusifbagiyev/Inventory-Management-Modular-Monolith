@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // Start session monitoring (only if user is authenticated)
+    setupSessionMonitor();
 });
 
 // AJAX helper functions
@@ -169,4 +172,33 @@ function showLoader() {
 
 function hideLoader() {
     $('.loader-overlay').remove();
+}
+
+function setupSessionMonitor() {
+    const isUserAuthenticated = document.querySelector('.user-menu-toggle') !== null;
+
+    if (!isUserAuthenticated) {
+        return;
+    }
+
+    console.log('Session monitor started');
+
+    const monitorInterval = setInterval(async function () {
+        try {
+            const isAuth = await SecureTokenProvider.isAuthenticated();
+
+            if (!isAuth) {
+                clearInterval(monitorInterval);
+                showToast('Your session has expired. Please log in again.', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/Account/Login?returnUrl=' +
+                        encodeURIComponent(window.location.pathname);
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Session check failed:', error);
+        }
+    }, 5 * 60 * 1000);
+
+    window.sessionMonitorInterval = monitorInterval;
 }
