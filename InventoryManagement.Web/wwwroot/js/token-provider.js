@@ -47,7 +47,7 @@ window.SecureTokenProvider = (function () {
      */
     async function fetchTokenFromServer() {
         try {
-            const response = await fetch('/api/token/current', {
+            const response = await fetch('/token/current', {
                 method: 'GET',
                 credentials: 'same-origin', // Send cookies
                 headers: {
@@ -111,7 +111,7 @@ window.SecureTokenProvider = (function () {
      */
     async function isAuthenticated() {
         try {
-            const response = await fetch('/api/token/validate', {
+            const response = await fetch('/token/validate', {
                 method: 'GET',
                 credentials: 'same-origin'
             });
