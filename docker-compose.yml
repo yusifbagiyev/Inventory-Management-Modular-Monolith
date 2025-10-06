@@ -84,6 +84,8 @@ services:
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
+    ports:
+      - "5001:80"
     depends_on:
       - postgres
       - rabbitmq
