@@ -44,6 +44,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if(id== 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var request = await _approvalService.GetRequestDetailsAsync(id);
                 if (request == null)
                 {
@@ -63,6 +67,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if(id== 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
                 if (approvalRequest == null)
                     return RedirectToAction("NotFound", "Home", "?statusCode=404");
@@ -80,6 +88,10 @@ namespace InventoryManagement.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> Reject(int id, string reason)
         {
+            if (id == 0)
+            {
+                return RedirectToAction("NotFound", "Home", "?statusCode=404");
+            }
             if (string.IsNullOrWhiteSpace(reason))
             {
                 return HandleError("Rejection reason is required", null,

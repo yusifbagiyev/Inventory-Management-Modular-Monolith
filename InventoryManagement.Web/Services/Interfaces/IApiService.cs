@@ -5,8 +5,8 @@ namespace InventoryManagement.Web.Services.Interfaces
     public interface IApiService
     {
         Task<T?> GetAsync<T>(string endpoint);
-        Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data);
-        Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data);
+        Task<ApiResponse<T>> PostAsync<T>(string endpoint, object? data);
+        Task<ApiResponse<T>> PutAsync<T>(string endpoint, object? data);
         Task<ApiResponse<bool>> DeleteAsync(string endpoint);
         Task<ApiResponse<T>> PostFormAsync<T>(string endpoint, IFormCollection form, object? dataDto = null);
         Task<ApiResponse<TResponse>> PutFormAsync<TResponse>(string endpoint, IFormCollection form, object? dataDto = null);

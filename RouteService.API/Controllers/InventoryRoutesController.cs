@@ -9,7 +9,6 @@ using RouteService.Domain.Exceptions;
 using SharedServices.Authorization;
 using SharedServices.Exceptions;
 using SharedServices.Identity;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace RouteService.API.Controllers
@@ -35,6 +34,7 @@ namespace RouteService.API.Controllers
 
         [HttpPost("transfer")]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.RouteCreate)]
         public async Task<IActionResult> TransferInventory([FromForm] TransferInventoryDto dto)
         {
             try
@@ -76,6 +76,7 @@ namespace RouteService.API.Controllers
 
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.RouteUpdate)]
         public async Task<IActionResult> UpdateRoute(int id, [FromForm] UpdateRouteDto dto)
         {
             try
@@ -283,17 +284,6 @@ namespace RouteService.API.Controllers
         {
             await _mediator.Send(new DeleteRoute.Command(id));
             return NoContent();
-        }
-
-
-
-
-        [HttpPost("batch-delete")]
-        [Permission(AllPermissions.RouteBatchDelete)]
-        public async Task<ActionResult<BatchDeleteResultDto>> BatchDelete(BatchDeleteDto dto)
-        {
-            var result = await _mediator.Send(new BatchDeleteRoutes.Command(dto));
-            return Ok(result);
         }
     }
 }

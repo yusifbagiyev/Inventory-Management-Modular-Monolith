@@ -178,12 +178,18 @@
                                             <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            @if(User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            }
+                                            @if(User.HasPermission("product.delete") || User.HasPermission("product.delete.direct"))
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            }
                                         </div>
                                     </td>
                                 </tr>

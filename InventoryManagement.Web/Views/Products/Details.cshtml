@@ -21,12 +21,18 @@
                             Product Information
                         </div>
                         <div class="col text-end">
-                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            <a asp-controller="Routes" asp-action="Transfer" class="btn btn-primary btn-sm">
-                                <i class="fas fa-exchange-alt"></i> Transfer
-                            </a>
+                            @if (User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
+                            {
+                                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            }
+                            @if(User.HasPermission("route.create")|| User.HasPermission("route.create.direct"))
+                            {
+                                <a asp-controller="Routes" asp-action="Transfer" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-exchange-alt"></i> Transfer
+                                </a>
+                            }
                         </div>
                     </div>
                 </div>
@@ -137,12 +143,18 @@
                         <a asp-controller="Routes" asp-action="Timeline" asp-route-productId="@Model.Id" class="btn btn-outline-primary">
                             <i class="fas fa-route"></i> View Transfer History
                         </a>
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning">
-                            <i class="fas fa-edit"></i> Edit Product
-                        </a>
-                        <button type="button" class="btn btn-outline-danger" onclick="confirmDelete(@Model.Id)">
-                            <i class="fas fa-trash"></i> Delete Product
-                        </button>
+                        @if (User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-warning">
+                                <i class="fas fa-edit"></i> Edit Product
+                            </a>
+                        }
+                        @if(User.HasPermission("product.delete") || User.HasPermission("product.delete.direct"))
+                        {
+                            <button type="button" class="btn btn-outline-danger" onclick="confirmDelete(@Model.Id)">
+                                <i class="fas fa-trash"></i> Delete Product
+                            </button>
+                        }
                     </div>
                 </div>
             </div>

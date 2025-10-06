@@ -42,6 +42,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if (id == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var request = await _approvalService.GetRequestDetailsAsync(id);
 
                 if (request == null)
@@ -67,6 +71,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if(id == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 // Get the request to verify ownership
                 var request = await _approvalService.GetRequestDetailsAsync(id);
 

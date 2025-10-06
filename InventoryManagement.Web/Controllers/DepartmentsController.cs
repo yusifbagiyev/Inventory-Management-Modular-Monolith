@@ -166,7 +166,7 @@ namespace InventoryManagement.Web.Controllers
                     IsActive = model.IsActive
                 };
 
-                var response = await _apiService.PostAsync<CreateDepartmentDto, DepartmentDto>("api/departments", dto);
+                var response = await _apiService.PostAsync<DepartmentDto>("api/departments", dto);
                 return HandleApiResponse(response, "Index");
             }
             catch(Exception ex)
@@ -212,7 +212,7 @@ namespace InventoryManagement.Web.Controllers
                     Description = model.Description,
                     IsActive = model.IsActive
                 };
-                var response = await _apiService.PutAsync<UpdateDepartmentDto, bool>($"api/departments/{id}", dto);
+                var response = await _apiService.PutAsync<bool>($"api/departments/{id}", dto);
                 return HandleApiResponse(response, "Index");
             }
             catch (Exception ex)

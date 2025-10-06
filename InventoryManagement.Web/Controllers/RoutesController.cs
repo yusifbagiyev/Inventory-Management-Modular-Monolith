@@ -1,11 +1,10 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+﻿using InventoryManagement.Web.Filters;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
-using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Net.NetworkInformation;
 using System.Text;
 
 namespace InventoryManagement.Web.Controllers
@@ -91,6 +90,7 @@ namespace InventoryManagement.Web.Controllers
 
 
 
+        [PermissionAuthorize("route.create", "route.create.direct")]
         public async Task<IActionResult> Transfer()
         {
             var model = new TransferViewModel();
@@ -101,30 +101,22 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
+        [PermissionAuthorize("route.update", "route.update.direct")]
         public async Task<IActionResult> Edit(int id)
         {
             try
             {
+                if (id == 0)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
                     return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
-                if (route != null)
+                if (!string.IsNullOrEmpty(route.ImageUrl))
                 {
-                    if (!string.IsNullOrEmpty(route.ImageUrl))
-                    {
-                        route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
-                    }
+                    route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
                 }
-
-                // Load departments for dropdown
-                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
-                ViewBag.Departments = departments?.Select(d => new SelectListItem
-                {
-                    Value = d.Id.ToString(),
-                    Text = d.Name
-                }).ToList() ?? [];
-
                 return View(route);
             }
             catch (Exception ex)
@@ -137,38 +129,49 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("route.update", "route.update.direct")]
         public async Task<IActionResult> Edit(int id, [FromForm] UpdateRouteViewModel model)
         {
+            if (!ModelState.IsValid)
+            {
+                await LoadDropdowns();
+                return HandleValidationErrors(model);
+            }
             try
             {
                 var dto = new
                 {
+                    model.ImageFile,
                     model.ToDepartmentId,
                     model.ToWorker,
                     model.Notes
                 };
 
-                var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", HttpContext.Request.Form, dto);
-                return HandleApiResponse(response, "Index");
+                if (model.ImageFile != null && model?.ImageFile?.Length!=0)
+                {
+                    var form = HttpContext.Request.Form;
+                    var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", form, dto);
+                    return HandleApiResponse(response, "Index");
+                }
+                else
+                {
+                    var response = await _apiService.PutAsync<bool>($"api/inventoryroutes/{id}", dto);
+                    return HandleApiResponse(response, "Index");
+                }
             }
             catch (Exception ex)
             {
-                // Reload departments on error
-                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
-                ViewBag.Departments = departments?.Select(d => new SelectListItem
-                {
-                    Value = d.Id.ToString(),
-                    Text = d.Name
-                }).ToList() ?? new List<SelectListItem>();
-
+                await LoadDropdowns();
                 return HandleException(ex, model);
             }
         }
 
 
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("route.create", "route.create.direct")]
         public async Task<IActionResult> Transfer(TransferViewModel model)
         {
             if (!ModelState.IsValid)
@@ -227,6 +230,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if (productId == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var routes = await _apiService.GetAsync<List<RouteViewModel>>($"api/inventoryroutes/product/{productId}");
                 ViewBag.ProductId = productId;
 
@@ -254,6 +261,10 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+                if(id == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
                     return RedirectToAction("NotFound", "Home", "?statusCode=404");
@@ -277,11 +288,16 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("route.complete")]
         public async Task<IActionResult> Complete(int id)
         {
             try
             {
-                var response = await _apiService.PutAsync<object, bool>($"api/inventoryroutes/{id}/complete", new { });
+                if (id == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
+                var response = await _apiService.PutAsync<bool>($"api/inventoryroutes/{id}/complete", new { });
 
                 if (response.IsSuccess)
                 {
@@ -302,61 +318,19 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExportToPdf([FromForm] List<int> routeIds)
-        {
-            try
-            {
-                if (routeIds == null || !routeIds.Any())
-                {
-                    TempData["Error"] = "Please select routes to export";
-                    return RedirectToAction("Index");
-                }
-
-                // For now, let's export as CSV until PDF implementation is ready
-                var routes = new List<RouteViewModel>();
-
-                foreach (var id in routeIds)
-                {
-                    var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
-                    if (route != null)
-                        routes.Add(route);
-                }
-
-                // Generate CSV content
-                var csv = new StringBuilder();
-                csv.AppendLine("Date,Type,Product,From,To,Status");
-
-                foreach (var route in routes)
-                {
-                    csv.AppendLine($"{route.CreatedAt:yyyy-MM-dd HH:mm}," +
-                                  $"{route.RouteTypeName}," +
-                                  $"{route.InventoryCode} - {route.Model}," +
-                                  $"{route.FromDepartmentName ?? "N/A"} ({route.FromWorker ?? "N/A"})," +
-                                  $"{route.ToDepartmentName} ({route.ToWorker ?? "N/A"})," +
-                                  $"{(route.IsCompleted ? "Completed" : "Pending")}");
-                }
-
-                var bytes = Encoding.UTF8.GetBytes(csv.ToString());
-                return File(bytes, "text/csv", $"routes_export_{DateTime.Now:yyyyMMdd}.csv");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error exporting routes");
-                TempData["Error"] = "Failed to export routes";
-                return RedirectToAction("Index");
-            }
-        }
-
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("route.delete", "route.delete.direct")]
+
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
+                if (id == 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var response = await _apiService.DeleteAsync($"api/inventoryroutes/{id}");
 
                 if (response.IsSuccess)
@@ -406,5 +380,24 @@ namespace InventoryManagement.Web.Controllers
                 model.Departments = [];
             }
         }
+
+        private async Task LoadDropdowns()
+        {
+            try
+            {
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+                ViewBag.Departments = departments?.Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = d.Name
+                }).ToList() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load dropdowns in route view");
+                ViewBag.Departments = new List<DepartmentDto>();
+            }
+        }
+
     }
 }

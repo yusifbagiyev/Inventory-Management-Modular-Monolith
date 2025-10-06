@@ -139,11 +139,20 @@ namespace InventoryManagement.Web.Services
 
 
 
-        public async Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<ApiResponse<T>> PostAsync<T>(string endpoint, object? data)
         {
+            if(data == null)
+            {
+                return new ApiResponse<T>
+                {
+                    IsSuccess = false,
+                    Message = "Data must not be  null"
+                };
+            }
+
             if(!SetAuthorizationHeader())
             {
-                return new ApiResponse<TResponse>
+                return new ApiResponse<T>
                 {
                     IsSuccess = false,
                     Message = "Authentication required - please login"
@@ -177,7 +186,7 @@ namespace InventoryManagement.Web.Services
                     }
                     else
                     {
-                        return new ApiResponse<TResponse>
+                        return new ApiResponse<T>
                         {
                             IsSuccess = false,
                             Message = "Authentication failed - please login again"
@@ -193,19 +202,19 @@ namespace InventoryManagement.Web.Services
                 // Check if response indicates approval even with 200 OK
                 if (IsApprovalResponse(responseContent))
                 {
-                    return HandleApprovalResponse<TResponse>(responseContent);
+                    return HandleApprovalResponse<T>(responseContent);
                 }
 
 
-                return new ApiResponse<TResponse>
+                return new ApiResponse<T>
                 {
                     IsSuccess = true,
-                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                    Data = JsonConvert.DeserializeObject<T>(responseContent)
                 };
             }
 
             // For non-success responses, return structured error
-            return await ProcessResponse<TResponse>(response, responseContent);
+            return await ProcessResponse<T>(response, responseContent);
         }
 
 
@@ -279,11 +288,20 @@ namespace InventoryManagement.Web.Services
 
 
 
-        public async Task<ApiResponse<TResponse>> PutAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<ApiResponse<T>> PutAsync<T>(string endpoint, object? data)
         {
+            if (data == null)
+            {
+                return new ApiResponse<T>
+                {
+                    IsSuccess = false,
+                    Message = "Data must not be null"
+                };
+            }
+
             if(! SetAuthorizationHeader())
             {
-                return new ApiResponse<TResponse>
+                return new ApiResponse<T>
                 {
                     IsSuccess = false,
                     Message = "Authentication required - please login"
@@ -316,7 +334,7 @@ namespace InventoryManagement.Web.Services
                     }
                     else
                     {
-                        return new ApiResponse<TResponse>
+                        return new ApiResponse<T>
                         {
                             IsSuccess = false,
                             Message = "Authentication failed - please login again"
@@ -332,26 +350,26 @@ namespace InventoryManagement.Web.Services
                 // Check if response indicates approval even with 200 OK
                 if (IsApprovalResponse(responseContent))
                 {
-                    return HandleApprovalResponse<TResponse>(responseContent);
+                    return HandleApprovalResponse<T>(responseContent);
                 }
 
 
-                else if (string.IsNullOrEmpty(responseContent))
+                if (string.IsNullOrEmpty(responseContent))
                 {
-                    return new ApiResponse<TResponse>
+                    return new ApiResponse<T>
                     {
                         IsSuccess = true
                     };
                 }
 
-                return new ApiResponse<TResponse>
+                return new ApiResponse<T>
                 {
                     IsSuccess = true,
-                    Data = JsonConvert.DeserializeObject<TResponse>(responseContent)
+                    Data = JsonConvert.DeserializeObject<T>(responseContent)
                 };
             }
 
-            return await ProcessResponse<TResponse>(response, responseContent);
+            return await ProcessResponse<T>(response, responseContent);
         }
 
 
@@ -409,6 +427,13 @@ namespace InventoryManagement.Web.Services
                 if (IsApprovalResponse(responseContent))
                 {
                     return HandleApprovalResponse<TResponse>(responseContent);
+                }
+                if (string.IsNullOrEmpty(responseContent))
+                {
+                    return new ApiResponse<TResponse>
+                    {
+                        IsSuccess = true
+                    };
                 }
                 return new ApiResponse<TResponse>
                 {

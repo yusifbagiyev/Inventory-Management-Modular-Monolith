@@ -11,7 +11,6 @@
         public const string RouteDelete = "route.delete";
         public const string RouteDeleteDirect = "route.delete.direct";
         public const string RouteComplete = "route.complete";
-        public const string RouteBatchDelete = "route.batch_delete";
 
         // Product Permissions
         public const string ProductView = "product.view";

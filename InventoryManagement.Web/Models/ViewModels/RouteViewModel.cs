@@ -68,6 +68,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public record UpdateRouteViewModel
     {
+        public IFormFile? ImageFile { get; set; }
         public int ToDepartmentId { get; set; }
         public string? ToWorker { get; set; }
         public string? Notes { get; set; }

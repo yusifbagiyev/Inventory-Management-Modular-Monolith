@@ -375,7 +375,7 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _apiService.PostAsync<object, bool>($"/api/auth/users/{id}/grant-permission",
+                var result = await _apiService.PostAsync<bool>($"/api/auth/users/{id}/grant-permission",
                     new { permissionName = model.PermissionName });
                 return Json(new { success = result });
             }
@@ -399,7 +399,7 @@ namespace InventoryManagement.Web.Controllers
                     : $"/api/auth/users/{id}/revoke-permission";
 
                 var requestData = new { permissionName = model.PermissionName };
-                var result = await _apiService.PostAsync<object, bool>(url, requestData);
+                var result = await _apiService.PostAsync<bool>(url, requestData);
 
                 if (result.IsSuccess)
                 {
@@ -425,7 +425,7 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var result = await _apiService.PostAsync<object, bool>($"/api/auth/users/{id}/revoke-permission",
+                var result = await _apiService.PostAsync<bool>($"/api/auth/users/{id}/revoke-permission",
                     new { permissionName = model.PermissionName });
                 return Json(new { success = result });
             }

@@ -1,10 +1,11 @@
-﻿using System.Text;
+﻿using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Text;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -115,7 +116,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-
+        [PermissionAuthorize("product.create", "product.create.direct")]
         public async Task<IActionResult> Create()
         {
             var model = new ProductViewModel();
@@ -127,6 +128,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]  
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("product.create", "product.create.direct")]
         public async Task<IActionResult> Create(ProductViewModel productModel)
         {
             if (!ModelState.IsValid)
@@ -150,10 +152,19 @@ namespace InventoryManagement.Web.Controllers
 
             try
             {
-                var form = HttpContext.Request.Form;
-                var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
+                // If product has image , handle this method with FORM
+                if(productModel.ImageFile != null && productModel?.ImageFile?.Length!=0)
+                {
+                    var form = HttpContext.Request.Form;
+                    var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
 
-                return HandleApiResponse(response, "Index");
+                    return HandleApiResponse(response, "Index");
+                }
+                else
+                {
+                    var response = await _apiService.PostAsync<dynamic>("api/products", dto);
+                    return HandleApiResponse(response, "Index");
+                }
             }
             catch (Exception ex)
             {
@@ -164,6 +175,7 @@ namespace InventoryManagement.Web.Controllers
 
 
 
+        [PermissionAuthorize("product.update", "product.update.direct")]
         public async Task<IActionResult> Edit(int id)
         {
             try
@@ -193,6 +205,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("product.update", "product.update.direct")]
         public async Task<IActionResult> Edit(int id, ProductViewModel productModel)
         {
             if (!ModelState.IsValid)
@@ -202,10 +215,17 @@ namespace InventoryManagement.Web.Controllers
             }
             try
             {
-                var form = HttpContext.Request.Form;
-                var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
-
-                return HandleApiResponse(response, "Index");
+                if (productModel.ImageFile != null && productModel?.ImageFile?.Length != 0)
+                {
+                    var form = HttpContext.Request.Form;
+                    var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
+                    return HandleApiResponse(response, "Index");
+                }
+                else
+                {
+                    var response = await _apiService.PutAsync<bool>($"api/products/{id}", productModel);
+                    return HandleApiResponse(response, "Index");
+                }
             }
             catch(Exception ex)
             {
@@ -218,11 +238,12 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("product.update", "product.update.direct")]
         public async Task<IActionResult> UpdateInventoryCode([FromBody] UpdateInventoryCodeDto request)
         {
             try
             {
-                var response = await _apiService.PutAsync<UpdateInventoryCodeDto, bool>(
+                var response = await _apiService.PutAsync<bool>(
                     $"api/products/{request.Id}/inventory-code",
                     new UpdateInventoryCodeDto { InventoryCode = request.InventoryCode });
 
@@ -245,10 +266,15 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize("product.delete", "product.delete.direct")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
+                if(id== 0)
+                {
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+                }
                 var response = await _apiService.DeleteAsync($"api/products/{id}");
                 return HandleApiResponse(response, "Index");
             }
