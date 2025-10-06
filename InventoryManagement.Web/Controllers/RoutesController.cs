@@ -137,27 +137,20 @@ namespace InventoryManagement.Web.Controllers
                 await LoadDropdowns();
                 return HandleValidationErrors(model);
             }
+
+                var dto = new
+            {
+                model.ImageFile,
+                model.ToDepartmentId,
+                model.ToWorker,
+                model.Notes
+            };
+
             try
             {
-                var dto = new
-                {
-                    model.ImageFile,
-                    model.ToDepartmentId,
-                    model.ToWorker,
-                    model.Notes
-                };
-
-                if (model.ImageFile != null && model?.ImageFile?.Length!=0)
-                {
-                    var form = HttpContext.Request.Form;
-                    var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", form, dto);
-                    return HandleApiResponse(response, "Index");
-                }
-                else
-                {
-                    var response = await _apiService.PutAsync<bool>($"api/inventoryroutes/{id}", dto);
-                    return HandleApiResponse(response, "Index");
-                }
+                var form = HttpContext.Request.Form;
+                var response = await _apiService.PutFormAsync<bool>($"api/inventoryroutes/{id}", form, dto);
+                return HandleApiResponse(response, "Index");
             }
             catch (Exception ex)
             {

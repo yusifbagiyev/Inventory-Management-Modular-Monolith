@@ -152,19 +152,10 @@ namespace InventoryManagement.Web.Controllers
 
             try
             {
-                // If product has image , handle this method with FORM
-                if(productModel.ImageFile != null && productModel?.ImageFile?.Length!=0)
-                {
-                    var form = HttpContext.Request.Form;
-                    var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
+                var form = HttpContext.Request.Form;
+                var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
 
-                    return HandleApiResponse(response, "Index");
-                }
-                else
-                {
-                    var response = await _apiService.PostAsync<dynamic>("api/products", dto);
-                    return HandleApiResponse(response, "Index");
-                }
+                return HandleApiResponse(response, "Index");
             }
             catch (Exception ex)
             {
@@ -215,17 +206,9 @@ namespace InventoryManagement.Web.Controllers
             }
             try
             {
-                if (productModel.ImageFile != null && productModel?.ImageFile?.Length != 0)
-                {
-                    var form = HttpContext.Request.Form;
-                    var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
-                    return HandleApiResponse(response, "Index");
-                }
-                else
-                {
-                    var response = await _apiService.PutAsync<bool>($"api/products/{id}", productModel);
-                    return HandleApiResponse(response, "Index");
-                }
+                var form = HttpContext.Request.Form;
+                var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
+                return HandleApiResponse(response, "Index");
             }
             catch(Exception ex)
             {
