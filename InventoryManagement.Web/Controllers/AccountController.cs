@@ -1,26 +1,28 @@
-﻿using System.Security.Claims;
-using InventoryManagement.Web.Models.DTOs;
-using InventoryManagement.Web.Models.ViewModels;
+﻿using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Security.Claims;
 
 namespace InventoryManagement.Web.Controllers
 {
     public class AccountController : Controller
     {
         private readonly IAuthService _authService;
-        private readonly ITokenManager _tokenManager;
         private readonly ILogger<AccountController> _logger;
+        private readonly IUserManagementService _userManagementService;
+        private readonly ITokenManager _tokenManager;
         public AccountController(
             IAuthService authService,
+            IUserManagementService userManagementService,
             ILogger<AccountController> logger,
             ITokenManager tokenManager)
         {
             _authService = authService;
             _logger = logger;
+            _userManagementService = userManagementService;
             _tokenManager = tokenManager;
         }
 
@@ -170,7 +172,7 @@ namespace InventoryManagement.Web.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Login error");
+                    _logger?.LogError(ex, "Login error");
                     ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
                 }
             }
@@ -184,7 +186,7 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            _logger.LogInformation($"User - {User?.Identity?.Name} logged out");
+            _logger?.LogInformation($"User - {User?.Identity?.Name} logged out");
             await CleanupAuthenticationAsync();
             return RedirectToAction("Login", "Account");
         }
@@ -199,21 +201,37 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
             if (!User.Identity?.IsAuthenticated ?? true)
             {
                 return RedirectToAction("Login");
             }
 
-            var userDataJson=HttpContext.Session.GetString("UserData");
-            if(string.IsNullOrEmpty(userDataJson))
+            try
             {
-                return RedirectToAction("Login");
-            }
+                // Get user ID from claims
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-            var userData = JsonConvert.DeserializeObject<User>(userDataJson);
-            return View(userData);
+                if (userId == 0)
+                {
+                    return RedirectToAction("Login");
+                }
+
+                // Get complete user data from API
+                var viewModel = await _userManagementService.GetUserProfileAsync(userId);
+
+                if (viewModel == null)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading user profile");
+                TempData["Error"] = "An error occurred while loading your profile";
+                return RedirectToAction("Dashboard", "Home");
+            }
         }
 
 
@@ -275,7 +293,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Token refresh error");
+                _logger?.LogError(ex, "Token refresh error");
             }
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -284,6 +302,67 @@ namespace InventoryManagement.Web.Controllers
             }
 
             return RedirectToAction("Login");
+        }
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(int id)
+        {
+            try
+            {
+                if (id == 0)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
+                var user = await _userManagementService.GetUserByIdAsync(id);
+                if (user == null)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
+                var model = new ResetPasswordViewModel
+                {
+                    UserId = user.Id,
+                    Username = user.Username
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading user profile");
+                TempData["Error"] = "An error occurred while loading your profile";
+                return RedirectToAction("Dashboard", "Home");
+            }
+        }
+        
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return HandleValidationErrors(model);
+            }
+
+            try
+            {
+                var success = await _userManagementService.ResetPasswordAsync(model.UserId, model.NewPassword);
+
+                if (success)
+                {
+                    TempData["Success"] = "Password reset successfully";
+                    return RedirectToAction("Profile", "Account");
+                }
+
+                ModelState.AddModelError("", "Failed to reset password");
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading user profile");
+                TempData["Error"] = "An error occurred while loading your profile";
+                return RedirectToAction("Dashboard", "Home");
+            }
         }
 
 
@@ -306,6 +385,36 @@ namespace InventoryManagement.Web.Controllers
 
             Response.Cookies.Delete("remember_me");
             Response.Cookies.Delete("username");
+        }
+
+
+        protected bool IsAjaxRequest()
+        {
+            return Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+        }
+
+        protected IActionResult HandleValidationErrors(object? model = null)
+        {
+            if (IsAjaxRequest())
+            {
+                Response.StatusCode = 400; // Important: Set error status code
+
+                var errors = ModelState
+                    .Where(x => x.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
+
+                return Json(new
+                {
+                    isSuccess = false,
+                    message = "Please correct the validation errors and try again.",
+                    errors
+                });
+            }
+
+            return View(model);
         }
     }
 }

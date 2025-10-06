@@ -104,7 +104,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
                 if (department == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 // Get products for this department
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
@@ -183,7 +183,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
                 if (department == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 return View(department);
             }
@@ -248,11 +248,11 @@ namespace InventoryManagement.Web.Controllers
                 // Get department details
                 var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
                 if (department == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 // Get products for this department
                 var products=await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
-                                $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
+                                    $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
 
                 var departmentProducts=products?.Items?.ToList() ?? new List<ProductViewModel>();
 

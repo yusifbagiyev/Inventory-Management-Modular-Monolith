@@ -98,7 +98,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
                 if (category == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 // Get products for this category
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
@@ -169,7 +169,7 @@ namespace InventoryManagement.Web.Controllers
                 var category = await _apiService.GetAsync<CategoryViewModel>($"api/categories/{id}");
 
                 if (category == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 return View(category);
             }

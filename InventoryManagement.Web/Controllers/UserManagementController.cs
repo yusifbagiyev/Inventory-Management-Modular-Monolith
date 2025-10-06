@@ -104,9 +104,13 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+
+                if (id == 0)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
                 var user = await _userManagementService.GetUserByIdAsync(id);
-                if (user == null)
-                    return NotFound();
+                if (user == null) 
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 return View(user);
             }
@@ -211,11 +215,14 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+
+                if (id == 0)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
                 var user = await _userManagementService.GetUserByIdAsync(id);
                 if (user == null)
                 {
-                    TempData["ErrorMessage"] = "User not found.";
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home","?statusCode=404");
                 }
 
                 var model = new ResetPasswordViewModel
@@ -273,11 +280,14 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
+
+                if (id == 0)
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
                 var user = await _userManagementService.GetUserByIdAsync(id);
                 if (user == null || user.Id == 0)
                 {
-                    TempData["ErrorMessage"] = "User not found.";
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
                 }
                 return View(user);
             }
@@ -290,10 +300,12 @@ namespace InventoryManagement.Web.Controllers
 
         // AJAX endpoints for better UX
         [HttpGet]
-        public async Task<JsonResult> GetUser(int id)
+        public async Task<JsonResult?> GetUser(int id)
         {
             try
             {
+                if (id == 0)
+                    return null;
                 var user = await _userManagementService.GetUserByIdAsync(id);
                 return Json(new { success = true, data = user });
             }
@@ -320,10 +332,12 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
-        public async Task<JsonResult> GetUserPermissions(int id)
+        public async Task<JsonResult?> GetUserPermissions(int id)
         {
             try
             {
+                if (id == 0)
+                    return null;
                 // Get user details to get their current permissions
                 var user = await _apiService.GetAsync<UserDto>($"/api/auth/users/{id}");
                 if(user == null)
@@ -398,7 +412,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error toggling permission {Permission} for user {UserId}",
+                _logger?.LogError(ex, "Error toggling permission {Permission} for user {UserId}",
                     model.PermissionName, id);
                 return Json(new { success = false, message = "Permission change failed" });
             }

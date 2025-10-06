@@ -107,7 +107,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 if (route != null)
                 {
@@ -256,7 +256,8 @@ namespace InventoryManagement.Web.Controllers
             {
                 var route = await _apiService.GetAsync<RouteViewModel>($"api/inventoryroutes/{id}");
                 if (route == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+
                 if (route != null)
                 {
                     if(!string.IsNullOrEmpty(route.ImageUrl))

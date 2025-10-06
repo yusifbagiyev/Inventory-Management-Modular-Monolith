@@ -113,6 +113,49 @@ namespace InventoryManagement.Web.Services
         }
 
 
+        public async Task<UserProfileViewModel> GetUserProfileAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/auth/users/{id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var user = JsonConvert.DeserializeObject<UserDto>(content);
+
+                    if (user != null)
+                    {
+                        var roles = await GetAllRolesAsync();
+                        return new UserProfileViewModel
+                        {
+                            Id = user.Id,
+                            Username = user.Username,
+                            Email = user.Email,
+                            FirstName = user.FirstName,
+                            LastName = user.LastName,
+                            IsActive = user.IsActive,
+                            Roles = user.Roles,
+                            CreatedAt = user.CreatedAt,
+                            LastLoginAt = user.LastLoginAt,
+                            Permissions = user.Permissions.Select(p => new Permissions
+                            {
+                                Name = p,
+                                DisplayName = FormatPermissionName(p),
+                                Category = GetPermissionCategory(p),
+                                Description = GetPermissionDescription(p)
+                            }).ToList()
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user by id: {UserId}", id);
+            }
+            return new UserProfileViewModel();
+        }
+
+
         public async Task<bool> CreateUserAsync(CreateUserViewModel model)
         {
             try
@@ -300,6 +343,46 @@ namespace InventoryManagement.Web.Services
                 _logger.LogError(ex, "Error getting all roles");
             }
             return new List<string> { "Admin", "Manager", "User" };
+        }
+
+
+        // Helper methods for permission formatting
+        private string FormatPermissionName(string permission)
+        {
+            // Convert "Product.View" to "View Products"
+            var parts = permission.Split('.');
+            if (parts.Length == 2)
+            {
+                return $"{parts[1]} {parts[0]}s";
+            }
+            return permission.Replace(".", " ");
+        }
+
+
+
+        private string GetPermissionCategory(string permission)
+        {
+            var parts = permission.Split('.');
+            return parts.Length > 0 ? parts[0] : "General";
+        }
+
+
+
+        private string GetPermissionDescription(string permission)
+        {
+            // You can expand this with actual descriptions
+            var descriptions = new Dictionary<string, string>
+            {
+                ["Product.View"] = "View product information",
+                ["Product.Create"] = "Create new products",
+                ["Product.Update"] = "Edit existing products",
+                ["Product.Delete"] = "Delete products",
+                ["Route.View"] = "View transfer routes",
+                ["Route.Create"] = "Create transfer routes",
+                // Add more as needed
+            };
+
+            return descriptions.ContainsKey(permission) ? descriptions[permission] : "";
         }
     }
 }

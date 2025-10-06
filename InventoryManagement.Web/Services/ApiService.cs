@@ -121,17 +121,20 @@ namespace InventoryManagement.Web.Services
                 throw new UnauthorizedAccessException("Authentication failed - please login again");
             }
 
+            
+
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
                 return JsonConvert.DeserializeObject<T>(content);
             }
-
-            var errorContent = await response.Content.ReadAsStringAsync();
-            _logger.LogError("API request failed: {StatusCode} - {Content} for {Endpoint}",
-                response.StatusCode, errorContent, endpoint);
-
-            throw new HttpRequestException($"Request failed with status {response.StatusCode}: {errorContent}");
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("API request failed: {StatusCode} - {Content} for {Endpoint}",
+                    response.StatusCode, errorContent, endpoint);
+                return default(T);
+            }
         }
 
 
@@ -650,28 +653,6 @@ namespace InventoryManagement.Web.Services
                 HttpStatusCode.InternalServerError => "Server error occurred. Please try again later.",
                 _ => $"Request failed with status {statusCode}"
             };
-        }
-
-
-
-        // Throw appropriate exception based on HTTP status
-        private Task ThrowHttpRequestException(HttpResponseMessage response, string content)
-        {
-            var message = ParseErrorMessage(content, response.StatusCode);
-
-            switch (response.StatusCode)
-            {
-                case HttpStatusCode.Unauthorized:
-                    throw new UnauthorizedAccessException(message);
-                case HttpStatusCode.Forbidden:
-                    throw new UnauthorizedAccessException(message);
-                case HttpStatusCode.NotFound:
-                    throw new KeyNotFoundException(message);
-                case HttpStatusCode.Conflict:
-                    throw new InvalidOperationException(message);
-                default:
-                    throw new HttpRequestException(message);
-            }
         }
     }
 }

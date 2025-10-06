@@ -45,7 +45,7 @@ namespace InventoryManagement.Web.Controllers
                 var request = await _approvalService.GetRequestDetailsAsync(id);
 
                 if (request == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 // Verify the user owns this request
                 if (request.RequestedById != GetCurrentUserId())
@@ -71,7 +71,7 @@ namespace InventoryManagement.Web.Controllers
                 var request = await _approvalService.GetRequestDetailsAsync(id);
 
                 if (request == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 if (request.RequestedById != GetCurrentUserId())
                 {

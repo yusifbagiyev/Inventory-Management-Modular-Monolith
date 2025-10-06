@@ -47,7 +47,7 @@ namespace InventoryManagement.Web.Controllers
                 var request = await _approvalService.GetRequestDetailsAsync(id);
                 if (request == null)
                 {
-                    return NotFound();
+                    return RedirectToAction("NotFound","Home","?statusCode=404");
                 }
                 return PartialView("_ApprovalDetails", request);
             }
@@ -65,7 +65,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
                 if (approvalRequest == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 await _approvalService.ApproveRequestAsync(id);
                 return Json(new { success = true, message = "Request approved successfully" });
@@ -90,7 +90,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
                 if (approvalRequest == null)
-                    return NotFound();
+                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
 
                 await _approvalService.RejectRequestAsync(id, reason);
 

@@ -6,6 +6,7 @@ namespace InventoryManagement.Web.Services.Interfaces
     {
         Task<List<UserListViewModel>> GetAllUsersAsync();
         Task<EditUserViewModel> GetUserByIdAsync(int id);
+        Task<UserProfileViewModel> GetUserProfileAsync(int id);
         Task<bool> CreateUserAsync(CreateUserViewModel model);
         Task<bool> UpdateUserAsync(EditUserViewModel model);
         Task<bool> DeleteUserAsync(int id);

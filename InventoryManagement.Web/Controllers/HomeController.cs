@@ -18,6 +18,8 @@ namespace InventoryManagement.Web.Controllers
             _apiService = apiService;
         }
 
+
+
         public IActionResult Index()
         {
             if (User.Identity?.IsAuthenticated ?? false)
@@ -26,6 +28,8 @@ namespace InventoryManagement.Web.Controllers
             }
             return View();
         }
+
+
 
         public async Task<IActionResult> Dashboard(string period = "last7days")
         {
@@ -115,6 +119,8 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
+
         /// <summary>
         /// Filter routes by the selected date period
         /// This is the foundation for all period-based metrics
@@ -135,6 +141,8 @@ namespace InventoryManagement.Web.Controllers
                            r.CreatedAt.Date <= endDate.Date)
                 .ToList();
         }
+
+
 
         /// <summary>
         /// Calculate how many unique categories were involved in transfers during the period
@@ -161,6 +169,8 @@ namespace InventoryManagement.Web.Controllers
             return activeCategoryIds;
         }
 
+
+
         /// <summary>
         /// Calculate how many unique departments were involved in transfers during the period
         /// A department is "active" if it sent or received at least one transfer
@@ -183,6 +193,8 @@ namespace InventoryManagement.Web.Controllers
 
             return activeDepartmentIds.Count;
         }
+
+
 
         /// <summary>
         /// Process product metrics for the selected period
@@ -227,6 +239,8 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
+
+
         /// <summary>
         /// Process route metrics based on filtered routes
         /// </summary>
@@ -239,6 +253,8 @@ namespace InventoryManagement.Web.Controllers
             model.CompletedTransfers = routesInPeriod.Count(r => r.IsCompleted);
             model.PendingTransfers = routesInPeriod.Count(r => !r.IsCompleted);
         }
+
+
 
         /// <summary>
         /// Process department statistics based on transfer activity
@@ -300,6 +316,8 @@ namespace InventoryManagement.Web.Controllers
             .Take(5)
             .ToList();
         }
+
+
 
         /// <summary>
         /// Process category distribution based on transfer activity
@@ -384,6 +402,9 @@ namespace InventoryManagement.Web.Controllers
                 "Category distribution: {Count} categories had transfer activity",
                 model.CategoryDistributions.Count);
         }
+
+
+
 
         /// <summary>
         /// Generate transfer activity data for charts
@@ -503,6 +524,8 @@ namespace InventoryManagement.Web.Controllers
             };
         }
 
+
+
         /// <summary>
         /// Create an empty dashboard model for error cases
         /// </summary>
@@ -526,11 +549,15 @@ namespace InventoryManagement.Web.Controllers
             };
         }
 
+
+
         [AllowAnonymous]
         public IActionResult Privacy()
         {
             return View();
         }
+
+
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
@@ -551,6 +578,22 @@ namespace InventoryManagement.Web.Controllers
             }
 
             return View(errorViewModel);
+        }
+
+
+
+        [AllowAnonymous]
+        [Route("NotFound")]
+        public IActionResult NotFound(int? statusCode = null)
+        {
+            var model = new ErrorViewModel
+            {
+                StatusCode = statusCode ?? 404,
+                Message = "The page you're looking for could not be found."
+            };
+
+            Response.StatusCode = 404;
+            return View(model);
         }
     }
 }

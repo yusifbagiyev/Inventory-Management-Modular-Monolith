@@ -144,6 +144,9 @@ try
     app.UseStaticFiles();
 
     app.UseRouting();
+
+    app.UseStatusCodePagesWithReExecute("/NotFound", "?statusCode={0}");
+
     app.UseSession();
 
     app.UseMiddleware<ExceptionHandlerMiddleware>();

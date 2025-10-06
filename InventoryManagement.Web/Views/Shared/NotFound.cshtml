@@ -1,0 +1,82 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "Page Not Found";
+}
+
+<div class="container-fluid px-4">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="text-center">
+                <!-- Large 404 graphic -->
+                <div class="error-graphic mb-4">
+                    <h1 class="display-1 text-primary" style="font-size: 120px; font-weight: 700;">404</h1>
+                </div>
+
+                <!-- Error icon -->
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+
+                <!-- Main message -->
+                <h2 class="fw-bold mb-3">Page Not Found</h2>
+                <p class="fs-5 text-muted mb-4">
+                    The page you're looking for doesn't exist or may have been removed.
+                </p>
+
+                <!-- Helpful suggestions -->
+                <div class="alert alert-info text-start mb-4">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>This might have happened because:
+                    </h6>
+                    <ul class="mb-0">
+                        <li>The item was deleted</li>
+                        <li>The URL was typed incorrectly</li>
+                        <li>You don't have permission to view this resource</li>
+                        <li>The link you followed is outdated</li>
+                    </ul>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="d-flex gap-3 justify-content-center">
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </a>
+                    <a href="/Home/Dashboard" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>Go to Dashboard
+                    </a>
+                </div>
+
+                <!-- Search suggestion -->
+                <div class="mt-5">
+                    <p class="text-muted">Looking for something specific?</p>
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="list-group">
+                                <a href="/Products" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-box me-2"></i>Browse Products
+                                </a>
+                                <a href="/Routes" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-route me-2"></i>View Routes
+                                </a>
+                                <a href="/Departments" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-building me-2"></i>View Departments
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-graphic {
+        position: relative;
+    }
+
+    .error-graphic h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+</style>
