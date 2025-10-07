@@ -87,14 +87,57 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1)
             }));
 
-    // Specific rate limiting for login attempts
-    options.AddFixedWindowLimiter("LoginPolicy", limiterOptions =>
+    options.AddPolicy("LoginPolicyPerIP", context =>
     {
-        limiterOptions.PermitLimit = 5;
-        limiterOptions.Window = TimeSpan.FromMinutes(15);
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 2;
+        // Get the real client IP address, accounting for proxies/load balancers
+        var remoteIpAddress = context.Connection.RemoteIpAddress?.ToString()
+            ?? context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: remoteIpAddress,
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(5),
+                QueueProcessingOrder=QueueProcessingOrder.OldestFirst,
+                QueueLimit=2
+            });
     });
+
+    // Configure what happens when rate limit is exceeded
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        // Log the rate limit rejection
+        var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+        var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString()
+            ?? context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?? "unknown";
+
+        logger.LogWarning(
+            "Rate limit exceeded for IP: {IpAddress} on endpoint: {Endpoint}",
+            ipAddress,
+            context.HttpContext.Request.Path);
+
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            await context.HttpContext.Response.WriteAsJsonAsync(new
+            {
+                error = "Too many login attempts. Please try again later.",
+                retryAfter = retryAfter.TotalSeconds
+            }, cancellationToken);
+        }
+        else
+        {
+            await context.HttpContext.Response.WriteAsJsonAsync(new
+            {
+                error = "Too many login attempts. Please try again in 5 minutes."
+            }, cancellationToken);
+        }
+    };
 });
 
 //Add CORS policy

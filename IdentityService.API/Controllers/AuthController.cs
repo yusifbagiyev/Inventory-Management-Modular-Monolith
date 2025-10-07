@@ -19,7 +19,7 @@ namespace IdentityService.API.Controllers
         }
 
         [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicy")]
+        [EnableRateLimiting("LoginPolicyPerIP")]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
             try
