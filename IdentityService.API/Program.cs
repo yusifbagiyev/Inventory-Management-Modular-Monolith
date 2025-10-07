@@ -88,20 +88,44 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("LoginPolicyPerIP", context =>
     {
-        // Get the real client IP address, accounting for proxies/load balancers
-        var remoteIpAddress = context.Connection.RemoteIpAddress?.ToString()
-            ?? context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-            ?? "unknown";
+        // In a proxied environment, ALWAYS check forwarded headers first
+        // X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2...)
+        // We want the FIRST one (the original client)
+        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+
+        string clientIp;
+
+        if (!string.IsNullOrEmpty(forwardedFor))
+        {
+            // X-Forwarded-For can be: "client_ip, proxy1_ip, proxy2_ip"
+            // Split by comma and take the first (original client) IP
+            clientIp = forwardedFor.Split(',')[0].Trim();
+        }
+        else if (!string.IsNullOrEmpty(realIp))
+        {
+            // X-Real-IP contains a single IP
+            clientIp = realIp.Trim();
+        }
+        else
+        {
+            // Fallback to connection IP (only useful in direct connections)
+            clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        }
+
+        // Log for debugging - you can see which IPs are being rate limited
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogDebug("Rate limiting based on IP: {ClientIp}", clientIp);
 
         return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: remoteIpAddress,
+            partitionKey: clientIp,
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(5),
-                QueueProcessingOrder=QueueProcessingOrder.OldestFirst,
-                QueueLimit=0
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
             });
     });
 
