@@ -93,29 +93,34 @@ builder.Services.AddRateLimiter(options =>
         // We want the FIRST one (the original client)
         var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
         var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+        var remoteIp = context.Connection.RemoteIpAddress?.ToString();
 
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+
+        // DEBUGGING: Log all IP sources
+        logger.LogWarning(
+            "Rate Limiter Debug - X-Forwarded-For: [{ForwardedFor}], X-Real-IP: [{RealIp}], RemoteIP: [{RemoteIp}]",
+            forwardedFor ?? "NULL",
+            realIp ?? "NULL",
+            remoteIp ?? "NULL"
+        );
+
+        // Your existing IP detection logic...
         string clientIp;
-
         if (!string.IsNullOrEmpty(forwardedFor))
         {
-            // X-Forwarded-For can be: "client_ip, proxy1_ip, proxy2_ip"
-            // Split by comma and take the first (original client) IP
             clientIp = forwardedFor.Split(',')[0].Trim();
         }
         else if (!string.IsNullOrEmpty(realIp))
         {
-            // X-Real-IP contains a single IP
             clientIp = realIp.Trim();
         }
         else
         {
-            // Fallback to connection IP (only useful in direct connections)
-            clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            clientIp = remoteIp ?? "unknown";
         }
 
-        // Log for debugging - you can see which IPs are being rate limited
-        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-        logger.LogDebug("Rate limiting based on IP: {ClientIp}", clientIp);
+        logger.LogInformation("Rate limiting using IP: {ClientIp}", clientIp);
 
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: clientIp,

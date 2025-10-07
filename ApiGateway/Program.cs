@@ -110,6 +110,31 @@ app.UseCors("AllowWebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.Use(async (context, next) =>
+{
+    // Get the real client IP from forwarded headers (set by nginx)
+    var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+    var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+
+    // Log what we're seeing (for debugging)
+    Log.Debug("API Gateway received - X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}, RemoteIP: {RemoteIp}",
+        forwardedFor, realIp, remoteIp);
+
+    // Ensure these headers exist for downstream services
+    if (string.IsNullOrEmpty(forwardedFor) && !string.IsNullOrEmpty(remoteIp))
+    {
+        context.Request.Headers["X-Forwarded-For"] = remoteIp;
+    }
+
+    if (string.IsNullOrEmpty(realIp) && !string.IsNullOrEmpty(remoteIp))
+    {
+        context.Request.Headers["X-Real-IP"] = remoteIp;
+    }
+
+    await next();
+});
+
 await app.UseOcelot();
 
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()

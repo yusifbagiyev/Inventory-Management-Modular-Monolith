@@ -105,16 +105,24 @@
       }
     },
     {
-      "DownstreamPathTemplate": "/api/auth/{everything}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 5003
+        "DownstreamPathTemplate": "/api/auth/{everything}",
+        "DownstreamScheme": "http",
+        "DownstreamHostAndPorts": [
+            {
+                "Host": "localhost",
+                "Port": 5003
+            }
+        ],
+        "UpstreamPathTemplate": "/api/auth/{everything}",
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
+        "UpstreamHeaderTransform": {
+            "X-Forwarded-For": "{RemoteIpAddress}",
+            "X-Real-IP": "{RemoteIpAddress}"
+        },
+        "DownstreamHeaderTransform": {
+            "X-Forwarded-For": "{UpstreamHeaderValue}",
+            "X-Real-IP": "{UpstreamHeaderValue}"
         }
-      ],
-      "UpstreamPathTemplate": "/api/auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
     },
     {
       "DownstreamPathTemplate": "/api/approvalrequests/{everything}",
