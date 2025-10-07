@@ -110,19 +110,19 @@ namespace RouteService.Infrastructure.Services
                             await ProcessProductUpdated(updatedEvent);
                     }
 
-                    _channel.BasicAck(ea.DeliveryTag, false);
+                    _channel?.BasicAck(ea.DeliveryTag, false);
                 }
                 catch (FluentValidation.ValidationException ex)
                 {
                     _logger.LogError(ex, "Validation error - message will be discarded");
                     // Don't requeue validation errors
-                    _channel.BasicNack(ea.DeliveryTag, false, false);
+                    _channel?.BasicNack(ea.DeliveryTag, false, false);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing product created event");
                     // Requeue only for unexpected errors
-                    _channel.BasicNack(ea.DeliveryTag, false, true);
+                    _channel?.BasicNack(ea.DeliveryTag, false, true);
                 }
             };
 
@@ -218,7 +218,7 @@ namespace RouteService.Infrastructure.Services
             var product = await productClient.GetProductByIdAsync(receivedProduct.Product.Id);
             if (product == null) return;
 
-            string? imageUrl = product.ImageUrl;
+            string? imageUrl = null;
 
             // Upload image if data is provided
             if (receivedProduct.ImageData != null && receivedProduct.ImageData.Length > 0)

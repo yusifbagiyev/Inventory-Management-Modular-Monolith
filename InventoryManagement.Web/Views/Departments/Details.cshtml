@@ -5,176 +5,350 @@
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Department Details</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Departments</a></li>
-        <li class="breadcrumb-item active">Details</li>
-    </ol>
+    <!-- Modern Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb bg-transparent px-0">
+            <li class="breadcrumb-item"><a href="/Home/Dashboard" class="text-decoration-none">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/Departments" class="text-decoration-none">Departments</a></li>
+            <li class="breadcrumb-item active">@Model.Name</li>
+        </ol>
+    </nav>
 
-    <div class="row">
-        <div class="col-lg-4">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-building me-1"></i>
-                    Department Information
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">@Model.Name</h5>
+    <!-- Department Header Card with modern gradient -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body text-white p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="department-icon-large me-3">
+                            <i class="fas fa-building fa-2x"></i>
+                        </div>
+                        <div>
+                            <h2 class="mb-1 fw-bold">@Model.Name</h2>
+                            @if (!string.IsNullOrEmpty(Model.DepartmentHead))
+                            {
+                                <p class="mb-0 opacity-90">
+                                    <i class="fas fa-user-tie me-2"></i>Led by @Model.DepartmentHead
+                                </p>
+                            }
+                        </div>
+                    </div>
 
                     @if (!string.IsNullOrEmpty(Model.Description))
                     {
-                        <p class="card-text">@Model.Description</p>
+                        <p class="mb-0 opacity-90">@Model.Description</p>
                     }
-                    else
-                    {
-                        <p class="card-text text-muted fst-italic">No description provided</p>
-                    }
+                </div>
 
-                    <table class="table table-borderless">
-                        @if (!string.IsNullOrEmpty(Model.DepartmentHead))
-                        {
-                            <tr>
-                                <th>Department Head:</th>
-                                <td>
-                                    <span class="badge bg-info text-dark">
-                                        <i class="fas fa-user-tie me-1"></i>@Model.DepartmentHead
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                        <tr>
-                            <th>Status:</th>
-                            <td>
-                                @if (Model.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Created:</th>
-                            <td>@Model.CreatedAt.ToString("MM/dd/yyyy")</td>
-                        </tr>
-                        @if (Model.UpdatedAt.HasValue)
-                        {
-                            <tr>
-                                <th>Updated:</th>
-                                <td>@Model.UpdatedAt.Value.ToString("MM/dd/yyyy")</td>
-                            </tr>
-                        }
-                    </table>
-
-                    <div class="row text-center mt-4">
-                        <div class="col-6">
-                            <div class="metric">
-                                <i class="fas fa-boxes fa-2x text-primary"></i>
-                                <h3 class="mt-2">@Model.ProductCount</h3>
-                                <small class="text-muted">Products</small>
+                <div class="col-lg-4">
+                    <div class="row g-3 text-center">
+                        <div class="col-4">
+                            <div class="stat-box-white">
+                                <div class="stat-icon mb-2">
+                                    <i class="fas fa-boxes fa-2x"></i>
+                                </div>
+                                <h3 class="mb-0 fw-bold">@Model.ProductCount</h3>
+                                <small class="opacity-90">Products</small>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="metric">
-                                <i class="fas fa-users fa-2x text-success"></i>
-                                <h3 class="mt-2">@Model.WorkerCount</h3>
-                                <small class="text-muted">Workers</small>
+                        <div class="col-4">
+                            <div class="stat-box-white">
+                                <div class="stat-icon mb-2">
+                                    <i class="fas fa-users fa-2x"></i>
+                                </div>
+                                <h3 class="mb-0 fw-bold">@Model.WorkerCount</h3>
+                                <small class="opacity-90">Workers</small>
                             </div>
                         </div>
-                    </div>
-
-                    <hr />
-
-                    <div class="d-grid gap-2">
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Edit Department
-                        </a>
-                        <a asp-action="ExportToWord" asp-route-id="@Model.Id"
-                           class="btn btn-success">
-                            <i class="fas fa-file-word"></i> Export to Word
-                        </a>
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
+                        <div class="col-4">
+                            <div class="stat-box-white">
+                                <div class="stat-icon mb-2">
+                                    @if (Model.IsActive)
+                                    {
+                                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-times-circle fa-2x text-warning"></i>
+                                    }
+                                </div>
+                                <h6 class="mb-2 fw-bold ">
+                                    @(Model.IsActive ? "Active" : "Inactive")
+                                </h6>
+                                <small class="opacity-90">Status</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-lg-8">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-boxes me-1"></i>
-                    Products in this Department
+            <!-- Action Buttons -->
+            <div class="row mt-3 pt-3 border-top border-white border-opacity-25">
+                <div class="col">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-light btn-sm">
+                            <i class="fas fa-edit me-1"></i> Edit Department
+                        </a>
+                        <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="btn btn-light btn-sm">
+                            <i class="fas fa-file-word me-1"></i> Export to Word
+                        </a>
+                        <a asp-action="Index" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> Back to List
+                        </a>
+                    </div>
                 </div>
-                <div class="card-body">
-                    @if (products.Any())
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover" id="departmentProductsTable">
-                                <thead>
-                                    <tr>
-                                        <th>Code</th>
-                                        <th>Model</th>
-                                        <th>Vendor</th>
-                                        <th>Worker</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var product in products)
-                                    {
-                                        <tr>
-                                            <td>@product.InventoryCode</td>
-                                            <td>@product.Model</td>
-                                            <td>@product.Vendor</td>
-                                            <td>@(product.Worker ?? "N/A")</td>
-                                            <td>
-                                                @if (product.IsWorking)
-                                                {
-                                                    <span class="badge bg-success">Working</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-danger">Not Working</span>
-                                                }
-                                            </td>
-                                            <td>
-                                                <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id"
-                                                   class="btn btn-sm btn-info">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fas fa-box-open fa-3x text-muted"></i>
-                            <p class="mt-3 text-muted">No products in this department.</p>
-                        </div>
-                    }
+                <div class="col-auto">
+                    <small class="opacity-75">
+                        <i class="far fa-calendar me-1"></i>
+                        Created @Model.CreatedAt.ToString("MMM dd, yyyy")
+                    </small>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Products Table Card with improved layout -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="fas fa-boxes text-primary me-2"></i>
+                        Department Inventory
+                    </h5>
+                    <small class="text-muted">Complete list of products in this department</small>
+                </div>
+                <div class="col-auto">
+                    @if (products.Any())
+                    {
+                        <span class="badge bg-primary-soft text-primary px-3 py-2">
+                            @products.Count Total Items
+                        </span>
+                    }
+                
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (products.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="departmentProductsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 10%">
+                                    <i class="fas fa-barcode me-1"></i>Code
+                                </th>
+                                <th style="width: 18%">
+                                    <i class="fas fa-tag me-1"></i>Category
+                                </th>
+                                <th style="width: 20%">
+                                    <i class="fas fa-cube me-1"></i>Model
+                                </th>
+                                <th style="width: 15%">
+                                    <i class="fas fa-industry me-1"></i>Vendor
+                                </th>
+                                <th style="width: 15%">
+                                    <i class="fas fa-user me-1"></i>Assigned To
+                                </th>
+                                <th style="width: 12%" class="text-center">
+                                    <i class="fas fa-info-circle me-1"></i>Status
+                                </th>
+                                <th style="width: 10%" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var product in products.OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode))
+                            {
+                                <tr class="product-row">
+                                    <td>
+                                        <span class="badge bg-primary fs-6 px-3 py-2">
+                                            @product.InventoryCode
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="category-color-dot me-2" style="background: @GetCategoryColor(product.CategoryName);"></div>
+                                            <span class="fw-semibold">@(product.CategoryName ?? "Uncategorized")</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-medium text-dark">@(product.Model ?? "N/A")</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">@(product.Vendor ?? "N/A")</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(product.Worker))
+                                        {
+                                            <div class="d-flex align-items-center">
+                                                <div class="worker-avatar me-2">
+                                                    @product.Worker.Substring(0, 1).ToUpper()
+                                                </div>
+                                                <span>@product.Worker</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fst-italic">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (product.IsWorking)
+                                        {
+                                            <span class="badge bg-success-soft text-success">
+                                                <i class="fas fa-check-circle me-1"></i>Working
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger-soft text-danger">
+                                                <i class="fas fa-times-circle me-1"></i>Not Working
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id"
+                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="fas fa-box-open fa-4x text-muted mb-3 opacity-50"></i>
+                        <h5 class="text-muted">No Products Yet</h5>
+                        <p class="text-muted mb-0">This department doesn't have any products assigned.</p>
+                    </div>
+                </div>
+            }
+        
+        </div>
+    </div>
 </div>
+
+@functions {
+    private string GetCategoryColor(string? categoryName)
+    {
+        // Generate consistent colors for categories
+        var colors = new[] { "#667eea", "#764ba2", "#f093fb", "#4facfe", "#43e97b", "#fa709a", "#30cfd0", "#c471ed" };
+        if (string.IsNullOrEmpty(categoryName)) return colors[0];
+
+        var hash = categoryName.GetHashCode();
+        return colors[Math.Abs(hash) % colors.Length];
+    }
+}
+
 
 @section Scripts {
     <script>
         $(document).ready(function() {
+            // Initialize DataTable with modern styling
             $('#departmentProductsTable').DataTable({
-                pageLength: 10,
-                responsive: true
+                pageLength: 25,
+                order: [[1, 'asc'], [0, 'asc']], // Sort by category, then code
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search products...",
+                    lengthMenu: "Show _MENU_ items",
+                    info: "Showing _START_ to _END_ of _TOTAL_ products",
+                    infoEmpty: "No products to show",
+                    infoFiltered: "(filtered from _MAX_ total)"
+                },
+                dom: '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
             });
         });
     </script>
 }
+<style>
+    .department-icon-large {
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(10px);
+    }
+
+    .stat-box-white {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 1rem 0.5rem;
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+    }
+
+        .stat-box-white:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+    .category-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .worker-avatar {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .product-row {
+        transition: all 0.2s ease;
+    }
+
+        .product-row:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+            transform: translateX(5px);
+        }
+
+    .bg-primary-soft {
+        background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .bg-success-soft {
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+
+    .bg-danger-soft {
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .empty-state i {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 1rem 0.75rem;
+    }
+
+    tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+    }
+</style>
