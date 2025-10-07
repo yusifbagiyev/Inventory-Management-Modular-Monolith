@@ -1,12 +1,14 @@
-using System.Text;
 using ApiGateway.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
+using Polly;
+using Polly.Extensions.Http;
 using Serilog;
 using Serilog.Events;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -41,7 +43,12 @@ builder.Services.AddHttpClient("OcelotHttpClient")
         MaxConnectionsPerServer = 100,
         // Timeout for individual operations
         ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true // Only for development!
-    });
+    })
+    // Add retry policy
+    .AddPolicyHandler(GetRetryPolicy())
+    // Add circuit breaker
+    .AddPolicyHandler(GetCircuitBreakerPolicy());
+
 
 var environment=builder.Environment.EnvironmentName;
 //Add Ocelot configuration
@@ -88,6 +95,8 @@ builder.Services.AddOcelot();
 
 var app = builder.Build();
 
+app.UseMiddleware<RequestTimeoutMiddleware>(TimeSpan.FromSeconds(30));
+
 app.UseGlobalExceptionHandler();
 
 // Add forwarded headers support for proxy
@@ -102,5 +111,39 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 await app.UseOcelot();
+
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError() // Handles 5xx and 408
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests) // Handle 429
+        .WaitAndRetryAsync(
+            retryCount: 2, // Only retry twice
+            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryAttempt, context) =>
+            {
+                Log.Warning("Retry {RetryAttempt} after {Delay}ms due to {StatusCode}",
+                    retryAttempt, timespan.TotalMilliseconds, outcome.Result?.StatusCode);
+            });
+}
+
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable) // 503
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5, // Break after 5 consecutive failures
+            durationOfBreak: TimeSpan.FromSeconds(30), // Stay open for 30 seconds
+            onBreak: (outcome, duration) =>
+            {
+                Log.Error("Circuit breaker opened for {Duration}s due to {StatusCode}",
+                    duration.TotalSeconds, outcome.Result?.StatusCode);
+            },
+            onReset: () =>
+            {
+                Log.Information("Circuit breaker reset - service recovered");
+            });
+}
 
 app.Run();

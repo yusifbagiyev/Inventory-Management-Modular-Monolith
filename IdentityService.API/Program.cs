@@ -6,7 +6,6 @@ using IdentityService.Infrastructure.Data;
 using IdentityService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -83,7 +82,7 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 50,
+                PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1)
             }));
 
@@ -99,10 +98,10 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 5,
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(5),
                 QueueProcessingOrder=QueueProcessingOrder.OldestFirst,
-                QueueLimit=2
+                QueueLimit=0
             });
     });
 
@@ -111,8 +110,10 @@ builder.Services.AddRateLimiter(options =>
     {
         // Log the rate limit rejection
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-        var ipAddress = context.HttpContext.Connection.RemoteIpAddress?.ToString()
-            ?? context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+
+        var ipAddress = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim()
+            ?? context.HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault()
+            ?? context.HttpContext.Connection.RemoteIpAddress?.ToString()
             ?? "unknown";
 
         logger.LogWarning(
@@ -121,22 +122,19 @@ builder.Services.AddRateLimiter(options =>
             context.HttpContext.Request.Path);
 
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
 
-        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+            ? retryAfterValue.TotalSeconds
+            : 300; // 5 minutes default
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
         {
-            await context.HttpContext.Response.WriteAsJsonAsync(new
-            {
-                error = "Too many login attempts. Please try again later.",
-                retryAfter = retryAfter.TotalSeconds
-            }, cancellationToken);
-        }
-        else
-        {
-            await context.HttpContext.Response.WriteAsJsonAsync(new
-            {
-                error = "Too many login attempts. Please try again in 5 minutes."
-            }, cancellationToken);
-        }
+            error = "Too many login attempts from your IP address. Please try again later.",
+            retryAfter = retryAfter,
+            // Help the user understand what happened
+            message = $"Your IP address has been temporarily blocked due to multiple failed login attempts. Please wait {Math.Ceiling(retryAfter / 60)} minutes before trying again."
+        }, cancellationToken: cancellationToken);
     };
 });
 
@@ -154,7 +152,20 @@ builder.Services.AddCors(options =>
 
 // Database
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{ 
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+    npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+        npgsqlOptions.CommandTimeout(30);
+    })
+        .EnableSensitiveDataLogging(builder.Environment.IsDevelopment())
+        .EnableDetailedErrors(builder.Environment.IsDevelopment());
+},
+ServiceLifetime.Scoped);
 
 
 // Identity

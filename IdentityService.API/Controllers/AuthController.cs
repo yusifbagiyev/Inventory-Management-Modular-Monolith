@@ -12,27 +12,57 @@ namespace IdentityService.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
+
 
         [HttpPost("login")]
         [EnableRateLimiting("LoginPolicyPerIP")]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
+            var ipAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim()
+                ?? HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault()
+                ?? HttpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "unknown";
+
+            _logger.LogInformation(
+                "Login attempt for user {Username} from IP {IpAddress}",
+                dto.Username,
+                ipAddress);
+
             try
             {
                 var result = await _authService.LoginAsync(dto);
+
+                _logger.LogInformation(
+                    "Login successful for user {Username} from IP {IpAddress}",
+                    dto.Username,
+                    ipAddress);
+
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning(
+                    "Login failed for user {Username} from IP {IpAddress}: {Reason}",
+                    dto.Username,
+                    ipAddress,
+                    ex.Message);
+
                 return Unauthorized(new { message = ex.Message });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex,
+                    "Login error for user {Username} from IP {IpAddress}",
+                    dto.Username,
+                    ipAddress);
+
                 return BadRequest(new { message = ex.Message });
             }
         }
