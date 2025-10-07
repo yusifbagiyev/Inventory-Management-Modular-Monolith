@@ -3,6 +3,7 @@ using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
 using ProductService.Infrastructure.Data;
+using SharedServices.Services;
 
 namespace ProductService.Infrastructure.Repositories
 {
@@ -36,26 +37,48 @@ namespace ProductService.Infrastructure.Repositories
             string search, 
             CancellationToken cancellationToken = default)
         {
-
             var query = _context.Departments.Include(c => c.Products).AsQueryable();
+
+            IEnumerable<Department> items;
+            int totalCount;
 
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim();
-                query = query.Where(r =>
+
+                var broadQuery = query.Where(r =>
                     EF.Functions.ILike(r.Name, $"%{search}%") ||
-                    (r.DepartmentHead !=null && EF.Functions.ILike(r.DepartmentHead,$"%{search}%")) ||
-                    (r.Description!=null&&EF.Functions.ILike(r.Description, $"%{search}%"))
+                    (r.DepartmentHead != null && EF.Functions.ILike(r.DepartmentHead, $"%{search}%")) ||
+                    (r.Description != null && EF.Functions.ILike(r.Description, $"%{search}%"))
                 );
+
+                var allFilteredItems = await broadQuery
+                    .OrderBy(n => n.Name)
+                    .ToListAsync(cancellationToken);
+
+                items = allFilteredItems.Where(r =>
+                    SearchHelper.ContainsAzerbaijani(r.Name, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.DepartmentHead, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Description, search))
+                    .ToList();
+
+                totalCount = items.Count();
+
+                items = items
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
             }
+            else
+            {
+                totalCount = await query.CountAsync(cancellationToken);
 
-            var totalCount = await query.CountAsync(cancellationToken);
-            var items = await query
-                .OrderBy(n => n.Name)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
-
+                items = await query
+                    .OrderBy(n => n.Name)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(cancellationToken);
+            }
             return new PagedResult<Department>
             {
                 Items = items,

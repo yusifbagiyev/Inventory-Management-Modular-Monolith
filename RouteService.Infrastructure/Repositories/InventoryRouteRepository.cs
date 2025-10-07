@@ -4,6 +4,7 @@ using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Repositories;
 using RouteService.Infrastructure.Data;
+using SharedServices.Services;
 
 namespace RouteService.Infrastructure.Repositories
 {
@@ -99,28 +100,60 @@ namespace RouteService.Infrastructure.Repositories
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
+            IEnumerable<InventoryRoute> items;
+            int totalCount;
+
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim();
-                query = query.Where(r =>
+
+                // Apply broad database filter first
+                var broadQuery = query.Where(r =>
                     EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{search}%") ||
                     EF.Functions.ILike(r.ProductSnapshot.CategoryName, $"%{search}%") ||
                     EF.Functions.ILike(r.ProductSnapshot.Vendor, $"%{search}%") ||
                     EF.Functions.ILike(r.ProductSnapshot.Model, $"%{search}%") ||
                     (r.FromDepartmentName != null && EF.Functions.ILike(r.FromDepartmentName, $"%{search}%")) ||
-                    EF.Functions.ILike(r.ToDepartmentName, $"%{search}%")
-                    
-             );
+                    EF.Functions.ILike(r.ToDepartmentName, $"%{search}%") ||
+                    (r.FromWorker != null && EF.Functions.ILike(r.FromWorker, $"%{search}%")) ||
+                    (r.ToWorker != null && EF.Functions.ILike(r.ToWorker, $"%{search}%"))
+                );
+
+                var allFilteredItems = await broadQuery
+                    .OrderByDescending(r => !r.IsCompleted)
+                    .ThenByDescending(r => r.CompletedAt)
+                    .ToListAsync(cancellationToken);
+
+                // Apply Azerbaijani-aware search in memory
+                items = allFilteredItems.Where(r =>
+                    SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.InventoryCode.ToString(), search) ||
+                    SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.CategoryName, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.Vendor, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.Model, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.FromDepartmentName, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.ToDepartmentName, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.FromWorker, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.ToWorker, search)
+                ).ToList();
+
+                totalCount = items.Count();
+
+                items = items
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
             }
+            else
+            {
+                totalCount = await query.CountAsync(cancellationToken);
 
-            var totalCount = await query.CountAsync(cancellationToken);
-
-            var items = await query
-                .OrderByDescending(r=>!r.IsCompleted)
-                .ThenByDescending(r => r.CompletedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
+                items = await query
+                    .OrderByDescending(r => !r.IsCompleted)
+                    .ThenByDescending(r => r.CompletedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(cancellationToken);
+            }
 
             return new PagedResult<InventoryRoute>
             {

@@ -3,6 +3,7 @@ using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
 using ProductService.Infrastructure.Data;
+using SharedServices.Services;
 
 namespace ProductService.Infrastructure.Repositories
 {
@@ -64,29 +65,62 @@ namespace ProductService.Infrastructure.Repositories
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
+            IEnumerable<Product> items;
+            int totalCount;
+
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.Trim().ToLower();
-                query = query.Where(r =>
+                search = search.Trim();
+
+                // First, apply a broad database filter to reduce the dataset
+                // This uses standard SQL ILIKE which works but isn't perfect for Azerbaijani
+                var broadQuery = query.Where(r =>
                     EF.Functions.ILike(r.InventoryCode.ToString(), $"%{search}%") ||
                     EF.Functions.ILike(r.Vendor, $"%{search}%") ||
                     EF.Functions.ILike(r.Model, $"%{search}%") ||
                     (r.Category != null && EF.Functions.ILike(r.Category.Name, $"%{search}%")) ||
                     (r.Department != null && EF.Functions.ILike(r.Department.Name, $"%{search}%")) ||
-                    EF.Functions.Like(r.Description, $"%{search}%") ||
-                    EF.Functions.Like(r.Worker, $"%{search}%")
+                    EF.Functions.ILike(r.Description ?? "", $"%{search}%") ||
+                    EF.Functions.ILike(r.Worker ?? "", $"%{search}%")
                 );
+
+                // Load the filtered results into memory
+                var allFilteredItems = await broadQuery
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.UpdatedAt)
+                    .ToListAsync(cancellationToken);
+
+                // Now apply Azerbaijani-aware search in memory for precision
+                items = allFilteredItems.Where(r =>
+                    SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Vendor, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Model, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Category?.Name, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Department?.Name, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Description, search) ||
+                    SearchHelper.ContainsAzerbaijani(r.Worker, search)
+                ).ToList();
+
+                totalCount = items.Count();
+
+                // Apply pagination in memory
+                items = items
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
             }
+            else
+            {
+                // No search term - use standard database pagination
+                totalCount = await query.CountAsync(cancellationToken);
 
-
-            var totalCount = await query.CountAsync(cancellationToken);
-
-            var items = await query
-                .OrderByDescending(r => r.CreatedAt)
-                .ThenByDescending(r=>r.UpdatedAt)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(cancellationToken);
+                items = await query
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.UpdatedAt)
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(cancellationToken);
+            }
 
             return new PagedResult<Product>
             {
