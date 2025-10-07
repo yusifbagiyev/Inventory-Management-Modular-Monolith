@@ -91,32 +91,14 @@ builder.Services.AddRateLimiter(options =>
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-        // After UseForwardedHeaders runs, this will contain the real client IP
-        var clientIp = context.Connection.RemoteIpAddress?.ToString();
+        // After UseForwardedHeaders runs, RemoteIpAddress will contain the real client IP
+        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-        // Fallback to headers if needed (for local development)
-        if (string.IsNullOrEmpty(clientIp) || clientIp.StartsWith("172.") || clientIp.StartsWith("::1"))
-        {
-            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedFor))
-            {
-                // Take the FIRST IP in the chain (the real client)
-                clientIp = forwardedFor.Split(',')[0].Trim();
-            }
-        }
-
-        // Ensure we have a valid IP
-        if (string.IsNullOrEmpty(clientIp))
-        {
-            clientIp = "unknown";
-        }
-
-        // CRITICAL LOG: This helps you verify the IP detection is working
+        // CRITICAL LOG: This helps verify the IP detection is working
         logger.LogInformation(
-            "Rate limiting for login - Detected IP: {ClientIp} | X-Forwarded-For: {ForwardedFor} | RemoteIP: {RemoteIp}",
+            "Rate limiting login attempt - Client IP: {ClientIp} | X-Forwarded-For: {ForwardedFor}",
             clientIp,
-            context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? "NULL",
-            context.Connection.RemoteIpAddress?.ToString() ?? "NULL"
+            context.Request.Headers["X-Forwarded-For"].ToString()
         );
 
         return RateLimitPartition.GetFixedWindowLimiter(
@@ -124,8 +106,8 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(5),
+                PermitLimit = 10,        // 10 attempts
+                Window = TimeSpan.FromMinutes(5),  // per 5 minutes
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             });
@@ -252,12 +234,21 @@ if (app.Environment.IsDevelopment())
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    // In production with Docker, we need to trust the internal Docker network
-    // This is safe because your containers are isolated from the outside world
-    KnownNetworks = { }, // Clear default known networks
-    KnownProxies = { },  // Clear default known proxies
-    // Trust any proxy in the Docker network (they're all internal)
-    ForwardLimit = 2 // Expect up to 2 proxies (Nginx ? API Gateway)
+
+    // CRITICAL: Tell ASP.NET Core to trust headers from Docker network
+    // In Docker, internal IPs are typically 172.x.x.x
+    KnownNetworks = { }, // Clear defaults
+    KnownProxies = { },  // Clear defaults
+
+    // Allow up to 2 proxies (Nginx ? API Gateway ? Identity Service)
+    ForwardLimit = 2,
+
+    // This is the key setting: Trust ALL proxies in Docker network
+    // Since containers are isolated, this is safe in your environment
+    RequireHeaderSymmetry = false,
+
+    // Process the full X-Forwarded-For chain
+    ForwardedForHeaderName = "X-Forwarded-For"
 });
 
 
