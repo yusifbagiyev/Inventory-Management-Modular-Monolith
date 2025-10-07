@@ -1,16 +1,17 @@
-using System.Text;
-using System.Threading.RateLimiting;
 using IdentityService.Application.Services;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Data;
 using IdentityService.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
+using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,39 +89,35 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("LoginPolicyPerIP", context =>
     {
-        // In a proxied environment, ALWAYS check forwarded headers first
-        // X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2...)
-        // We want the FIRST one (the original client)
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-        var remoteIp = context.Connection.RemoteIpAddress?.ToString();
-
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-        // DEBUGGING: Log all IP sources
-        logger.LogWarning(
-            "Rate Limiter Debug - X-Forwarded-For: [{ForwardedFor}], X-Real-IP: [{RealIp}], RemoteIP: [{RemoteIp}]",
-            forwardedFor ?? "NULL",
-            realIp ?? "NULL",
-            remoteIp ?? "NULL"
+        // After UseForwardedHeaders runs, this will contain the real client IP
+        var clientIp = context.Connection.RemoteIpAddress?.ToString();
+
+        // Fallback to headers if needed (for local development)
+        if (string.IsNullOrEmpty(clientIp) || clientIp.StartsWith("172.") || clientIp.StartsWith("::1"))
+        {
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // Take the FIRST IP in the chain (the real client)
+                clientIp = forwardedFor.Split(',')[0].Trim();
+            }
+        }
+
+        // Ensure we have a valid IP
+        if (string.IsNullOrEmpty(clientIp))
+        {
+            clientIp = "unknown";
+        }
+
+        // CRITICAL LOG: This helps you verify the IP detection is working
+        logger.LogInformation(
+            "Rate limiting for login - Detected IP: {ClientIp} | X-Forwarded-For: {ForwardedFor} | RemoteIP: {RemoteIp}",
+            clientIp,
+            context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? "NULL",
+            context.Connection.RemoteIpAddress?.ToString() ?? "NULL"
         );
-
-        // Your existing IP detection logic...
-        string clientIp;
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            clientIp = forwardedFor.Split(',')[0].Trim();
-        }
-        else if (!string.IsNullOrEmpty(realIp))
-        {
-            clientIp = realIp.Trim();
-        }
-        else
-        {
-            clientIp = remoteIp ?? "unknown";
-        }
-
-        logger.LogInformation("Rate limiting using IP: {ClientIp}", clientIp);
 
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: clientIp,
@@ -251,6 +248,18 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    // In production with Docker, we need to trust the internal Docker network
+    // This is safe because your containers are isolated from the outside world
+    KnownNetworks = { }, // Clear default known networks
+    KnownProxies = { },  // Clear default known proxies
+    // Trust any proxy in the Docker network (they're all internal)
+    ForwardLimit = 2 // Expect up to 2 proxies (Nginx ? API Gateway)
+});
+
 
 app.UseRateLimiter();
 
