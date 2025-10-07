@@ -143,8 +143,9 @@ namespace RouteService.Domain.Entities
         {
             ImageUrl = imageUrl ?? ImageUrl;
         }
-        public void UpdateNotes(string notes)
+        public void UpdateExistingRoute(string? toWorker,string? notes)
         {
+            ToWorker= toWorker;
             Notes = notes;
         }
     }

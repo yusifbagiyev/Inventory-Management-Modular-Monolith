@@ -185,10 +185,18 @@
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script>
-        $(document).ready(function() {
+                    $(document).ready(function() {
             let currentProductData = null;
             let searchTimeout = null;
             let lastSearchedCode = '';
+            let isSubmitting = false; // Track submission state
+
+            // Focus on inventory code input
+            $('#inventoryCodeInput').focus();
+
+            // Get the submit button reference
+            const $submitBtn = $('#submitBtn');
+            const originalButtonHtml = $submitBtn.html();
 
             // Initialize AjaxHandler for the form
             AjaxHandler.handleForm('#transferForm', {
@@ -197,10 +205,24 @@
                 successRedirect: '/Routes',
                 redirectDelay: 1500,
                 onBeforeSubmit: function(form) {
+                    // FIRST: Check if we're already submitting (this prevents duplicates)
+                    if (isSubmitting) {
+                        console.log('Already submitting, blocking duplicate submission');
+                        return false; // Stop here, don't proceed with submission
+                    }
+
+                    // SECOND: Mark as submitting immediately
+                    isSubmitting = true;
+
+                    // THIRD: Now do validation (if validation fails, we'll reset the flag)
+
                     // Validate that we have a product selected
                     if (!currentProductData || !$('#ProductId').val()) {
                         showError('Please search for and select a valid product first');
                         $('#inventoryCodeInput').focus();
+
+                        // Reset submission state so user can try again
+                        isSubmitting = false;
                         return false;
                     }
 
@@ -208,9 +230,14 @@
                     if (!$('#ToDepartmentId').val()) {
                         showError('Please select a destination department');
                         $('#ToDepartmentId').focus();
+
+                        // Reset submission state so user can try again
+                        isSubmitting = false;
                         return false;
                     }
 
+                    // All validation passed, proceed with submission
+                    console.log('Validation passed, proceeding with transfer submission');
                     return true;
                 },
                 onSuccess: function(response) {
@@ -223,13 +250,16 @@
                     return true; // Continue with default success handling
                 },
                 onError: function(errorMessage, xhr) {
+                    // IMPORTANT: Reset submission state on error so user can retry
+                    isSubmitting = false;
+
+                    // Also restore button state
+                    $submitBtn.prop('disabled', false).html(originalButtonHtml);
+
                     showError(errorMessage);
                     console.error('Transfer error:', errorMessage);
                 }
             });
-
-            // Focus on inventory code input
-            $('#inventoryCodeInput').focus();
 
             // Handle Enter key in inventory code input
             $('#inventoryCodeInput').on('keypress', function(e) {
@@ -243,25 +273,21 @@
             $('#inventoryCodeInput').on('input', function() {
                 const inventoryCode = $(this).val().trim();
 
-                // Clear timeout if exists
                 if (searchTimeout) {
                     clearTimeout(searchTimeout);
                 }
 
-                // Reset if empty
                 if (!inventoryCode) {
                     resetForm();
                     return;
                 }
 
-                // Validate range
                 const codeNum = parseInt(inventoryCode);
                 if (isNaN(codeNum) || codeNum < 1 || codeNum > 9999) {
                     showError('Inventory code must be between 1 and 9999');
                     return;
                 }
 
-                // Set timeout for auto-search (750ms delay)
                 searchTimeout = setTimeout(() => {
                     searchProduct();
                 }, 750);
@@ -304,7 +330,6 @@
                     return;
                 }
 
-                // Avoid duplicate searches
                 if (inventoryCode === lastSearchedCode && currentProductData) {
                     return;
                 }
@@ -315,7 +340,6 @@
 
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
-
                     const token = await SecureTokenProvider.getToken();
 
                     const response = await $.ajax({
@@ -375,7 +399,6 @@
             async function checkPendingRoutes(productId) {
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
-
                     const token = await SecureTokenProvider.getToken();
 
                     const routes = await $.ajax({
@@ -399,7 +422,6 @@
                     }
                 } catch (error) {
                     console.error('Failed to check pending routes:', error);
-                    // Show transfer fields anyway if check fails
                     showTransferFields();
                 }
             }
@@ -408,8 +430,7 @@
             async function loadRecentTransfers() {
                 try {
                     const apiUrl = AppConfig.buildApiUrl('inventoryroutes?pageSize=5&pageNumber=1');
-
-                    const token =await SecureTokenProvider.getToken();
+                    const token = await SecureTokenProvider.getToken();
 
                     const response = await $.ajax({
                         url: apiUrl,
@@ -453,12 +474,12 @@
             // UI Helper Functions
             function showTransferFields() {
                 $('#transferFields').slideDown();
-                $('#submitBtn').prop('disabled', false);
+                $submitBtn.prop('disabled', false);
             }
 
             function hideTransferFields() {
                 $('#transferFields').slideUp();
-                $('#submitBtn').prop('disabled', true);
+                $submitBtn.prop('disabled', true);
             }
 
             function hideProductInfo() {
@@ -514,6 +535,7 @@
                 hideWarning();
                 currentProductData = null;
                 lastSearchedCode = '';
+                isSubmitting = false; // Reset submission flag when resetting form
                 $('#ProductId').val('');
                 $('#ToDepartmentId').val('');
                 $('#ToWorker').val('');

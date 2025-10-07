@@ -50,9 +50,9 @@ namespace RouteService.Application.Features.Routes.Commands
                 try
                 {
                     // Update notes if provided
-                    if (dto.Notes != null)
+                    if (!string.IsNullOrEmpty(dto.ToWorker) || !string.IsNullOrEmpty(dto.Notes))
                     {
-                        route.UpdateNotes(dto.Notes);
+                        route.UpdateExistingRoute(dto.ToWorker,dto.Notes);
                     }
 
                     // Update image if provided

@@ -53,6 +53,19 @@
             const originalButtonHtml = $submitBtnInThisForm.html();
             const originalButtonDisabled = $submitBtnInThisForm.prop('disabled');
 
+            // Add a click handler to prevent rapid clicks
+            $submitBtnInThisForm.off('click.preventDouble');
+            $submitBtnInThisForm.on('click.preventDouble', function (e) {
+                const formState = submissionStates.get(formElement);
+                if (formState.isSubmitting) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log('Preventing duplicate submission via click handler');
+                    return false;
+                }
+            });
+
 
             // Attach the submit handler
             $individualForm.on('submit.ajaxHandler', function (e) {
@@ -68,24 +81,28 @@
                     return false;
                 }
 
-                // Mark as submitting
+                // IMMEDIATELY mark as submitting and disable button
                 formState.isSubmitting = true;
-
-                // Get the submit button for THIS form
                 const $currentSubmitBtn = $(form).find('button[type="submit"]').filter(function () {
                     return $(this).closest('form')[0] === form;
                 });
 
-                // Validate form first
+                $currentSubmitBtn.prop('disabled', true)
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+
+
+                // Validate form
                 if (settings.validateBeforeSubmit) {
                     if (!form.checkValidity()) {
                         form.reportValidity();
                         formState.isSubmitting = false;
+                        $currentSubmitBtn.prop('disabled', originalButtonDisabled).html(originalButtonHtml);
                         return false;
                     }
 
                     if ($.validator && !$(form).valid()) {
                         formState.isSubmitting = false;
+                        $currentSubmitBtn.prop('disabled', originalButtonDisabled).html(originalButtonHtml);
                         return false;
                     }
                 }
@@ -95,6 +112,7 @@
                     const shouldContinue = settings.onBeforeSubmit(form);
                     if (shouldContinue === false) {
                         formState.isSubmitting = false;
+                        $currentSubmitBtn.prop('disabled', originalButtonDisabled).html(originalButtonHtml);
                         return false;
                     }
                 }

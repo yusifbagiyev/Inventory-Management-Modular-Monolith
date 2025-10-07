@@ -211,23 +211,14 @@
                     return;
                 }
 
+                // Get the submit button and remember its original appearance
+                const $submitBtn = $('#submitBtn');
+                const originalButtonHtml = $submitBtn.html();
+
                 // This is crucial to prevent duplicate handlers
                 $form.off('submit');
                 $form.off('submit.ajaxHandler');
-
-                // Also remove any click handlers on the submit button
-                const $submitBtn = $('#submitBtn');
                 $submitBtn.off('click');
-
-                // Add a click handler to the submit button to prevent double-clicks
-                $submitBtn.on('click', function(e) {
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Form is already being submitted, preventing double click');
-                        return false;
-                    }
-                });
 
                 // Initialize the AjaxHandler with proper configuration
                 AjaxHandler.handleForm('#editRouteForm', {
@@ -287,23 +278,12 @@
                         // Reset submission flag on error
                         isSubmitting = false;
 
-                        // Reset button state
-                        const $submitBtn = $('#submitBtn');
+                        // Also restore the button to its original state
                         $submitBtn.prop('disabled', false)
-                            .html('<i class="fas fa-save"></i> Save Changes');
+                            .html(originalButtonHtml);
 
                         // Show error message
                         showToast(errorMessage || 'Failed to update route', 'error');
-                    }
-                });
-
-                // Add an additional safeguard: intercept the form's native submit
-                $form.on('submit', function(e) {
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Preventing native form submission during Ajax processing');
-                        return false;
                     }
                 });
             }
@@ -393,7 +373,6 @@
                     window.currentDeleteRouteId = null;
                 });
             }
-
         })(); // End of page-specific namespace
     </script>
 }
