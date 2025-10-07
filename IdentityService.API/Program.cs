@@ -91,23 +91,63 @@ builder.Services.AddRateLimiter(options =>
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-        // After UseForwardedHeaders runs, RemoteIpAddress will contain the real client IP
+        // After UseForwardedHeaders, RemoteIpAddress should have the real client IP
         var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-        // CRITICAL LOG: This helps verify the IP detection is working
+        // Handle IPv6-mapped IPv4 addresses (::ffff:192.168.1.1 -> 192.168.1.1)
+        if (clientIp.StartsWith("::ffff:"))
+        {
+            clientIp = clientIp.Substring(7); // Remove the ::ffff: prefix
+        }
+
+        // If we're still seeing internal Docker IPs, something is wrong with header forwarding
+        if (clientIp.StartsWith("172.") || clientIp.StartsWith("10.") || clientIp == "unknown")
+        {
+            logger.LogWarning(
+                "Rate limiting detected internal IP: {ClientIp} - checking X-Forwarded-For header",
+                clientIp);
+
+            // Fallback: manually parse X-Forwarded-For as last resort
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // Get the first (leftmost) IP in the chain - that's the real client
+                var firstIp = forwardedFor.Split(',')[0].Trim();
+
+                // Clean up IPv6 format if present
+                if (firstIp.StartsWith("::ffff:"))
+                {
+                    firstIp = firstIp.Substring(7);
+                }
+
+                // Only use this IP if it's NOT an internal Docker IP
+                if (!firstIp.StartsWith("172.") && !firstIp.StartsWith("10."))
+                {
+                    clientIp = firstIp;
+                    logger.LogInformation("Using X-Forwarded-For IP: {ClientIp}", clientIp);
+                }
+                else
+                {
+                    logger.LogError(
+                        "X-Forwarded-For contains only internal IPs: {ForwardedFor} - Nginx may not be setting headers correctly",
+                        forwardedFor);
+                }
+            }
+        }
+
         logger.LogInformation(
-            "Rate limiting login attempt - Client IP: {ClientIp} | X-Forwarded-For: {ForwardedFor}",
+            "Rate limiting login - Final Client IP: {ClientIp} | X-Forwarded-For: {ForwardedFor} | RemoteIP: {RemoteIp}",
             clientIp,
-            context.Request.Headers["X-Forwarded-For"].ToString()
-        );
+            context.Request.Headers["X-Forwarded-For"].ToString(),
+            context.Connection.RemoteIpAddress?.ToString());
 
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: clientIp,
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 10,        // 10 attempts
-                Window = TimeSpan.FromMinutes(5),  // per 5 minutes
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(5),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             });

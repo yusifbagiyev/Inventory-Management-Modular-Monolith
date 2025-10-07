@@ -105,6 +105,8 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
+app.UseMiddleware<ForwardedHeaderMiddleware>();
+
 app.UseCors("AllowWebApp");
 
 app.UseAuthentication();
