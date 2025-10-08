@@ -1,6 +1,7 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
 using InventoryManagement.Web.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using Serilog.Events;
 
@@ -139,6 +140,16 @@ try
         app.UseDeveloperExceptionPage();
         app.UseCors("Development");
     }
+
+    // Configure forwarded headers to get real client IP from Nginx
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        KnownNetworks = { },
+        KnownProxies = { },
+        ForwardLimit = 2,
+        RequireHeaderSymmetry = false
+    });
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();

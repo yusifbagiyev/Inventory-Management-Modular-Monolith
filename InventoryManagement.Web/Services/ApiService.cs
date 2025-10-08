@@ -35,6 +35,42 @@ namespace InventoryManagement.Web.Services
         }
 
 
+        private void SetClientIpHeaders()
+        {
+            var context= _httpContextAccessor.HttpContext;
+            if (context == null) return;
+
+            var clientIp = context.Connection.RemoteIpAddress?.ToString();
+
+            var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(forwardedFor))
+            {
+                // Nginx already set this - pass it along
+                _httpClient.DefaultRequestHeaders.Remove("X-Forwarded-For");
+                _httpClient.DefaultRequestHeaders.Add("X-Forwarded-For", forwardedFor);
+
+                // Also set X-Real-IP to the first IP in the chain
+                var realIp = forwardedFor.Split(',')[0].Trim();
+                _httpClient.DefaultRequestHeaders.Remove("X-Real-IP");
+                _httpClient.DefaultRequestHeaders.Add("X-Real-IP", realIp);
+                _logger.LogDebug("Forwarding client IP headers - X-Forwarded-For: {ForwardedFor}, X-Real-IP: {RealIp}",
+                    forwardedFor, realIp);
+            }
+            else if (!string.IsNullOrEmpty(clientIp))
+            {
+                // Start the X-Forwarded-For chain
+                _httpClient.DefaultRequestHeaders.Remove("X-Forwarded-For");
+                _httpClient.DefaultRequestHeaders.Add("X-Forwarded-For", clientIp);
+
+                _httpClient.DefaultRequestHeaders.Remove("X-Real-IP");
+                _httpClient.DefaultRequestHeaders.Add("X-Real-IP", clientIp);
+
+                _logger.LogDebug("Starting X-Forwarded-For chain with client IP: {ClientIp}", clientIp);
+            }
+        }
+
+
         private bool SetAuthorizationHeader()
         {
             // Clear any existing authorization header
@@ -82,6 +118,8 @@ namespace InventoryManagement.Web.Services
                 _logger.LogWarning("Cannot proceed without valid token for {Endpoint}", endpoint);
                 throw new UnauthorizedAccessException("Authentication required");
             }
+
+            SetClientIpHeaders();
 
             var response = await _httpClient.GetAsync(endpoint);
 
@@ -159,7 +197,7 @@ namespace InventoryManagement.Web.Services
                 };
             }
 
-
+            SetClientIpHeaders();
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
@@ -232,6 +270,8 @@ namespace InventoryManagement.Web.Services
                     Message = "Authentication required - please login"
                 };
             }
+            SetClientIpHeaders();
+
 
             using var content = BuildMultipartContent(form, dataDto);
 
@@ -307,6 +347,8 @@ namespace InventoryManagement.Web.Services
                     Message = "Authentication required - please login"
                 };
             }
+            SetClientIpHeaders();
+
 
             var json = JsonConvert.SerializeObject(data);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -387,6 +429,7 @@ namespace InventoryManagement.Web.Services
                     Message = "Authentication required - please login"
                 };
             }
+            SetClientIpHeaders();
 
             using var content = BuildMultipartContent(form, dataDto);
 
@@ -457,6 +500,7 @@ namespace InventoryManagement.Web.Services
                     Message = "Authentication required - please login"
                 };
             }
+            SetClientIpHeaders();
 
             var response = await _httpClient.DeleteAsync(endpoint);
 

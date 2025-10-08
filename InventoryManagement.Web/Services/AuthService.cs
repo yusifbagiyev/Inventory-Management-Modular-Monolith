@@ -28,7 +28,10 @@ namespace InventoryManagement.Web.Services
         {
             try
             {
-                // Send login request (backend doesn't need to know about RememberMe)
+                var context = _httpContextAccessor.HttpContext;
+                var clientIp = context?.Connection.RemoteIpAddress?.ToString();
+                var forwardedFor = context?.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
                 var loginDto = new LoginDto
                 {
                     Username = username,
@@ -38,7 +41,28 @@ namespace InventoryManagement.Web.Services
                 var json = JsonConvert.SerializeObject(loginDto);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync("api/auth/login", content);
+                // Create a new HttpRequestMessage so we can add headers
+                var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login")
+                {
+                    Content = content
+                };
+
+                // Forward the real client IP headers
+                if (!string.IsNullOrEmpty(forwardedFor))
+                {
+                    request.Headers.Add("X-Forwarded-For", forwardedFor);
+                    var realIp = forwardedFor.Split(',')[0].Trim();
+                    request.Headers.Add("X-Real-IP", realIp);
+                    _logger.LogDebug("Login request - forwarding X-Forwarded-For: {ForwardedFor}", forwardedFor);
+                }
+                else if (!string.IsNullOrEmpty(clientIp))
+                {
+                    request.Headers.Add("X-Forwarded-For", clientIp);
+                    request.Headers.Add("X-Real-IP", clientIp);
+                    _logger.LogDebug("Login request - starting X-Forwarded-For with: {ClientIp}", clientIp);
+                }
+
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
