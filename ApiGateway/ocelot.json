@@ -114,11 +114,7 @@
             }
         ],
         "UpstreamPathTemplate": "/api/auth/{everything}",
-        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ],
-        "AddHeadersToRequest": {
-            "X-Original-Forwarded-For": "{DownstreamBaseUrl}",
-            "X-Gateway-IP": "{RemoteIpAddress}"
-        }
+        "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE" ]
     },
     {
       "DownstreamPathTemplate": "/api/approvalrequests/{everything}",

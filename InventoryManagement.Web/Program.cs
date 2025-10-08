@@ -141,16 +141,6 @@ try
         app.UseCors("Development");
     }
 
-    // Configure forwarded headers to get real client IP from Nginx
-    app.UseForwardedHeaders(new ForwardedHeadersOptions
-    {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-        KnownNetworks = { },
-        KnownProxies = { },
-        ForwardLimit = 2,
-        RequireHeaderSymmetry = false
-    });
-
     app.UseHttpsRedirection();
     app.UseStaticFiles();
 

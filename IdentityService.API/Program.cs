@@ -186,8 +186,8 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(5),
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             });
@@ -214,7 +214,7 @@ builder.Services.AddRateLimiter(options =>
 
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
             ? retryAfterValue.TotalSeconds
-            : 300; // 5 minutes default
+            : 600; // 5 minutes default
 
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
