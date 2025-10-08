@@ -102,7 +102,21 @@ app.UseGlobalExceptionHandler();
 // Add forwarded headers support for proxy
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+
+    // CRITICAL: Trust all Docker network proxies
+    // Docker typically uses 172.x.x.x networks
+    KnownNetworks = { }, // Clear restrictive defaults
+    KnownProxies = { },  // Clear restrictive defaults
+
+    // Allow the full proxy chain (Nginx ? API Gateway ? Services)
+    ForwardLimit = 2,
+
+    // Trust the Docker network - this is safe within your isolated container network
+    RequireHeaderSymmetry = false,
+
+    // Ensure we're reading the standard header
+    ForwardedForHeaderName = "X-Forwarded-For"
 });
 
 app.UseMiddleware<ForwardedHeaderMiddleware>();

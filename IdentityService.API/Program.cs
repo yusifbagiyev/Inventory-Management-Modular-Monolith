@@ -94,27 +94,19 @@ builder.Services.AddRateLimiter(options =>
         // After UseForwardedHeaders, RemoteIpAddress should have the real client IP
         var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
-        // Handle IPv6-mapped IPv4 addresses (::ffff:192.168.1.1 -> 192.168.1.1)
         if (clientIp.StartsWith("::ffff:"))
         {
-            clientIp = clientIp.Substring(7); // Remove the ::ffff: prefix
+            clientIp = clientIp.Substring(7);
         }
 
         // If we're still seeing internal Docker IPs, something is wrong with header forwarding
         if (clientIp.StartsWith("172.") || clientIp.StartsWith("10.") || clientIp == "unknown")
         {
-            logger.LogWarning(
-                "Rate limiting detected internal IP: {ClientIp} - checking X-Forwarded-For header",
-                clientIp);
-
-            // Fallback: manually parse X-Forwarded-For as last resort
             var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
             if (!string.IsNullOrEmpty(forwardedFor))
             {
-                // Get the first (leftmost) IP in the chain - that's the real client
                 var firstIp = forwardedFor.Split(',')[0].Trim();
 
-                // Clean up IPv6 format if present
                 if (firstIp.StartsWith("::ffff:"))
                 {
                     firstIp = firstIp.Substring(7);
@@ -124,13 +116,6 @@ builder.Services.AddRateLimiter(options =>
                 if (!firstIp.StartsWith("172.") && !firstIp.StartsWith("10."))
                 {
                     clientIp = firstIp;
-                    logger.LogInformation("Using X-Forwarded-For IP: {ClientIp}", clientIp);
-                }
-                else
-                {
-                    logger.LogError(
-                        "X-Forwarded-For contains only internal IPs: {ForwardedFor} - Nginx may not be setting headers correctly",
-                        forwardedFor);
                 }
             }
         }
@@ -274,23 +259,12 @@ if (app.Environment.IsDevelopment())
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-
-    // CRITICAL: Tell ASP.NET Core to trust headers from Docker network
-    // In Docker, internal IPs are typically 172.x.x.x
     KnownNetworks = { }, // Clear defaults
     KnownProxies = { },  // Clear defaults
-
-    // Allow up to 2 proxies (Nginx ? API Gateway ? Identity Service)
     ForwardLimit = 2,
-
-    // This is the key setting: Trust ALL proxies in Docker network
-    // Since containers are isolated, this is safe in your environment
     RequireHeaderSymmetry = false,
-
-    // Process the full X-Forwarded-For chain
     ForwardedForHeaderName = "X-Forwarded-For"
 });
-
 
 app.UseRateLimiter();
 
