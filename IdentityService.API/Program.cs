@@ -99,8 +99,24 @@ builder.Services.AddRateLimiter(options =>
             clientIp = clientIp.Substring(7);
         }
 
+        bool isDockerInternalIp = clientIp.StartsWith("172.17.") ||
+                               clientIp.StartsWith("172.18.") ||
+                               clientIp.StartsWith("172.19.") ||
+                               clientIp.StartsWith("172.20.") ||
+                               clientIp.StartsWith("172.21.") ||
+                               clientIp.StartsWith("172.22.") ||
+                               clientIp.StartsWith("172.23.") ||
+                               clientIp.StartsWith("172.24.") ||
+                               clientIp.StartsWith("172.25.") ||
+                               clientIp.StartsWith("172.26.") ||
+                               clientIp.StartsWith("172.27.") ||
+                               clientIp.StartsWith("172.28.") ||
+                               clientIp.StartsWith("172.29.") ||
+                               clientIp.StartsWith("172.30.") ||
+                               clientIp.StartsWith("172.31.");  
+
         // If we're still seeing internal Docker IPs, something is wrong with header forwarding
-        if (clientIp.StartsWith("172.") || clientIp.StartsWith("10.") || clientIp == "unknown")
+        if (isDockerInternalIp || clientIp == "unknown")
         {
             var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
             if (!string.IsNullOrEmpty(forwardedFor))
@@ -111,13 +127,52 @@ builder.Services.AddRateLimiter(options =>
                 {
                     firstIp = firstIp.Substring(7);
                 }
-
-                // Only use this IP if it's NOT an internal Docker IP
-                if (!firstIp.StartsWith("172.") && !firstIp.StartsWith("10."))
+                // Validate it's a real IP address (basic check)
+                if (!string.IsNullOrWhiteSpace(firstIp) && firstIp != "unknown")
                 {
-                    clientIp = firstIp;
+                    // Check if this forwarded IP is ALSO a Docker IP (shouldn't be, but defensive)
+                    bool forwardedIsDockerIp = firstIp.StartsWith("172.17.") ||
+                                               firstIp.StartsWith("172.18.") ||
+                                               firstIp.StartsWith("172.19.") ||
+                                               firstIp.StartsWith("172.20.") ||
+                                               firstIp.StartsWith("172.21.") ||
+                                               firstIp.StartsWith("172.22.") ||
+                                               firstIp.StartsWith("172.23.") ||
+                                               firstIp.StartsWith("172.24.") ||
+                                               firstIp.StartsWith("172.25.") ||
+                                               firstIp.StartsWith("172.26.") ||
+                                               firstIp.StartsWith("172.27.") ||
+                                               firstIp.StartsWith("172.28.") ||
+                                               firstIp.StartsWith("172.29.") ||
+                                               firstIp.StartsWith("172.30.") ||
+                                               firstIp.StartsWith("172.31.");
+
+                    if (!forwardedIsDockerIp)
+                    {
+                        clientIp = firstIp;
+                        logger.LogInformation(
+                            "Using X-Forwarded-For IP for rate limiting: {ClientIp}",
+                            clientIp);
+                    }
+                    else
+                    {
+                        logger.LogError(
+                            "X-Forwarded-For contains Docker IP: {ForwardedFor} - configuration error!",
+                            forwardedFor);
+                    }
                 }
             }
+            else
+            {
+                logger.LogWarning(
+                    "RemoteIP is Docker internal but no X-Forwarded-For header present");
+            }
+        }
+        else
+        {
+            logger.LogInformation(
+                "Using RemoteIP for rate limiting (not a Docker IP): {ClientIp}",
+                clientIp);
         }
 
         logger.LogInformation(
