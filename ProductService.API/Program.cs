@@ -25,7 +25,6 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
     .Enrich.WithProperty("ApplicationName", "Product Service")
     .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
     .WriteTo.Seq(

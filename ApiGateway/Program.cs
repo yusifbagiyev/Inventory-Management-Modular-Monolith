@@ -8,7 +8,9 @@ using Polly;
 using Polly.Extensions.Http;
 using Serilog;
 using Serilog.Events;
+using System.Net;
 using System.Text;
+using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -18,10 +20,6 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .Enrich.WithProperty("ApplicationName", "Api Gateway")
-    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
-    .WriteTo.Console()
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",
         restrictedToMinimumLevel: LogEventLevel.Information)
@@ -100,12 +98,14 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
 
     // Trust all proxies -we're behind nginx which we control
-    KnownNetworks = { },
-    KnownProxies = { },
+    KnownNetworks =
+    {
+        new IPNetwork(IPAddress.Parse("172.18.0.0"), 16),  // Docker bridge network
+        new IPNetwork(IPAddress.Parse("172.17.0.0"), 16)   // Default Docker network (fallback)
+    },
 
     // Clear defaults to trust everything in our controlled environment
     ForwardLimit = null,
-
     RequireHeaderSymmetry = false,
     ForwardedForHeaderName = "X-Forwarded-For"
 });
