@@ -31,6 +31,9 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
+# Explicitly copy wwwroot to ensure static files are included
+COPY InventoryManagement.Web/wwwroot /app/wwwroot
+
 # Copy nginx configuration if needed
 COPY InventoryManagement.Web/nginx/ /app/nginx/
 
