@@ -20,9 +20,17 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("ApplicationName", "ApiGateway")
+    .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    // Also try to write to Seq, but don't fail if it's not available
     .WriteTo.Seq(
         serverUrl: builder.Configuration.GetConnectionString("Seq") ?? "http://seq:80",
-        restrictedToMinimumLevel: LogEventLevel.Information)
+        restrictedToMinimumLevel: LogEventLevel.Information,
+        // This is important: don't throw exceptions if Seq is unreachable
+        apiKey: null)
     .CreateLogger();
 
 builder.Host.UseSerilog();

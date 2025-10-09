@@ -145,34 +145,73 @@ namespace InventoryManagement.Web.Services
 
             try
             {
-                var logoPath = Path.Combine(_environment.WebRootPath, "logo.jpg");
+                // Log the environment information for debugging
+                var webRootPath = _environment.WebRootPath;
+                var contentRootPath = _environment.ContentRootPath;
+                var environmentName = _environment.EnvironmentName;
 
-                // Add logging to see what's happening in production
-                Console.WriteLine($"WebRootPath: {_environment.WebRootPath}");
-                Console.WriteLine($"Logo path: {logoPath}");
+                Console.WriteLine($"=== LOGO LOADING DEBUG ===");
+                Console.WriteLine($"Environment: {environmentName}");
+                Console.WriteLine($"WebRootPath: {webRootPath}");
+                Console.WriteLine($"ContentRootPath: {contentRootPath}");
+                Console.WriteLine($"Current Directory: {Directory.GetCurrentDirectory()}");
+
+                var logoPath = Path.Combine(webRootPath, "logo.jpg");
+                Console.WriteLine($"Looking for logo at: {logoPath}");
                 Console.WriteLine($"File exists: {File.Exists(logoPath)}");
 
-                // List all files in wwwroot to debug
-                if (Directory.Exists(_environment.WebRootPath))
+                // List all files in wwwroot to see what's actually there
+                if (Directory.Exists(webRootPath))
                 {
-                    var files = Directory.GetFiles(_environment.WebRootPath);
+                    var files = Directory.GetFiles(webRootPath, "*.*", SearchOption.TopDirectoryOnly);
                     Console.WriteLine($"Files in wwwroot: {string.Join(", ", files.Select(Path.GetFileName))}");
+
+                    // Check permissions
+                    try
+                    {
+                        var fileInfo = new FileInfo(logoPath);
+                        if (fileInfo.Exists)
+                        {
+                            Console.WriteLine($"Logo file size: {fileInfo.Length} bytes");
+                            Console.WriteLine($"Logo file last modified: {fileInfo.LastWriteTime}");
+
+                            // Try to actually read the file to test permissions
+                            using (var testStream = File.OpenRead(logoPath))
+                            {
+                                Console.WriteLine($"Successfully opened logo file for reading");
+                            }
+                        }
+                    }
+                    catch (Exception permEx)
+                    {
+                        Console.WriteLine($"Permission error checking logo: {permEx.Message}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"WebRootPath directory does not exist!");
                 }
 
                 if (File.Exists(logoPath))
                 {
+                    Console.WriteLine("Attempting to create image run...");
                     var logoRun = CreateImageRun(mainPart, logoPath, "Logo", 200, 200);
                     logoPara.Append(logoRun);
+                    Console.WriteLine("Image run created successfully!");
                 }
                 else
                 {
+                    Console.WriteLine("Logo file not found, using text placeholder");
                     var logoRun = CreateTextRun("[LOGO]", 24, true, true);
                     logoPara.Append(logoRun);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading logo: {ex.Message}");
+                Console.WriteLine($"ERROR loading logo: {ex.GetType().Name}");
+                Console.WriteLine($"Error message: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+
                 var logoRun = CreateTextRun("[LOGO]", 24, true, true);
                 logoPara.Append(logoRun);
             }
