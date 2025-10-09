@@ -267,11 +267,30 @@ namespace InventoryManagement.Web.Services
         /// </summary>
         private Run CreateImageRun(MainDocumentPart mainPart, string imagePath, string imageName, int widthInPoints, int heightInPoints)
         {
-            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Png);
+            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg); // Changed from Png to Jpeg since logo.jpg is a JPEG
 
-            using (FileStream stream = new FileStream(imagePath, FileMode.Open))
+            // IMPORTANT CHANGE: Read the entire file into memory first
+            // This avoids file permission issues that can occur in Docker containers
+            // where the app user might not have the same permissions as the build user
+            byte[] imageBytes;
+            try
             {
-                imagePart.FeedData(stream);
+                // Read the entire file into a byte array
+                imageBytes = File.ReadAllBytes(imagePath);
+                Console.WriteLine($"Successfully read {imageBytes.Length} bytes from logo file");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to read image bytes: {ex.Message}");
+                throw;
+            }
+
+            // Now create a memory stream from those bytes and feed it to the ImagePart
+            // This completely avoids any file permission issues
+            using (var memoryStream = new MemoryStream(imageBytes))
+            {
+                imagePart.FeedData(memoryStream);
+                Console.WriteLine("Successfully fed image data to ImagePart");
             }
 
             string relationshipId = mainPart.GetIdOfPart(imagePart);
