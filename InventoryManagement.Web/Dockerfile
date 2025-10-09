@@ -31,10 +31,12 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Explicitly copy wwwroot to ensure static files are included
-COPY InventoryManagement.Web/wwwroot /app/wwwroot
+# The wwwroot folder should already be in /app/publish from the dotnet publish command
+# But we're going to verify it's there by also explicitly ensuring the logo exists
+# If the publish didn't include it (which would be unusual), this will catch it
+COPY --from=build /src/InventoryManagement.Web/wwwroot/logo.jpg /app/wwwroot/logo.jpg
 
 # Copy nginx configuration if needed
-COPY InventoryManagement.Web/nginx/ /app/nginx/
+COPY --from=build /src/InventoryManagement.Web/nginx/ /app/nginx/
 
 ENTRYPOINT ["dotnet", "InventoryManagement.Web.dll"]
