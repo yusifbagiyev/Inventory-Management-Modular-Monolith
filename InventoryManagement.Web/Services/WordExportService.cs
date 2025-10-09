@@ -147,9 +147,21 @@ namespace InventoryManagement.Web.Services
             {
                 var logoPath = Path.Combine(_environment.WebRootPath, "logo.jpg");
 
+                // Add logging to see what's happening in production
+                Console.WriteLine($"WebRootPath: {_environment.WebRootPath}");
+                Console.WriteLine($"Logo path: {logoPath}");
+                Console.WriteLine($"File exists: {File.Exists(logoPath)}");
+
+                // List all files in wwwroot to debug
+                if (Directory.Exists(_environment.WebRootPath))
+                {
+                    var files = Directory.GetFiles(_environment.WebRootPath);
+                    Console.WriteLine($"Files in wwwroot: {string.Join(", ", files.Select(Path.GetFileName))}");
+                }
+
                 if (File.Exists(logoPath))
                 {
-                    var logoRun = CreateImageRun(mainPart, logoPath, "logo", 200, 200);
+                    var logoRun = CreateImageRun(mainPart, logoPath, "Logo", 200, 200);
                     logoPara.Append(logoRun);
                 }
                 else
@@ -158,8 +170,9 @@ namespace InventoryManagement.Web.Services
                     logoPara.Append(logoRun);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error loading logo: {ex.Message}");
                 var logoRun = CreateTextRun("[LOGO]", 24, true, true);
                 logoPara.Append(logoRun);
             }
