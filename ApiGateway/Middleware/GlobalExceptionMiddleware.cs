@@ -25,32 +25,32 @@ namespace ApiGateway.Middleware
 
             try
             {
-                // Log incoming request with correlation ID
-                _logger.LogInformation(
-                    "Request started: {Method} {Path} | CorrelationId: {CorrelationId} | RemoteIP: {RemoteIP}",
+                // Only log at Debug level for normal requests
+                _logger.LogDebug(
+                    "Request started: {Method} {Path} | CorrelationId: {CorrelationId}",
                     context.Request.Method,
                     context.Request.Path,
-                    correlationId,
-                    context.Connection.RemoteIpAddress);
+                    correlationId);
 
                 await _next(context);
 
                 stopwatch.Stop();
 
-                // Log successful completion
-                _logger.LogInformation(
-                    "Request completed: {Method} {Path} | Status: {StatusCode} | Duration: {Duration}ms | CorrelationId: {CorrelationId}",
-                    context.Request.Method,
-                    context.Request.Path,
-                    context.Response.StatusCode,
-                    stopwatch.ElapsedMilliseconds,
-                    correlationId);
+                // Only log completed requests if they took a long time or had errors
+                if (stopwatch.ElapsedMilliseconds > 1000 || context.Response.StatusCode >= 400)
+                {
+                    _logger.LogInformation(
+                        "Request completed: {Method} {Path} | Status: {StatusCode} | Duration: {Duration}ms | CorrelationId: {CorrelationId}",
+                        context.Request.Method,
+                        context.Request.Path,
+                        context.Response.StatusCode,
+                        stopwatch.ElapsedMilliseconds,
+                        correlationId);
+                }
             }
             catch (TaskCanceledException ex)
             {
                 stopwatch.Stop();
-
-                // This is the timeout scenario - log it clearly
                 _logger.LogError(ex,
                     "Request TIMEOUT: {Method} {Path} | Duration: {Duration}ms | CorrelationId: {CorrelationId}",
                     context.Request.Method,

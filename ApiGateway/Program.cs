@@ -95,6 +95,21 @@ builder.Services.AddOcelot();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+
+    // Trust all proxies -we're behind nginx which we control
+    KnownNetworks = { },
+    KnownProxies = { },
+
+    // Clear defaults to trust everything in our controlled environment
+    ForwardLimit = null,
+
+    RequireHeaderSymmetry = false,
+    ForwardedForHeaderName = "X-Forwarded-For"
+});
+
 app.UseMiddleware<RequestTimeoutMiddleware>(TimeSpan.FromSeconds(30));
 
 app.UseGlobalExceptionHandler();

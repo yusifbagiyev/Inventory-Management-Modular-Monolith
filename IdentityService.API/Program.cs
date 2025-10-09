@@ -91,95 +91,29 @@ builder.Services.AddRateLimiter(options =>
     {
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-        // After UseForwardedHeaders, RemoteIpAddress should have the real client IP
-        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        // Get the real client IP from X-Forwarded-For header (set by nginx)
+        var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
+        string clientIp;
 
-        if (clientIp.StartsWith("::ffff:"))
+        if (!string.IsNullOrEmpty(forwardedFor))
         {
-            clientIp = clientIp.Substring(7);
-        }
+            // Take the first IP in the chain (the real client)
+            clientIp = forwardedFor.Split(',')[0].Trim();
 
-        bool isDockerInternalIp = clientIp.StartsWith("172.17.") ||
-                               clientIp.StartsWith("172.18.") ||
-                               clientIp.StartsWith("172.19.") ||
-                               clientIp.StartsWith("172.20.") ||
-                               clientIp.StartsWith("172.21.") ||
-                               clientIp.StartsWith("172.22.") ||
-                               clientIp.StartsWith("172.23.") ||
-                               clientIp.StartsWith("172.24.") ||
-                               clientIp.StartsWith("172.25.") ||
-                               clientIp.StartsWith("172.26.") ||
-                               clientIp.StartsWith("172.27.") ||
-                               clientIp.StartsWith("172.28.") ||
-                               clientIp.StartsWith("172.29.") ||
-                               clientIp.StartsWith("172.30.") ||
-                               clientIp.StartsWith("172.31.");  
-
-        // If we're still seeing internal Docker IPs, something is wrong with header forwarding
-        if (isDockerInternalIp || clientIp == "unknown")
-        {
-            var forwardedFor = context.Request.Headers["X-Forwarded-For"].ToString();
-            if (!string.IsNullOrEmpty(forwardedFor))
+            // Remove IPv6 prefix if present
+            if (clientIp.StartsWith("::ffff:"))
             {
-                var firstIp = forwardedFor.Split(',')[0].Trim();
-
-                if (firstIp.StartsWith("::ffff:"))
-                {
-                    firstIp = firstIp.Substring(7);
-                }
-                // Validate it's a real IP address (basic check)
-                if (!string.IsNullOrWhiteSpace(firstIp) && firstIp != "unknown")
-                {
-                    // Check if this forwarded IP is ALSO a Docker IP (shouldn't be, but defensive)
-                    bool forwardedIsDockerIp = firstIp.StartsWith("172.17.") ||
-                                               firstIp.StartsWith("172.18.") ||
-                                               firstIp.StartsWith("172.19.") ||
-                                               firstIp.StartsWith("172.20.") ||
-                                               firstIp.StartsWith("172.21.") ||
-                                               firstIp.StartsWith("172.22.") ||
-                                               firstIp.StartsWith("172.23.") ||
-                                               firstIp.StartsWith("172.24.") ||
-                                               firstIp.StartsWith("172.25.") ||
-                                               firstIp.StartsWith("172.26.") ||
-                                               firstIp.StartsWith("172.27.") ||
-                                               firstIp.StartsWith("172.28.") ||
-                                               firstIp.StartsWith("172.29.") ||
-                                               firstIp.StartsWith("172.30.") ||
-                                               firstIp.StartsWith("172.31.");
-
-                    if (!forwardedIsDockerIp)
-                    {
-                        clientIp = firstIp;
-                        logger.LogInformation(
-                            "Using X-Forwarded-For IP for rate limiting: {ClientIp}",
-                            clientIp);
-                    }
-                    else
-                    {
-                        logger.LogError(
-                            "X-Forwarded-For contains Docker IP: {ForwardedFor} - configuration error!",
-                            forwardedFor);
-                    }
-                }
+                clientIp = clientIp.Substring(7);
             }
-            else
-            {
-                logger.LogWarning(
-                    "RemoteIP is Docker internal but no X-Forwarded-For header present");
-            }
+
+            logger.LogDebug("Using client IP from X-Forwarded-For: {ClientIp}", clientIp);
         }
         else
         {
-            logger.LogInformation(
-                "Using RemoteIP for rate limiting (not a Docker IP): {ClientIp}",
-                clientIp);
+            // Fallback to remote IP (should not happen in production with nginx)
+            clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            logger.LogWarning("No X-Forwarded-For header found, using RemoteIP: {ClientIp}", clientIp);
         }
-
-        logger.LogInformation(
-            "Rate limiting login - Final Client IP: {ClientIp} | X-Forwarded-For: {ForwardedFor} | RemoteIP: {RemoteIp}",
-            clientIp,
-            context.Request.Headers["X-Forwarded-For"].ToString(),
-            context.Connection.RemoteIpAddress?.ToString());
 
         return RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: clientIp,
@@ -193,16 +127,14 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
-    // Configure what happens when rate limit is exceeded
     options.OnRejected = async (context, cancellationToken) =>
     {
-        // Log the rate limit rejection
         var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
 
-        var ipAddress = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim()
-            ?? context.HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault()
-            ?? context.HttpContext.Connection.RemoteIpAddress?.ToString()
-            ?? "unknown";
+        var forwardedFor = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        var ipAddress = !string.IsNullOrEmpty(forwardedFor)
+            ? forwardedFor.Split(',')[0].Trim()
+            : context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
         logger.LogWarning(
             "Rate limit exceeded for IP: {IpAddress} on endpoint: {Endpoint}",
@@ -214,13 +146,12 @@ builder.Services.AddRateLimiter(options =>
 
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
             ? retryAfterValue.TotalSeconds
-            : 600; // 5 minutes default
+            : 600;
 
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
             error = "Too many login attempts from your IP address. Please try again later.",
             retryAfter = retryAfter,
-            // Help the user understand what happened
             message = $"Your IP address has been temporarily blocked due to multiple failed login attempts. Please wait {Math.Ceiling(retryAfter / 60)} minutes before trying again."
         }, cancellationToken: cancellationToken);
     };
@@ -316,7 +247,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
     KnownNetworks = { }, // Clear defaults
     KnownProxies = { },  // Clear defaults
-    ForwardLimit = 2,
+    ForwardLimit = null,
     RequireHeaderSymmetry = false,
     ForwardedForHeaderName = "X-Forwarded-For"
 });
