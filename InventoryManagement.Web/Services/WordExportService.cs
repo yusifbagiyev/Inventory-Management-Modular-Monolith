@@ -149,8 +149,7 @@ namespace InventoryManagement.Web.Services
 
                 if (File.Exists(logoPath))
                 {
-                    // INCREASED SIZE: from 150x150 to 200x200 for much larger logo
-                    var logoRun = CreateImageRun(mainPart, logoPath, "Logo", 200, 200);
+                    var logoRun = CreateImageRun(mainPart, logoPath, "logo", 200, 200);
                     logoPara.Append(logoRun);
                 }
                 else
