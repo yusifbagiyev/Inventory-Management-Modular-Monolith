@@ -232,6 +232,7 @@ services:
     restart: always
     volumes:
       - ./logs/web:/app/logs
+      - ./src/InventoryManagement.Web/wwwroot/logo.jpg:/app/wwwroot/logo.jpg:ro
 
   # Seq - Centralized logging system
   seq:
