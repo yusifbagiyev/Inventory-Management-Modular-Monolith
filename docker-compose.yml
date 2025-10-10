@@ -8,7 +8,6 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
@@ -17,10 +16,10 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-inventory_user}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      start_period: 10s
 
   # RabbitMQ Message Broker
   rabbitmq:
@@ -38,10 +37,11 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics","-q", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 20s
 
   # Identity Service with Seq logging
   identity-service:
@@ -59,11 +59,19 @@ services:
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
     depends_on:
-      - postgres
-      - seq
+      postgres:
+        condition: service_healthy
+      seq:
+        condition: service_healthy
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Product Service with Seq logging and fixed file permissions
   product-service:
@@ -87,14 +95,23 @@ services:
     ports:
       - "5001:80"
     depends_on:
-      - postgres
-      - rabbitmq
-      - seq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_healthy
     volumes:
       - ./storage/images/products:/app/wwwroot/images/products:rw
     networks:
       - backend
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
 
   # Route Service with Seq logging
   route-service:
@@ -194,21 +211,25 @@ services:
       dockerfile: Dockerfile
     container_name: inventory_api_gateway
     environment:
-      - TZ=${TZ:-UTC}
-      - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
-      - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__Seq=http://seq:80
+      - ASPNETCORE_ENVIRONMENT=Production
       - Jwt__Key=${JWT_SECRET_KEY}
-      - Jwt__Issuer=${JWT_ISSUER}
-      - Jwt__Audience=${JWT_AUDIENCE}
     ports:
       - "5000:80"
     depends_on:
-      - seq
+      identity-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
     networks:
       - backend
       - frontend
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Web Application with enhanced Seq logging
   web:
@@ -252,11 +273,11 @@ services:
       - backend
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
+      test: ["CMD", "curl -f http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 10
-      start_period: 120s
+      retries: 5
+      start_period: 30s
       
   # Nginx Reverse Proxy
   nginx:

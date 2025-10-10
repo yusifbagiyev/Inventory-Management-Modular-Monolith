@@ -1,6 +1,11 @@
+using ApiGateway.HealthCheck;
 using ApiGateway.Middleware;
+using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
@@ -51,6 +56,39 @@ builder.Services.AddHttpClient("OcelotHttpClient")
     .AddPolicyHandler(GetRetryPolicy())
     // Add circuit breaker
     .AddPolicyHandler(GetCircuitBreakerPolicy());
+
+// Configure health checks for the gateway itself
+builder.Services.AddHealthChecks()
+    // Check system resources
+    .AddProcessAllocatedMemoryHealthCheck(
+        maximumMegabytesAllocated: 300,
+        name: "gateway-memory",
+        tags: new[] { "gateway", "memory" })
+
+    // Check if we can reach downstream services
+    .AddCheck<ServicesHealthCheck>(
+        "downstream-services",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "services", "critical" });
+
+
+
+// Add Health Checks UI for monitoring dashboard
+builder.Services.AddHealthChecksUI(setup =>
+{
+    setup.SetEvaluationTimeInSeconds(15); // How often to check health
+    setup.MaximumHistoryEntriesPerEndpoint(100); // History to keep
+    setup.SetMinimumSecondsBetweenFailureNotifications(60);
+
+    // Add all microservices to monitor
+    setup.AddHealthCheckEndpoint("API Gateway", "/health");
+    setup.AddHealthCheckEndpoint("Product Service", "http://product-service/health");
+    setup.AddHealthCheckEndpoint("Identity Service", "http://identity-service/health");
+    setup.AddHealthCheckEndpoint("Route Service", "http://route-service/health");
+    setup.AddHealthCheckEndpoint("Approval Service", "http://approval-service/health");
+    setup.AddHealthCheckEndpoint("Notification Service", "http://notification-service/health");
+})
+.AddInMemoryStorage();
 
 
 var environment=builder.Environment.EnvironmentName;
@@ -184,5 +222,36 @@ static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
                 Log.Information("Circuit breaker reset - service recovered");
             });
 }
+
+// Map health check endpoints
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("gateway"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            timestamp = DateTime.UtcNow
+        });
+    }
+});
+
+// Map the Health Check UI
+app.MapHealthChecksUI(options =>
+{
+    options.UIPath = "/health-dashboard";  // Access the dashboard here
+    options.ApiPath = "/health-api";
+    options.UseRelativeApiPath = false;
+    options.UseRelativeResourcesPath = false;
+});
+
 
 app.Run();

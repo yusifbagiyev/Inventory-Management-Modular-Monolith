@@ -1,20 +1,22 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProductService.API.Authentication;
+using ProductService.API.HealthChecks;
 using ProductService.API.Middleware;
 using ProductService.Application;
 using ProductService.Application.Mappings;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Data;
 using Serilog;
-using Serilog.Events;
 using SharedServices.Authorization;
 using SharedServices.Identity;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,6 +71,78 @@ builder.Services.AddSwaggerGen(options =>
             }
         });
 });
+
+// Register custom health check services
+builder.Services.AddSingleton<DatabaseHealthCheck>();
+builder.Services.AddSingleton<DependencyHealthCheck>();
+
+// Configure comprehensive health checks for production
+builder.Services.AddHealthChecks()
+    // Custom database check with migration verification
+    .AddCheck<DatabaseHealthCheck>(
+        "database-advanced",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "critical" })
+
+    // Basic database connectivity check (faster, used for liveness)
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "database-basic",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "basic" },
+        timeout: TimeSpan.FromSeconds(2))
+
+    // RabbitMQ check - degraded if unavailable since we can work without it temporarily
+    .AddRabbitMQ(
+        rabbitConnectionString: $"amqp://{builder.Configuration["RabbitMQ:UserName"]}:{builder.Configuration["RabbitMQ:Password"]}@{builder.Configuration["RabbitMQ:HostName"]}:5672",
+        name: "rabbitmq",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "messaging", "rabbitmq" },
+        timeout: TimeSpan.FromSeconds(3))
+
+    // Storage check - ensure we can write product images
+    .AddCheck("storage", () =>
+    {
+        var imagePath = builder.Configuration["ImageSettings:Path"]!;
+        if (!Directory.Exists(imagePath))
+        {
+            try
+            {
+                Directory.CreateDirectory(imagePath);
+            }
+            catch (Exception ex)
+            {
+                return HealthCheckResult.Unhealthy($"Cannot create storage directory: {ex.Message}");
+            }
+        }
+
+        // Verify write permissions
+        var testFile = Path.Combine(imagePath, $".health-{Guid.NewGuid()}");
+        try
+        {
+            File.WriteAllText(testFile, DateTime.UtcNow.ToString());
+            File.Delete(testFile);
+            return HealthCheckResult.Healthy("Storage is accessible and writable");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Degraded($"Storage exists but may have permission issues: {ex.Message}");
+        }
+    }, tags: new[] { "storage", "io" })
+
+    // Memory check - important for production monitoring
+    .AddProcessAllocatedMemoryHealthCheck(
+        maximumMegabytesAllocated: 500,
+        name: "memory",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "memory", "performance" })
+
+    // Check dependencies
+    .AddCheck<DependencyHealthCheck>(
+        "dependencies",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "dependencies" });
+
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -173,5 +247,38 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.MigrateAsync();
     await dbContext.Database.EnsureCreatedAsync();
 }
+
+
+// Liveness probe - Is the service running? (used by Docker/K8s to restart unhealthy containers)
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("basic"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            status = report.Status.ToString(),
+            timestamp = DateTime.UtcNow,
+            service = "ProductService"
+        };
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+    }
+});
+
+// Readiness probe - Is the service ready to handle requests?
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("critical"),
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+}); 
+
+// Detailed health check - Full diagnostic information
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
 
 app.Run();
