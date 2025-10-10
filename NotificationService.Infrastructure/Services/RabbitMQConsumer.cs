@@ -79,7 +79,6 @@ namespace NotificationService.Infrastructure.Services
                 _channel.QueueBind(_queueName, "inventory-events", "approval.request.cancelled");
                 _channel.QueueBind(_queueName, "inventory-events", "product.created");
                 _channel.QueueBind(_queueName, "inventory-events", "product.deleted");
-                _channel.QueueBind(_queueName, "inventory-events", "product.updated");
                 _channel.QueueBind(_queueName, "inventory-events", "route.created");
                 _channel.QueueBind(_queueName, "inventory-events", "route.completed");
 
@@ -106,12 +105,12 @@ namespace NotificationService.Infrastructure.Services
 
                     await ProcessMessage(routingKey, message);
 
-                    _channel.BasicAck(ea.DeliveryTag, false);
+                    _channel?.BasicAck(ea.DeliveryTag, false);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing message");
-                    _channel.BasicNack(ea.DeliveryTag, false, true);
+                    _channel?.BasicNack(ea.DeliveryTag, false, true);
                 }
             };
 
@@ -570,7 +569,7 @@ namespace NotificationService.Infrastructure.Services
                             imageBytes,
                             Path.GetFileName(productEvent.ImageUrl) ?? $"product_{productEvent.InventoryCode}.jpg");
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         _logger.LogInformation($"No image available for product {productEvent.InventoryCode}, sending text only");
                         success = await whatsAppService.SendGroupMessageAsync(groupId, message);
@@ -668,7 +667,7 @@ namespace NotificationService.Infrastructure.Services
                             imageBytes,
                             Path.GetFileName(routeEvent.ImageUrl) ?? $"route_{routeEvent.InventoryCode}.jpg");
                     }
-                    catch (Exception ex)
+                    catch
                     {
                         _logger.LogInformation($"No image available for route {routeEvent.InventoryCode}, sending text only");
                         success = await whatsAppService.SendGroupMessageAsync(groupId, message);
