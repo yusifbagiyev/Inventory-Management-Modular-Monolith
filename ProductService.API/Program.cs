@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProductService.API.Authentication;
@@ -11,7 +9,6 @@ using ProductService.Application.Mappings;
 using ProductService.Infrastructure;
 using ProductService.Infrastructure.Data;
 using Serilog;
-using Serilog.Events;
 using SharedServices.Authorization;
 using SharedServices.Identity;
 using System.Text;
