@@ -2,9 +2,8 @@
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
+using System.Web;
 
 namespace NotificationService.Infrastructure.Services
 {
@@ -36,24 +35,34 @@ namespace NotificationService.Infrastructure.Services
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
 
-                // Create the request payload according to Green API documentation
-                var payload = new
+
+                var queryParams = new Dictionary<string, string>
                 {
-                    chatId = groupId,
-                    message
+                    ["token"] = _settings.ApiToken,
+                    ["to"] = groupId,
+                    ["body"] = message,
+                    ["priority"] = "10"
                 };
 
                 // Construct the API endpoint URL
-                var endpoint = $"/waInstance{_settings.IdInstance}/sendMessage/{_settings.ApiTokenInstance}";
+                var endpoint = $"/{_settings.InstanceId}/messages/chat";
 
-                // Send the HTTP request
-                var response = await SendRequestAsync(endpoint, payload);
+                var queryString = string.Join("&", queryParams.Select(kvp =>
+                    $"{kvp.Key}={HttpUtility.UrlEncode(kvp.Value)}"));
+
+                var fullEndpoint = $"{endpoint}?{queryString}";
+
+                _logger.LogDebug($"Sending message to: {_httpClient.BaseAddress}{fullEndpoint}");
+
+                // Send the HTTP request (UltraMsg uses GET for messages/chat)
+                var response = await _httpClient.GetAsync(fullEndpoint);
 
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation($"Whatsapp message sent succesfully to group {groupId}");
                     return true;
                 }
+
                 var errorContent=await response.Content.ReadAsStringAsync();
                 _logger.LogError($"Failed to send WhatsApp message. Status: {response.StatusCode}, Error: {errorContent}");
                 return false;
@@ -84,31 +93,30 @@ namespace NotificationService.Infrastructure.Services
                 var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
                 _logger.LogInformation($"Image size: {imageSizeInMB:F2} MB for file: {fileName}");
 
-                if (imageSizeInMB > 10) // Green API typically has a 10MB limit
+                if (imageSizeInMB > 10) // UltraMsg typically has a 10MB limit
                 {
                     _logger.LogWarning($"Image size {imageSizeInMB:F2}MB exceeds limit. Sending text only.");
                     return await SendGroupMessageAsync(groupId, message);
                 }
 
-                // Convert image data to base64 for sending
+                // Convert image to base64 for UltraMsg API
+                var base64Image = Convert.ToBase64String(imageData);
                 var mimeType = GetMimeType(fileName);
-                var endpoint = $"/waInstance{_settings.IdInstance}/sendFileByUpload/{_settings.ApiTokenInstance}";
 
-                // Create multipart form data
-                using var formData = new MultipartFormDataContent();
-                formData.Add(new StringContent(groupId), "chatId");
-                formData.Add(new StringContent(message), "caption");
+                // For UltraMsg image endpoint
+                var formData = new FormUrlEncodedContent(new[]
+                {
+                    new KeyValuePair<string, string>("token", _settings.ApiToken),
+                    new KeyValuePair<string, string>("to", groupId),
+                    new KeyValuePair<string, string>("image", $"data:{mimeType};base64,{base64Image}"),
+                    new KeyValuePair<string, string>("caption", message)
+                });
 
-                // Create file content with proper encoding
-                var fileContent = new ByteArrayContent(imageData);
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
 
-                // Sanitize filename and add to form
-                var sanitizedFileName = SanitizeFileName(fileName ?? $"image.{mimeType.Split('/')[1]}");
-                formData.Add(fileContent, "file", sanitizedFileName);
+                var endpoint = $"/{_settings.InstanceId}/messages/image";
 
-                _logger.LogDebug($"Sending file to: {_httpClient.BaseAddress}{endpoint}");
-                _logger.LogDebug($"File size: {imageData.Length} bytes, MIME: {mimeType}, Name: {sanitizedFileName}");
+                _logger.LogDebug($"Sending image to: {_httpClient.BaseAddress}{endpoint}");
+                _logger.LogDebug($"Image size: {imageData.Length} bytes, MIME: {mimeType}");
 
                 var response = await _httpClient.PostAsync(endpoint, formData);
                 var responseContent = await response.Content.ReadAsStringAsync();
@@ -120,11 +128,13 @@ namespace NotificationService.Infrastructure.Services
                 }
 
                 _logger.LogError($"Failed to upload file. Status: {response.StatusCode}, Error: {responseContent}");
+                // Fallback to text message if image sending fails
                 return await SendGroupMessageAsync(groupId, message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error sending image to group {groupId}");
+                // Fallback to text message if image sending fails
                 return await SendGroupMessageAsync(groupId, message);
             }
         }
@@ -136,21 +146,10 @@ namespace NotificationService.Infrastructure.Services
             {
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".png" => "image/png",
-                _=> "image/jpeg"
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                _ => "image/jpeg"
             };
-        }
-        private string SanitizeFileName(string fileName)
-        {
-            // Remove problematic characters
-            var invalidChars = Path.GetInvalidFileNameChars();
-            var cleanName = new string(fileName
-                .Where(ch => !invalidChars.Contains(ch))
-                .ToArray());
-
-            // Ensure proper extension
-            return Path.GetExtension(cleanName) == ""
-                ? $"{cleanName}.jpg"
-                : cleanName;
         }
 
         public string FormatNotification(WhatsAppProductNotification notification)
@@ -218,21 +217,6 @@ namespace NotificationService.Infrastructure.Services
             message.AppendLine();
             message.AppendLine($"⏰ *Time:* {notification.CreatedAt:dd/MM/yyyy HH:mm}");
             return message.ToString();
-        }
-
-
-        private async Task<HttpResponseMessage> SendRequestAsync(string endpoint, object payload)
-        {
-            var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            _logger.LogDebug($"Sending request to: {_httpClient.BaseAddress}{endpoint}");
-
-            // Log first 100 chars of payload for debugging (be careful not to log sensitive data)
-            var payloadPreview = json.Length > 100 ? json.Substring(0, 100) + "..." : json;
-            _logger.LogDebug($"Payload preview: {payloadPreview}");
-
-            return await _httpClient.PostAsync(endpoint, content);
         }
     }
 }
