@@ -173,8 +173,7 @@ services:
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
-      - WhatsApp__ApiUrl=https://7103.api.greenapi.com
-      - WhatsApp__MediaUrl=https://7103.media.greenapi.com
+      - WhatsApp__ApiUrl=https://api.ultramsg.com/
       - WhatsApp__InstanceId=${WHATSAPP_INSTANCE_ID}
       - WhatsApp__ApiToken=${WHATSAPP_API_TOKEN}
       - WhatsApp__DefaultGroupId=${WHATSAPP_GROUP_ID}
