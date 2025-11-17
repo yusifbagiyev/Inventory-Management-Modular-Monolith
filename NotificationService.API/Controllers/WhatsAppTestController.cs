@@ -120,14 +120,14 @@ namespace NotificationService.API.Controllers
         {
             var enabled = _configuration.GetValue<bool>("WhatsApp:Enabled", false);
             var groupId = _configuration["WhatsApp:DefaultGroupId"];
-            var instanceId = _configuration["WhatsApp:IdInstance"];
+            var hasToken = !string.IsNullOrEmpty(_configuration["WhatsApp:ApiToken"]);
 
             return Ok(new
             {
                 enabled,
-                instanceConfigured = !string.IsNullOrEmpty(instanceId),
+                tokenConfigured = hasToken,
                 groupConfigured = !string.IsNullOrEmpty(groupId),
-                instanceId = string.IsNullOrEmpty(instanceId) ? "Not configured" : $"***{instanceId.Substring(Math.Max(0, instanceId.Length - 4))}"
+                apiUrl = _configuration["WhatsApp:ApiUrl"] ?? "Not configured"
             });
         }
     }
