@@ -173,11 +173,9 @@ services:
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
-      - WhatsApp__ApiUrl=https://api.ultramsg.com/
-      - WhatsApp__InstanceId=${WHATSAPP_INSTANCE_ID}
+      - WhatsApp__ApiUrl=https://wasenderapi.com/api/
       - WhatsApp__ApiToken=${WHATSAPP_API_TOKEN}
       - WhatsApp__DefaultGroupId=${WHATSAPP_GROUP_ID}
-      - WhatsApp__Enabled=true
     depends_on:
       - postgres
       - rabbitmq
