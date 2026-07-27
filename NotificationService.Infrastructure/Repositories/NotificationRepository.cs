@@ -19,14 +19,21 @@ namespace NotificationService.Infrastructure.Repositories
             return await _context.Notifications.FindAsync(new object[] { id }, cancellationToken);
         }
 
-        public async Task<IEnumerable<Notification>> GetByUserIdAsync(int userId, bool unreadOnly = false, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Notification>> GetByUserIdAsync(int userId, bool unreadOnly = false, CancellationToken cancellationToken = default, int? limit = null)
         {
-            var query = _context.Notifications.Where(n => n.UserId == userId);
+            var query = _context.Notifications.AsNoTracking().Where(n => n.UserId == userId);
 
             if (unreadOnly)
                 query = query.Where(n => !n.IsRead);
 
-            return await query.OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken);
+            query = query.OrderByDescending(n => n.CreatedAt);
+
+            // Cap in SQL. Callers that render only the newest few used to pull the user's entire
+            // notification history and then Take(n) in memory.
+            if (limit.HasValue)
+                query = query.Take(limit.Value);
+
+            return await query.ToListAsync(cancellationToken);
         }
 
         public async Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken = default)

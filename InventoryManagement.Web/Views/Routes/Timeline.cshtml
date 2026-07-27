@@ -1,41 +1,55 @@
-﻿@model List<RouteViewModel>
+@model List<RouteViewModel>
 @{
     ViewData["Title"] = "Transfer Timeline";
     var productId = ViewBag.ProductId;
+    var ordered = Model.OrderByDescending(r => r.CreatedAt).ToList();
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Transfer Timeline</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">Products</a></li>
-        <li class="breadcrumb-item active">Timeline</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Transfer Timeline</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">Products</a></li>
+                <li class="breadcrumb-item active">Timeline</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportTimelineToPDF()">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="btn btn-primary btn-sm">
+                <i class="fas fa-box"></i> View Product
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
+    <div class="row mt-3">
         <div class="col-lg-8">
-            <div class="card mb-4 shadow">
-                <!-- In the card-header section -->
+            <div class="card mb-4">
                 <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-history me-1"></i>
-                            Product Transfer History
-                        </div>
-                        <!-- Add this button -->
-                        <button class="btn btn-outline-secondary btn-sm" onclick="exportTimelineToPDF()">
-                            <i class="fas fa-file-pdf"></i> Export PDF
-                        </button>
-                    </div>
+                    <i class="bi bi-clock-history me-1"></i>
+                    Product Transfer History
                 </div>
-            </div>
                 <div class="card-body">
-                    @if (Model.Any())
+                    @if (ordered.Any())
                     {
                         <div class="timeline">
-                            @foreach (var route in Model.OrderByDescending(r => r.CreatedAt))
+                            @for (var i = 0; i < ordered.Count; i++)
                             {
-                                <div class="timeline-item">
+                                var route = ordered[i];
+                                var isLast = i == ordered.Count - 1;
+                                var typeClass = route.RouteTypeName switch
+                                {
+                                    "New" => "state-ok",
+                                    "Removal" => "state-crit",
+                                    "Update" => "state-warn",
+                                    "Transfer" => "state-info",
+                                    _ => "state-idle"
+                                };
+
+                                <div class="timeline-item d-flex gap-3 py-3 @(isLast ? "" : "border-bottom")">
                                     <div class="timeline-marker">
                                         @if (route.IsCompleted)
                                         {
@@ -46,51 +60,65 @@
                                             <i class="fas fa-clock text-warning"></i>
                                         }
                                     </div>
-                                    <div class="timeline-content">
-                                        <h6 class="mb-1">
-                                            @route.RouteTypeName
-                                            <small class="text-muted float-end">
-                                                @route.CreatedAt.ToString("MMM dd, yyyy HH:mm")
-                                            </small>
+                                    <div class="timeline-content flex-grow-1">
+                                        <h6 class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                            <span class="d-flex align-items-center flex-wrap gap-2">
+                                                <span class="state state-flat @typeClass">@route.RouteTypeName</span>
+                                                @if (route.IsCompleted)
+                                                {
+                                                    <span class="state state-ok">Completed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="state state-warn">Pending</span>
+                                                }
+                                            </span>
+                                            <span class="cell-sub mono">@route.CreatedAt.ToString("MMM dd, yyyy HH:mm")</span>
                                         </h6>
-                                        <p class="mb-2">
+
+                                        <div class="d-flex align-items-center flex-wrap gap-3 mb-2">
                                             @if (route.FromDepartmentName != null)
                                             {
-                                                <span>From: <strong>@route.FromDepartmentName</strong>
+                                                <div class="cell-text">
+                                                    <span class="cell-sub">From</span>
+                                                    <span class="cell-title">@route.FromDepartmentName</span>
                                                     @if (!string.IsNullOrEmpty(route.FromWorker))
                                                     {
-                                                        <span>(@route.FromWorker)</span>
+                                                        <span class="cell-sub">@route.FromWorker</span>
                                                     }
-                                                </span >
-                                                <br />
+                                                </div>
+                                                <i class="bi bi-arrow-right text-muted"></i>
                                             }
-                                        <span>
-                                            To: <strong>@route.ToDepartmentName</strong>
+                                            <div class="cell-text">
+                                                <span class="cell-sub">To</span>
+                                                <span class="cell-title">@route.ToDepartmentName</span>
                                                 @if (!string.IsNullOrEmpty(route.ToWorker))
                                                 {
-                                                    <span>(@route.ToWorker)</span>
+                                                    <span class="cell-sub">@route.ToWorker</span>
                                                 }
-                                        </span>
-                                        </p>
+                                            </div>
+                                        </div>
+
                                         @if (!string.IsNullOrEmpty(route.Notes))
                                         {
                                             <p class="text-muted mb-2">
-                                                <i class="fas fa-sticky-note"></i> @route.Notes
+                                                <i class="bi bi-sticky me-1"></i> @route.Notes
                                             </p>
                                         }
+
                                         @if (!string.IsNullOrEmpty(route.FullImageUrl))
                                         {
                                             <img src="@route.FullImageUrl"
-                                                 class="img-thumbnail timeline-image-zoom"
+                                                 class="img-thumbnail timeline-image-zoom mb-2"
                                                  style="max-width: 150px; cursor: pointer;"
-                                             onclick="showImageModal('@route.FullImageUrl', 'Transfer Image')" />
+                                                 alt="Transfer Image"
+                                                 onclick="showImageModal('@route.FullImageUrl', 'Transfer Image')" />
                                         }
+
                                         @if (route.IsCompleted)
                                         {
-                                            <div class="mt-2">
-                                                <span class="badge bg-success">
-                                                    Completed: @route.CompletedAt?.ToString("MMM dd, yyyy HH:mm")
-                                                </span>
+                                            <div class="cell-sub mono">
+                                                Completed: @route.CompletedAt?.ToString("MMM dd, yyyy HH:mm")
                                             </div>
                                         }
                                     </div>
@@ -100,54 +128,64 @@
                     }
                     else
                     {
-                        <div class="text-center py-5">
-                            <i class="fas fa-history fa-3x text-muted"></i>
-                            <p class="mt-3 text-muted">No transfer history available for this product.</p>
+                        <div class="empty-state">
+                            <i class="bi bi-clock-history"></i>
+                            <h5>No transfers yet</h5>
+                            <p class="mb-0">No transfer history available for this product.</p>
                         </div>
                     }
                 </div>
             </div>
+        </div>
+
         <div class="col-lg-4">
-            <div class="card mb-4 shadow">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-chart-line me-1"></i>
+                    <i class="bi bi-bar-chart-line me-1"></i>
                     Statistics
                 </div>
                 <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <strong>Total Transfers:</strong> @Model.Count
-                        </li>
-                        <li class="mb-2">
-                            <strong>Completed:</strong> @Model.Count(r => r.IsCompleted)
-                        </li>
-                        <li class="mb-2">
-                            <strong>Pending:</strong> @Model.Count(r => !r.IsCompleted)
-                        </li>
-                        @if (Model.Any())
-                        {
-                            <li class="mb-2">
-                                <strong>First Transfer:</strong> @Model.Min(r => r.CreatedAt).ToString("MMM dd, yyyy")
-                            </li>
-                            <li class="mb-2">
-                                <strong>Last Transfer:</strong> @Model.Max(r => r.CreatedAt).ToString("MMM dd, yyyy")
-                            </li>
-                        }
-                    </ul>
-
-                    <hr />
-
-                    <div class="d-grid">
-                        <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="btn btn-outline-primary">
-                            <i class="fas fa-box"></i> View Product
-                        </a>
+                    <div class="detail-grid">
+                        <div class="detail-row">
+                            <span class="d-label">Total Transfers</span>
+                            <span class="d-value mono">@Model.Count</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Completed</span>
+                            <span class="d-value mono">@Model.Count(r => r.IsCompleted)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Pending</span>
+                            <span class="d-value mono">@Model.Count(r => !r.IsCompleted)</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">First Transfer</span>
+                            @if (Model.Any())
+                            {
+                                <span class="d-value mono">@Model.Min(r => r.CreatedAt).ToString("MMM dd, yyyy")</span>
+                            }
+                            else
+                            {
+                                <span class="d-value d-empty">Not available</span>
+                            }
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Last Transfer</span>
+                            @if (Model.Any())
+                            {
+                                <span class="d-value mono">@Model.Max(r => r.CreatedAt).ToString("MMM dd, yyyy")</span>
+                            }
+                            else
+                            {
+                                <span class="d-value d-empty">Not available</span>
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        </div>
-
     </div>
+</div>
 
 @section Scripts {
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
@@ -165,7 +203,6 @@
             $('#globalModalImage').attr('src', imageUrl);
             $('#globalImageModal .modal-title').text(title || 'Image Preview');
             $('#globalImageModal').modal('show');
-        }
         }
     </script>
 }

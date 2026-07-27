@@ -1,105 +1,124 @@
-﻿@model ProductViewModel
+@model ProductViewModel
 @{
     ViewData["Title"] = "Edit Product";
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Edit Product</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
-        <li class="breadcrumb-item active">Edit</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Edit Product</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-eye"></i> View Details
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
+    <div class="row mt-3">
         <div class="col-lg-8">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-edit me-1"></i>
-                    Edit Product Information
-                </div>
-                <div class="card-body">
-                    <form asp-action="Edit" method="post" enctype="multipart/form-data">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-                        <input type="hidden" asp-for="Id" />
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="InventoryCode" class="form-label"></label>
-                                    <input asp-for="InventoryCode" class="form-control" readonly />
-                                </div>
+            <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                <input type="hidden" asp-for="Id" />
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-pencil-square me-1"></i>
+                        Edit Product Information
+                    </div>
+
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="form-section">
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-0" role="alert"></div>
+                        </div>
+                    }
+
+                    <div class="form-section">
+                        <div class="section-title">Identity</div>
+                        <div class="form-grid">
+                            <div>
+                                <label asp-for="InventoryCode" class="form-label"></label>
+                                <input asp-for="InventoryCode" class="form-control" readonly />
+                                <div class="form-text">The inventory code cannot be changed after creation.</div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Vendor" class="form-label"></label>
-                                    <input asp-for="Vendor" class="form-control" />
-                                    <span asp-validation-for="Vendor" class="text-danger"></span>
-                                </div>
+                            <div>
+                                <label asp-for="Model" class="form-label"></label>
+                                <input asp-for="Model" class="form-control" />
+                                <span asp-validation-for="Model" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="Vendor" class="form-label"></label>
+                                <input asp-for="Vendor" class="form-control" />
+                                <span asp-validation-for="Vendor" class="text-danger"></span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Model" class="form-label"></label>
-                                    <input asp-for="Model" class="form-control" />
-                                    <span asp-validation-for="Model" class="text-danger"></span>
-                                </div>
+                    <div class="form-section">
+                        <div class="section-title">Classification</div>
+                        <div class="form-grid">
+                            <div>
+                                <label asp-for="CategoryId" class="form-label"></label>
+                                <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                                    <option value="">-- Select Category --</option>
+                                </select>
+                                <span asp-validation-for="CategoryId" class="text-danger"></span>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Worker" class="form-label"></label>
-                                    <input asp-for="Worker" class="form-control" />
-                                    <span asp-validation-for="Worker" class="text-danger"></span>
-                                </div>
+                            <div>
+                                <label asp-for="DepartmentId" class="form-label"></label>
+                                <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select">
+                                    <option value="">-- Select Department --</option>
+                                </select>
+                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
                             </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="CategoryId" class="form-label"></label>
-                                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                                        <option value="">-- Select Category --</option>
-                                    </select>
-                                    <span asp-validation-for="CategoryId" class="text-danger"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="DepartmentId" class="form-label"></label>
-                                    <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select">
-                                        <option value="">-- Select Department --</option>
-                                    </select>
-                                    <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                                </div>
+                            <div>
+                                <label asp-for="Worker" class="form-label"></label>
+                                <input asp-for="Worker" class="form-control" />
+                                <span asp-validation-for="Worker" class="text-danger"></span>
+                                <div class="form-text">Person responsible for this item.</div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label"></label>
-                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
+                    <div class="form-section">
+                        <div class="section-title">Status</div>
+                        <div class="form-grid">
+                            <div class="form-check">
+                                <input asp-for="IsWorking" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsWorking" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsActive" class="form-check-label"></label>
+                            </div>
+                            <div class="form-check">
+                                <input asp-for="IsNewItem" class="form-check-input" type="checkbox" />
+                                <label asp-for="IsNewItem" class="form-check-label"></label>
+                            </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Product Image</label>
-
-                            <!-- Replace the current image display section -->
+                    <div class="form-section">
+                        <div class="section-title">Product Image</div>
+                        <div class="form-grid">
                             @if (!string.IsNullOrEmpty(Model.ImageUrl))
                             {
-                                <div id="currentImageContainer" class="mb-3">
-                                    <p class="text-muted mb-2">Current image:</p>
-                                    <div class="position-relative" style="max-width: 200px;">
+                                <div id="currentImageContainer">
+                                    <label class="form-label">Current image</label>
+                                    <div class="image-preview">
                                         <img src="@Model.FullImageUrl"
-                                             class="img-thumbnail cursor-pointer"
                                              alt="@Model.Model"
                                              id="currentImage"
                                              onclick="showImageModal('@Model.FullImageUrl', '@Model.Model')"
                                              style="cursor: pointer;" />
-                                        <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                                        <button type="button" class="btn btn-outline-danger btn-sm mt-2"
                                                 onclick="removeCurrentImage()" title="Remove image">
-                                            <i class="fas fa-times"></i>
+                                            <i class="fas fa-times"></i> Remove image
                                         </button>
                                     </div>
                                 </div>
@@ -112,42 +131,34 @@
                                 <input asp-for="ImageFile" class="form-control" accept="image/*"
                                        onchange="previewNewImage(this, 'imagePreview')" />
                                 <span asp-validation-for="ImageFile" class="text-danger"></span>
-                                <img id="imagePreview" class="img-thumbnail mt-2" style="max-width: 200px; display: none;" />
+                                <img id="imagePreview" class="img-fluid mt-2" alt="Selected image preview" style="display: none;" />
                             </div>
                         </div>
+                    </div>
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input asp-for="IsWorking" class="form-check-input" type="checkbox" />
-                                    <label asp-for="IsWorking" class="form-check-label"></label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-                                    <label asp-for="IsActive" class="form-check-label"></label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-check mb-3">
-                                    <input asp-for="IsNewItem" class="form-check-input" type="checkbox" />
-                                    <label asp-for="IsNewItem" class="form-check-label"></label>
-                                </div>
+                    <div class="form-section">
+                        <div class="section-title">Notes</div>
+                        <div class="form-grid">
+                            <div class="full">
+                                <label asp-for="Description" class="form-label"></label>
+                                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                <span asp-validation-for="Description" class="text-danger"></span>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="d-flex justify-content-between">
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to List
-                            </a>
-                            <button type="submit" class="btn btn-primary">
+                    <div class="page-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                        <div class="actions-right">
+                            <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="fas fa-save"></i> Save Changes
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>

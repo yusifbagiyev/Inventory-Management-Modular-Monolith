@@ -1,81 +1,162 @@
-﻿@model PagedResultDto<ProductViewModel>
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@model PagedResultDto<ProductViewModel>
 @{
     ViewData["Title"] = "Products";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
+    var filterCategories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
+    var filterDepartments = ViewBag.FilterDepartments as List<SelectListItem> ?? new List<SelectListItem>();
+    var curCategoryId = ViewBag.CurrentCategoryId as int?;
+    var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
+    var curStatus = ViewBag.CurrentStatus as bool?;
+    var curAvailability = ViewBag.CurrentAvailability as bool?;
+    var curStart = ViewBag.StartDate as DateTime?;
+    var curEnd = ViewBag.EndDate as DateTime?;
+
+    string CategoryName(int? id) => filterCategories.FirstOrDefault(c => c.Value == id.ToString())?.Text ?? id?.ToString() ?? "";
+    string DepartmentName(int? id) => filterDepartments.FirstOrDefault(d => d.Value == id.ToString())?.Text ?? id?.ToString() ?? "";
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Products</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item active">Products</li>
-    </ol>
-
-    <div class="card mb-4 shadow">
-        <div class="card-header">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-start-0"
-                               value="@currentSearch" name="search"
-                               placeholder="Search by code, model, vendor..." />
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                        <input type="text" id="dateRange" class="form-control"
-                               placeholder="Select date range" />
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <select id="statusFilter" class="form-select">
-                        <option value="">All Status</option>
-                        <option value="true">Working</option>
-                        <option value="false">Not Working</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select id="availabilityFilter" class="form-select">
-                        <option value="">All</option>
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <button class="btn btn-primary w-100" onclick="applyProductFilters()">
-                        <i class="fas fa-filter"></i> Apply
-                    </button>
-                </div>
-                <div class="col-md-1">
-                    <button class="btn btn-outline-secondary w-100" onclick="resetProductFilters()">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
-                </div>
-            </div>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Products</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item active">Products</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportProductsToPDF()">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
+            {
+                <a asp-action="Create" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> New Product
+                </a>
+            }
         </div>
     </div>
 
-    <div class="card mb-4 shadow">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <partial name="_ProductPagination" model="Model" />
-                </div>
-                <div class="col-auto">
-                    @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
-                    {
-                        <a asp-action="Create" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> New Product
-                        </a>
-                    }
-                    <button class="btn btn-outline-secondary btn-sm" onclick="exportProductsToPDF()">
-                        <i class="fas fa-file-pdf"></i> Export PDF
-                    </button>
+    <div class="filter-panel mt-3">
+        <div class="filter-top">
+            <div class="filter-search">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" id="searchInput" class="form-control" value="@currentSearch" name="search"
+                           placeholder="Search code, model, vendor, worker..." />
                 </div>
             </div>
+            <button class="btn btn-primary btn-sm" onclick="applyProductFilters()">
+                <i class="fas fa-filter"></i> Apply
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetProductFilters()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
         </div>
+
+        <div class="filter-grid">
+            <div class="filter-field">
+                <label for="categoryFilter">Category</label>
+                <select id="categoryFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                    <option value="">All categories</option>
+                    @foreach (var c in filterCategories)
+                    {
+                        <option value="@c.Value" selected="@(c.Value == curCategoryId?.ToString())">@c.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="departmentFilter">Department</label>
+                <select id="departmentFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                    <option value="">All departments</option>
+                    @foreach (var d in filterDepartments)
+                    {
+                        <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="statusFilter">Working state</label>
+                <select id="statusFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                    <option value="">All</option>
+                    <option value="true" selected="@(curStatus == true)">Working</option>
+                    <option value="false" selected="@(curStatus == false)">Not working</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="availabilityFilter">Availability</label>
+                <select id="availabilityFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                    <option value="">All</option>
+                    <option value="true" selected="@(curAvailability == true)">Active</option>
+                    <option value="false" selected="@(curAvailability == false)">Inactive</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="dateRange">Created between</label>
+                <input type="text" id="dateRange" class="form-control form-control-sm" placeholder="Any date" />
+            </div>
+            <div class="filter-field">
+                <label for="pageSizeFilter">Rows per page</label>
+                <select id="pageSizeFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                    @foreach (var size in new[] { 15, 30, 50, 100 })
+                    {
+                        <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-quick">
+            <span class="qlabel">Quick</span>
+            <span class="qchip @(curStatus == false ? "active" : "")" onclick="quickFilter('notWorking')">Not working</span>
+            <span class="qchip @(curAvailability == false ? "active" : "")" onclick="quickFilter('inactive')">Inactive</span>
+            <span class="qchip" onclick="quickFilter('unassigned')">Unassigned</span>
+            <span class="qchip" onclick="quickFilter('noImage')">No image</span>
+        </div>
+
+        @{
+            var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCategoryId.HasValue || curDepartmentId.HasValue
+                || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue;
+        }
+        @if (hasFilters)
+        {
+            <div class="filter-applied">
+                @if (!string.IsNullOrEmpty(currentSearch))
+                {
+                    <span class="achip">Search: <b>@currentSearch</b><button type="button" class="achip-x" onclick="removeFilter('search')">&times;</button></span>
+                }
+                @if (curCategoryId.HasValue)
+                {
+                    <span class="achip">Category: <b>@CategoryName(curCategoryId)</b><button type="button" class="achip-x" onclick="removeFilter('categoryId')">&times;</button></span>
+                }
+                @if (curDepartmentId.HasValue)
+                {
+                    <span class="achip">Department: <b>@DepartmentName(curDepartmentId)</b><button type="button" class="achip-x" onclick="removeFilter('departmentId')">&times;</button></span>
+                }
+                @if (curStatus.HasValue)
+                {
+                    <span class="achip">Working: <b>@(curStatus.Value ? "Yes" : "No")</b><button type="button" class="achip-x" onclick="removeFilter('status')">&times;</button></span>
+                }
+                @if (curAvailability.HasValue)
+                {
+                    <span class="achip">Active: <b>@(curAvailability.Value ? "Yes" : "No")</b><button type="button" class="achip-x" onclick="removeFilter('availability')">&times;</button></span>
+                }
+                @if (curStart.HasValue || curEnd.HasValue)
+                {
+                    <span class="achip">Created: <b>@(curStart?.ToString("dd.MM.yyyy")) - @(curEnd?.ToString("dd.MM.yyyy"))</b><button type="button" class="achip-x" onclick="removeFilter('dates')">&times;</button></span>
+                }
+                <button type="button" class="filter-clear" onclick="resetProductFilters()">Clear all</button>
+            </div>
+        }
+    </div>
+
+    <div class="result-bar">
+        <span><b>@Model.TotalCount</b> product@(Model.TotalCount == 1 ? "" : "s")@(hasFilters ? " matched" : "")</span>
+        <span class="text-muted">Page @Model.PageNumber</span>
+    </div>
+
+    <div class="card mb-4">
         <div class="card-body p-0">
             @if (Model.Items.Any())
             {
@@ -83,33 +164,20 @@
                     <table class="table table-hover align-middle" id="productsTable">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">Image</th>
-                                <th>Code</th>
-                                <th>Product Details</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th style="width: 120px;">Actions</th>
+                                <th style="width: 96px;">Code</th>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Department</th>
+                                <th>Assigned</th>
+                                <th>State</th>
+                                <th style="width: 96px;">Created</th>
+                                <th style="width: 104px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var product in Model.Items)
                             {
-                                <tr>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(product.ImageUrl))
-                                        {
-                                            <img src="@product.FullImageUrl" class="img-thumbnail"
-                                                 style="width: 60px; height: 60px; object-fit: cover; cursor: pointer;"
-                                                 onclick="showImageModal('@product.FullImageUrl','@product.CategoryName')"
-                                                 alt="@product.CategoryName">
-                                        }
-                                        else
-                                        {
-                                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                                <i class="fas fa-image text-muted"></i>
-                                            </div>
-                                        }
-                                    </td>
+                                <tr class="@(product.HasPendingApproval ? "row-crit" : (!product.IsWorking ? "row-warn" : ""))">
                                     <td>
                                         <span class="badge bg-primary fs-6 inventory-code-display" data-id="@product.Id">
                                             @product.InventoryCode
@@ -128,51 +196,61 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div>
-                                            <strong>@product.Model</strong>
-                                            <small class="text-muted">by @product.Vendor</small>
+                                        <div class="cell-item">
+                                            @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                            {
+                                                <img src="@product.FullImageUrl" class="cell-thumb"
+                                                     style="cursor: pointer;"
+                                                     onclick="showImageModal('@product.FullImageUrl','@product.Model')"
+                                                     alt="@product.Model">
+                                            }
+                                            else
+                                            {
+                                                <div class="cell-thumb cell-thumb-empty"><i class="fas fa-image"></i></div>
+                                            }
+                                            <div class="cell-text">
+                                                <span class="cell-title" title="@product.Description">@product.Model</span>
+                                                <span class="cell-sub">@product.Vendor</span>
+                                            </div>
                                         </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-tag"></i> @product.CategoryName
-                                        </small>
                                     </td>
+                                    <td>@product.CategoryName</td>
+                                    <td>@product.DepartmentName</td>
                                     <td>
-                                        <div>
-                                            <i class="fas fa-building"></i> @product.DepartmentName
-                                        </div>
                                         @if (!string.IsNullOrEmpty(product.Worker))
                                         {
-                                            <small class="text-muted">
-                                                <i class="fas fa-user"></i> @product.Worker
-                                            </small>
+                                            @product.Worker
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Unassigned</span>
                                         }
                                     </td>
                                     <td>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            @if (product.IsWorking)
-                                            {
-                                                <span class="badge bg-success">Working</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger">Not Working</span>
-                                            }
-                                            @if (product.IsActive)
-                                            {
-                                                <span class="badge bg-secondary">Active</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger">Inactive</span>
-                                            }
+                                        <div class="state-stack">
                                             @if (product.HasPendingApproval)
                                             {
-                                                <span class="badge bg-warning">
-                                                    <i class="fas fa-clock"></i> Pending Approval
-                                                </span>
+                                                <span class="state state-crit">Pending</span>
+                                            }
+                                            @if (!product.IsWorking)
+                                            {
+                                                <span class="state state-warn">Not working</span>
+                                            }
+                                            else if (!product.HasPendingApproval)
+                                            {
+                                                <span class="state state-ok">Working</span>
+                                            }
+                                            @if (!product.IsActive)
+                                            {
+                                                <span class="state state-flat state-idle">Inactive</span>
+                                            }
+                                            @if (product.IsNewItem)
+                                            {
+                                                <span class="state state-flat state-new">New</span>
                                             }
                                         </div>
                                     </td>
+                                    <td class="num text-muted">@(product.CreatedAt?.ToString("dd.MM.yyyy") ?? "-")</td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
@@ -200,12 +278,17 @@
             }
             else
             {
-                <div class="text-center py-5">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No products found in inventory</p>
-                    <a asp-action="Create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add First Product
-                    </a>
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h5>No products match these filters</h5>
+                    <p class="text-muted mb-3">Clear the filters to see the full inventory, or add a new product.</p>
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="resetProductFilters()">Clear filters</button>
+                    @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
+                    {
+                        <a asp-action="Create" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> New product
+                        </a>
+                    }
                 </div>
             }
         </div>
@@ -338,11 +421,71 @@
                 params.append('availability', availability);
             }
 
-            // Maintain page size
-            params.append('pageSize', '@Model.PageSize');
+            // Category / department - supported by the products API, now sent from the UI too
+            const categoryId = $('#categoryFilter').val();
+            if (categoryId) {
+                params.append('categoryId', categoryId);
+            }
+
+            const departmentId = $('#departmentFilter').val();
+            if (departmentId) {
+                params.append('departmentId', departmentId);
+            }
+
+            const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
+            params.append('pageSize', pageSize);
             params.append('pageNumber', '1');
 
             // Build the URL property
+            window.location.href = '/Products?' + params.toString();
+        }
+
+        // One-click presets. They set the matching control and re-apply, so the
+        // active state always reflects what the server actually filtered on.
+        function quickFilter(kind) {
+            if (kind === 'notWorking') {
+                $('#statusFilter').val($('#statusFilter').val() === 'false' ? '' : 'false');
+            } else if (kind === 'inactive') {
+                $('#availabilityFilter').val($('#availabilityFilter').val() === 'false' ? '' : 'false');
+            } else if (kind === 'unassigned' || kind === 'noImage') {
+                // Not a server-side filter yet - narrow the rows already on screen.
+                filterRowsClientSide(kind);
+                return;
+            }
+            applyProductFilters();
+        }
+
+        // Client-side narrowing for the two presets the API cannot express yet.
+        function filterRowsClientSide(kind) {
+            const chip = document.querySelector(`.qchip[onclick*="${kind}"]`);
+            const turningOn = chip && !chip.classList.contains('active');
+
+            document.querySelectorAll('.qchip').forEach(c => {
+                if (c.getAttribute('onclick').includes('unassigned') || c.getAttribute('onclick').includes('noImage')) {
+                    c.classList.remove('active');
+                }
+            });
+            if (turningOn && chip) chip.classList.add('active');
+
+            document.querySelectorAll('#productsTable tbody tr').forEach(row => {
+                if (!turningOn) { row.style.display = ''; return; }
+                const hit = kind === 'unassigned'
+                    ? !!row.querySelector('td:nth-child(5) .text-muted')
+                    : !!row.querySelector('.cell-thumb-empty');
+                row.style.display = hit ? '' : 'none';
+            });
+        }
+
+        // Drop a single applied filter and reload.
+        function removeFilter(key) {
+            const params = new URLSearchParams(window.location.search);
+            if (key === 'dates') {
+                params.delete('startDate');
+                params.delete('endDate');
+            } else {
+                params.delete(key);
+            }
+            params.set('pageNumber', '1');
             window.location.href = '/Products?' + params.toString();
         }
 
@@ -359,6 +502,8 @@
             $('#dateRange').val('');
             $('#statusFilter').val('');
             $('#availabilityFilter').val('');
+            $('#categoryFilter').val('');
+            $('#departmentFilter').val('');
             window.location.href = '/Products?pageSize=@Model.PageSize&pageNumber=1';
         }
 

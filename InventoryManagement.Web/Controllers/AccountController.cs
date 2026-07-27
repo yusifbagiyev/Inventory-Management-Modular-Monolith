@@ -2,6 +2,7 @@
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Security.Claims;
@@ -84,9 +85,12 @@ namespace InventoryManagement.Web.Controllers
                             HttpOnly = true,
                             Secure = Request.IsHttps,
                             SameSite = SameSiteMode.Strict,
-                            Expires = rememberMe
-                                ? DateTimeOffset.Now.AddDays(30)
-                                : DateTimeOffset.Now.AddHours(1),
+                            // Without "remember me" this used to hard-expire in 1 hour, which threw
+                            // away a refresh token the server keeps valid for 30 days: once the
+                            // cookie vanished the silent refresh had nothing to send and the user
+                            // was bounced to the login page. A session cookie keeps them signed in
+                            // for as long as the browser stays open, which is the actual intent.
+                            Expires = rememberMe ? DateTimeOffset.Now.AddDays(30) : null,
                             Path = "/",
                             IsEssential = true
                         };
@@ -305,7 +309,38 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        // Self-service password change for the signed-in user (any authenticated role).
+        // Distinct from the Admin-only ResetPassword below, which sets another user's password
+        // without knowing the current one.
+        [Authorize]
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
+            return View(new ChangePasswordViewModel());
+        }
 
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var (success, error) = await _userManagementService.ChangePasswordAsync(model.CurrentPassword, model.NewPassword);
+            if (success)
+            {
+                TempData["Success"] = "Your password has been changed.";
+                return RedirectToAction("Profile");
+            }
+
+            ModelState.AddModelError(string.Empty, error ?? "Could not change the password.");
+            return View(model);
+        }
+
+
+
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> ResetPassword(int id)
         {
@@ -335,6 +370,7 @@ namespace InventoryManagement.Web.Controllers
         }
         
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)

@@ -18,8 +18,12 @@ try
 
     Log.Information("Starting InventoryManagement.Web application");
 
-    builder.Services.AddControllersWithViews()
-        .AddRazorRuntimeCompilation();
+    // Runtime Razor compilation is a development convenience (it watches the file system and
+    // recompiles views on the fly). In production it only costs memory and first-render latency,
+    // since the views are already compiled into the assembly at build time.
+    var mvcBuilder = builder.Services.AddControllersWithViews();
+    if (builder.Environment.IsDevelopment())
+        mvcBuilder.AddRazorRuntimeCompilation();
 
     builder.Services.AddCustomAuthentication(builder.Configuration);
 
@@ -42,37 +46,10 @@ try
     builder.Services.AddHostedService<TokenRefreshBackgroundService>();
 
 
-    builder.Services.ConfigureApplicationCookie(options =>
-    {
-        options.ExpireTimeSpan = TimeSpan.FromDays(1); // Increased from 2 hours
-        options.SlidingExpiration = true;
-
-        options.Events.OnRedirectToLogin = context =>
-        {
-            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
-                context.Response.StatusCode = 401;
-            }
-            else
-            {
-                context.Response.Redirect(context.RedirectUri);
-            }
-            return Task.CompletedTask;
-        };
-
-        options.Events.OnRedirectToAccessDenied = context =>
-        {
-            if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
-                context.Response.StatusCode = 403;
-            }
-            else
-            {
-                context.Response.Redirect(context.RedirectUri);
-            }
-            return Task.CompletedTask;
-        };
-    });
+    // NOTE: ConfigureApplicationCookie used to be called here to set a 1-day expiry and the
+    // AJAX 401/403 handlers. It configures the ASP.NET Core *Identity* cookie scheme, which this
+    // app never registers, so none of it ever took effect - the real cookie lived on at 60
+    // minutes. That configuration now sits with the actual scheme in AddCustomAuthentication().
 
     // Configure CORS properly for production
     builder.Services.AddCors(options =>

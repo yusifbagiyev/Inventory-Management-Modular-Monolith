@@ -11,11 +11,16 @@ namespace ProductService.Application.Features.Departments.Commands
         public class DeleteDepartmentCommandHandler : IRequestHandler<Command>
         {
             private readonly IDepartmentRepository _departmentRepository;
+            private readonly IProductRepository _productRepository;
             private readonly IUnitOfWork _unitOfWork;
 
-            public DeleteDepartmentCommandHandler(IDepartmentRepository departmentRepository, IUnitOfWork unitOfWork)
+            public DeleteDepartmentCommandHandler(
+                IDepartmentRepository departmentRepository,
+                IProductRepository productRepository,
+                IUnitOfWork unitOfWork)
             {
                 _departmentRepository = departmentRepository;
+                _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
             }
 
@@ -24,6 +29,14 @@ namespace ProductService.Application.Features.Departments.Commands
                 var department = await _departmentRepository.GetByIdAsync(request.Id, cancellationToken);
                 if (department == null)
                     throw new NotFoundException($"Department with ID {request.Id} not found");
+
+                // Refuse the delete while products still reference this department. The foreign key
+                // is Restrict, so the database would reject it anyway - this turns that into a clear
+                // message instead of a 500, and it keeps in-flight transfer events resolvable.
+                var productCount = await _productRepository.CountByDepartmentIdAsync(request.Id, cancellationToken);
+                if (productCount > 0)
+                    throw new ConflictException(
+                        $"Cannot delete department '{department.Name}': {productCount} product(s) are still assigned to it. Move them to another department first.");
 
                 await _departmentRepository.DeleteAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

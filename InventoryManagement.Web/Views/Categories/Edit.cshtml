@@ -1,69 +1,86 @@
-﻿@model CategoryViewModel
+@model CategoryViewModel
 @{
     ViewData["Title"] = "Edit Category";
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Edit Category</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
-        <li class="breadcrumb-item active">Edit</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Edit Category</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
 
-    <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <i class="fas fa-edit me-1"></i>
-                    Edit Category Information
-                </div>
-                <div class="card-body">
-                    <form asp-action="Edit" method="post">
+    <div class="row mt-3">
+        <div class="col-xl-7 col-lg-9">
+            <form asp-action="Edit" method="post">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-edit me-1"></i>
+                        Edit Category Information
+                    </div>
+
+                    <div class="form-section">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                        <div class="mb-3">
-                            <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control" />
-                            <span asp-validation-for="Name" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Description" class="form-label"></label>
-                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                            <span asp-validation-for="Description" class="text-danger"></span>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input asp-for="IsActive" class="form-check-input" />
-                            <label asp-for="IsActive" class="form-check-label"></label>
-                        </div>
-
-                        <div class="row text-muted">
-                            <div class="col-md-6">
-                                <small>Created: @Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</small>
+                        <div class="form-grid">
+                            <div class="full">
+                                <label asp-for="Name" class="form-label"></label>
+                                <input asp-for="Name" class="form-control" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
                             </div>
-                            <div class="col-md-6 text-end">
-                                @if (Model.UpdatedAt.HasValue)
-                                {
-                                    <small>Updated: @Model.UpdatedAt.Value.ToString("MM/dd/yyyy HH:mm")</small>
-                                }
+
+                            <div class="full">
+                                <label asp-for="Description" class="form-label"></label>
+                                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                <span asp-validation-for="Description" class="text-danger"></span>
+                            </div>
+
+                            <div class="full">
+                                <div class="form-check">
+                                    <input asp-for="IsActive" class="form-check-input" />
+                                    <label asp-for="IsActive" class="form-check-label"></label>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <hr />
+                    <div class="form-section">
+                        <div class="section-title">Record</div>
+                        <div class="detail-grid">
+                            <div class="detail-row">
+                                <span class="d-label">Created</span>
+                                <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+                            </div>
+                            @if (Model.UpdatedAt.HasValue)
+                            {
+                                <div class="detail-row">
+                                    <span class="d-label">Updated</span>
+                                    <span class="d-value mono">@Model.UpdatedAt.Value.ToString("MM/dd/yyyy HH:mm")</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
 
-                        <div class="d-flex justify-content-between">
-                            <a asp-action="Index" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to List
-                            </a>
-                            <button type="submit" class="btn btn-primary">
+                    <div class="page-actions">
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                        <div class="actions-right">
+                            <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="fas fa-save"></i> Save Changes
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>

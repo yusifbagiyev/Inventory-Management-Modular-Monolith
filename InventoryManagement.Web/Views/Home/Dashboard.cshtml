@@ -1,5 +1,6 @@
-﻿@model DashboardViewModel
+@model DashboardViewModel
 @{
+    ViewData["Title"] = "Dashboard";
     var currentPeriod = ViewBag.CurrentPeriod as string ?? "last7days";
     var totalDepartments = ViewBag.TotalDepartments ?? 0;
     var totalCategories = ViewBag.TotalCategories ?? 0;
@@ -7,6 +8,9 @@
     var activeCategoriesInPeriod = ViewBag.ActiveCategoriesInPeriod ?? 0;
     var startDate = ViewBag.PeriodStartDate as DateTime?;
     var endDate = ViewBag.PeriodEndDate as DateTime?;
+
+    // Pending transfers are the only tile figure that can signal a problem, so it is the only one that gets colour
+    var pendingState = Model.PendingTransfers > 0 ? "state-warn" : "state-idle";
 
     // Determine period display name
     var periodName = currentPeriod switch
@@ -20,22 +24,28 @@
 }
 
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">Dashboard</h1>
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last7days" ? "active" : "")"
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Dashboard</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item active">Overview</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <span class="form-label mb-0">Period</span>
+            <button type="button" class="qchip @(currentPeriod == "last7days" ? "active" : "")"
                     onclick="changePeriod('last7days')">
                 Last 7 Days
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last30days" ? "active" : "")"
+            <button type="button" class="qchip @(currentPeriod == "last30days" ? "active" : "")"
                     onclick="changePeriod('last30days')">
                 Last 30 Days
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "last6months" ? "active" : "")"
+            <button type="button" class="qchip @(currentPeriod == "last6months" ? "active" : "")"
                     onclick="changePeriod('last6months')">
                 Last 6 Months
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm @(currentPeriod == "all" ? "active" : "")"
+            <button type="button" class="qchip @(currentPeriod == "all" ? "active" : "")"
                     onclick="changePeriod('all')">
                 All Time
             </button>
@@ -45,7 +55,7 @@
     <!-- Period Info Banner -->
     @if (startDate.HasValue && endDate.HasValue)
     {
-        <div class="alert alert-info mb-4">
+        <div class="alert alert-info mt-3 mb-3">
             <i class="fas fa-calendar-alt me-2"></i>
             <strong>Viewing:</strong> @periodName
             <span class="mx-2">|</span>
@@ -58,98 +68,80 @@
     }
 
     <!-- Key Metrics -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+    <div class="row g-3 mt-1 mb-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-2">
-                                @if (currentPeriod == "all")
-                                {
-                                    <text>Total Products</text>
-                                }
-                                else
-                                {
-                                    <text>New Products Added</text>
-                                }
-                            </p>
-                            <h3 class="mb-0">@Model.TotalProducts.ToString("N0")</h3>
-                            <p class="text-success mb-0">
-                                <i class="fas fa-check-circle"></i> @Model.ActiveProducts active
-                            </p>
-                        </div>
-                        <div class="rounded-circle bg-primary-soft text-primary p-3">
-                            <i class="fas fa-boxes fa-2x"></i>
-                        </div>
+                    <div class="section-title">
+                        <i class="fas fa-boxes me-1"></i>
+                        @if (currentPeriod == "all")
+                        {
+                            <text>Total Products</text>
+                        }
+                        else
+                        {
+                            <text>New Products Added</text>
+                        }
                     </div>
+                    <div class="display-6 mb-2">@Model.TotalProducts.ToString("N0")</div>
+                    <span class="state state-flat state-ok">
+                        <i class="fas fa-check-circle"></i> @Model.ActiveProducts active
+                    </span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-2">Total Transfers</p>
-                            <h3 class="mb-0">@Model.TotalRoutes.ToString("N0")</h3>
-                            <p class="text-warning mb-0">
-                                <i class="fas fa-hourglass-half"></i> @Model.PendingTransfers pending
-                            </p>
-                        </div>
-                        <div class="rounded-circle bg-success-soft text-success p-3">
-                            <i class="fas fa-exchange-alt fa-2x"></i>
-                        </div>
+                    <div class="section-title">
+                        <i class="fas fa-exchange-alt me-1"></i>
+                        Total Transfers
                     </div>
+                    <div class="display-6 mb-2">@Model.TotalRoutes.ToString("N0")</div>
+                    <span class="state state-flat @pendingState">
+                        <i class="fas fa-hourglass-half"></i> @Model.PendingTransfers pending
+                    </span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-2">Departments</p>
-                            <h3 class="mb-0">@totalDepartments</h3>
-                            <p class="text-info mb-0">
-                                <i class="fas fa-chart-line"></i> @activeDepartmentsInPeriod active in period
-                            </p>
-                        </div>
-                        <div class="rounded-circle bg-info-soft text-info p-3">
-                            <i class="fas fa-building fa-2x"></i>
-                        </div>
+                    <div class="section-title">
+                        <i class="fas fa-building me-1"></i>
+                        Departments
                     </div>
+                    <div class="display-6 mb-2">@totalDepartments</div>
+                    <span class="state state-flat state-info">
+                        <i class="fas fa-chart-line"></i> @activeDepartmentsInPeriod active in period
+                    </span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100">
+        <div class="col-xl-3 col-md-6">
+            <div class="card h-100">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-2">Categories</p>
-                            <h3 class="mb-0">@totalCategories</h3>
-                            <p class="text-secondary mb-0">
-                                <i class="fas fa-chart-line"></i> @activeCategoriesInPeriod active in period
-                            </p>
-                        </div>
-                        <div class="rounded-circle bg-warning-soft text-warning p-3">
-                            <i class="fas fa-tags fa-2x"></i>
-                        </div>
+                    <div class="section-title">
+                        <i class="fas fa-tags me-1"></i>
+                        Categories
                     </div>
+                    <div class="display-6 mb-2">@totalCategories</div>
+                    <span class="state state-flat state-idle">
+                        <i class="fas fa-chart-line"></i> @activeCategoriesInPeriod active in period
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-3">
         <div class="col-xl-8">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white">
+            <div class="card h-100">
+                <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Transfer Activity (@periodName)</h5>
                         <small class="text-muted">Completed vs Pending</small>
@@ -158,15 +150,17 @@
                 <div class="card-body">
                     @if (Model.TransferActivityData.Labels.Any())
                     {
+                        @* Chart.js needs an explicitly sized box when maintainAspectRatio is off. *@
                         <div class="chart-container" style="position: relative; height: 300px;">
                             <canvas id="transferChart"></canvas>
                         </div>
                     }
                     else
                     {
-                        <div class="text-center py-5">
-                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No transfer activity for this period</p>
+                        <div class="empty-state">
+                            <i class="fas fa-chart-line"></i>
+                            <h5>No transfer activity for this period</h5>
+                            <p class="text-muted mb-0">Pick a wider period to see movement over time.</p>
                         </div>
                     }
                 </div>
@@ -174,8 +168,8 @@
         </div>
 
         <div class="col-xl-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white">
+            <div class="card h-100">
+                <div class="card-header">
                     <h5 class="mb-0">Categories in Transfers</h5>
                     <small class="text-muted">Products transferred by category</small>
                 </div>
@@ -186,24 +180,25 @@
                             <canvas id="categoryChart"></canvas>
                         </div>
                         <!-- Legend -->
-                        <div class="mt-3">
+                        <div class="detail-grid mt-3">
                             @foreach (var category in Model.CategoryDistributions)
                             {
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="me-2" style="width: 18px; height: 18px; background-color: @category.Color; border-radius: 3px;"></div>
-                                        <small><strong>@category.CategoryName</strong></small>
-                                    </div>
-                                    <small class="text-muted"><strong>@category.Count</strong> transfers</small>
+                                <div class="detail-row">
+                                    <span class="d-label">
+                                        <span class="d-inline-block align-middle me-2"
+                                              style="width: 10px; height: 10px; border-radius: 2px; background-color: @category.Color;"></span>@category.CategoryName
+                                    </span>
+                                    <span class="d-value"><span class="mono">@category.Count</span> transfers</span>
                                 </div>
                             }
                         </div>
                     }
                     else
                     {
-                        <div class="text-center py-5">
-                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No transfers for this period</p>
+                        <div class="empty-state">
+                            <i class="fas fa-chart-pie"></i>
+                            <h5>No transfers for this period</h5>
+                            <p class="text-muted mb-0">The category split appears once products move.</p>
                         </div>
                     }
                 </div>
@@ -214,12 +209,12 @@
     <!-- Department Performance -->
     <div class="row">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white">
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="mb-0">Top Departments by Transfer Activity</h5>
                     <small class="text-muted">Departments with the most transfer activity during @periodName.ToLower()</small>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     @if (Model.DepartmentStats.Any())
                     {
                         <div class="table-responsive">
@@ -246,24 +241,18 @@
                                     {
                                         <tr>
                                             <td>
-                                                <i class="fas fa-building text-primary me-2"></i>
+                                                <i class="fas fa-building text-muted me-2"></i>
                                                 <strong>@dept.DepartmentName</strong>
                                             </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-primary rounded-pill px-3">@dept.PeriodTransfers</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-success rounded-pill px-3">@dept.ProductCount</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-info rounded-pill px-3">@dept.ActiveWorkers</span>
-                                            </td>
+                                            <td class="text-center num">@dept.PeriodTransfers</td>
+                                            <td class="text-center num">@dept.ProductCount</td>
+                                            <td class="text-center num">@dept.ActiveWorkers</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
-                        <div class="mt-3">
+                        <div class="page-actions">
                             <small class="text-muted">
                                 <i class="fas fa-info-circle me-1"></i>
                                 <strong>Note:</strong> "Active" means the department participated in at least one transfer during this period.
@@ -272,9 +261,10 @@
                     }
                     else
                     {
-                        <div class="text-center py-4">
-                            <i class="fas fa-building fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No department activity for this period</p>
+                        <div class="empty-state">
+                            <i class="fas fa-building"></i>
+                            <h5>No department activity for this period</h5>
+                            <p class="text-muted mb-0">Departments show up here once they send or receive a transfer.</p>
                         </div>
                     }
                 </div>
@@ -288,6 +278,19 @@
     <script>
         let transferChart, categoryChart;
         const currentPeriod = '@currentPeriod';
+
+        // Chart palette - mirrors the design tokens in modern-ui.css
+        const chartColors = {
+            accent: '#0E9BC4',
+            ok: '#17924E',
+            warn: '#C2740A',
+            crit: '#CE3B33',
+            neutral: '#7C8F9B',
+            ink: 'rgba(20, 35, 43, 0.92)',
+            grid: 'rgba(20, 35, 43, 0.06)',
+            okFill: 'rgba(23, 146, 78, 0.12)',
+            warnFill: 'rgba(194, 116, 10, 0.12)'
+        };
 
         $(document).ready(function() {
             initializeCharts();
@@ -353,10 +356,10 @@
                             display: false
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            backgroundColor: chartColors.ink,
                             padding: 12,
-                            titleFont: { size: 14, weight: 'bold' },
-                            bodyFont: { size: 13 },
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
                             callbacks: {
                                 label: function(context) {
                                     const label = context.label || '';
@@ -388,26 +391,28 @@
                         {
                             label: 'Completed',
                             data: transferData.completedData,
-                            borderColor: '#10B981',
-                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            borderColor: chartColors.ok,
+                            backgroundColor: chartColors.okFill,
+                            borderWidth: 2,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 5,
-                            pointHoverRadius: 7,
-                            pointBackgroundColor: '#10B981',
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: chartColors.ok,
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2
                         },
                         {
                             label: 'Pending',
                             data: transferData.pendingData,
-                            borderColor: '#F59E0B',
-                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            borderColor: chartColors.warn,
+                            backgroundColor: chartColors.warnFill,
+                            borderWidth: 2,
                             tension: 0.4,
                             fill: true,
-                            pointRadius: 5,
-                            pointHoverRadius: 7,
-                            pointBackgroundColor: '#F59E0B',
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: chartColors.warn,
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2
                         }
@@ -426,16 +431,17 @@
                             labels: {
                                 usePointStyle: true,
                                 padding: 15,
+                                color: chartColors.neutral,
                                 font: { size: 12, weight: 'bold' }
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            backgroundColor: chartColors.ink,
                             padding: 12,
                             titleColor: '#fff',
                             bodyColor: '#fff',
-                            titleFont: { size: 14, weight: 'bold' },
-                            bodyFont: { size: 13 }
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 }
                         }
                     },
                     scales: {
@@ -444,10 +450,11 @@
                             ticks: {
                                 stepSize: 1,
                                 precision: 0,
+                                color: chartColors.neutral,
                                 font: { size: 11 }
                             },
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.05)',
+                                color: chartColors.grid,
                                 drawBorder: false
                             }
                         },
@@ -456,6 +463,7 @@
                                 display: false
                             },
                             ticks: {
+                                color: chartColors.neutral,
                                 font: { size: 11 }
                             }
                         }
@@ -464,54 +472,4 @@
             });
         }
     </script>
-    <style>
-        .bg-primary-soft {
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-
-        .bg-success-soft {
-            background-color: rgba(16, 185, 129, 0.1);
-        }
-
-        .bg-info-soft {
-            background-color: rgba(6, 182, 212, 0.1);
-        }
-
-        .bg-warning-soft {
-            background-color: rgba(245, 158, 11, 0.1);
-        }
-
-        .card {
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-
-            .card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
-            }
-
-        .badge {
-            font-size: 0.875rem;
-            padding: 0.5em 0.85em;
-            font-weight: 600;
-        }
-
-        .table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.5px;
-        }
-
-        .table tbody tr {
-            transition: background-color 0.2s ease;
-        }
-
-            .table tbody tr:hover {
-                background-color: rgba(59, 130, 246, 0.05);
-            }
-    </style>
 }

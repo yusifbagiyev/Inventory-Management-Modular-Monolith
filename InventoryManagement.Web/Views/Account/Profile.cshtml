@@ -1,102 +1,86 @@
-﻿@model UserProfileViewModel
+@model UserProfileViewModel
 @{
     ViewData["Title"] = "My Profile";
 }
 
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mt-4">
-                <i class="fas fa-user-circle text-primary me-2"></i>My Profile
-            </h1>
+            <h1 class="mb-1">My Profile</h1>
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
                 <li class="breadcrumb-item active">Profile</li>
             </ol>
         </div>
+        <div class="d-flex gap-2 flex-wrap">
+            @* Self-service change (verifies the current password). Previously this pointed at the
+               Admin-only ResetPassword action, so a non-admin got Access Denied. *@
+            <a href="@Url.Action("ChangePassword")" class="btn btn-sm btn-primary">
+                <i class="fas fa-key me-1"></i> Change Password
+            </a>
+            <form asp-action="Logout" method="post" class="mb-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                </button>
+            </form>
+        </div>
     </div>
 
-    <div class="row">
-        <!-- Left Column - Profile Card -->
-        <div class="col-lg-4 mb-4">
-            <!-- Profile Summary Card -->
-            <div class="card shadow mb-4">
-                <div class="card-body text-center">
-                    <!-- Avatar -->
-                    <div class="avatar-circle mx-auto mb-3" style="width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <span class="initials" style="font-size: 3rem; line-height: 120px;">
-                            @Model.FirstName[0]@Model.LastName[0]
-                        </span>
-                    </div>
-
-                    <!-- User Info -->
-                    <h4 class="mb-1">@Model.FullName</h4>
-                    <p class="text-muted mb-2">@@@Model.Username</p>
-
-                    <!-- Status Badge -->
-                    @if (Model.IsActive)
-                    {
-                        <span class="badge bg-success mb-3">
-                            <i class="fas fa-check-circle me-1"></i>Active Account
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary mb-3">
-                            <i class="fas fa-times-circle me-1"></i>Inactive
-                        </span>
-                    }
-
-                    <!-- Roles -->
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-2">Roles</small>
-                        <div class="d-flex flex-wrap justify-content-center gap-1">
-                            @foreach (var role in Model.Roles)
-                            {
-                                <span class="badge bg-primary">
-                                    <i class="fas fa-shield-alt me-1"></i>@role
-                                </span>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Quick Stats -->
-                    <hr class="my-3">
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <div class="stat-box">
-                                <h5 class="mb-0 text-primary">@Model.Permissions.Count</h5>
-                                <small class="text-muted">Permissions</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-box">
-                                <h5 class="mb-0 text-success">@Model.Roles.Count</h5>
-                                <small class="text-muted">Roles</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions Card -->
-            <div class="card shadow">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-bolt text-warning me-2"></i>Quick Actions
-                    </h6>
+    <div class="row mt-3">
+        <!-- Left Column - Account summary -->
+        <div class="col-lg-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-person-badge me-2"></i>Account
                 </div>
                 <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="@Url.Action("ResetPassword",new {id=Model.Id})" class="btn btn-outline-primary">
-                            <i class="fas fa-key me-2"></i>Change Password
-                        </a>
-                        <form asp-action="Logout" method="post" class="mb-0">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-outline-danger w-100">
-                                <i class="fas fa-sign-out-alt me-2"></i>Sign Out
-                            </button>
-                        </form>
+                    <div class="cell-item mb-3">
+                        <div class="user-avatar">
+                            <span>@Model.FirstName[0]@Model.LastName[0]</span>
+                        </div>
+                        <div class="cell-text">
+                            <span class="cell-title">@Model.FullName</span>
+                            <span class="cell-sub">@@@Model.Username</span>
+                        </div>
+                    </div>
+
+                    <div class="detail-grid">
+                        <div class="detail-row">
+                            <span class="d-label">Status</span>
+                            <span class="d-value">
+                                @if (Model.IsActive)
+                                {
+                                    <span class="state state-ok">Active Account</span>
+                                }
+                                else
+                                {
+                                    <span class="state state-idle">Inactive</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Roles (@Model.Roles.Count)</span>
+                            <span class="d-value">
+                                @if (Model.Roles.Any())
+                                {
+                                    <span class="state-stack">
+                                        @foreach (var role in Model.Roles)
+                                        {
+                                            <span class="badge bg-primary">@role</span>
+                                        }
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="d-empty">No roles</span>
+                                }
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Permissions</span>
+                            <span class="d-value mono">@Model.Permissions.Count</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -104,82 +88,78 @@
 
         <!-- Right Column - Details -->
         <div class="col-lg-8">
-            <!-- Personal Information Card -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-info-circle text-info me-2"></i>Personal Information
-                    </h6>
+            <!-- Personal Information -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-info-circle me-2"></i>Personal Information
                 </div>
                 <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">First Name</label>
-                            <div class="form-control-plaintext fw-semibold">@Model.FirstName</div>
+                    <div class="detail-grid">
+                        <div class="detail-row">
+                            <span class="d-label">First Name</span>
+                            <span class="d-value">@Model.FirstName</span>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Last Name</label>
-                            <div class="form-control-plaintext fw-semibold">@Model.LastName</div>
+                        <div class="detail-row">
+                            <span class="d-label">Last Name</span>
+                            <span class="d-value">@Model.LastName</span>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Username</label>
-                            <div class="form-control-plaintext fw-semibold">@Model.Username</div>
+                        <div class="detail-row">
+                            <span class="d-label">Username</span>
+                            <span class="d-value">@Model.Username</span>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Email Address</label>
-                            <div class="form-control-plaintext fw-semibold">
-                                <i class="fas fa-envelope text-muted me-2"></i>@Model.Email
-                            </div>
+                        <div class="detail-row">
+                            <span class="d-label">Email Address</span>
+                            <span class="d-value">@Model.Email</span>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Account Created</label>
-                            <div class="form-control-plaintext fw-semibold">
-                                <i class="far fa-calendar text-muted me-2"></i>
-                                @Model.CreatedAt.ToString("MMM dd, yyyy")
-                            </div>
+                        <div class="detail-row">
+                            <span class="d-label">Account Created</span>
+                            <span class="d-value mono">@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small">Last Login</label>
-                            <div class="form-control-plaintext fw-semibold">
-                                <i class="far fa-clock text-muted me-2"></i>
-                                @(Model.LastLoginAt.HasValue? Model.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm") : "Never")
-                            </div>
+                        <div class="detail-row">
+                            <span class="d-label">Last Login</span>
+                            <span class="d-value">
+                                @if (Model.LastLoginAt.HasValue)
+                                {
+                                    <span class="mono">@Model.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm")</span>
+                                }
+                                else
+                                {
+                                    <span class="d-empty">Never</span>
+                                }
+                            </span>
                         </div>
                     </div>
 
-                    <div class="alert alert-info mt-3 mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <small>To update your profile information, please contact your system administrator.</small>
-                    </div>
+                    <p class="form-text mb-0 mt-3">
+                        To update your profile information, please contact your system administrator.
+                    </p>
                 </div>
             </div>
 
-            <!-- Permissions Card -->
-            <div class="card shadow">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
-                        <i class="fas fa-shield-alt text-success me-2"></i>
-                        My Permissions (@Model.Permissions.Count)
-                    </h6>
-                    <div class="input-group" style="max-width: 300px;">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text"
-                               id="permissionSearch"
-                               class="form-control form-control-sm"
-                               placeholder="Search permissions...">
+            <!-- Permissions -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                    <span><i class="bi bi-shield-check me-2"></i>My Permissions (@Model.Permissions.Count)</span>
+                    <div class="filter-search">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text"
+                                   id="permissionSearch"
+                                   class="form-control"
+                                   placeholder="Search permissions...">
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
                     @if (Model.Permissions.Any())
                     {
-                        <!-- Group permissions by category -->
                         var permissionsByCategory = Model.Permissions
-                        .GroupBy(p => p.Category)
-                        .OrderBy(g => g.Key);
+                            .GroupBy(p => p.Category)
+                            .OrderBy(g => g.Key);
 
-                        <div class="accordion" id="permissionsAccordion">
+                        <div class="accordion accordion-flush" id="permissionsAccordion">
                             @foreach (var category in permissionsByCategory)
                             {
                                 var categoryId = category.Key.Replace(" ", "");
@@ -191,8 +171,7 @@
                                                 type="button"
                                                 data-bs-toggle="collapse"
                                                 data-bs-target="#@categoryId">
-                                            <i class="fas fa-folder-open text-primary me-2"></i>
-                                            <strong>@category.Key</strong>
+                                            <span class="fw-semibold">@category.Key</span>
                                             <span class="badge bg-primary ms-2">@category.Count()</span>
                                         </button>
                                     </h2>
@@ -200,21 +179,20 @@
                                          class="accordion-collapse collapse @(isFirst ? "show" : "")"
                                          data-bs-parent="#permissionsAccordion">
                                         <div class="accordion-body">
-                                            <div class="list-group list-group-flush">
+                                            <div class="list-group list-group-flush side-panel">
                                                 @foreach (var permission in category.OrderBy(p => p.Name))
                                                 {
                                                     <div class="list-group-item permission-item"
                                                          data-permission-name="@permission.Name.ToLower()">
-                                                        <div class="d-flex align-items-center">
-                                                            <i class="fas fa-check-circle text-success me-3"></i>
-                                                            <div class="flex-grow-1">
-                                                                <div class="fw-semibold">@permission.Name</div>
+                                                        <div class="d-flex align-items-start gap-2">
+                                                            <i class="bi bi-check-circle text-success"></i>
+                                                            <div>
+                                                                <div class="mono">@permission.Name</div>
                                                                 @if (!string.IsNullOrEmpty(permission.Description))
                                                                 {
-                                                                    <small class="text-muted">@permission.Description</small>
+                                                                    <div class="form-text">@permission.Description</div>
                                                                 }
                                                             </div>
-                                                            <code class="text-muted small">@permission.Name</code>
                                                         </div>
                                                     </div>
                                                 }
@@ -227,9 +205,10 @@
                     }
                     else
                     {
-                        <div class="text-center text-muted py-5">
-                            <i class="fas fa-shield-alt fa-3x mb-3 opacity-25"></i>
-                            <p>No permissions assigned</p>
+                        <div class="empty-state">
+                            <i class="bi bi-shield-exclamation"></i>
+                            <h5>No permissions assigned</h5>
+                            <p class="mb-0">Ask your administrator to grant the access you need.</p>
                         </div>
                     }
                 </div>
@@ -237,43 +216,6 @@
         </div>
     </div>
 </div>
-
-<style>
-    .avatar-circle {
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    .initials {
-        color: white;
-        font-weight: bold;
-    }
-
-    .stat-box {
-        padding: 0.5rem;
-    }
-
-    .form-control-plaintext {
-        padding: 0.5rem 0;
-        min-height: 38px;
-    }
-
-    .permission-item {
-        transition: background-color 0.2s;
-    }
-
-        .permission-item:hover {
-            background-color: #f8f9fa;
-        }
-
-    .accordion-button:not(.collapsed) {
-        background-color: #f8f9fa;
-        color: #0d6efd;
-    }
-</style>
 
 @section Scripts {
     <script>

@@ -1,4 +1,4 @@
-﻿@model LoginViewModel
+@model LoginViewModel
 @{
     Layout = null;
 }
@@ -8,422 +8,289 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Inventory Pro</title>
+    <title>Sign in - Inventory Pro</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --ground: #F6F9FC;
+            --surface: #FFFFFF;
+            --surface-2: #F0F5F9;
+            --ink: #16262E;
+            --ink-2: #4C616D;
+            --ink-3: #7C8F9B;
+            --line: #E3EDF3;
+            --line-2: #CFDEE8;
+            --accent: #0E9BC4;
+            --accent-2: #0B7FA3;
+            --accent-weak: #E4F5FB;
+            --crit: #CE3B33;
+            --crit-weak: #FDECEA;
+            --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
         }
+
+        * { box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .login-container {
-            background: #ffffff;
-            border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            max-width: 1100px;
-            width: 100%;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            animation: slideUp 0.6s ease-out;
+            place-items: center;
+            padding: 24px;
+            background: var(--ground);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14.5px;
+            -webkit-font-smoothing: antialiased;
         }
 
-        @@keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(22, 38, 46, .06);
+            padding: 30px 28px 26px;
         }
 
-        .login-left {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 3rem;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
-
-            .login-left::before {
-                content: '';
-                position: absolute;
-                top: -50%;
-                right: -50%;
-                width: 200%;
-                height: 200%;
-                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-                animation: rotate 20s linear infinite;
-            }
-
-        @@keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .brand-section {
-            position: relative;
-            z-index: 1;
-        }
-
-        .brand-logo {
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
+        .brand {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
+            gap: 10px;
+            margin-bottom: 22px;
         }
 
-        .brand-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+            background: var(--accent);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 15px;
+            flex: none;
+        }
+
+        .brand-name {
+            font-size: 16px;
+            font-weight: 660;
+            letter-spacing: -.01em;
             line-height: 1.2;
         }
 
-        .brand-subtitle {
-            font-size: 1.125rem;
-            opacity: 0.9;
-            font-weight: 500;
+        .brand-sub {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--ink-3);
         }
 
-        .features-section {
-            position: relative;
-            z-index: 1;
+        h1 {
+            font-size: 19px;
+            font-weight: 640;
+            letter-spacing: -.015em;
+            margin: 0 0 3px;
         }
 
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+        .lead {
+            margin: 0 0 20px;
+            color: var(--ink-3);
+            font-size: 13.5px;
         }
 
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .feature-content h5 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .feature-content p {
-            margin: 0;
-            opacity: 0.85;
-            font-size: 0.9375rem;
-        }
-
-        .login-right {
-            padding: 3rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .login-header {
-            margin-bottom: 2rem;
-        }
-
-            .login-header h2 {
-                font-size: 2rem;
-                font-weight: 700;
-                color: #1e293b;
-                margin-bottom: 0.5rem;
-            }
-
-            .login-header p {
-                color: #64748b;
-                font-size: 1rem;
-            }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+        .form-group { margin-bottom: 14px; }
 
         .form-label {
             display: block;
+            font-size: 12.5px;
             font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-            font-size: 0.9375rem;
+            color: var(--ink-2);
+            margin-bottom: 5px;
         }
 
-        .input-wrapper {
-            position: relative;
-        }
+        .input-wrapper { position: relative; }
 
         .input-icon {
             position: absolute;
-            left: 1.125rem;
+            left: 11px;
             top: 50%;
             transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 1.125rem;
+            color: var(--ink-3);
+            font-size: 13px;
+            pointer-events: none;
         }
 
         .form-input {
             width: 100%;
-            padding: 0.875rem 1.125rem 0.875rem 3rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8fafc;
+            padding: 9px 12px 9px 33px;
+            border: 1px solid var(--line-2);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--ink);
+            font: inherit;
+            font-size: 14px;
+            transition: border-color .15s ease, box-shadow .15s ease;
         }
 
-            .form-input:focus {
-                outline: none;
-                border-color: #667eea;
-                background: #ffffff;
-                box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            }
+        .form-input::placeholder { color: var(--ink-3); }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-weak);
+        }
 
         .form-check {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
+            gap: 8px;
+            margin: 16px 0 20px;
         }
 
         .form-check-input {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
+            width: 15px;
+            height: 15px;
+            accent-color: var(--accent);
+            margin: 0;
             cursor: pointer;
         }
 
-            .form-check-input:checked {
-                background-color: #667eea;
-                border-color: #667eea;
-            }
-
         .form-check-label {
-            color: #64748b;
-            font-size: 0.9375rem;
+            font-size: 13px;
+            color: var(--ink-2);
             cursor: pointer;
         }
 
         .login-btn {
             width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 1.0625rem;
+            padding: 10px 14px;
+            border: 0;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font: inherit;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: background .15s ease;
         }
 
-            .login-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-            }
+        .login-btn:hover { background: var(--accent-2); }
 
-            .login-btn:active {
-                transform: translateY(0);
-            }
+        .login-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
 
         .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            border: none;
-        }
-
-        .alert-danger {
-            background: #fee2e2;
-            color: #dc2626;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            background: var(--crit-weak);
+            color: var(--crit);
+            border-radius: 6px;
+            padding: 9px 11px;
+            font-size: 13px;
+            margin-bottom: 16px;
         }
 
         .text-danger {
-            color: #dc2626;
-            font-size: 0.875rem;
-            margin-top: 0.375rem;
             display: block;
+            color: var(--crit);
+            font-size: 12.5px;
+            margin-top: 4px;
         }
 
-        @@media (max-width: 992px) {
-            .login-container {
-                grid-template-columns: 1fr;
-            }
-
-            .login-left {
-                display: none;
-            }
+        .foot {
+            margin-top: 20px;
+            padding-top: 14px;
+            border-top: 1px solid var(--line);
+            font-size: 12px;
+            color: var(--ink-3);
+            text-align: center;
         }
 
-        @@media (max-width: 576px) {
-            body {
-                padding: 1rem;
-            }
-
-            .login-right {
-                padding: 2rem 1.5rem;
-            }
+        @@media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-left">
-            <div class="brand-section">
-                <div class="brand-logo">
-                    <i class="fas fa-boxes"></i>
-                </div>
-                <h1 class="brand-title">Inventory Pro</h1>
-                <p class="brand-subtitle">Complete Inventory Management Solution</p>
-            </div>
-
-            <div class="features-section">
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-box fa-lg"></i>
-                    </div>
-                    <div class="feature-content">
-                        <h5>Smart Inventory</h5>
-                        <p>Track and manage your products effortlessly with real-time updates</p>
-                    </div>
-                </div>
-
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-route fa-lg"></i>
-                    </div>
-                    <div class="feature-content">
-                        <h5>Seamless Transfers</h5>
-                        <p>Optimize product movements across departments</p>
-                    </div>
-                </div>
-
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <i class="fas fa-chart-line fa-lg"></i>
-                    </div>
-                    <div class="feature-content">
-                        <h5>Powerful Analytics</h5>
-                        <p>Get insights with comprehensive reporting tools</p>
-                    </div>
-                </div>
+    <div class="login-card">
+        <div class="brand">
+            <div class="brand-mark"><i class="fas fa-boxes-stacked"></i></div>
+            <div>
+                <div class="brand-name">Inventory Pro</div>
+                <div class="brand-sub">166</div>
             </div>
         </div>
 
-        <div class="login-right">
-            <div class="login-header">
-                <h2>Welcome Back!</h2>
-                <p>Please sign in to your account to continue</p>
+        <h1>Sign in</h1>
+        <p class="lead">Use your work account to continue.</p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert">
+                <i class="fas fa-circle-exclamation" style="margin-top:2px"></i>
+                <div>
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <div>@error.ErrorMessage</div>
+                    }
+                </div>
+            </div>
+        }
+
+        <form asp-action="Login" method="post">
+            <div class="form-group">
+                <label asp-for="Username" class="form-label">Username</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-user input-icon"></i>
+                    <input asp-for="Username" class="form-input" placeholder="Your username" autocomplete="username" autofocus>
+                </div>
+                <span asp-validation-for="Username" class="text-danger"></span>
             </div>
 
-            @if (!ViewData.ModelState.IsValid)
-            {
-                <div class="alert alert-danger">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <div>
-                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-                            {
-                                <div>@error.ErrorMessage</div>
-                            }
-                        </div>
-                    </div>
+            <div class="form-group">
+                <label asp-for="Password" class="form-label">Password</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input asp-for="Password" class="form-input" type="password" placeholder="Your password" autocomplete="current-password">
                 </div>
-            }
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
 
-            <form asp-action="Login" method="post">
-                <div class="form-group">
-                    <label asp-for="Username" class="form-label">Username</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-user input-icon"></i>
-                        <input asp-for="Username" class="form-input" placeholder="Enter your username" autofocus>
-                    </div>
-                    <span asp-validation-for="Username" class="text-danger"></span>
-                </div>
+            <div class="form-check">
+                <input asp-for="RememberMe" class="form-check-input" type="checkbox">
+                <label asp-for="RememberMe" class="form-check-label">Keep me signed in for 30 days</label>
+            </div>
 
-                <div class="form-group">
-                    <label asp-for="Password" class="form-label">Password</label>
-                    <div class="input-wrapper">
-                        <i class="fas fa-lock input-icon"></i>
-                        <input asp-for="Password" class="form-input" type="password" placeholder="Enter your password">
-                    </div>
-                    <span asp-validation-for="Password" class="text-danger"></span>
-                </div>
+            <button type="submit" class="login-btn">Sign in</button>
+        </form>
 
-                <div class="form-check">
-                    <input asp-for="RememberMe" class="form-check-input" type="checkbox">
-                    <label asp-for="RememberMe" class="form-check-label">
-                        Remember me for 30 days
-                    </label>
-                </div>
-
-                <button type="submit" class="login-btn">
-                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
-                </button>
-            </form>
-        </div>
+        <div class="foot">Trouble signing in? Contact your system administrator.</div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Pre-fill username if remembered
-            const rememberedUsername = getCookie('username');
-            if (rememberedUsername) {
-                $('#Username').val(rememberedUsername);
-                $('#RememberMe').prop('checked', true);
-                $('#Password').focus();
+        document.addEventListener('DOMContentLoaded', function () {
+            var remembered = getCookie('username');
+            if (remembered) {
+                var user = document.getElementById('Username');
+                var remember = document.getElementById('RememberMe');
+                var pass = document.getElementById('Password');
+                if (user) user.value = remembered;
+                if (remember) remember.checked = true;
+                if (pass) pass.focus();
             }
         });
 
         function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
+            var value = '; ' + document.cookie;
+            var parts = value.split('; ' + name + '=');
             if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
             return null;
         }

@@ -34,6 +34,33 @@ namespace ProductService.Infrastructure
             services.AddSingleton<RabbitMQConsumer>();
             services.AddHostedService(provider => provider.GetRequiredService<RabbitMQConsumer>());
 
+            // Configure Redis Caching (Optional - Toggle via appsettings.json)
+            var redisEnabled = configuration.GetValue<bool>("Redis:Enabled");
+            if (redisEnabled)
+            {
+                var redisConnectionString = configuration.GetValue<string>("Redis:ConnectionString");
+                if (!string.IsNullOrEmpty(redisConnectionString))
+                {
+                    services.AddStackExchangeRedisCache(options =>
+                    {
+                        options.Configuration = redisConnectionString;
+                        options.InstanceName = "ProductService_";
+                    });
+                    services.AddScoped<ICacheService, RedisCacheService>();
+                    Console.WriteLine("Redis caching is ENABLED for ProductService");
+                }
+                else
+                {
+                    services.AddScoped<ICacheService, NoCacheService>();
+                    Console.WriteLine("Redis enabled but connection string missing. Using NoCacheService.");
+                }
+            }
+            else
+            {
+                services.AddScoped<ICacheService, NoCacheService>();
+                Console.WriteLine("Redis caching is DISABLED for ProductService");
+            }
+
             return services;
         }
     }

@@ -30,7 +30,9 @@ namespace InventoryManagement.Web.Controllers
             DateTime? startDate=null,
             DateTime? endDate=null,
             bool? status=null,
-            bool? availability=null)
+            bool? availability=null,
+            int? categoryId=null,
+            int? departmentId=null)
         {
             try
             {
@@ -50,6 +52,13 @@ namespace InventoryManagement.Web.Controllers
 
                 if (availability.HasValue)
                     queryString.Append($"&availability={availability}");
+
+                // The products API already supported these two; the list screen just never sent them.
+                if (categoryId.HasValue)
+                    queryString.Append($"&categoryId={categoryId}");
+
+                if (departmentId.HasValue)
+                    queryString.Append($"&departmentId={departmentId}");
 
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products{queryString}");
 
@@ -79,7 +88,10 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.CurrentAvailability = availability;
                 ViewBag.StartDate = startDate;
                 ViewBag.EndDate = endDate;
+                ViewBag.CurrentCategoryId = categoryId;
+                ViewBag.CurrentDepartmentId = departmentId;
 
+                await LoadFilterLists();
 
                 return View(products ?? new PagedResultDto<ProductViewModel>());
             }
@@ -268,6 +280,35 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        /// <summary>
+        /// Category/department options for the list screen's filter panel. Failure is non-fatal:
+        /// the list still renders, the two dropdowns just come back empty.
+        /// </summary>
+        private async Task LoadFilterLists()
+        {
+            try
+            {
+                var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+
+                ViewBag.FilterCategories = categories?
+                    .OrderBy(c => c.Name)
+                    .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Name })
+                    .ToList() ?? [];
+
+                ViewBag.FilterDepartments = departments?
+                    .OrderBy(d => d.Name)
+                    .Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name })
+                    .ToList() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load product filter lists");
+                ViewBag.FilterCategories = new List<SelectListItem>();
+                ViewBag.FilterDepartments = new List<SelectListItem>();
+            }
+        }
+
         private async Task LoadDropdowns(ProductViewModel model)
         {
             try
@@ -275,13 +316,15 @@ namespace InventoryManagement.Web.Controllers
                 var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
                 var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
 
-                model.Categories = categories?.Select(c => new SelectListItem
+                // Ordered by name: the API returns insertion order, which put the dropdowns in
+                // effectively random (id) order and made a long department list unusable.
+                model.Categories = categories?.OrderBy(c => c.Name).Select(c => new SelectListItem
                 {
                     Value = c.Id.ToString(),
                     Text = c.Name
                 }).ToList() ?? [];
 
-                model.Departments = departments?.Select(d => new SelectListItem
+                model.Departments = departments?.OrderBy(d => d.Name).Select(d => new SelectListItem
                 {
                     Value = d.Id.ToString(),
                     Text = d.Name

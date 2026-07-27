@@ -11,6 +11,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    @* Bootstrap Icons: cleaner stroke-style glyphs used for the navigation chrome.
+       Font Awesome stays for the in-page action buttons across the existing views. *@
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <!-- Custom CSS -->
@@ -98,6 +101,11 @@
                                             <i class="fas fa-user-circle me-2"></i> My Profile
                                         </a>
                                     </li>
+                                    <li>
+                                        <a class="dropdown-item" href="/Account/ChangePassword">
+                                            <i class="fas fa-key me-2"></i> Change Password
+                                        </a>
+                                    </li>
                                     @if (User.IsInRole("Admin"))
                                     {
                                         <li>
@@ -180,17 +188,28 @@
     }
     <script>
         // Initialize application when document is ready
+        // Single entry point for the sidebar, shared by the header button and the mobile
+        // overlay. The overlay markup has always called toggleSidebar(), but the function was
+        // never defined - so tapping outside the drawer did nothing. Layout widths are owned by
+        // the stylesheet; setting margin-left from JS here fought those rules.
+        function toggleSidebar() {
+            if (window.matchMedia('(max-width: 992px)').matches) {
+                document.body.classList.toggle('sidebar-open');   // drawer over the content
+            } else {
+                document.getElementById('wrapper').classList.toggle('toggled'); // collapse to rail
+            }
+        }
+
         $(document).ready(function() {
-            // Initialize sidebar toggle
             $('#menu-toggle').click(function(e) {
                 e.preventDefault();
-                $('body').toggleClass('sidebar-toggled');
-                $('#wrapper').toggleClass('toggled');
+                toggleSidebar();
+            });
 
-                if ($('#wrapper').hasClass('toggled')) {
-                    $('.main-content').css('margin-left', '0');
-                } else {
-                    $('.main-content').css('margin-left', 'var(--sidebar-width)');
+            // Leaving the mobile breakpoint should never strand an open drawer.
+            window.addEventListener('resize', function () {
+                if (!window.matchMedia('(max-width: 992px)').matches) {
+                    document.body.classList.remove('sidebar-open');
                 }
             });
 

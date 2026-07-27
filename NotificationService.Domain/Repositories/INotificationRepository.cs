@@ -5,7 +5,7 @@ namespace NotificationService.Domain.Repositories
     public interface INotificationRepository
     {
         Task<Notification?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Notification>> GetByUserIdAsync(int userId, bool unreadOnly = false, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Notification>> GetByUserIdAsync(int userId, bool unreadOnly = false, CancellationToken cancellationToken = default, int? limit = null);
         Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken = default);
         Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default);

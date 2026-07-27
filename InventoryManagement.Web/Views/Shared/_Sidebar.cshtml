@@ -1,121 +1,90 @@
-﻿<aside class="modern-sidebar" id="sidebar-wrapper">
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+}
+<aside class="modern-sidebar" id="sidebar-wrapper">
     <div class="sidebar-header">
-        <img src="/inventory.png" alt="Logo" height="40">
-        <h5 class="mb-0 ms-2">Inventory Pro</h5>
+        <img src="/inventory.png" alt="" height="30">
+        <span class="brand-text">Inventory Pro</span>
     </div>
 
     <ul class="sidebar-content">
-            <!-- Dashboard -->
+        <li class="nav-item">
+            <a href="/Home/Dashboard" class="nav-link @(action == "Dashboard" ? "active" : "")">
+                <span class="nav-icon"><i class="bi bi-grid-1x2"></i></span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+        </li>
+
+        <li class="nav-section"><span>Main menu</span></li>
+
+        <li class="nav-item">
+            <a href="/Products" class="nav-link @(controller == "Products" ? "active" : "")">
+                <span class="nav-icon"><i class="bi bi-box-seam"></i></span>
+                <span class="nav-text">Products</span>
+                <span class="badge bg-primary">@ViewBag.ProductCount</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="/Routes" class="nav-link @(controller == "Routes" ? "active" : "")">
+                <span class="nav-icon"><i class="bi bi-arrow-left-right"></i></span>
+                <span class="nav-text">Routes</span>
+                <span class="badge bg-warning" id="pendingRoutesCount"></span>
+            </a>
+        </li>
+
+        @if (User.IsInRole("Admin"))
+        {
+            <li class="nav-section"><span>Management</span></li>
+
             <li class="nav-item">
-                <a href="/Home/Dashboard"
-                   class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "Dashboard" ? "active" : "")">
-                    <div class="nav-icon">
-                        <i class="fas fa-th-large"></i>
-                    </div>
-                    <span class="nav-text">Dashboard</span>
+                <a href="/Categories" class="nav-link @(controller == "Categories" ? "active" : "")">
+                    <span class="nav-icon"><i class="bi bi-tags"></i></span>
+                    <span class="nav-text">Categories</span>
                 </a>
             </li>
 
-            <!-- Main Menu -->
-            <li class="nav-section">
-                <span>MAIN MENU</span>
+            <li class="nav-item">
+                <a href="/Departments" class="nav-link @(controller == "Departments" ? "active" : "")">
+                    <span class="nav-icon"><i class="bi bi-diagram-3"></i></span>
+                    <span class="nav-text">Departments</span>
+                </a>
             </li>
 
+            <li class="nav-section"><span>Administration</span></li>
+
             <li class="nav-item">
-                <a href="/Products"
-                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Products" ? "active" : "")">
-                    <div class="nav-icon">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <span class="nav-text">Products</span>
-                    <span class="badge bg-primary ms-auto">@ViewBag.ProductCount</span>
+                <a href="/Approvals" class="nav-link @(controller == "Approvals" ? "active" : "")">
+                    <span class="nav-icon"><i class="bi bi-check2-square"></i></span>
+                    <span class="nav-text">Approvals</span>
+                    <span class="badge bg-danger" id="sidebarPendingCount"></span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a href="/Routes"
-                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Routes" ? "active" : "")">
-                    <div class="nav-icon">
-                        <i class="fas fa-route"></i>
-                    </div>
-                    <span class="nav-text">Routes</span>
-                    <span class="badge bg-warning ms-auto" id="pendingRoutesCount"></span>
+                <a href="/UserManagement" class="nav-link @(controller == "UserManagement" ? "active" : "")">
+                    <span class="nav-icon"><i class="bi bi-people"></i></span>
+                    <span class="nav-text">Users</span>
                 </a>
             </li>
-
-            @if (User.IsInRole("Admin"))
-            {
-                <li class="nav-section">
-                    <span>MANAGEMENT</span>
-                </li>
-
-                <li class="nav-item">
-                    <a href="/Categories"
-                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
-                        <div class="nav-icon">
-                            <i class="fas fa-tags"></i>
-                        </div>
-                        <span class="nav-text">Categories</span>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="/Departments"
-                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Departments" ? "active" : "")">
-                        <div class="nav-icon">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <span class="nav-text">Departments</span>
-                    </a>
-                </li>
-
-                <li class="nav-section">
-                    <span>ADMINISTRATION</span>
-                </li>
-
-                <li class="nav-item">
-                    <a href="/Approvals"
-                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Approvals" ? "active" : "")">
-                        <div class="nav-icon">
-                            <i class="fas fa-check-double"></i>
-                        </div>
-                        <span class="nav-text">Approvals</span>
-                        <span class="badge bg-danger ms-auto" id="sidebarPendingCount"></span>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="/UserManagement"
-                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "UserManagement" ? "active" : "")">
-                        <div class="nav-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <span class="nav-text">Users</span>
-                    </a>
-                </li>
-            }
-            else
-            {
-                <li class="nav-item">
-                    <a href="/MyRequests"
-                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "MyRequests" ? "active" : "")">
-                        <div class="nav-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <span class="nav-text">My Requests</span>
-                    </a>
-                </li>
-            }
-
+        }
+        else
+        {
             <li class="nav-item">
-                <a href="/Notifications"
-                   class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notifications" ? "active" : "")">
-                    <div class="nav-icon">
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    <span class="nav-text">Notifications</span>
-                    <span class="badge bg-info ms-auto notification-badge" id="sidebarUnreadCount" style="display: none;"></span>
+                <a href="/MyRequests" class="nav-link @(controller == "MyRequests" ? "active" : "")">
+                    <span class="nav-icon"><i class="bi bi-clock-history"></i></span>
+                    <span class="nav-text">My Requests</span>
                 </a>
             </li>
+        }
+
+        <li class="nav-item">
+            <a href="/Notifications" class="nav-link @(controller == "Notifications" ? "active" : "")">
+                <span class="nav-icon"><i class="bi bi-bell"></i></span>
+                <span class="nav-text">Notifications</span>
+                <span class="badge bg-info notification-badge" id="sidebarUnreadCount" style="display: none;"></span>
+            </a>
+        </li>
     </ul>
 </aside>

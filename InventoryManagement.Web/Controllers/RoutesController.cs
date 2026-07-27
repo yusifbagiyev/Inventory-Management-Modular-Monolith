@@ -354,13 +354,15 @@ namespace InventoryManagement.Web.Controllers
                 var products = await _apiService.GetAsync<PagedResultDto<ProductDto>>("api/products");
                 var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
 
-                model.Products = products?.Items.Select(p => new SelectListItem
+                // Ordered for humans: products by inventory code, departments alphabetically.
+                // Both lists arrived in id order, which reads as random in a long dropdown.
+                model.Products = products?.Items.OrderBy(p => p.InventoryCode).Select(p => new SelectListItem
                 {
                     Value = p.Id.ToString(),
                     Text = $"{p.InventoryCode} - {p.Model} ({p.Vendor})"
                 }).ToList() ?? [];
 
-                model.Departments = departments?.Select(d => new SelectListItem
+                model.Departments = departments?.OrderBy(d => d.Name).Select(d => new SelectListItem
                 {
                     Value = d.Id.ToString(),
                     Text = d.Name
@@ -379,7 +381,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
-                ViewBag.Departments = departments?.Select(d => new SelectListItem
+                ViewBag.Departments = departments?.OrderBy(d => d.Name).Select(d => new SelectListItem
                 {
                     Value = d.Id.ToString(),
                     Text = d.Name
