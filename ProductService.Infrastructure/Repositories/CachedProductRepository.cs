@@ -144,8 +144,21 @@ namespace ProductService.Infrastructure.Repositories
         }
 
         public async Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
+            bool? status = null,
+            bool? availability = null,
+            bool? hasImage = null,
+            bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
+            // Only the unfiltered facet set is cached; a filtered request (cascading against the
+            // active state filters) is cheap and varies too much to be worth caching.
+            var noFilters = !status.HasValue && !availability.HasValue && !hasImage.HasValue && !assigned.HasValue;
+            if (!noFilters)
+            {
+                return await _innerRepository.GetDepartmentCategoryPairsAsync(
+                    status, availability, hasImage, assigned, cancellationToken);
+            }
+
             var cacheKey = $"{CacheKeyPrefix}facets:dept-category";
 
             var cached = await _cacheService.GetAsync<List<int[]>>(cacheKey, cancellationToken);
@@ -154,7 +167,7 @@ namespace ProductService.Infrastructure.Repositories
                 return cached.Select(a => (a[0], a[1])).ToList();
             }
 
-            var pairs = await _innerRepository.GetDepartmentCategoryPairsAsync(cancellationToken);
+            var pairs = await _innerRepository.GetDepartmentCategoryPairsAsync(cancellationToken: cancellationToken);
 
             // ValueTuple has no stable JSON shape, so cache as int[] pairs (invalidated on every write).
             await _cacheService.SetAsync(

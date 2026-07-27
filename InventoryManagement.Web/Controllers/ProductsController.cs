@@ -103,7 +103,8 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.CurrentHasImage = hasImage;
                 ViewBag.CurrentAssigned = assigned;
 
-                await LoadFilterLists();
+                // Pass the active state/quick filters so the cascading facets narrow to them.
+                await LoadFilterLists(status, availability, hasImage, assigned);
 
                 return View(products ?? new PagedResultDto<ProductViewModel>());
             }
@@ -296,7 +297,8 @@ namespace InventoryManagement.Web.Controllers
         /// Category/department options for the list screen's filter panel. Failure is non-fatal:
         /// the list still renders, the two dropdowns just come back empty.
         /// </summary>
-        private async Task LoadFilterLists()
+        private async Task LoadFilterLists(
+            bool? status = null, bool? availability = null, bool? hasImage = null, bool? assigned = null)
         {
             try
             {
@@ -326,7 +328,13 @@ namespace InventoryManagement.Web.Controllers
             // category/department dropdowns intact - cascading just falls back to "show everything".
             try
             {
-                var facets = await _apiService.GetAsync<ProductFilterFacetsDto>("api/products/filter-facets");
+                var facetQuery = new StringBuilder("api/products/filter-facets?");
+                if (status.HasValue) facetQuery.Append($"&status={status}");
+                if (availability.HasValue) facetQuery.Append($"&availability={availability}");
+                if (hasImage.HasValue) facetQuery.Append($"&hasImage={hasImage}");
+                if (assigned.HasValue) facetQuery.Append($"&assigned={assigned}");
+
+                var facets = await _apiService.GetAsync<ProductFilterFacetsDto>(facetQuery.ToString());
                 var pairs = facets?.Pairs
                     .Select(p => new[] { p.DepartmentId, p.CategoryId })
                     .ToList() ?? [];

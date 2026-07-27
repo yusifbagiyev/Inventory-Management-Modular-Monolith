@@ -6,9 +6,14 @@ namespace ProductService.Application.Features.Products.Queries
 {
     /// <summary>
     /// Returns the (department, category) pairs present in the inventory, so the list filters can
-    /// cascade. Cheap DISTINCT query; the repository caches the result.
+    /// cascade. The state/quick filters narrow the result, so the department and category options
+    /// react to the other active filters. Cheap DISTINCT query; the unfiltered set is cached.
     /// </summary>
-    public record GetProductFilterFacetsQuery() : IRequest<ProductFilterFacetsDto>;
+    public record GetProductFilterFacetsQuery(
+        bool? Status = null,
+        bool? Availability = null,
+        bool? HasImage = null,
+        bool? Assigned = null) : IRequest<ProductFilterFacetsDto>;
 
     public class GetProductFilterFacetsQueryHandler
         : IRequestHandler<GetProductFilterFacetsQuery, ProductFilterFacetsDto>
@@ -23,7 +28,8 @@ namespace ProductService.Application.Features.Products.Queries
         public async Task<ProductFilterFacetsDto> Handle(
             GetProductFilterFacetsQuery request, CancellationToken cancellationToken)
         {
-            var pairs = await _productRepository.GetDepartmentCategoryPairsAsync(cancellationToken);
+            var pairs = await _productRepository.GetDepartmentCategoryPairsAsync(
+                request.Status, request.Availability, request.HasImage, request.Assigned, cancellationToken);
 
             return new ProductFilterFacetsDto
             {

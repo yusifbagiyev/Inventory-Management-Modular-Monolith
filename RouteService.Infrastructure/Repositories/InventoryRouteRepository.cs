@@ -44,13 +44,24 @@ namespace RouteService.Infrastructure.Repositories
 
 
         public async Task<IReadOnlyList<(int DepartmentId, string CategoryName)>> GetDepartmentCategoryPairsAsync(
+            bool? isCompleted = null,
+            RouteType? routeType = null,
             CancellationToken cancellationToken = default)
         {
+            var scoped = _context.InventoryRoutes.AsNoTracking().AsQueryable();
+
+            // Apply the same status/type predicates the list uses, so the department and category
+            // options reflect only what the other active filters allow.
+            if (isCompleted.HasValue)
+                scoped = scoped.Where(r => r.IsCompleted == isCompleted.Value);
+
+            if (routeType.HasValue)
+                scoped = scoped.Where(r => r.RouteType == routeType.Value);
+
             // Pull the distinct (from, to, category) triples, then fan each out to one pair per real
             // department end. Done in memory because a route has two department columns and dept 0
             // ("Removed") must be dropped - awkward to express as a single translatable query.
-            var rows = await _context.InventoryRoutes
-                .AsNoTracking()
+            var rows = await scoped
                 .Select(r => new
                 {
                     r.FromDepartmentId,
@@ -116,12 +127,16 @@ namespace RouteService.Infrastructure.Repositories
             DateTime? endDate,
             int? departmentId = null,
             string? categoryName = null,
+            RouteType? routeType = null,
             CancellationToken cancellationToken = default)
         {
             var query = _context.InventoryRoutes.AsQueryable();
 
             if (isCompleted.HasValue)
                 query = query.Where(r => r.IsCompleted == isCompleted.Value);
+
+            if (routeType.HasValue)
+                query = query.Where(r => r.RouteType == routeType.Value);
 
             // A route touches two departments, so "in this department" means either end - same rule
             // as GetByDepartmentIdAsync.

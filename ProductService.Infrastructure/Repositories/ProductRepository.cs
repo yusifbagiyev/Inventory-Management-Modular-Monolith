@@ -163,12 +163,39 @@ namespace ProductService.Infrastructure.Repositories
 
 
         public async Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
+            bool? status = null,
+            bool? availability = null,
+            bool? hasImage = null,
+            bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
+            var query = _context.Products.AsNoTracking().AsQueryable();
+
+            // Same predicates as GetAllAsync (minus department/category), so the pairs - and therefore
+            // the cascading dropdowns - reflect only what the other active filters allow.
+            if (status.HasValue)
+                query = query.Where(p => p.IsWorking == status.Value);
+
+            if (availability.HasValue)
+                query = query.Where(p => p.IsActive == availability.Value);
+
+            if (hasImage.HasValue)
+            {
+                query = hasImage.Value
+                    ? query.Where(p => p.ImageUrl != null && p.ImageUrl != "")
+                    : query.Where(p => p.ImageUrl == null || p.ImageUrl == "");
+            }
+
+            if (assigned.HasValue)
+            {
+                query = assigned.Value
+                    ? query.Where(p => p.Worker != null && p.Worker != "")
+                    : query.Where(p => p.Worker == null || p.Worker == "");
+            }
+
             // One row per (department, category) that occurs at least once. Projected to an anonymous
             // type first because EF cannot translate a ValueTuple projection.
-            var pairs = await _context.Products
-                .AsNoTracking()
+            var pairs = await query
                 .Select(p => new { p.DepartmentId, p.CategoryId })
                 .Distinct()
                 .ToListAsync(cancellationToken);

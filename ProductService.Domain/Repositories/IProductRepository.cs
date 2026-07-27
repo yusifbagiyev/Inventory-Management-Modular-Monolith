@@ -21,10 +21,16 @@ namespace ProductService.Domain.Repositories
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Distinct (departmentId, categoryId) combinations that actually occur in the inventory.
-        /// Drives the cascading list filters so a department only offers the categories present in it.
+        /// Distinct (departmentId, categoryId) combinations that occur in the inventory. Drives the
+        /// cascading list filters so a department only offers the categories present in it. The
+        /// state/quick filters are applied first, so the options react to the other active filters
+        /// (e.g. picking "Not working" narrows the departments and categories accordingly).
         /// </summary>
         Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
+            bool? status = null,
+            bool? availability = null,
+            bool? hasImage = null,
+            bool? assigned = null,
             CancellationToken cancellationToken = default);
 
         Task<IEnumerable<Product>> GetByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
