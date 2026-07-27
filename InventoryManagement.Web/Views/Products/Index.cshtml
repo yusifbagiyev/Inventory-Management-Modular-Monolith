@@ -9,6 +9,8 @@
     var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
     var curStatus = ViewBag.CurrentStatus as bool?;
     var curAvailability = ViewBag.CurrentAvailability as bool?;
+    var curHasImage = ViewBag.CurrentHasImage as bool?;
+    var curAssigned = ViewBag.CurrentAssigned as bool?;
     var curStart = ViewBag.StartDate as DateTime?;
     var curEnd = ViewBag.EndDate as DateTime?;
 
@@ -58,7 +60,7 @@
         <div class="filter-grid">
             <div class="filter-field">
                 <label for="categoryFilter">Category</label>
-                <select id="categoryFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                <select id="categoryFilter" class="form-select form-select-sm" onchange="onCategoryChange()">
                     <option value="">All categories</option>
                     @foreach (var c in filterCategories)
                     {
@@ -68,7 +70,7 @@
             </div>
             <div class="filter-field">
                 <label for="departmentFilter">Department</label>
-                <select id="departmentFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
+                <select id="departmentFilter" class="form-select form-select-sm" onchange="onDepartmentChange()">
                     <option value="">All departments</option>
                     @foreach (var d in filterDepartments)
                     {
@@ -111,20 +113,25 @@
             <span class="qlabel">Quick</span>
             <span class="qchip @(curStatus == false ? "active" : "")" onclick="quickFilter('notWorking')">Not working</span>
             <span class="qchip @(curAvailability == false ? "active" : "")" onclick="quickFilter('inactive')">Inactive</span>
-            <span class="qchip" onclick="quickFilter('unassigned')">Unassigned</span>
-            <span class="qchip" onclick="quickFilter('noImage')">No image</span>
+            <span class="qchip @(curAssigned == false ? "active" : "")" onclick="quickFilter('unassigned')">Unassigned</span>
+            <span class="qchip @(curHasImage == false ? "active" : "")" onclick="quickFilter('noImage')">No image</span>
         </div>
 
         @{
             var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCategoryId.HasValue || curDepartmentId.HasValue
-                || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue;
+                || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue
+                || curHasImage.HasValue || curAssigned.HasValue;
         }
         @if (hasFilters)
         {
             <div class="filter-applied">
                 @if (!string.IsNullOrEmpty(currentSearch))
                 {
-                    <span class="achip">Search: <b>@currentSearch</b><button type="button" class="achip-x" onclick="removeFilter('search')">&times;</button></span>
+                    @* One chip per search word; each × removes just that word (data-word is Razor-encoded). *@
+                    foreach (var word in currentSearch.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        <span class="achip">Search: <b>@word</b><button type="button" class="achip-x achip-word" data-word="@word">&times;</button></span>
+                    }
                 }
                 @if (curCategoryId.HasValue)
                 {
@@ -145,6 +152,14 @@
                 @if (curStart.HasValue || curEnd.HasValue)
                 {
                     <span class="achip">Created: <b>@(curStart?.ToString("dd.MM.yyyy")) - @(curEnd?.ToString("dd.MM.yyyy"))</b><button type="button" class="achip-x" onclick="removeFilter('dates')">&times;</button></span>
+                }
+                @if (curAssigned == false)
+                {
+                    <span class="achip"><b>Unassigned</b><button type="button" class="achip-x" onclick="removeFilter('assigned')">&times;</button></span>
+                }
+                @if (curHasImage == false)
+                {
+                    <span class="achip"><b>No image</b><button type="button" class="achip-x" onclick="removeFilter('hasImage')">&times;</button></span>
                 }
                 <button type="button" class="filter-clear" onclick="resetProductFilters()">Clear all</button>
             </div>
@@ -342,18 +357,27 @@
                 opens: 'left'
             });
 
-            // Handle date range selection
+            // Handle date range selection - apply immediately, like the other filters do.
             $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
                 $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                applyProductFilters();
             });
 
-            // Handle clear button
+            // "Clear" drops the date filter and reloads (only if one was set).
             $('#dateRange').on('cancel.daterangepicker', function(ev, picker) {
+                const hadValue = $(this).val() !== '';
                 $(this).val('');
+                if (hadValue) {
+                    removeFilter('dates');
+                }
             });
 
             // Restore filter values from query parameters
             restoreFilterValues();
+
+            // Reflect the current department/category selection in the cascading dropdowns.
+            cascadeCategoryOptions();
+            cascadeDepartmentOptions();
         });
 
         // Restore filter values from URL parameters
@@ -388,8 +412,64 @@
             }
         }
 
-        // Apply all filters and reload the page with query parameters
-        function applyProductFilters() {
+        // Cascading filters: which categories occur in which department. Built from the
+        // [[deptId, catId], ...] facet list the server emits, into two lookup maps.
+        const FILTER_PAIRS = @Html.Raw(ViewBag.FilterPairsJson ?? "[]");
+        const deptToCats = new Map();   // departmentId -> Set(categoryId)
+        const catToDepts = new Map();   // categoryId   -> Set(departmentId)
+        FILTER_PAIRS.forEach(function (pair) {
+            const dep = pair[0], cat = pair[1];
+            if (!deptToCats.has(dep)) deptToCats.set(dep, new Set());
+            if (!catToDepts.has(cat)) catToDepts.set(cat, new Set());
+            deptToCats.get(dep).add(cat);
+            catToDepts.get(cat).add(dep);
+        });
+
+        // Show only the category options that exist in the selected department (all when none).
+        function cascadeCategoryOptions() {
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            const allowed = Number.isNaN(dep) ? null : (deptToCats.get(dep) || new Set());
+            document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
+                if (opt.value === '') { opt.hidden = false; return; }
+                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
+            });
+        }
+
+        // Show only the department options that contain the selected category (all when none).
+        function cascadeDepartmentOptions() {
+            const cat = parseInt($('#categoryFilter').val(), 10);
+            const allowed = Number.isNaN(cat) ? null : (catToDepts.get(cat) || new Set());
+            document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
+                if (opt.value === '') { opt.hidden = false; return; }
+                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
+            });
+        }
+
+        function onDepartmentChange() {
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            const cat = parseInt($('#categoryFilter').val(), 10);
+            // If the chosen category doesn't exist in the new department, drop it - avoids an
+            // empty result the user didn't ask for.
+            if (!Number.isNaN(dep) && !Number.isNaN(cat) && !(deptToCats.get(dep) || new Set()).has(cat)) {
+                $('#categoryFilter').val('');
+            }
+            cascadeCategoryOptions();
+            applyProductFilters();
+        }
+
+        function onCategoryChange() {
+            const cat = parseInt($('#categoryFilter').val(), 10);
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            if (!Number.isNaN(cat) && !Number.isNaN(dep) && !(catToDepts.get(cat) || new Set()).has(dep)) {
+                $('#departmentFilter').val('');
+            }
+            cascadeDepartmentOptions();
+            applyProductFilters();
+        }
+
+        // Collect every active filter control into query params. `hasImage`/`assigned` have no
+        // dropdown, so they are carried over from the current URL (a quick chip toggles them).
+        function collectFilterParams() {
             const params = new URLSearchParams();
 
             const searchTerm = $('#searchInput').val().trim();
@@ -397,31 +477,25 @@
                 params.append('search', searchTerm);
             }
 
-            // Get date range value
             const dateRange = $('#dateRange').val();
             if (dateRange) {
                 const dates = dateRange.split(' - ');
                 if (dates.length === 2) {
-                    const startDate = moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD');
-                    const endDate = moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD');
-                    params.append('startDate', startDate);
-                    params.append('endDate', endDate);
+                    params.append('startDate', moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD'));
+                    params.append('endDate', moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD'));
                 }
             }
 
-            // Get status filter value
             const status = $('#statusFilter').val();
             if (status !== '') {
                 params.append('status', status);
             }
 
-            // Get availability filter value
             const availability = $('#availabilityFilter').val();
             if (availability !== '') {
                 params.append('availability', availability);
             }
 
-            // Category / department - supported by the products API, now sent from the UI too
             const categoryId = $('#categoryFilter').val();
             if (categoryId) {
                 params.append('categoryId', categoryId);
@@ -432,48 +506,46 @@
                 params.append('departmentId', departmentId);
             }
 
+            // Preserve the two URL-only quick flags across any other filter change.
+            const cur = new URLSearchParams(window.location.search);
+            ['hasImage', 'assigned'].forEach(function (k) {
+                if (cur.get(k) === 'false') params.set(k, 'false');
+            });
+
             const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
             params.append('pageSize', pageSize);
             params.append('pageNumber', '1');
-
-            // Build the URL property
-            window.location.href = '/Products?' + params.toString();
+            return params;
         }
 
-        // One-click presets. They set the matching control and re-apply, so the
-        // active state always reflects what the server actually filtered on.
+        // Apply all filters and reload the page with query parameters.
+        function applyProductFilters() {
+            window.location.href = '/Products?' + collectFilterParams().toString();
+        }
+
+        // One-click presets. "Not working"/"Inactive" drive their dropdowns; "Unassigned"/"No image"
+        // are server-side flags with no control, so they toggle directly in the URL.
         function quickFilter(kind) {
             if (kind === 'notWorking') {
                 $('#statusFilter').val($('#statusFilter').val() === 'false' ? '' : 'false');
+                applyProductFilters();
             } else if (kind === 'inactive') {
                 $('#availabilityFilter').val($('#availabilityFilter').val() === 'false' ? '' : 'false');
-            } else if (kind === 'unassigned' || kind === 'noImage') {
-                // Not a server-side filter yet - narrow the rows already on screen.
-                filterRowsClientSide(kind);
-                return;
+                applyProductFilters();
+            } else if (kind === 'unassigned') {
+                toggleQuickFlag('assigned');
+            } else if (kind === 'noImage') {
+                toggleQuickFlag('hasImage');
             }
-            applyProductFilters();
         }
 
-        // Client-side narrowing for the two presets the API cannot express yet.
-        function filterRowsClientSide(kind) {
-            const chip = document.querySelector(`.qchip[onclick*="${kind}"]`);
-            const turningOn = chip && !chip.classList.contains('active');
-
-            document.querySelectorAll('.qchip').forEach(c => {
-                if (c.getAttribute('onclick').includes('unassigned') || c.getAttribute('onclick').includes('noImage')) {
-                    c.classList.remove('active');
-                }
-            });
-            if (turningOn && chip) chip.classList.add('active');
-
-            document.querySelectorAll('#productsTable tbody tr').forEach(row => {
-                if (!turningOn) { row.style.display = ''; return; }
-                const hit = kind === 'unassigned'
-                    ? !!row.querySelector('td:nth-child(5) .text-muted')
-                    : !!row.querySelector('.cell-thumb-empty');
-                row.style.display = hit ? '' : 'none';
-            });
+        // Flip a URL-only quick flag on/off while preserving every other active filter.
+        function toggleQuickFlag(key) {
+            const params = collectFilterParams();
+            if (params.get(key) === 'false') { params.delete(key); }
+            else { params.set(key, 'false'); }
+            params.set('pageNumber', '1');
+            window.location.href = '/Products?' + params.toString();
         }
 
         // Drop a single applied filter and reload.
@@ -488,6 +560,23 @@
             params.set('pageNumber', '1');
             window.location.href = '/Products?' + params.toString();
         }
+
+        // Drop a single word from a multi-word search (its own chip's ×).
+        function removeSearchWord(word) {
+            const params = new URLSearchParams(window.location.search);
+            const remaining = (params.get('search') || '')
+                .split(/\s+/)
+                .filter(w => w && w.toLowerCase() !== word.toLowerCase());
+            if (remaining.length) { params.set('search', remaining.join(' ')); }
+            else { params.delete('search'); }
+            params.set('pageNumber', '1');
+            window.location.href = '/Products?' + params.toString();
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.achip-word').forEach(function (b) {
+                b.addEventListener('click', function () { removeSearchWord(b.dataset.word); });
+            });
+        });
 
         // Make search work on Enter key
         $('#searchInput').on('keypress', function(e) {

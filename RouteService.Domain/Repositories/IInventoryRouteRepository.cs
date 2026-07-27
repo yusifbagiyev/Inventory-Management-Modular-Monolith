@@ -20,7 +20,18 @@ namespace RouteService.Domain.Repositories
             bool? isCompleted = null,
             DateTime? startDate = null,
             DateTime? endDate = null,
+            int? departmentId = null,
+            string? categoryName = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Distinct (departmentId, categoryName) combinations across routes, taking BOTH ends of each
+        /// transfer. Drives the cascading list filters. Routes store the category as a name (the
+        /// product snapshot has no id), so the category side is name-based.
+        /// </summary>
+        Task<IReadOnlyList<(int DepartmentId, string CategoryName)>> GetDepartmentCategoryPairsAsync(
+            CancellationToken cancellationToken = default);
+
         Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default);
         Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task<InventoryRoute?> GetPreviousRouteForProductAsync(int productId, int currentRouteId, CancellationToken cancellationToken = default);

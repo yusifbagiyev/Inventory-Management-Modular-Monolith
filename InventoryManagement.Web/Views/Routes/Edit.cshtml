@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model RouteViewModel
 @{
     ViewData["Title"] = "Edit Route";
@@ -75,7 +76,11 @@
                             }
                             else
                             {
-                                <span class="d-value">@Model.FromDepartmentName (@Model.FromWorker)</span>
+                                @* Only append the worker when there is one - otherwise this rendered
+                                   "IT Storage ()" with empty brackets. *@
+                                <span class="d-value">
+                                    @Model.FromDepartmentName@(string.IsNullOrWhiteSpace(Model.FromWorker) ? "" : $" ({Model.FromWorker})")
+                                </span>
                             }
                         </div>
                         <div class="detail-row">
@@ -113,15 +118,35 @@
                         <h2 class="section-title">Destination</h2>
                         <div class="form-grid">
                             <div>
-                                <label class="form-label">To Department</label>
-                                <input type="text" class="form-control" value="@Model.ToDepartmentName" readonly disabled />
-                                <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
-                                <div class="form-text">Department cannot be changed from this screen.</div>
+                                <label class="form-label" for="ToDepartmentId">To Department</label>
+                                @{
+                                    var departmentOptions = ViewBag.Departments as List<SelectListItem> ?? new List<SelectListItem>();
+                                }
+                                @if (departmentOptions.Any())
+                                {
+                                    <select name="ToDepartmentId" id="ToDepartmentId" class="form-select">
+                                        @foreach (var dept in departmentOptions)
+                                        {
+                                            <option value="@dept.Value" selected="@(dept.Value == Model.ToDepartmentId.ToString())">@dept.Text</option>
+                                        }
+                                    </select>
+                                    <div class="form-text">Moving the route to another department updates its destination.</div>
+                                }
+                                else
+                                {
+                                    @* Department list unavailable - keep the current value rather than posting an empty one. *@
+                                    <input type="text" class="form-control" value="@Model.ToDepartmentName" readonly disabled />
+                                    <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
+                                    <div class="form-text">Department list could not be loaded; try reloading the page.</div>
+                                }
                             </div>
                             <div>
                                 <label class="form-label">To Worker</label>
-                                <input type="text" class="form-control" value="@Model.ToWorker" />
-                                <input type="hidden" name="ToWorker" value="@Model.ToWorker" />
+                                @* The visible box had no name attribute, so edits never reached the
+                                   server - a hidden field posted the ORIGINAL value instead. Bind the
+                                   visible input itself and drop the shadow field. *@
+                                <input type="text" name="ToWorker" class="form-control" value="@Model.ToWorker"
+                                       placeholder="Not assigned" />
                             </div>
                         </div>
                     </div>

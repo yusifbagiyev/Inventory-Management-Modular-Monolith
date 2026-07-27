@@ -323,10 +323,21 @@
         }
 
         async function togglePermission(permissionName, isGranting) {
-            const action = isGranting ? 'grant' : 'remove';
-            const message = `Are you sure you want to ${action} the "${permissionName}" permission?`;
+            // Promise wrapper so the shared dialog fits this async flow: resolves only if confirmed.
+            const confirmed = await new Promise(resolve => {
+                confirmAction({
+                    title: isGranting ? 'Grant permission' : 'Remove permission',
+                    message: isGranting
+                        ? `Grant the "${permissionName}" permission to this user?`
+                        : `Remove the "${permissionName}" permission from this user?`,
+                    okText: isGranting ? 'Grant' : 'Remove',
+                    danger: !isGranting
+                }, () => resolve(true));
+                document.getElementById('globalConfirmModal')
+                    ?.addEventListener('hidden.bs.modal', () => resolve(false), { once: true });
+            });
 
-            if (!confirm(message)) {
+            if (!confirmed) {
                 return; // User cancelled the action
             }
 

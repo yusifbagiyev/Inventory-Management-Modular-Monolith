@@ -111,12 +111,15 @@ namespace ProductService.Infrastructure.Repositories
             bool? availability,
             int? categoryId = null,
             int? departmentId = null,
+            bool? hasImage = null,
+            bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
             // For demo purposes, we'll cache only simple queries (no search, no filters)
             // In production, you'd want to be more selective about what to cache
             if (string.IsNullOrEmpty(search) && !startDate.HasValue && !endDate.HasValue &&
-                !status.HasValue && !availability.HasValue && !categoryId.HasValue && !departmentId.HasValue)
+                !status.HasValue && !availability.HasValue && !categoryId.HasValue && !departmentId.HasValue &&
+                !hasImage.HasValue && !assigned.HasValue)
             {
                 var cacheKey = $"{CacheKeyPrefix}all:page:{pageNumber}:size:{pageSize}";
 
@@ -127,7 +130,7 @@ namespace ProductService.Infrastructure.Repositories
                 }
 
                 var result = await _innerRepository.GetAllAsync(
-                    pageNumber, pageSize, search, startDate, endDate, status, availability, categoryId, departmentId, cancellationToken);
+                    pageNumber, pageSize, search, startDate, endDate, status, availability, categoryId, departmentId, hasImage, assigned, cancellationToken);
 
                 // Cache for shorter duration (5 minutes) for list queries
                 await _cacheService.SetAsync(cacheKey, result, TimeSpan.FromMinutes(5), cancellationToken);
@@ -137,7 +140,30 @@ namespace ProductService.Infrastructure.Repositories
 
             // Complex queries with filters - skip cache
             return await _innerRepository.GetAllAsync(
-                pageNumber, pageSize, search, startDate, endDate, status, availability, categoryId, departmentId, cancellationToken);
+                pageNumber, pageSize, search, startDate, endDate, status, availability, categoryId, departmentId, hasImage, assigned, cancellationToken);
+        }
+
+        public async Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var cacheKey = $"{CacheKeyPrefix}facets:dept-category";
+
+            var cached = await _cacheService.GetAsync<List<int[]>>(cacheKey, cancellationToken);
+            if (cached != null)
+            {
+                return cached.Select(a => (a[0], a[1])).ToList();
+            }
+
+            var pairs = await _innerRepository.GetDepartmentCategoryPairsAsync(cancellationToken);
+
+            // ValueTuple has no stable JSON shape, so cache as int[] pairs (invalidated on every write).
+            await _cacheService.SetAsync(
+                cacheKey,
+                pairs.Select(p => new[] { p.DepartmentId, p.CategoryId }).ToList(),
+                TimeSpan.FromMinutes(5),
+                cancellationToken);
+
+            return pairs;
         }
 
         // Write operations - invalidate cache
@@ -194,6 +220,9 @@ namespace ProductService.Infrastructure.Repositories
             // Remove category and department lists
             await _cacheService.RemoveAsync($"{CacheKeyPrefix}category:{product.CategoryId}", cancellationToken);
             await _cacheService.RemoveAsync($"{CacheKeyPrefix}department:{product.DepartmentId}", cancellationToken);
+
+            // Adding/moving/removing a product can change which (department, category) pairs exist.
+            await _cacheService.RemoveAsync($"{CacheKeyPrefix}facets:dept-category", cancellationToken);
 
             // Note: In production, you might want to use Redis SCAN with pattern matching
             // to invalidate all "product:all:*" keys, but that requires direct Redis access

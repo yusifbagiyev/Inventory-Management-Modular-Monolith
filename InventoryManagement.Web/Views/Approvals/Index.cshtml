@@ -281,7 +281,11 @@
         }
 
         function quickApprove(requestId) {
-            if (confirm('Are you sure you want to approve this request?')) {
+            confirmAction({
+                title: 'Approve request',
+                message: 'Approve this request? The change will be applied immediately.',
+                okText: 'Approve'
+            }, function () {
                 showLoader();
 
                 $.post(`/Approvals/Approve/${requestId}`)
@@ -299,7 +303,7 @@
                         const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Unknown error';
                         showToast('Failed to approve request: ' + errorMsg, 'error');
                     });
-            }
+            });
         }
 
         function showRejectModal(requestId) {

@@ -30,7 +30,9 @@ namespace InventoryManagement.Web.Controllers
             string? search = null,
             bool? isCompleted = null,
             DateTime? startDate = null,
-            DateTime? endDate = null)
+            DateTime? endDate = null,
+            int? departmentId = null,
+            string? categoryName = null)
         {
             try
             {
@@ -47,6 +49,14 @@ namespace InventoryManagement.Web.Controllers
 
                 if (endDate.HasValue)
                     queryString.Append($"&endDate={endDate.Value:yyyy-MM-dd}");
+
+                // Department is matched against either end of the transfer; category is by name
+                // (routes store only the category name).
+                if (departmentId.HasValue)
+                    queryString.Append($"&departmentId={departmentId}");
+
+                if (!string.IsNullOrEmpty(categoryName))
+                    queryString.Append($"&categoryName={Uri.EscapeDataString(categoryName)}");
 
                 // Add ordering to show pending first
                 queryString.Append("&orderBy=IsCompleted&ascending=true");
@@ -79,6 +89,10 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.EndDate = endDate;
                 ViewBag.PageNumber = pageNumber ?? 1;
                 ViewBag.PageSize = pageSize ?? 30;
+                ViewBag.CurrentDepartmentId = departmentId;
+                ViewBag.CurrentCategoryName = categoryName;
+
+                await LoadFilterLists();
 
                 return View(routes ?? new PagedResultDto<RouteViewModel>());
             }
@@ -117,6 +131,11 @@ namespace InventoryManagement.Web.Controllers
                 {
                     route.FullImageUrl = _urlService.GetImageUrl(route.ImageUrl);
                 }
+
+                // Needed for the destination dropdown - without it the view had no department
+                // list, which is why that field was locked to a read-only textbox.
+                await LoadDropdowns();
+
                 return View(route);
             }
             catch (Exception ex)
@@ -390,7 +409,57 @@ namespace InventoryManagement.Web.Controllers
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Failed to load dropdowns in route view");
-                ViewBag.Departments = new List<DepartmentDto>();
+                // Must stay the same type the view casts to, otherwise a failed lookup turns
+                // into a render-time cast exception instead of an empty dropdown.
+                ViewBag.Departments = new List<SelectListItem>();
+            }
+        }
+
+
+        /// <summary>
+        /// Department/category options + cascading data for the route list's filter panel. The
+        /// category dropdown uses the category NAME as its value, because routes store only the name;
+        /// the department dropdown uses the id. Failures are non-fatal - the list still renders.
+        /// </summary>
+        private async Task LoadFilterLists()
+        {
+            try
+            {
+                var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
+                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+
+                ViewBag.FilterCategories = categories?
+                    .OrderBy(c => c.Name)
+                    .Select(c => new SelectListItem { Value = c.Name, Text = c.Name })
+                    .ToList() ?? [];
+
+                ViewBag.FilterDepartments = departments?
+                    .OrderBy(d => d.Name)
+                    .Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name })
+                    .ToList() ?? [];
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load route filter lists");
+                ViewBag.FilterCategories = new List<SelectListItem>();
+                ViewBag.FilterDepartments = new List<SelectListItem>();
+            }
+
+            // Cascading data: which category names occur in which department (either end of a route).
+            // Emitted as [[deptId, "categoryName"], ...]. Own try so a facets failure (e.g. an older
+            // gateway) leaves the dropdowns intact - cascading just falls back to "show everything".
+            try
+            {
+                var facets = await _apiService.GetAsync<RouteFilterFacetsDto>("api/inventoryroutes/filter-facets");
+                var pairs = facets?.Pairs
+                    .Select(p => new object[] { p.DepartmentId, p.CategoryName })
+                    .ToList() ?? [];
+                ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(pairs);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load route filter facets");
+                ViewBag.FilterPairsJson = "[]";
             }
         }
 

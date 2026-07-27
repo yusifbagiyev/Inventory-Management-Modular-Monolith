@@ -293,23 +293,27 @@
         }
 
         function markAllAsRead() {
-            if (!confirm('Are you sure you want to mark all notifications as read?')) return;
-
-            $.ajax({
-                url: '/Notifications/MarkAllAsRead',
-                type: 'POST',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
-                },
-                success: function() {
-                    $('.notification-item').removeClass('unread').attr('data-read', 'read');
-                    $('.notification-item .btn-outline-primary').remove();
-                    $('.notification-item .badge.bg-primary').remove();
-                    showToast('All notifications marked as read', 'success');
-                },
-                error: function() {
-                    showToast('Failed to mark all as read', 'error');
-                }
+            confirmAction({
+                title: 'Mark all as read',
+                message: 'Mark every notification as read?',
+                okText: 'Mark all read'
+            }, function () {
+                $.ajax({
+                    url: '/Notifications/MarkAllAsRead',
+                    type: 'POST',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
+                    },
+                    success: function() {
+                        $('.notification-item').removeClass('unread').attr('data-read', 'read');
+                        $('.notification-item .btn-outline-primary').remove();
+                        $('.notification-item .badge.bg-primary').remove();
+                        showToast('All notifications marked as read', 'success');
+                    },
+                    error: function() {
+                        showToast('Failed to mark all as read', 'error');
+                    }
+                });
             });
         }
 

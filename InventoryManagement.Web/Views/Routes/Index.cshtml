@@ -1,7 +1,14 @@
-﻿@model PagedResultDto<RouteViewModel>
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@model PagedResultDto<RouteViewModel>
 @{
     ViewData["Title"] = "Routes";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
+    var filterCategories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
+    var filterDepartments = ViewBag.FilterDepartments as List<SelectListItem> ?? new List<SelectListItem>();
+    var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
+    var curCategoryName = ViewBag.CurrentCategoryName as string;
+
+    string DepartmentName(int? id) => filterDepartments.FirstOrDefault(d => d.Value == id.ToString())?.Text ?? id?.ToString() ?? "";
 }
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
@@ -30,7 +37,8 @@
         var curStart = ViewBag.StartDate as DateTime?;
         var curEnd = ViewBag.EndDate as DateTime?;
         var routeTypes = Model.Items.Select(r => r.RouteTypeName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
-        var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCompleted.HasValue || curStart.HasValue || curEnd.HasValue;
+        var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCompleted.HasValue || curStart.HasValue || curEnd.HasValue
+            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curCategoryName);
     }
 
     <div class="filter-panel mt-3">
@@ -51,6 +59,26 @@
         </div>
 
         <div class="filter-grid">
+            <div class="filter-field">
+                <label for="departmentFilter">Department</label>
+                <select id="departmentFilter" class="form-select form-select-sm" onchange="onDepartmentChange()">
+                    <option value="">All departments</option>
+                    @foreach (var d in filterDepartments)
+                    {
+                        <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="categoryFilter">Category</label>
+                <select id="categoryFilter" class="form-select form-select-sm" onchange="onCategoryChange()">
+                    <option value="">All categories</option>
+                    @foreach (var c in filterCategories)
+                    {
+                        <option value="@c.Value" selected="@(c.Value == curCategoryName)">@c.Text</option>
+                    }
+                </select>
+            </div>
             <div class="filter-field">
                 <label for="statusFilter">Status</label>
                 @* the previous markup wrote the Razor variables as bare attributes, so the
@@ -98,7 +126,21 @@
             <div class="filter-applied">
                 @if (!string.IsNullOrEmpty(currentSearch))
                 {
-                    <span class="achip">Search: <b>@currentSearch</b><button type="button" class="achip-x" onclick="removeRouteFilter('search')">&times;</button></span>
+                    @* One chip per search word - each word is matched independently, and its ×
+                       removes just that word. data-word is Razor-encoded so a quote in the term
+                       cannot break out. *@
+                    foreach (var word in currentSearch.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        <span class="achip">Search: <b>@word</b><button type="button" class="achip-x achip-word" data-word="@word">&times;</button></span>
+                    }
+                }
+                @if (curDepartmentId.HasValue)
+                {
+                    <span class="achip">Department: <b>@DepartmentName(curDepartmentId)</b><button type="button" class="achip-x" onclick="removeRouteFilter('departmentId')">&times;</button></span>
+                }
+                @if (!string.IsNullOrEmpty(curCategoryName))
+                {
+                    <span class="achip">Category: <b>@curCategoryName</b><button type="button" class="achip-x" onclick="removeRouteFilter('categoryName')">&times;</button></span>
                 }
                 @if (curCompleted.HasValue)
                 {
@@ -271,7 +313,6 @@
             </div>
 
         </div>
-    </div>
 
     <!-- Hidden form for CSRF token -->
     <form id="csrfForm" style="display: none;">
@@ -416,13 +457,22 @@
 
                     $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
                         $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+                        applyRouteFilters();
                     });
 
                     $('#dateRange').on('cancel.daterangepicker', function() {
+                        const hadValue = $(this).val() !== '';
                         $(this).val('');
+                        if (hadValue) {
+                            removeRouteFilter('dates');
+                        }
                     });
 
                     restoreFilterValues();
+
+                    // Reflect the current department/category selection in the cascading dropdowns.
+                    cascadeCategoryOptions();
+                    cascadeDepartmentOptions();
                 });
 
             // Restore filter values from URL parameters
@@ -444,11 +494,67 @@
                 $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
             }
 
-            // Restore status filter
-            const status = params.get('status');
+            // Restore status filter. Same key the action binds (`isCompleted`), so the dropdown
+            // also reflects the state when it was set by a quick chip.
+            const status = params.get('isCompleted');
             if (status !== null) {
                 $('#statusFilter').val(status);
             }
+        }
+
+        // Cascading filters: which category names occur in which department (either end of a route).
+        // Department options carry the department id; category options carry the category NAME, since
+        // routes store only the name. Built from the [[deptId, "categoryName"], ...] facet list.
+        const FILTER_PAIRS = @Html.Raw(ViewBag.FilterPairsJson ?? "[]");
+        const deptToCats = new Map();   // departmentId -> Set(categoryName)
+        const catToDepts = new Map();   // categoryName -> Set(departmentId)
+        FILTER_PAIRS.forEach(function (pair) {
+            const dep = pair[0], cat = pair[1];
+            if (!deptToCats.has(dep)) deptToCats.set(dep, new Set());
+            if (!catToDepts.has(cat)) catToDepts.set(cat, new Set());
+            deptToCats.get(dep).add(cat);
+            catToDepts.get(cat).add(dep);
+        });
+
+        // Show only the category options present in the selected department (all when none).
+        function cascadeCategoryOptions() {
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            const allowed = Number.isNaN(dep) ? null : (deptToCats.get(dep) || new Set());
+            document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
+                if (opt.value === '') { opt.hidden = false; return; }
+                opt.hidden = allowed ? !allowed.has(opt.value) : false;
+            });
+        }
+
+        // Show only the department options that contain the selected category (all when none).
+        function cascadeDepartmentOptions() {
+            const cat = $('#categoryFilter').val();
+            const allowed = cat ? (catToDepts.get(cat) || new Set()) : null;
+            document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
+                if (opt.value === '') { opt.hidden = false; return; }
+                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
+            });
+        }
+
+        function onDepartmentChange() {
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            const cat = $('#categoryFilter').val();
+            // Drop an incompatible category so the reload can't land on an empty result.
+            if (!Number.isNaN(dep) && cat && !(deptToCats.get(dep) || new Set()).has(cat)) {
+                $('#categoryFilter').val('');
+            }
+            cascadeCategoryOptions();
+            applyRouteFilters();
+        }
+
+        function onCategoryChange() {
+            const cat = $('#categoryFilter').val();
+            const dep = parseInt($('#departmentFilter').val(), 10);
+            if (cat && !Number.isNaN(dep) && !(catToDepts.get(cat) || new Set()).has(dep)) {
+                $('#departmentFilter').val('');
+            }
+            cascadeDepartmentOptions();
+            applyRouteFilters();
         }
 
         // Apply all filters and reload the page with query parameters
@@ -472,14 +578,28 @@
                 }
             }
 
-            // Get status filter value
+            // Status. The action binds `isCompleted` (true/false) - sending it as `status`
+            // meant the dropdown silently did nothing while the quick chips (which link to
+            // ?isCompleted=) worked.
             const status = $('#statusFilter').val();
             if (status !== '') {
-                params.append('status', status);
+                params.append('isCompleted', status);
             }
 
-            // Maintain page size
-            params.append('pageSize', '@Model.PageSize');
+            // Department (by id, either end of the transfer) and category (by name).
+            const departmentId = $('#departmentFilter').val();
+            if (departmentId) {
+                params.append('departmentId', departmentId);
+            }
+
+            const categoryName = $('#categoryFilter').val();
+            if (categoryName) {
+                params.append('categoryName', categoryName);
+            }
+
+            // Respect the rows-per-page dropdown rather than always re-sending the current size.
+            const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
+            params.append('pageSize', pageSize);
             params.append('pageNumber', '1');
 
             // Build the URL property
@@ -498,6 +618,8 @@
             $('#dateRange').val('');
             $('#statusFilter').val('');
             $('#typeFilter').val('');
+            $('#departmentFilter').val('');
+            $('#categoryFilter').val('');
             window.location.href = '/Routes';
         }
 
@@ -523,6 +645,23 @@
             params.set('pageNumber', '1');
             window.location.href = '/Routes?' + params.toString();
         }
+
+        // Drop a single word from a multi-word search (its own chip's ×).
+        function removeRouteWord(word) {
+            const params = new URLSearchParams(window.location.search);
+            const remaining = (params.get('search') || '')
+                .split(/\s+/)
+                .filter(w => w && w.toLowerCase() !== word.toLowerCase());
+            if (remaining.length) { params.set('search', remaining.join(' ')); }
+            else { params.delete('search'); }
+            params.set('pageNumber', '1');
+            window.location.href = '/Routes?' + params.toString();
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.achip-word').forEach(function (b) {
+                b.addEventListener('click', function () { removeRouteWord(b.dataset.word); });
+            });
+        });
 
         function formatLocalDateTime(utcDateString) {
             const date = new Date(utcDateString);
@@ -557,7 +696,11 @@
         }
 
         function completeRoute(id) {
-            if (confirm('Are you sure you want to mark this route as completed?')) {
+            confirmAction({
+                title: 'Complete route',
+                message: 'Mark this route as completed?',
+                okText: 'Complete'
+            }, function () {
                 $.ajax({
                     url: '/Routes/Complete/' + id,
                     type: 'POST',
@@ -575,25 +718,30 @@
                         showToast(errorMsg, 'error');
                     }
                 });
-            }
+            });
         }
         function deleteRoute(id) {
-                    if (confirm('Are you sure you want to delete this route?')) {
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/Routes/Delete/' + id;
+            confirmAction({
+                title: 'Delete route',
+                message: 'Delete this route? This cannot be undone.',
+                okText: 'Delete',
+                danger: true
+            }, function () {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Routes/Delete/' + id;
 
-                        const token = document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value;
-                        const tokenInput = document.createElement('input');
-                        tokenInput.type = 'hidden';
-                        tokenInput.name = '__RequestVerificationToken';
-                        tokenInput.value = token;
+                const token = document.querySelector('#csrfForm input[name="__RequestVerificationToken"]').value;
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
 
-                        form.appendChild(tokenInput);
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
-                }
+                form.appendChild(tokenInput);
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
     </script>
     <script>
         // Real-time search functionality

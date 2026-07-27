@@ -182,6 +182,10 @@ body {
 .modern-sidebar .nav-link .badge.bg-warning { background: var(--warn) !important; color: #fff !important; }
 .modern-sidebar .nav-link .badge.bg-danger { background: var(--crit) !important; color: #fff !important; }
 .modern-sidebar .nav-link .badge.bg-info { background: var(--accent) !important; color: #fff !important; }
+/* An empty count badge must not linger as a coloured dot. The notification badge hides itself
+   via inline display:none + JS; this covers the rest (Products total, pending-routes/approvals)
+   when there is no number to show. A real count re-shows it (it is no longer :empty). */
+.modern-sidebar .nav-link .badge:empty { display: none; }
 
 /* ── top bar ─────────────────────────────────────────────────────────────── */
 .top-navbar {
@@ -332,6 +336,10 @@ h5, .h5 { font-size: 14px; font-weight: 620; }
     color: var(--ink);
     background-color: var(--surface);
 }
+/* Selects need clearance on the right for Bootstrap's chevron; the shared .6rem
+   padding above is too tight, so the value (e.g. "10") slid under the arrow. */
+.form-select { padding-right: 2rem; background-position: right .65rem center; }
+.form-select.form-select-sm { padding-right: 1.75rem; background-position: right .55rem center; }
 .form-control:focus, .form-select:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-weak);
@@ -430,7 +438,8 @@ tr.row-crit > td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 
 .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; padding: 14px; }
 /* selects apply on change, so make them feel like live controls */
-.filter-grid .form-select, .filter-grid .form-control { padding: .45rem .6rem; font-size: 14px; }
+.filter-grid .form-control { padding: .45rem .6rem; font-size: 14px; }
+.filter-grid .form-select { padding: .45rem 2rem .45rem .6rem; font-size: 14px; }
 .filter-grid .form-select { cursor: pointer; }
 .filter-grid .form-select:hover { border-color: var(--accent); }
 .filter-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -558,7 +567,11 @@ textarea.form-control { min-height: 84px; }
 .inventory-code-edit .form-control { min-width: 74px; }
 
 .empty-state { padding: 42px 20px; text-align: center; color: var(--ink-3); }
-.empty-state i { font-size: 26px; color: var(--line-2); display: block; margin-bottom: 10px; }
+/* Only the standalone illustration icon gets the big block treatment - scoping this to a direct
+   child keeps it off icons inside buttons/links, where display:block + 26px pushed the glyph onto
+   its own line and made the button twice as tall. */
+.empty-state > i { font-size: 26px; color: var(--line-2); display: block; margin-bottom: 10px; }
+.empty-state .btn i { font-size: inherit; color: inherit; display: inline; margin: 0; }
 .empty-state h5 { color: var(--ink-2); font-weight: 620; margin-bottom: 4px; }
 
 /* ── legacy patterns ─────────────────────────────────────────────────────────

@@ -184,12 +184,14 @@
                 return;
             }
 
-            // Show confirmation modal
-            if (!confirm('Are you sure you want to delete this product?')) {
-                return;
-            }
-
-            deleteProduct(productId);
+            confirmAction({
+                title: 'Delete product',
+                message: 'Delete this product? This cannot be undone.',
+                okText: 'Delete',
+                danger: true
+            }, function () {
+                deleteProduct(productId);
+            });
         }
 
         function deleteProduct(productId) {

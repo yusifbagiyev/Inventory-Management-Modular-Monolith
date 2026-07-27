@@ -35,6 +35,8 @@ namespace ProductService.Infrastructure.Repositories
             bool? availability,
             int? categoryId = null,
             int? departmentId = null,
+            bool? hasImage = null,
+            bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
             var query = _context.Products
@@ -53,6 +55,22 @@ namespace ProductService.Infrastructure.Repositories
 
             if (availability.HasValue)
                 query = query.Where(p => p.IsActive == availability.Value);
+
+            // "No image" / "Unassigned" quick filters. A missing value is stored as either NULL or
+            // an empty string, so both count as "no image" / "unassigned".
+            if (hasImage.HasValue)
+            {
+                query = hasImage.Value
+                    ? query.Where(p => p.ImageUrl != null && p.ImageUrl != "")
+                    : query.Where(p => p.ImageUrl == null || p.ImageUrl == "");
+            }
+
+            if (assigned.HasValue)
+            {
+                query = assigned.Value
+                    ? query.Where(p => p.Worker != null && p.Worker != "")
+                    : query.Where(p => p.Worker == null || p.Worker == "");
+            }
 
             if (startDate.HasValue)
             {
@@ -141,6 +159,21 @@ namespace ProductService.Infrastructure.Repositories
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+
+        public async Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
+            CancellationToken cancellationToken = default)
+        {
+            // One row per (department, category) that occurs at least once. Projected to an anonymous
+            // type first because EF cannot translate a ValueTuple projection.
+            var pairs = await _context.Products
+                .AsNoTracking()
+                .Select(p => new { p.DepartmentId, p.CategoryId })
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            return pairs.Select(x => (x.DepartmentId, x.CategoryId)).ToList();
         }
 
 
