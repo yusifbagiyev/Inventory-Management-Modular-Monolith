@@ -4,7 +4,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	  <RuntimeFrameworkVersion>8.0.0</RuntimeFrameworkVersion>
 	  <UserSecretsId>aafadfc6-02dc-4b3d-a125-98fdac4283b8</UserSecretsId>
 	  <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
 	       
