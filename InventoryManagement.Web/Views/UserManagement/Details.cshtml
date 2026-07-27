@@ -211,8 +211,15 @@
 @section Scripts {
     <script>
         function toggleUserStatus(userId, isActive) {
-            const action = isActive ? 'deactivate' : 'activate';
-            if (confirm(`Are you sure you want to ${action} this user?`)) {
+            const deactivating = !!isActive;
+            confirmAction({
+                title: deactivating ? 'Deactivate user' : 'Activate user',
+                message: deactivating
+                    ? 'Deactivate this user? They will no longer be able to sign in.'
+                    : 'Activate this user? They will be able to sign in again.',
+                okText: deactivating ? 'Deactivate' : 'Activate',
+                danger: deactivating
+            }, function () {
                 fetch('@Url.Action("QuickToggleStatus")', {
                     method: 'POST',
                     headers: {
@@ -226,14 +233,14 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error updating user status: ' + (data.message || 'Unknown error'));
+                        showToast('Error updating user status: ' + (data.message || 'Unknown error'), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error updating user status');
+                    showToast('Error updating user status', 'error');
                 });
-            }
+            });
         }
 
         function deleteUser(userId, username) {

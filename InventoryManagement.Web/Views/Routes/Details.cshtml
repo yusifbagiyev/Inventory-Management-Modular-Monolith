@@ -207,7 +207,11 @@
         }
 
         function completeRoute(id) {
-            if (confirm('Are you sure you want to mark this route as completed?')) {
+            confirmAction({
+                title: 'Complete route',
+                message: 'Mark this route as completed?',
+                okText: 'Complete'
+            }, function () {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/Routes/Complete/' + id;
@@ -220,11 +224,16 @@
                 form.appendChild(token);
                 document.body.appendChild(form);
                 form.submit();
-            }
+            });
         }
 
         function deleteRoute(id) {
-            if (confirm('Are you sure you want to delete this route?')) {
+            confirmAction({
+                title: 'Delete route',
+                message: 'Delete this route? This cannot be undone.',
+                okText: 'Delete',
+                danger: true
+            }, function () {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '/Routes/Delete/' + id;
@@ -237,7 +246,7 @@
                 form.appendChild(token);
                 document.body.appendChild(form);
                 form.submit();
-            }
+            });
         }
 
         function printRoute() {

@@ -252,6 +252,22 @@ namespace RouteService.Application.Services
                 changes.Add($"Notes updated");
             }
 
+            // Worker and destination were never carried into the approval payload, so an approved
+            // request silently applied neither. Include them whenever they actually change.
+            if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
+            {
+                updateData["toWorker"] = updated.ToWorker;
+                changes.Add(string.IsNullOrWhiteSpace(updated.ToWorker)
+                    ? "Worker cleared"
+                    : $"Worker changed to {updated.ToWorker}");
+            }
+
+            if (updated.ToDepartmentId.HasValue && updated.ToDepartmentId.Value != existing.ToDepartmentId)
+            {
+                updateData["toDepartmentId"] = updated.ToDepartmentId.Value;
+                changes.Add("Destination department changed");
+            }
+
             // Handle image update
             if (updated.ImageFile != null && updated.ImageFile.Length > 0)
             {
@@ -276,6 +292,18 @@ namespace RouteService.Application.Services
             if (!string.IsNullOrEmpty(updated.Notes) && existing.Notes != updated.Notes)
             {
                 changes.Add("Notes updated");
+            }
+
+            if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
+            {
+                changes.Add(string.IsNullOrWhiteSpace(updated.ToWorker)
+                    ? "Worker cleared"
+                    : $"Worker: {existing.ToWorker} -> {updated.ToWorker}");
+            }
+
+            if (updated.ToDepartmentId.HasValue && updated.ToDepartmentId.Value != existing.ToDepartmentId)
+            {
+                changes.Add($"Destination: {existing.ToDepartmentName} -> department #{updated.ToDepartmentId.Value}");
             }
 
             if (updated.ImageFile != null)

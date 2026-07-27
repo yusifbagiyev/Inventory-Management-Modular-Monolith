@@ -148,5 +148,20 @@ namespace RouteService.Domain.Entities
             ToWorker= toWorker;
             Notes = notes;
         }
+
+        /// <summary>
+        /// Re-points a pending route at a different destination. Id and name are kept in sync so the
+        /// denormalised name can never drift from the id it describes.
+        /// </summary>
+        public void UpdateDestination(int departmentId, string departmentName)
+        {
+            if (departmentId <= 0)
+                throw new ArgumentException("Destination department id must be positive", nameof(departmentId));
+            if (string.IsNullOrWhiteSpace(departmentName))
+                throw new ArgumentException("Destination department name is required", nameof(departmentName));
+
+            ToDepartmentId = departmentId;
+            ToDepartmentName = departmentName;
+        }
     }
 }

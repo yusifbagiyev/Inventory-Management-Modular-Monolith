@@ -43,12 +43,27 @@ namespace ProductService.API.Controllers
             [FromQuery] bool? status = null,
             [FromQuery] bool? availability = null,
             [FromQuery] int? categoryId = null,
-            [FromQuery] int? departmentId = null)
+            [FromQuery] int? departmentId = null,
+            [FromQuery] bool? hasImage = null,
+            [FromQuery] bool? assigned = null)
         {
             var products = await _mediator.Send(new GetAllProductsQuery(
                 pageNumber, pageSize, search, startDate, endDate,
-                status, availability, categoryId, departmentId));
+                status, availability, categoryId, departmentId, hasImage, assigned));
             return Ok(products);
+        }
+
+
+
+        /// <summary>
+        /// The (department, category) pairs present in the inventory, used to cascade the list filters.
+        /// </summary>
+        [HttpGet("filter-facets")]
+        [Permission(AllPermissions.ProductView)]
+        public async Task<ActionResult<ProductFilterFacetsDto>> GetFilterFacets()
+        {
+            var facets = await _mediator.Send(new GetProductFilterFacetsQuery());
+            return Ok(facets);
         }
 
 

@@ -1,4 +1,79 @@
-﻿// Global site functionality
+﻿/**
+ * In-page confirmation dialog, replacing the browser's confirm() popup.
+ * Enter confirms, Esc/Cancel dismisses (Bootstrap handles Esc).
+ *
+ *   confirmAction('Delete this route?', () => { ...proceed... });
+ *   confirmAction({ message: '...', title: 'Delete route', okText: 'Delete', danger: true }, onOk);
+ *
+ * Falls back to window.confirm if the shared modal markup is missing (e.g. a layout-less page).
+ */
+function confirmAction(options, onConfirm) {
+    const opts = typeof options === 'string' ? { message: options } : (options || {});
+    const modalEl = document.getElementById('globalConfirmModal');
+
+    if (!modalEl || typeof bootstrap === 'undefined') {
+        if (window.confirm(opts.message || 'Are you sure?')) onConfirm?.();
+        return;
+    }
+
+    const titleEl = document.getElementById('globalConfirmTitle');
+    const msgEl = document.getElementById('globalConfirmMessage');
+    const okBtn = document.getElementById('globalConfirmOk');
+
+    titleEl.textContent = opts.title || 'Please confirm';
+    msgEl.textContent = opts.message || 'Are you sure?';
+    okBtn.textContent = opts.okText || 'Confirm';
+    okBtn.className = 'btn btn-sm ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+
+    // Rebuild the OK button so a previous dialog's handler can never fire for this one.
+    const freshOk = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(freshOk, okBtn);
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    // Track the outcome on the element itself. Listeners left over from an earlier dialog can
+    // still fire on this shared modal; keying off a per-call token means only the current
+    // dialog's listener acts, and a stale one can never swallow or double-run the callback.
+    const token = Symbol('confirm');
+    modalEl.__confirmToken = token;
+    modalEl.__confirmAccepted = false;
+
+    freshOk.addEventListener('click', function () {
+        modalEl.__confirmAccepted = true;
+        modal.hide();
+    });
+
+    // Enter anywhere in the dialog = confirm.
+    function onKeydown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            freshOk.click();
+        }
+    }
+    modalEl.addEventListener('keydown', onKeydown);
+
+    modalEl.addEventListener('shown.bs.modal', function onShown() {
+        freshOk.focus();
+        modalEl.removeEventListener('shown.bs.modal', onShown);
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+        modalEl.removeEventListener('keydown', onKeydown);
+        modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        if (modalEl.__confirmToken !== token) return;   // a newer dialog owns the modal now
+        if (modalEl.__confirmAccepted) onConfirm?.();   // run after it is gone, so redirects are clean
+    });
+
+    // Opening while a previous instance is still mid-hide leaves Bootstrap wedged (no dialog,
+    // stuck backdrop). Wait for that transition to finish before showing.
+    if (modalEl.classList.contains('show')) {
+        modalEl.addEventListener('hidden.bs.modal', () => modal.show(), { once: true });
+    } else {
+        modal.show();
+    }
+}
+
+// Global site functionality
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

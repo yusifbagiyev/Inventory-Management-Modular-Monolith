@@ -256,10 +256,9 @@
         });
 
         function logoutAllDevices() {
-            if (confirm('Are you sure you want to logout from all devices?')) {
-                // Implement logout from all devices
-                alert('Logout from all devices functionality coming soon!');
-            }
+            // Nothing is wired up behind this yet, so asking for confirmation first would be
+            // misleading - say plainly that it is not available instead.
+            showToast('Signing out other devices is not available yet.', 'info');
         }
     </script>
 }

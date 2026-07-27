@@ -32,7 +32,9 @@ namespace InventoryManagement.Web.Controllers
             bool? status=null,
             bool? availability=null,
             int? categoryId=null,
-            int? departmentId=null)
+            int? departmentId=null,
+            bool? hasImage=null,
+            bool? assigned=null)
         {
             try
             {
@@ -59,6 +61,14 @@ namespace InventoryManagement.Web.Controllers
 
                 if (departmentId.HasValue)
                     queryString.Append($"&departmentId={departmentId}");
+
+                // "No image" / "Unassigned" quick filters. Server-side so they span the whole
+                // inventory, not just the rows on the current page.
+                if (hasImage.HasValue)
+                    queryString.Append($"&hasImage={hasImage}");
+
+                if (assigned.HasValue)
+                    queryString.Append($"&assigned={assigned}");
 
                 var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products{queryString}");
 
@@ -90,6 +100,8 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.EndDate = endDate;
                 ViewBag.CurrentCategoryId = categoryId;
                 ViewBag.CurrentDepartmentId = departmentId;
+                ViewBag.CurrentHasImage = hasImage;
+                ViewBag.CurrentAssigned = assigned;
 
                 await LoadFilterLists();
 
@@ -306,6 +318,24 @@ namespace InventoryManagement.Web.Controllers
                 _logger?.LogError(ex, "Failed to load product filter lists");
                 ViewBag.FilterCategories = new List<SelectListItem>();
                 ViewBag.FilterDepartments = new List<SelectListItem>();
+            }
+
+            // Cascading data: which categories occur in which department. Emitted to the view as a
+            // compact [[deptId, catId], ...] array the filter JS turns into two lookup maps. Kept in
+            // its own try so a facets failure (e.g. an older gateway without the endpoint) leaves the
+            // category/department dropdowns intact - cascading just falls back to "show everything".
+            try
+            {
+                var facets = await _apiService.GetAsync<ProductFilterFacetsDto>("api/products/filter-facets");
+                var pairs = facets?.Pairs
+                    .Select(p => new[] { p.DepartmentId, p.CategoryId })
+                    .ToList() ?? [];
+                ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(pairs);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to load product filter facets");
+                ViewBag.FilterPairsJson = "[]";
             }
         }
 

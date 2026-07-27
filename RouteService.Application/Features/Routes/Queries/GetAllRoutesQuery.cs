@@ -11,7 +11,9 @@ namespace RouteService.Application.Features.Routes.Queries
         string? search=null,
         bool? IsCompleted = null,
         DateTime? StartDate = null,
-        DateTime? EndDate = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
+        DateTime? EndDate = null,
+        int? DepartmentId = null,
+        string? CategoryName = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
 
     public class GetAllRoutesHandler : IRequestHandler<GetAllRoutesQuery, PagedResultDto<InventoryRouteDto>>
     {
@@ -33,6 +35,8 @@ namespace RouteService.Application.Features.Routes.Queries
                 request.IsCompleted,
                 request.StartDate,
                 request.EndDate,
+                request.DepartmentId,
+                request.CategoryName,
                 cancellationToken);
 
             return new PagedResultDto<InventoryRouteDto>

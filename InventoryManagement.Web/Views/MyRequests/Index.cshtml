@@ -215,7 +215,12 @@
         }
 
          function cancelRequest(requestId) {
-            if (confirm('Are you sure you want to cancel this request?')) {
+            confirmAction({
+                title: 'Cancel request',
+                message: 'Cancel this request? It will be withdrawn from the approval queue.',
+                okText: 'Cancel request',
+                danger: true
+            }, function () {
                 // Get the anti-forgery token from the page
                 const token = $('input[name="__RequestVerificationToken"]').val();
 
@@ -302,7 +307,7 @@
                         $cancelButton.prop('disabled', false).html(originalButtonText);
                     }
                 });
-            }
+            });
         }
     </script>
 }

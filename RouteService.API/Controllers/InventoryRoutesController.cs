@@ -138,11 +138,25 @@ namespace RouteService.API.Controllers
             [FromQuery] string? search = null,
             [FromQuery] bool? isCompleted = null,
             [FromQuery] DateTime? startDate = null,
-            [FromQuery] DateTime? endDate = null)
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] int? departmentId = null,
+            [FromQuery] string? categoryName = null)
         {
             var result = await _mediator.Send(new GetAllRoutesQuery(
-                pageNumber, pageSize, search, isCompleted, startDate, endDate));
+                pageNumber, pageSize, search, isCompleted, startDate, endDate, departmentId, categoryName));
             return Ok(result);
+        }
+
+
+        /// <summary>
+        /// The (department, category-name) pairs present across routes, used to cascade the list filters.
+        /// </summary>
+        [HttpGet("filter-facets")]
+        [Permission(AllPermissions.RouteView)]
+        public async Task<ActionResult<RouteFilterFacetsDto>> GetFilterFacets()
+        {
+            var facets = await _mediator.Send(new GetRouteFilterFacetsQuery());
+            return Ok(facets);
         }
 
 
@@ -266,9 +280,15 @@ namespace RouteService.API.Controllers
             var json = updateData.ToString();
             var data = JsonSerializer.Deserialize<JsonElement>(json!);
 
+            // Read back every field the approval payload can carry. Previously only notes were
+            // applied, so an approved worker/destination change was accepted and then dropped.
             var dto = new UpdateRouteDto
             {
-                Notes = data.TryGetProperty("notes", out var notes) ? notes.GetString() : null
+                Notes = data.TryGetProperty("notes", out var notes) ? notes.GetString() : null,
+                ToWorker = data.TryGetProperty("toWorker", out var worker) ? worker.GetString() : null,
+                ToDepartmentId = data.TryGetProperty("toDepartmentId", out var deptId) && deptId.TryGetInt32(out var parsedDeptId)
+                    ? parsedDeptId
+                    : null
             };
 
             await _mediator.Send(new UpdateRoute.Command(id, dto));
