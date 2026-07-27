@@ -261,8 +261,11 @@ namespace InventoryManagement.Web.Controllers
 
                 if (success)
                 {
+                    // Return to the user list (where the reset-password action is launched from) and
+                    // surface the confirmation there. Previously this landed on the Edit page, which
+                    // both felt wrong and did not show the success message.
                     TempData["Success"] = "Password reset successfully";
-                    return RedirectToAction("Edit", new { id = model.UserId });
+                    return RedirectToAction("Index");
                 }
 
                 ModelState.AddModelError("", "Failed to reset password");

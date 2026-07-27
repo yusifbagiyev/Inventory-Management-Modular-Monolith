@@ -5,6 +5,7 @@ using RouteService.Application.DTOs;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
+using RouteService.Domain.Enums;
 using RouteService.Domain.Exceptions;
 using SharedServices.Authorization;
 using SharedServices.Exceptions;
@@ -140,22 +141,27 @@ namespace RouteService.API.Controllers
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null,
             [FromQuery] int? departmentId = null,
-            [FromQuery] string? categoryName = null)
+            [FromQuery] string? categoryName = null,
+            [FromQuery] RouteType? routeType = null)
         {
             var result = await _mediator.Send(new GetAllRoutesQuery(
-                pageNumber, pageSize, search, isCompleted, startDate, endDate, departmentId, categoryName));
+                pageNumber, pageSize, search, isCompleted, startDate, endDate,
+                departmentId, categoryName, routeType));
             return Ok(result);
         }
 
 
         /// <summary>
-        /// The (department, category-name) pairs present across routes, used to cascade the list filters.
+        /// The (department, category-name) pairs present across routes, used to cascade the list
+        /// filters. The status/type filters narrow the result so the options react to them.
         /// </summary>
         [HttpGet("filter-facets")]
         [Permission(AllPermissions.RouteView)]
-        public async Task<ActionResult<RouteFilterFacetsDto>> GetFilterFacets()
+        public async Task<ActionResult<RouteFilterFacetsDto>> GetFilterFacets(
+            [FromQuery] bool? isCompleted = null,
+            [FromQuery] RouteType? routeType = null)
         {
-            var facets = await _mediator.Send(new GetRouteFilterFacetsQuery());
+            var facets = await _mediator.Send(new GetRouteFilterFacetsQuery(isCompleted, routeType));
             return Ok(facets);
         }
 

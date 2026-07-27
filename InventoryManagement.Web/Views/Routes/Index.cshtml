@@ -36,9 +36,9 @@
         var curCompleted = ViewBag.CurrentFilter as bool?;
         var curStart = ViewBag.StartDate as DateTime?;
         var curEnd = ViewBag.EndDate as DateTime?;
-        var routeTypes = Model.Items.Select(r => r.RouteTypeName).Where(t => !string.IsNullOrEmpty(t)).Distinct().OrderBy(t => t).ToList();
+        var curRouteType = ViewBag.CurrentRouteType as string;
         var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCompleted.HasValue || curStart.HasValue || curEnd.HasValue
-            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curCategoryName);
+            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curCategoryName) || !string.IsNullOrEmpty(curRouteType);
     }
 
     <div class="filter-panel mt-3">
@@ -91,11 +91,14 @@
             </div>
             <div class="filter-field">
                 <label for="typeFilter">Route type</label>
-                <select id="typeFilter" class="form-select form-select-sm" onchange="filterByType()">
+                @* Server-side now: a fixed enum list (New/Existing/Update/Transfer/Removal) so past
+                   types on other pages are selectable, the count reflects it, and it survives other
+                   filter changes. Was client-side, narrowing only the current page's rows. *@
+                <select id="typeFilter" class="form-select form-select-sm" onchange="applyRouteFilters()">
                     <option value="">All types</option>
-                    @foreach (var t in routeTypes)
+                    @foreach (var t in new[] { "New", "Existing", "Update", "Transfer", "Removal" })
                     {
-                        <option value="@t">@t</option>
+                        <option value="@t" selected="@(t == curRouteType)">@t</option>
                     }
                 </select>
             </div>
@@ -141,6 +144,10 @@
                 @if (!string.IsNullOrEmpty(curCategoryName))
                 {
                     <span class="achip">Category: <b>@curCategoryName</b><button type="button" class="achip-x" onclick="removeRouteFilter('categoryName')">&times;</button></span>
+                }
+                @if (!string.IsNullOrEmpty(curRouteType))
+                {
+                    <span class="achip">Type: <b>@curRouteType</b><button type="button" class="achip-x" onclick="removeRouteFilter('routeType')">&times;</button></span>
                 }
                 @if (curCompleted.HasValue)
                 {
@@ -597,6 +604,11 @@
                 params.append('categoryName', categoryName);
             }
 
+            const routeType = $('#typeFilter').val();
+            if (routeType) {
+                params.append('routeType', routeType);
+            }
+
             // Respect the rows-per-page dropdown rather than always re-sending the current size.
             const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
             params.append('pageSize', pageSize);
@@ -621,16 +633,6 @@
             $('#departmentFilter').val('');
             $('#categoryFilter').val('');
             window.location.href = '/Routes';
-        }
-
-        // Route type is not a server-side filter, so narrow the rows already rendered.
-        function filterByType() {
-            const wanted = ($('#typeFilter').val() || '').trim();
-            document.querySelectorAll('#routesTableBody tr').forEach(function (row) {
-                const cell = row.querySelector('td:nth-child(3)');
-                const type = cell ? cell.textContent.trim() : '';
-                row.style.display = (!wanted || type === wanted) ? '' : 'none';
-            });
         }
 
         // Drop a single applied filter and reload.

@@ -56,13 +56,18 @@ namespace ProductService.API.Controllers
 
 
         /// <summary>
-        /// The (department, category) pairs present in the inventory, used to cascade the list filters.
+        /// The (department, category) pairs present in the inventory, used to cascade the list
+        /// filters. The state/quick filters narrow the result so the options react to them.
         /// </summary>
         [HttpGet("filter-facets")]
         [Permission(AllPermissions.ProductView)]
-        public async Task<ActionResult<ProductFilterFacetsDto>> GetFilterFacets()
+        public async Task<ActionResult<ProductFilterFacetsDto>> GetFilterFacets(
+            [FromQuery] bool? status = null,
+            [FromQuery] bool? availability = null,
+            [FromQuery] bool? hasImage = null,
+            [FromQuery] bool? assigned = null)
         {
-            var facets = await _mediator.Send(new GetProductFilterFacetsQuery());
+            var facets = await _mediator.Send(new GetProductFilterFacetsQuery(status, availability, hasImage, assigned));
             return Ok(facets);
         }
 

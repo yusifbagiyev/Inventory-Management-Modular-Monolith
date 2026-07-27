@@ -234,6 +234,26 @@ body {
     letter-spacing: .02em;
 }
 
+/* User-list initial badge: a soft, on-brand tinted circle instead of the harsh solid-blue
+   Bootstrap bg-primary that read as unfinished. */
+.user-initial-badge {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-weak);
+    color: var(--accent-2);
+    border: 1px solid var(--line);
+    font-weight: 600;
+    font-size: .9rem;
+    line-height: 1;
+    letter-spacing: .01em;
+    text-transform: uppercase;
+}
+
 .nav-link.notification-toggle,
 .nav-link.user-menu-toggle { color: var(--ink-2) !important; }
 .nav-link.notification-toggle:hover,

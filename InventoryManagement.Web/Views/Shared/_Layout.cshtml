@@ -578,6 +578,29 @@
         }
     </script>
 
+    @* Surface server-side TempData messages (create/update/delete/password-reset) as toasts.
+       Nothing rendered these before, so redirect-based flows showed no confirmation at all. *@
+    @{
+        var tdSuccess = TempData["Success"] as string;
+        var tdError = (TempData["Error"] ?? TempData["ErrorMessage"]) as string;
+    }
+    @if (!string.IsNullOrEmpty(tdSuccess) || !string.IsNullOrEmpty(tdError))
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (!window.showToast) return;
+                @if (!string.IsNullOrEmpty(tdSuccess))
+                {
+                    <text>showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tdSuccess)), 'success');</text>
+                }
+                @if (!string.IsNullOrEmpty(tdError))
+                {
+                    <text>showToast(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tdError)), 'error');</text>
+                }
+            });
+        </script>
+    }
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

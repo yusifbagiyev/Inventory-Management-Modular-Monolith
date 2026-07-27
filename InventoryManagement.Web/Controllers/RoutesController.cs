@@ -32,7 +32,8 @@ namespace InventoryManagement.Web.Controllers
             DateTime? startDate = null,
             DateTime? endDate = null,
             int? departmentId = null,
-            string? categoryName = null)
+            string? categoryName = null,
+            string? routeType = null)
         {
             try
             {
@@ -57,6 +58,9 @@ namespace InventoryManagement.Web.Controllers
 
                 if (!string.IsNullOrEmpty(categoryName))
                     queryString.Append($"&categoryName={Uri.EscapeDataString(categoryName)}");
+
+                if (!string.IsNullOrEmpty(routeType))
+                    queryString.Append($"&routeType={Uri.EscapeDataString(routeType)}");
 
                 // Add ordering to show pending first
                 queryString.Append("&orderBy=IsCompleted&ascending=true");
@@ -91,8 +95,10 @@ namespace InventoryManagement.Web.Controllers
                 ViewBag.PageSize = pageSize ?? 30;
                 ViewBag.CurrentDepartmentId = departmentId;
                 ViewBag.CurrentCategoryName = categoryName;
+                ViewBag.CurrentRouteType = routeType;
 
-                await LoadFilterLists();
+                // Pass the active status/type filters so the cascading facets narrow to them.
+                await LoadFilterLists(isCompleted, routeType);
 
                 return View(routes ?? new PagedResultDto<RouteViewModel>());
             }
@@ -421,7 +427,7 @@ namespace InventoryManagement.Web.Controllers
         /// category dropdown uses the category NAME as its value, because routes store only the name;
         /// the department dropdown uses the id. Failures are non-fatal - the list still renders.
         /// </summary>
-        private async Task LoadFilterLists()
+        private async Task LoadFilterLists(bool? isCompleted = null, string? routeType = null)
         {
             try
             {
@@ -450,7 +456,11 @@ namespace InventoryManagement.Web.Controllers
             // gateway) leaves the dropdowns intact - cascading just falls back to "show everything".
             try
             {
-                var facets = await _apiService.GetAsync<RouteFilterFacetsDto>("api/inventoryroutes/filter-facets");
+                var facetQuery = new StringBuilder("api/inventoryroutes/filter-facets?");
+                if (isCompleted.HasValue) facetQuery.Append($"&isCompleted={isCompleted}");
+                if (!string.IsNullOrEmpty(routeType)) facetQuery.Append($"&routeType={Uri.EscapeDataString(routeType)}");
+
+                var facets = await _apiService.GetAsync<RouteFilterFacetsDto>(facetQuery.ToString());
                 var pairs = facets?.Pairs
                     .Select(p => new object[] { p.DepartmentId, p.CategoryName })
                     .ToList() ?? [];
