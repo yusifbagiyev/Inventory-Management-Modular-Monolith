@@ -61,7 +61,10 @@ namespace RouteService.Infrastructure.Services
                     Password = password,
                     Port = port,
                     AutomaticRecoveryEnabled = true,
-                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+                    NetworkRecoveryInterval = TimeSpan.FromSeconds(10),
+                    // IModel is not thread-safe; dispatch async handlers on the client's consumer
+                    // thread instead of acking from an arbitrary continuation thread.
+                    DispatchConsumersAsync = true
                 };
 
                 _connection = factory.CreateConnection();
@@ -70,6 +73,11 @@ namespace RouteService.Infrastructure.Services
                 _channel.ExchangeDeclare("inventory-events", ExchangeType.Topic, durable: true);
                 _channel.QueueDeclare(_queueName, durable: true, exclusive: false, autoDelete: false);
                 _channel.QueueBind(_queueName, "inventory-events", "product.created");
+
+                // Parking queue for messages that can never succeed (declared separately so the
+                // live queue keeps its original arguments).
+                _channel.QueueDeclare(DeadLetterQueueName, durable: true, exclusive: false, autoDelete: false);
+                _channel.BasicQos(prefetchSize: 0, prefetchCount: 10, global: false);
 
                 _logger.LogInformation("RabbitMQ Consumer successfully connected");
             }
@@ -80,9 +88,34 @@ namespace RouteService.Infrastructure.Services
             }
         }
 
+        private const string DeadLetterQueueName = "route-product-created-dead";
+
+        /// <summary>
+        /// Moves the delivery to the parking queue and acks the original, so a message that can
+        /// never succeed stops cycling through the live queue but stays available for inspection.
+        /// </summary>
+        private void DeadLetter(BasicDeliverEventArgs ea)
+        {
+            try
+            {
+                var properties = _channel!.CreateBasicProperties();
+                properties.Persistent = true;
+                _channel.BasicPublish(exchange: "", routingKey: DeadLetterQueueName,
+                    basicProperties: properties, body: ea.Body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to move a message to {DeadLetterQueue}", DeadLetterQueueName);
+            }
+            finally
+            {
+                _channel!.BasicAck(ea.DeliveryTag, false);
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var consumer = new EventingBasicConsumer(_channel);
+            var consumer = new AsyncEventingBasicConsumer(_channel);
             consumer.Received += async (sender, ea) =>
             {
                 try
@@ -114,15 +147,29 @@ namespace RouteService.Infrastructure.Services
                 }
                 catch (FluentValidation.ValidationException ex)
                 {
-                    _logger.LogError(ex, "Validation error - message will be discarded");
-                    // Don't requeue validation errors
-                    _channel?.BasicNack(ea.DeliveryTag, false, false);
+                    _logger.LogWarning("Validation error - dead-lettering message: {Reason}", ex.Message);
+                    DeadLetter(ea);
+                }
+                catch (JsonException ex)
+                {
+                    // Malformed payload can never deserialize - retrying is pointless.
+                    _logger.LogWarning("Unreadable message payload - dead-lettering: {Reason}", ex.Message);
+                    DeadLetter(ea);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing product created event");
-                    // Requeue only for unexpected errors
-                    _channel?.BasicNack(ea.DeliveryTag, false, true);
+                    // Possibly transient: allow exactly one retry, then park it. Requeueing
+                    // unconditionally turns any persistent failure into an infinite hot loop.
+                    if (ea.Redelivered)
+                    {
+                        _logger.LogError(ex, "Product event failed again after redelivery - dead-lettering");
+                        DeadLetter(ea);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Product event failed, requeueing once: {Reason}", ex.Message);
+                        _channel?.BasicNack(ea.DeliveryTag, false, requeue: true);
+                    }
                 }
             };
 

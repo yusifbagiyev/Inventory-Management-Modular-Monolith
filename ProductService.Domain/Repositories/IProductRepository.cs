@@ -24,5 +24,7 @@ namespace ProductService.Domain.Repositories
         Task UpdateAsync(Product product, CancellationToken cancellationToken = default);
         Task DeleteAsync(Product product, CancellationToken cancellationToken = default);
         Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
+        Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
     }
 }

@@ -163,16 +163,16 @@ namespace InventoryManagement.Web.Services
                     }));
                 }
 
-                // Update refresh token cookie (token rotation for security)
+                // Update refresh token cookie (token rotation for security). Not-remember-me stays a
+                // SESSION cookie (no Expires) so it never expires before the JWT it is meant to renew -
+                // matching the login path and preventing the hourly forced logout.
                 var rememberMe = context.Request.Cookies["remember_me"] == "true";
                 var refreshCookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = context.Request.IsHttps,
                     SameSite = SameSiteMode.Strict,
-                    Expires = rememberMe
-                        ? DateTimeOffset.Now.AddDays(30)
-                        : DateTimeOffset.Now.AddHours(1),
+                    Expires = rememberMe ? DateTimeOffset.Now.AddDays(30) : null,
                     Path = "/",
                     IsEssential = true
                 };

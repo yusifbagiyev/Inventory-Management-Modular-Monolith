@@ -3,6 +3,7 @@ using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 
@@ -324,6 +325,31 @@ namespace InventoryManagement.Web.Services
             {
                 _logger.LogError(ex, "Error resetting password for user: {UserId}", userId);
                 return false;
+            }
+        }
+
+        public async Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword)
+        {
+            try
+            {
+                var payload = new { CurrentPassword = currentPassword, NewPassword = newPassword };
+                var json = JsonConvert.SerializeObject(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("api/auth/change-password", content);
+                if (response.IsSuccessStatusCode)
+                    return (true, null);
+
+                // Surface the identity service's reason (wrong current password, policy failure, ...)
+                var body = await response.Content.ReadAsStringAsync();
+                string? message = null;
+                try { message = JObject.Parse(body)["message"]?.ToString(); } catch { /* non-JSON body */ }
+                return (false, string.IsNullOrWhiteSpace(message) ? "Could not change the password." : message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing own password");
+                return (false, "A network error occurred. Please try again.");
             }
         }
 

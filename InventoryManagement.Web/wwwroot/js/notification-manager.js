@@ -145,11 +145,9 @@
 
             // Only try to reconnect if we haven't exceeded max retries
             if (connectionRetryCount < maxRetries) {
-                reconnectTimeout = setTimeout(() => {
-                    console.log(`Attempting manual reconnection... (${connectionRetryCount + 1}/${maxRetries})`);
-                    connectionRetryCount++;
-                    startConnection();
-                }, 5000);
+                connectionRetryCount++;
+                console.log(`Attempting manual reconnection... (${connectionRetryCount}/${maxRetries})`);
+                scheduleReconnect(5000);
             } else {
                 console.error('Maximum reconnection attempts exceeded');
                 showToast('Unable to connect to notification service', 'error');
@@ -303,9 +301,21 @@
 
 
     // Start the connection with better error handling
+    // Single owner of the reconnect timer. Previously onclose and the start() catch each held
+    // their own timeout, so two retry chains could run in parallel and open duplicate connections.
+    function scheduleReconnect(delay) {
+        if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+        }
+        reconnectTimeout = setTimeout(() => {
+            reconnectTimeout = null;
+            startConnection();
+        }, delay);
+    }
+
     function startConnection() {
-        if (connectionState === 'connecting') {
-            console.log('Connection already in progress');
+        if (connectionState === 'connecting' || connectionState === 'connected') {
+            console.log('Connection already in progress or established');
             return;
         }
 
@@ -332,7 +342,7 @@
                     connectionRetryCount++;
                     const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
                     console.log(`Retrying connection in ${delay}ms... (${connectionRetryCount}/${maxRetries})`);
-                    reconnectTimeout = setTimeout(() => startConnection(), delay);
+                    scheduleReconnect(delay);
                 } else if (isAuthError(err)) {
                     console.error('Authentication error, user may need to login');
                     showToast('Authentication expired. Please refresh the page.', 'warning');

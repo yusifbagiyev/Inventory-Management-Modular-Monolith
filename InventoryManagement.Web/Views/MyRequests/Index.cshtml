@@ -1,131 +1,173 @@
-﻿@model MyRequestsViewModel
+@model MyRequestsViewModel
     @Html.AntiForgeryToken()
+@{
+    ViewData["Title"] = "My Requests";
+}
 <div class="container-fluid px-4">
-    <h1 class="mt-4">My Approval Requests</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item active">My Requests</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">My Approval Requests</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item active">My Requests</li>
+            </ol>
+        </div>
+    </div>
 
-    <!-- Add filter buttons -->
-    <div class="mb-3">
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
-                All <span class="badge bg-secondary">@Model.Requests.Count</span>
+    @* Status filter chips - the click handler keys off .filter-btn + data-filter *@
+    <div class="filter-panel mt-3">
+        <div class="filter-quick pt-2">
+            <span class="qlabel">Status</span>
+            <button type="button" class="qchip filter-btn active" data-filter="all">
+                All <span class="mono">@Model.Requests.Count</span>
             </button>
-            <button type="button" class="btn btn-outline-warning filter-btn" data-filter="pending">
-                Pending <span class="badge bg-warning">@Model.Requests.Count(r => r.Status == "Pending")</span>
+            <button type="button" class="qchip filter-btn" data-filter="pending">
+                Pending <span class="mono">@Model.Requests.Count(r => r.Status == "Pending")</span>
             </button>
-            <button type="button" class="btn btn-outline-success filter-btn" data-filter="approved">
-                Approved <span class="badge bg-success">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
+            <button type="button" class="qchip filter-btn" data-filter="approved">
+                Approved <span class="mono">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
             </button>
-            <button type="button" class="btn btn-outline-danger filter-btn" data-filter="rejected">
-                Rejected <span class="badge bg-danger">@Model.Requests.Count(r => r.Status == "Rejected")</span>
+            <button type="button" class="qchip filter-btn" data-filter="rejected">
+                Rejected <span class="mono">@Model.Requests.Count(r => r.Status == "Rejected")</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary filter-btn" data-filter="failed">
-                Failed <span class="badge bg-secondary">@Model.Requests.Count(r => r.Status == "Failed")</span>
+            <button type="button" class="qchip filter-btn" data-filter="failed">
+                Failed <span class="mono">@Model.Requests.Count(r => r.Status == "Failed")</span>
             </button>
         </div>
     </div>
 
-    <div class="card mb-4 shadow">
-        <div class="card-header">
-            <i class="fas fa-list me-1"></i>
-            Your Approval Requests
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between gap-2">
+            <span><i class="bi bi-list-check me-1"></i> Your Approval Requests</span>
+            <span class="text-muted mono">@Model.Requests.Count</span>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="myRequestsTable">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Entity</th>
-                            <th>Status</th>
-                            <th>Processed By</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var request in Model.Requests)
-                        {
-                            <tr data-status="@GetStatusFilter(request.Status)">
-                                <td>@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
-                                <td>
-                                    <span class="badge bg-info">
-                                        @GetRequestTypeDisplay(request.RequestType)
-                                    </span>
-                                </td>
-                                <td>
-                                    @request.EntityType
-                                    @if (request.EntityId.HasValue)
-                                    {
-                                        <span class="badge bg-secondary">#@request.EntityId</span>
-                                    }
-                                </td>
-                                <td>
-                                    @switch (request.Status)
-                                    {
-                                        case "Pending":
-                                            <span class="badge bg-warning">Pending</span>
-                                            break;
-                                        case "Approved":
-                                        case "Executed":
-                                            <span class="badge bg-success">Approved</span>
-                                            break;
-                                        case "Rejected":
-                                            <span class="badge bg-danger">Rejected</span>
-                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
-                                            {
-                                                <br />
-                                
-                                                <small class="text-muted">@request.RejectionReason</small>
-                                            }
-                                            break;
-                                        case "Failed":
-                                            <span class="badge bg-danger">Failed</span>
-                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
-                                            {
-                                                <br />
-                                
-                                                <small class="text-muted">Reason: @request.RejectionReason</small>
-                                            }
-                                            break;
-                                        default:
-                                            <span class="badge bg-secondary">@request.Status</span>
-                                            break;
-                                    }
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(request.ApprovedByName))
-                                    {
-                                        @request.ApprovedByName
-                                        @if (request.ProcessedAt.HasValue)
-                                        {
-                                            <br />
-                                            <small class="text-muted">@request.ProcessedAt.Value.ToString("MM/dd HH:mm")</small>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-info" onclick="viewDetails(@request.Id)">
-                                        <i class="fas fa-eye"></i> Details
-                                    </button>
-                                    @if (request.Status == "Pending")
-                                    {
-                                        <button class="btn btn-sm btn-danger" onclick="cancelRequest(@request.Id)">
-                                            <i class="fas fa-times"></i> Cancel
-                                        </button>
-                                    }
-                                </td>
+            @if (Model.Requests.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover" id="myRequestsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Entity</th>
+                                <th>Status</th>
+                                <th>Processed By</th>
+                                <th>Actions</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in Model.Requests)
+                            {
+                                <tr data-status="@GetStatusFilter(request.Status)">
+                                    <td class="num text-muted">@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            @GetRequestTypeDisplay(request.RequestType)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="cell-text">
+                                            <span class="cell-title">@request.EntityType</span>
+                                            @if (request.EntityId.HasValue)
+                                            {
+                                                <span class="cell-sub mono">#@request.EntityId</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @switch (request.Status)
+                                        {
+                                            case "Pending":
+                                                <span class="state state-warn">Pending</span>
+                                                break;
+                                            case "Approved":
+                                            case "Executed":
+                                                <span class="state state-ok">Approved</span>
+                                                break;
+                                            case "Rejected":
+                                                <span class="state state-crit">Rejected</span>
+                                                @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                                {
+                                                    <br />
+
+                                                    <small class="text-muted">@request.RejectionReason</small>
+                                                }
+                                                break;
+                                            case "Failed":
+                                                <span class="state state-crit">Failed</span>
+                                                @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                                {
+                                                    <br />
+
+                                                    <small class="text-muted">Reason: @request.RejectionReason</small>
+                                                }
+                                                break;
+                                            default:
+                                                <span class="state state-idle">@request.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(request.ApprovedByName))
+                                        {
+                                            @request.ApprovedByName
+                                            @if (request.ProcessedAt.HasValue)
+                                            {
+                                                <br />
+                                                <small class="text-muted mono">@request.ProcessedAt.Value.ToString("MM/dd HH:mm")</small>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="d-empty">Not processed</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="View details">
+                                                <i class="fas fa-eye"></i> Details
+                                            </button>
+                                            @if (request.Status == "Pending")
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequest(@request.Id)" title="Cancel request">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <h5>You have not submitted any requests</h5>
+                    <p class="text-muted mb-0">Actions that need an administrator's approval show up here with their status.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -134,10 +176,13 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            $('#myRequestsTable').DataTable({
-                order: [[0, 'desc']],
-                pageLength: 25
-            });
+            // the table is only rendered when the user has at least one request
+            if ($('#myRequestsTable').length) {
+                $('#myRequestsTable').DataTable({
+                    order: [[0, 'desc']],
+                    pageLength: 25
+                });
+            }
 
             // Filter functionality
             $('.filter-btn').click(function() {
@@ -290,22 +335,3 @@
         };
     }
 }
-
-<!-- Details Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Request Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="detailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>

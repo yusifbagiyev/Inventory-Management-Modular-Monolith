@@ -1,144 +1,132 @@
-﻿@model EditUserViewModel
+@model EditUserViewModel
 @{
     ViewData["Title"] = "Edit User";
 }
 
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mt-4">Edit User</h1>
-            <ol class="breadcrumb mb-4">
+            <h1 class="mb-1">Edit User</h1>
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="@Url.Action("Index")">User Management</a></li>
                 <li class="breadcrumb-item active">Edit User</li>
             </ol>
         </div>
-        <div>
-            <a href="@Url.Action("Index")" class="btn btn-secondary">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> Back to Users
             </a>
         </div>
     </div>
 
-    <div class="row">
+    <div class="row mt-3">
         <div class="col-lg-8">
-            <div class="card shadow">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-user-edit"></i> User Information
-                    </h6>
+                    <i class="bi bi-person-gear me-1"></i> User Information
                 </div>
-                <div class="card-body">
-                    <form asp-action="Edit" method="post">
-                        @Html.AntiForgeryToken()
-                        <input asp-for="Id" type="hidden" />
-                        <input asp-for="Username" type="hidden" />
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Username</label>
-                                    <input value="@Model.Username" class="form-control" readonly disabled />
-                                    <div class="form-text">Username cannot be changed.</div>
-                                </div>
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Id" type="hidden" />
+                    <input asp-for="Username" type="hidden" />
+
+                    <div class="form-section">
+                        <div class="section-title">Account</div>
+                        <div class="form-grid">
+                            <div>
+                                <label class="form-label">Username</label>
+                                <input value="@Model.Username" class="form-control" readonly disabled />
+                                <div class="form-text">Username cannot be changed.</div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
-                                    <input asp-for="Email" class="form-control" placeholder="Enter email address" />
-                                    <span asp-validation-for="Email" class="text-danger"></span>
+                            <div>
+                                <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
+                                <input asp-for="Email" class="form-control" placeholder="Enter email address" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="FirstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                                <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                                <span asp-validation-for="FirstName" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label asp-for="LastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                                <span asp-validation-for="LastName" class="text-danger"></span>
+                            </div>
+                            <div>
+                                <label class="form-label">Status</label>
+                                <div class="form-check">
+                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                    <label asp-for="IsActive" class="form-check-label">
+                                        Active User
+                                    </label>
                                 </div>
+                                <div class="form-text">Inactive users cannot login to the system.</div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="FirstName" class="form-label">First Name <span class="text-danger">*</span></label>
-                                    <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
-                                    <span asp-validation-for="FirstName" class="text-danger"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="LastName" class="form-label">Last Name <span class="text-danger">*</span></label>
-                                    <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
-                                    <span asp-validation-for="LastName" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Status</label>
-                                    <div class="form-check">
-                                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-                                        <label asp-for="IsActive" class="form-check-label">
-                                            Active User
-                                        </label>
-                                    </div>
-                                    <div class="form-text">Inactive users cannot login to the system.</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Roles</label>
-                                    <div class="role-selection border rounded p-3">
-                                        @{
-                                            // Add a hidden field to ensure we always send role data
-                                            <input type="hidden" name="RoleUpdateFlag" value="true" />
-                                        }
-                                        @foreach (var role in Model.AvailableRoles)
+                    <div class="form-section">
+                        <div class="section-title">Roles</div>
+                        @* Always send role data, even when every box is cleared. *@
+                        <input type="hidden" name="RoleUpdateFlag" value="true" />
+                        <div class="role-selection form-grid">
+                            @foreach (var role in Model.AvailableRoles)
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox"
+                                           class="form-check-input role-checkbox"
+                                           name="SelectedRoles"
+                                           value="@role.Value"
+                                           id="role_@role.Value"
+                                           @(Model.CurrentRoles.Contains(role.Value) ? "checked" : "") />
+                                    <label class="form-check-label" for="role_@role.Value">
+                                        @role.Text
+                                        @if (Model.CurrentRoles.Contains(role.Value))
                                         {
-                                            <div class="form-check mb-2">
-                                                <input type="checkbox"
-                                                       class="form-check-input role-checkbox"
-                                                       name="SelectedRoles"
-                                                       value="@role.Value"
-                                                       id="role_@role.Value"
-                                                       @(Model.CurrentRoles.Contains(role.Value) ? "checked" : "") />
-                                                <label class="form-check-label" for="role_@role.Value">
-                                                    @role.Text
-                                                    @if (Model.CurrentRoles.Contains(role.Value))
-                                                    {
-                                                        <small class="text-muted">(Current)</small>
-                                                    }
-                                                </label>
-                                            </div>
+                                            <small class="text-muted">(Current)</small>
                                         }
-                                        <!-- Hidden field to track original roles -->
-                                        @foreach (var role in Model.CurrentRoles)
-                                        {
-                                            <input type="hidden" name="CurrentRoles" value="@role" />
-                                        }
-                                    </div>
-                                    <div class="form-text">
-                                        Select one or more roles for this user. Changes will be applied immediately upon save.
-                                    </div>
+                                    </label>
                                 </div>
-                            </div>
+                            }
                         </div>
+                        @if (!Model.AvailableRoles.Any())
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-person-badge"></i>
+                                <h5>No roles available</h5>
+                            </div>
+                        }
+                        @* Hidden fields to track original roles *@
+                        @foreach (var role in Model.CurrentRoles)
+                        {
+                            <input type="hidden" name="CurrentRoles" value="@role" />
+                        }
+                        <div class="form-text">
+                            Select one or more roles for this user. Changes will be applied immediately upon save.
+                        </div>
+                    </div>
 
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="@Url.Action("Index")" class="btn btn-secondary me-md-2">
+                    <div class="page-actions">
+                        <div class="actions-right">
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-times"></i> Cancel
                             </a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="fas fa-save"></i> Update User
                             </button>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card shadow">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-shield-alt"></i> User Permissions
-                    </h6>
+                    <i class="bi bi-shield-lock me-1"></i> User Permissions
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -146,6 +134,7 @@
                                placeholder="Search permissions...">
                     </div>
 
+                    @* Fixed-height scroll region: the permission list can run to hundreds of rows. *@
                     <div id="permissionsContainer" style="max-height: 500px; overflow-y: auto;">
                         <div class="text-center">
                             <div class="spinner-border spinner-border-sm" role="status">
@@ -155,25 +144,20 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-            <div class="card shadow mt-4">
+            <div class="card side-panel mb-4">
                 <div class="card-header">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-lock"></i> Password Management
-                    </h6>
+                    <i class="bi bi-lock me-1"></i> Password Management
                 </div>
-                <div class="card-body">
-                    <div class="d-grid">
-                        <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="btn btn-outline-warning">
-                            <i class="fas fa-key"></i> Reset Password
-                        </a>
-                    </div>
+                <div class="list-group list-group-flush">
+                    <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
+                        <i class="bi bi-key me-2"></i>Reset Password
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
+</div>
 
 @section Scripts {
     <script>
@@ -185,10 +169,14 @@
 
                     $('#permissionSearch').on('keyup', function() {
                 const searchTerm = $(this).val().toLowerCase();
+                let visible = 0;
                 $('.permission-item').each(function() {
                     const text = $(this).text().toLowerCase();
-                    $(this).toggle(text.includes(searchTerm));
+                    const match = text.includes(searchTerm);
+                    $(this).toggle(match);
+                    if (match) visible++;
                 });
+                $('#permissionsNoResults').toggle(visible === 0);
             });
         });
 
@@ -237,6 +225,17 @@
         }
 
         function renderPermissions(permissions) {
+            // Nothing came back at all - show the standard empty block instead of a blank panel.
+            if (!permissions || permissions.length === 0) {
+                $('#permissionsContainer').html(`
+                    <div class="empty-state">
+                        <i class="bi bi-shield-slash"></i>
+                        <h5>No permissions defined</h5>
+                    </div>
+                `);
+                return;
+            }
+
             // Group permissions by category
             const grouped = {};
             permissions.forEach(p => {
@@ -254,9 +253,7 @@
             if (assignedPerms.length > 0) {
                 html += `
                     <div class="mb-4">
-                        <h6 class="text-success mb-3">
-                            <i class="fas fa-check-circle"></i> Current Permissions (${assignedPerms.length})
-                        </h6>
+                        <div class="section-title">Current Permissions (${assignedPerms.length})</div>
                         <div class="assigned-permissions">
                 `;
 
@@ -268,7 +265,7 @@
             }
 
             // Show available permissions by category
-            html += '<h6 class="text-primary mb-3"><i class="fas fa-plus-circle"></i> Available Permissions</h6>';
+            html += '<div class="section-title">Available Permissions</div>';
 
             for (const [category, perms] of Object.entries(grouped)) {
                 const availableInCategory = perms.filter(p => !p.isAssigned);
@@ -276,7 +273,7 @@
 
                 html += `
                     <div class="category-section mb-3">
-                        <div class="category-header">${category}</div>
+                        <div class="category-header form-label mb-2">${category}</div>
                         <div class="category-permissions">
                 `;
 
@@ -287,21 +284,32 @@
                 html += '</div></div>';
             }
 
+            // Search filters the rendered rows, so it needs its own no-match block.
+            html += `
+                <div id="permissionsNoResults" class="empty-state" style="display: none;">
+                    <i class="bi bi-search"></i>
+                    <h5>No permissions match</h5>
+                </div>
+            `;
+
             html += '</div>';
             $('#permissionsContainer').html(html);
         }
 
         function createPermissionItem(permission, isAssigned) {
             const action = isAssigned ? 'remove' : 'add';
-            const buttonClass = isAssigned ? 'btn-danger' : 'btn-success';
+            // Removing a granted permission is the destructive side of this control.
+            const buttonClass = isAssigned ? 'btn-outline-danger' : 'btn-outline-secondary';
             const buttonIcon = isAssigned ? 'fa-times' : 'fa-plus';
             const buttonText = isAssigned ? 'Remove' : 'Add';
 
+            // The wrapper stays a plain block: jQuery .toggle() writes an inline display,
+            // which a Bootstrap d-* display utility would override with !important.
             return `
                 <div class="permission-item ${isAssigned ? 'assigned' : 'available'}" data-name="${permission.name}">
-                    <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex justify-content-between align-items-start gap-2 py-2 border-bottom">
                         <div class="permission-info">
-                            <div class="permission-name">${permission.name}</div>
+                            <div class="fw-semibold">${permission.name}</div>
                             <small class="text-muted">${permission.description || 'No description'}</small>
                         </div>
                         <button class="btn btn-sm ${buttonClass}"
@@ -362,45 +370,3 @@
         }
     </script>
 }
-
-<style>
-    .permissions-list {
-        padding: 10px;
-    }
-
-    .permission-item {
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 6px;
-        border: 1px solid #e0e0e0;
-        transition: all 0.2s;
-    }
-
-        .permission-item.assigned {
-            background-color: #e8f5e9;
-            border-color: #4caf50;
-        }
-
-        .permission-item.available:hover {
-            background-color: #f5f5f5;
-            border-color: #2196f3;
-        }
-
-    .permission-name {
-        font-weight: 500;
-        margin-bottom: 2px;
-    }
-
-    .category-section {
-        margin-bottom: 20px;
-    }
-
-    .category-header {
-        font-weight: 600;
-        color: #666;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        margin-bottom: 10px;
-    }
-</style>

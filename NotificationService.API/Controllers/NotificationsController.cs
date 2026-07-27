@@ -54,10 +54,10 @@ namespace NotificationService.API.Controllers
             if (userId == 0)
                 return Ok(new List<NotificationDto>());
 
-            var notifications = await _repository.GetByUserIdAsync(userId, false);
+            // Cap the fetch in SQL - this used to load the user's whole notification history
+            // and then keep only the newest five in memory.
+            var notifications = await _repository.GetByUserIdAsync(userId, false, limit: 5);
             var recent = notifications
-                .OrderByDescending(n => n.CreatedAt)
-                .Take(5)
                 .Select(n => new NotificationDto
                 {
                     Id = n.Id,

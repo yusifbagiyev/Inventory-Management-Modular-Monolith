@@ -50,6 +50,11 @@ namespace ProductService.API.Middleware
                     response.Error = notFoundException.Message;
                     break;
 
+                case ConflictException conflictException:
+                    context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                    response.Error = conflictException.Message;
+                    break;
+
                 case ArgumentException argumentException:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     response.Error = argumentException.Message;

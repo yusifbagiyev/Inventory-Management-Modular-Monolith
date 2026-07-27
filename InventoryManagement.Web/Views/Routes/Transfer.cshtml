@@ -1,164 +1,186 @@
-﻿@model TransferViewModel
+@model TransferViewModel
 @{
     ViewData["Title"] = "Transfer Product";
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Transfer Product</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
-        <li class="breadcrumb-item active">Transfer</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Transfer Product</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
+                <li class="breadcrumb-item active">Transfer</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
+    <div class="row mt-3">
         <div class="col-lg-8">
-            <div class="card mb-4 shadow">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-exchange-alt me-1"></i>
+                    <i class="bi bi-arrow-left-right me-1"></i>
                     Transfer Information
                 </div>
-                <div class="card-body">
-                    <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm">
-                        @Html.AntiForgeryToken()
+
+                <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Inventory Code Search Section -->
+                    <div class="form-section">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                        <!-- Inventory Code Search Section -->
-                        <div class="mb-3">
-                            <label class="form-label">Inventory Code <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                                <input type="number" id="inventoryCodeInput" class="form-control form-control-lg"
-                                       placeholder="Enter inventory code" min="1" max="9999"
-                                       autocomplete="off" autofocus />
-                                <button type="button" id="searchBtn" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
+                        <h2 class="section-title">Find product</h2>
+                        <label class="form-label" for="inventoryCodeInput">Inventory Code <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                            <input type="number" id="inventoryCodeInput" class="form-control form-control-lg"
+                                   placeholder="Enter inventory code" min="1" max="9999"
+                                   autocomplete="off" autofocus />
+                            <button type="button" id="searchBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                        <div id="searchFeedback" class="form-text mt-2"></div>
+                    </div>
+
+                    <!-- Product Information Display -->
+                    <div id="productInfoContainer" class="form-section" style="display:none;">
+                        <h2 class="section-title">Product</h2>
+                        <div class="detail-grid">
+                            <div class="detail-row">
+                                <span class="d-label">Model</span>
+                                <span class="d-value" id="productModel">N/A</span>
                             </div>
-                            <div id="searchFeedback" class="mt-2"></div>
+                            <div class="detail-row">
+                                <span class="d-label">Category</span>
+                                <span class="d-value" id="productCategory">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Vendor</span>
+                                <span class="d-value" id="productVendor">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Current Department</span>
+                                <span class="d-value" id="currentDepartment">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Current Worker</span>
+                                <span class="d-value" id="currentWorker">N/A</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="d-label">Working Status</span>
+                                <span class="d-value" id="workingStatus">N/A</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning Messages -->
+                    <div id="warningContainer" class="px-3"></div>
+
+                    <!-- Hidden Product ID -->
+                    <input type="hidden" asp-for="ProductId" id="ProductId" />
+
+                    <!-- Transfer Fields -->
+                    <div id="transferFields" style="display:none;">
+                        <div>
+                        <div class="form-section">
+                            <h2 class="section-title">Destination</h2>
+                            <div class="form-grid">
+                                <div>
+                                    <label asp-for="ToDepartmentId" class="form-label">
+                                        To Department <span class="text-danger">*</span>
+                                    </label>
+                                    <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select" required>
+                                        <option value="">-- Select Department --</option>
+                                    </select>
+                                    <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+                                </div>
+                                <div>
+                                    <label asp-for="ToWorker" class="form-label">To Worker</label>
+                                    <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name (optional)" />
+                                    <span asp-validation-for="ToWorker" class="text-danger"></span>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Product Information Display -->
-                        <div id="productInfoContainer" style="display:none;">
-                            <div class="alert alert-info alert-permanent">
-                                <h6 class="alert-heading"><i class="fas fa-box"></i> Product Information</h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <p class="mb-1"><strong>Model:</strong> <span id="productModel">N/A</span></p>
-                                        <p class="mb-1"><strong>Vendor:</strong> <span id="productVendor">N/A</span></p>
-                                        <p class="mb-1"><strong>Current Worker:</strong> <span id="currentWorker">N/A</span></p>
+                        <div class="form-section">
+                            <h2 class="section-title">Documentation</h2>
+                            <div class="form-grid">
+                                <div class="full">
+                                    <label asp-for="ImageFile" class="form-label">Transfer Image (Optional)</label>
+                                    <input asp-for="ImageFile" class="form-control" accept="image/*" />
+                                    <span asp-validation-for="ImageFile" class="text-danger"></span>
+                                    <div id="imagePreviewContainer" class="mt-2" style="display:none;">
+                                        <div class="image-preview">
+                                            <img id="imagePreview" alt="Transfer image preview" />
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <p class="mb-1"><strong>Category:</strong> <span id="productCategory">N/A</span></p>
-                                        <p class="mb-1"><strong>Current Department:</strong> <span id="currentDepartment">N/A</span></p>
-                                        <p class="mb-1"><strong>Working Status:</strong> <span id="workingStatus">N/A</span></p>
-                                    </div>
+                                </div>
+                                <div class="full">
+                                    <label asp-for="Notes" class="form-label">Notes</label>
+                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
+                                    <span asp-validation-for="Notes" class="text-danger"></span>
                                 </div>
                             </div>
                         </div>
+                        </div>
 
-                        <!-- Warning Messages -->
-                        <div id="warningContainer"></div>
-
-                        <!-- Hidden Product ID -->
-                        <input type="hidden" asp-for="ProductId" id="ProductId" />
-
-                        <!-- Transfer Fields -->
-                        <div id="transferFields" style="display:none;">
-                            <hr class="my-4" />
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label asp-for="ToDepartmentId" class="form-label">
-                                            <i class="fas fa-building"></i> To Department <span class="text-danger">*</span>
-                                        </label>
-                                        <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select" required>
-                                            <option value="">-- Select Department --</option>
-                                        </select>
-                                        <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label asp-for="ToWorker" class="form-label">
-                                            <i class="fas fa-user"></i> To Worker
-                                        </label>
-                                        <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name (optional)" />
-                                        <span asp-validation-for="ToWorker" class="text-danger"></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="ImageFile" class="form-label">
-                                    <i class="fas fa-camera"></i> Transfer Image (Optional)
-                                </label>
-                                <input asp-for="ImageFile" class="form-control" accept="image/*" />
-                                <span asp-validation-for="ImageFile" class="text-danger"></span>
-                                <div id="imagePreviewContainer" class="mt-2" style="display:none;">
-                                    <img id="imagePreview" class="img-thumbnail" style="max-width: 200px;" />
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="Notes" class="form-label">
-                                    <i class="fas fa-sticky-note"></i> Notes
-                                </label>
-                                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
-                                <span asp-validation-for="Notes" class="text-danger"></span>
-                            </div>
-
-                            <div class="d-flex justify-content-between">
-                                <a asp-action="Index" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left"></i> Back to List
-                                </a>
-                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <div class="page-actions">
+                            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                            <div class="actions-right">
+                                <button type="submit" class="btn btn-primary btn-sm" id="submitBtn">
                                     <i class="fas fa-exchange-alt"></i> Transfer Product
                                 </button>
                             </div>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card mb-4 shadow">
+            <div class="card mb-4 side-panel">
                 <div class="card-header">
-                    <i class="fas fa-info-circle me-1"></i>
+                    <i class="bi bi-lightbulb me-1"></i>
                     Transfer Guidelines
                 </div>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <i class="bi bi-check2 me-2"></i>
+                        Enter inventory code and click Search or press Enter
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check2 me-2"></i>
+                        System will verify product exists and show current location
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check2 me-2"></i>
+                        Choose destination department
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check2 me-2"></i>
+                        Assign to specific worker if needed
+                    </div>
+                    <div class="list-group-item">
+                        <i class="bi bi-check2 me-2"></i>
+                        Add transfer image for documentation
+                    </div>
+                </div>
                 <div class="card-body">
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            Enter inventory code and click Search or press Enter
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            System will verify product exists and show current location
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            Choose destination department
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            Assign to specific worker if needed
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success"></i>
-                            Add transfer image for documentation
-                        </li>
-                    </ul>
-
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
                         <strong>Note:</strong> Products with pending transfers must have those completed first.
                     </div>
 
-                    <div class="alert alert-info">
+                    <div class="alert alert-info mb-0">
                         <i class="fas fa-info-circle"></i>
                         <strong>Tip:</strong> The current worker information will be automatically displayed when you search for a product.
                     </div>
@@ -166,15 +188,13 @@
             </div>
 
             <!-- Recent Transfers Card -->
-            <div class="card shadow">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-history me-1"></i>
+                    <i class="bi bi-clock-history me-1"></i>
                     Recent Transfers
                 </div>
-                <div class="card-body">
-                    <div id="recentTransfers">
-                        <p class="text-muted">Loading recent transfers...</p>
-                    </div>
+                <div class="card-body" id="recentTransfers">
+                    <p class="form-text mb-0">Loading recent transfers...</p>
                 </div>
             </div>
         </div>
@@ -386,8 +406,8 @@
                 $('#productCategory').text(product.categoryName || 'N/A');
                 $('#currentDepartment').text(product.departmentName || 'N/A');
                 $('#workingStatus').html(product.isWorking ?
-                    '<span class="badge bg-success">Working</span>' :
-                    '<span class="badge bg-danger">Not Working</span>');
+                    '<span class="state state-ok">Working</span>' :
+                    '<span class="state state-crit">Not Working</span>');
 
                 $('#ProductId').val(product.id);
                 $('#productInfoContainer').slideDown();
@@ -441,33 +461,35 @@
                     });
 
                     if (response && response.items && response.items.length > 0) {
-                        let html = '<ul class="list-unstyled mb-0">';
-                        response.items.forEach(route => {
-                            const statusBadge = route.isCompleted ?
-                                '<span class="badge bg-success">Completed</span>' :
-                                '<span class="badge bg-warning">Pending</span>';
+                        const items = response.items;
+                        let html = '';
+                        items.forEach((route, idx) => {
+                            const statusChip = route.isCompleted ?
+                                '<span class="state state-ok">Completed</span>' :
+                                '<span class="state state-warn">Pending</span>';
+                            const rowClass = idx === items.length - 1 ? '' : 'pb-2 mb-2 border-bottom';
 
                             html += `
-                                <li class="mb-2 pb-2 border-bottom">
-                                    <div class="d-flex justify-content-between">
-                                        <small><strong>${route.inventoryCode}</strong> - ${route.model || 'N/A'}</small>
-                                        ${statusBadge}
+                                <div class="${rowClass}">
+                                    <div class="d-flex justify-content-between align-items-center gap-2">
+                                        <span class="cell-title mono">${route.inventoryCode}</span>
+                                        ${statusChip}
                                     </div>
-                                    <small class="text-muted">
-                                        To: ${route.toDepartmentName}
-                                        ${route.toWorker ? `(${route.toWorker})` : ''}
-                                    </small>
-                                </li>
+                                    <div class="cell-sub">${route.model || 'N/A'}</div>
+                                    <div class="cell-sub">
+                                        To: ${route.toDepartmentName}${route.toWorker ? ` (${route.toWorker})` : ''}
+                                    </div>
+                                </div>
                             `;
                         });
-                        html += '</ul>';
                         $('#recentTransfers').html(html);
                     } else {
-                        $('#recentTransfers').html('<p class="text-muted">No recent transfers</p>');
+                        $('#recentTransfers').html(
+                            '<div class="empty-state"><i class="bi bi-clock-history"></i><p class="mb-0">No recent transfers</p></div>');
                     }
                 } catch (error) {
                     console.error('Failed to load recent transfers:', error);
-                    $('#recentTransfers').html('<p class="text-muted">Unable to load recent transfers</p>');
+                    $('#recentTransfers').html('<p class="form-text mb-0">Unable to load recent transfers</p>');
                 }
             }
 
@@ -551,48 +573,3 @@
         });
     </script>
 }
-
-<style>
-    #inventoryCodeInput {
-        font-size: 1.25rem;
-        font-weight: 500;
-    }
-
-    #searchFeedback {
-        font-size: 0.9rem;
-        min-height: 20px;
-    }
-
-    .alert-heading {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-    }
-
-    #transferFields, #productInfoContainer {
-        animation: slideDown 0.3s ease-out;
-    }
-
-    @@keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .list-unstyled li:last-child {
-        border-bottom: none !important;
-    }
-
-    #imagePreview {
-        cursor: pointer;
-    }
-
-    .badge {
-        font-size: 0.75rem;
-    }
-</style>

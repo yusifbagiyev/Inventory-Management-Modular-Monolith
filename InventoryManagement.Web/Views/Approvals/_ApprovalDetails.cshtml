@@ -1,66 +1,102 @@
-﻿@model ApprovalRequestDto
+@model ApprovalRequestDto
 
 <div class="approval-details">
-    <div class="row">
+    <div class="row g-4">
         <div class="col-md-6">
-            <h6>Request Information</h6>
-            <table class="table table-sm">
-                <tr>
-                    <th>Type:</th>
-                    <td>
-                        <span class="badge bg-info">
-                            @GetReadableRequestType(Model.RequestType)
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Entity:</th>
-                    <td>@Model.EntityType @(Model.EntityId.HasValue ? $"#{Model.EntityId}" : "")</td>
-                </tr>
-                <tr>
-                    <th>Requested By:</th>
-                    <td>@Model.RequestedByName</td>
-                </tr>
-                <tr>
-                    <th>Date:</th>
-                    <td>@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
-                </tr>
-                <tr>
-                    <th>Status:</th>
-                    <td>
+            <div class="section-title">Request Information</div>
+            <div class="detail-grid">
+                <div class="detail-row">
+                    <span class="d-label">Type</span>
+                    <span class="d-value">
+                        <span class="badge bg-info">@GetReadableRequestType(Model.RequestType)</span>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label">Entity</span>
+                    <span class="d-value">
+                        @Model.EntityType
+                        @if (Model.EntityId.HasValue)
+                        {
+                            <span class="mono text-muted">#@Model.EntityId</span>
+                        }
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label">Requested By</span>
+                    <span class="d-value">@Model.RequestedByName</span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label">Date</span>
+                    <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="d-label">Status</span>
+                    <span class="d-value">
                         @if (Model.Status == "Pending")
                         {
-                            <span class="badge bg-warning">Pending</span>
+                            <span class="state state-warn">Pending</span>
                         }
                         else if (Model.Status == "Executed" || Model.Status == "Approved")
                         {
-                            <span class="badge bg-success">Approved</span>
+                            <span class="state state-ok">Approved</span>
                         }
                         else if (Model.Status == "Rejected")
                         {
-                            <span class="badge bg-danger">Rejected</span>
+                            <span class="state state-crit">Rejected</span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary">@Model.Status</span>
+                            <span class="state state-idle">@Model.Status</span>
                         }
-                    </td>
-                </tr>
-            </table>
+                    </span>
+                </div>
+            </div>
         </div>
         <div class="col-md-6">
-            <h6>Request Details</h6>
-            <div class="bg-light p-3 rounded">
-                @{
-                    var details = ParseActionData(Model.RequestType, Model.ActionData);
-                }
-                @Html.Raw(details)
-            </div>
+            <div class="section-title">Request Details</div>
+            @{
+                var details = ParseActionData(Model.RequestType, Model.ActionData);
+            }
+            @Html.Raw(details)
         </div>
     </div>
 </div>
 
 @functions {
+    // XSS guard: ActionData is user-supplied, so every dynamic value must be HTML-encoded
+    // before it is concatenated into markup that is emitted with @Html.Raw above.
+    string E(dynamic value) => System.Net.WebUtility.HtmlEncode(value?.ToString() ?? "");
+
+    // One label/value pair in the design-system detail-row shape. The value always goes
+    // through E(); when it is missing the placeholder is rendered muted instead.
+    // Callers cast the dynamic JSON value to object so this stays a compile-time bound call.
+    string Row(string label, object? value, string placeholder, bool mono)
+    {
+        var text = value?.ToString();
+        var body = string.IsNullOrWhiteSpace(text)
+            ? $"<span class='d-empty'>{E(placeholder)}</span>"
+            : E(text);
+        var valueClass = mono ? "d-value mono" : "d-value";
+        return $"<div class='detail-row'><span class='d-label'>{E(label)}</span><span class='{valueClass}'>{body}</span></div>";
+    }
+
+    // Same row shape for values that are markup we build ourselves (state chips, badges).
+    // Anything user-supplied inside valueHtml must already have been passed through E().
+    string RowHtml(string label, string valueHtml)
+        => $"<div class='detail-row'><span class='d-label'>{E(label)}</span><span class='d-value'>{valueHtml}</span></div>";
+
+    string Section(string title) => $"<div class='section-title'>{E(title)}</div>";
+
+    // department + worker stacked inside a single value cell
+    string Place(object department, object worker)
+    {
+        var dept = department?.ToString();
+        var who = worker?.ToString();
+        var deptHtml = string.IsNullOrWhiteSpace(dept) ? "<span class='d-empty'>Unknown</span>" : E(dept);
+        var workerHtml = string.IsNullOrWhiteSpace(who) ? "Not assigned" : E(who);
+        return $"{deptHtml}<br/><small class='text-muted'>Worker: {workerHtml}</small>";
+    }
+
     string GetReadableRequestType(string requestType)
     {
         return requestType switch
@@ -103,7 +139,7 @@
 
                 default:
                     // For unknown types, format the JSON nicely
-                    return $"<pre class='mb-0' style='max-height: 400px; overflow-y: auto;'>{FormatJson(data)}</pre>";
+                    return $"<pre class='mb-0' style='max-height: 340px; overflow: auto;'>{E(FormatJson(data))}</pre>";
             }
         }
         catch (Exception ex)
@@ -112,11 +148,11 @@
             try
             {
                 var parsed = Newtonsoft.Json.Linq.JToken.Parse(actionData);
-                return $"<pre class='mb-0' style='max-height: 400px; overflow-y: auto;'>{parsed.ToString(Newtonsoft.Json.Formatting.Indented)}</pre>";
+                return $"<pre class='mb-0' style='max-height: 340px; overflow: auto;'>{E(parsed.ToString(Newtonsoft.Json.Formatting.Indented))}</pre>";
             }
             catch
             {
-                return $"<div class='text-danger'>Error parsing data: {ex.Message}</div>";
+                return $"<div class='alert alert-danger mb-0'>Error parsing data: {E(ex.Message)}</div>";
             }
         }
     }
@@ -128,32 +164,38 @@
 
         // Basic Information
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Product Information</h6>");
-        html.AppendLine($"<strong>Inventory Code:</strong> {productData.inventoryCode ?? productData.InventoryCode}<br/>");
-        html.AppendLine($"<strong>Model:</strong> {productData.model ?? productData.Model ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Vendor:</strong> {productData.vendor ?? productData.Vendor ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Worker:</strong> {productData.worker ?? productData.Worker ?? "Not assigned"}<br/>");
+        html.AppendLine(Section("Product Information"));
+        html.AppendLine(Row("Inventory Code", (object)(productData.inventoryCode ?? productData.InventoryCode), "N/A", true));
+        html.AppendLine(Row("Model", (object)(productData.model ?? productData.Model), "N/A", false));
+        html.AppendLine(Row("Vendor", (object)(productData.vendor ?? productData.Vendor), "N/A", false));
+        html.AppendLine(Row("Worker", (object)(productData.worker ?? productData.Worker), "Not assigned", false));
         html.AppendLine("</div>");
 
         // Category & Department
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Location</h6>");
+        html.AppendLine(Section("Location"));
         var categoryName = productData.categoryName ?? productData.CategoryName ?? $"Category #{productData.categoryId ?? productData.CategoryId}";
         var departmentName = productData.departmentName ?? productData.DepartmentName ?? $"Department #{productData.departmentId ?? productData.DepartmentId}";
-        html.AppendLine($"<strong>Category:</strong> {categoryName}<br/>");
-        html.AppendLine($"<strong>Department:</strong> {departmentName}<br/>");
+        html.AppendLine(Row("Category", (object)categoryName, "N/A", false));
+        html.AppendLine(Row("Department", (object)departmentName, "N/A", false));
         html.AppendLine("</div>");
 
         // Status Information
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Status</h6>");
+        html.AppendLine(Section("Status"));
         bool isWorking = GetBoolValue(productData, "isWorking", "IsWorking", true);
         bool isActive = GetBoolValue(productData, "isActive", "IsActive", true);
         bool isNewItem = GetBoolValue(productData, "isNewItem", "IsNewItem", true);
 
-        html.AppendLine($"<strong>Working Status:</strong> {(isWorking ? "<span class='badge bg-success'>Working</span>" : "<span class='badge bg-danger'>Not Working</span>")}<br/>");
-        html.AppendLine($"<strong>Active:</strong> {(isActive ? "<span class='badge bg-success'>Active</span>" : "<span class='badge bg-secondary'>Inactive</span>")}<br/>");
-        html.AppendLine($"<strong>Item Condition:</strong> {(isNewItem ? "<span class='badge bg-info'>New</span>" : "<span class='badge bg-warning'>Used</span>")}<br/>");
+        html.AppendLine(RowHtml("Working Status", isWorking
+            ? "<span class='state state-ok'>Working</span>"
+            : "<span class='state state-crit'>Not Working</span>"));
+        html.AppendLine(RowHtml("Active", isActive
+            ? "<span class='state state-ok'>Active</span>"
+            : "<span class='state state-flat state-idle'>Inactive</span>"));
+        html.AppendLine(RowHtml("Item Condition", isNewItem
+            ? "<span class='state state-flat state-new'>New</span>"
+            : "<span class='state state-warn'>Used</span>"));
         html.AppendLine("</div>");
 
         // Description & Notes
@@ -161,8 +203,8 @@
         if (!string.IsNullOrEmpty(description?.ToString()))
         {
             html.AppendLine("<div class='mb-3'>");
-            html.AppendLine("<h6 class='text-primary'>Description</h6>");
-            html.AppendLine($"{description}");
+            html.AppendLine(Section("Description"));
+            html.AppendLine($"<p class='mb-0'>{E(description)}</p>");
             html.AppendLine("</div>");
         }
 
@@ -170,7 +212,7 @@
         if (productData.imageData != null || productData.imageFileName != null)
         {
             html.AppendLine("<div class='alert alert-info mb-0'>");
-            html.AppendLine($"<i class='fas fa-image'></i> Image attached: {productData.imageFileName ?? "product_image.jpg"}");
+            html.AppendLine($"<i class='fas fa-image'></i> Image attached: {E(productData.imageFileName ?? "product_image.jpg")}");
             html.AppendLine("</div>");
         }
 
@@ -180,24 +222,24 @@
     string ParseProductUpdateData(dynamic data)
     {
         var html = new System.Text.StringBuilder();
-        var inventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
+        var inventoryCode = data.InventoryCode ?? data.inventoryCode;
 
-        html.AppendLine($"<strong>Product:</strong> Inventory Code {inventoryCode}<br/>");
-
-        // Parse UpdateData
-        var updateData = data.UpdateData ?? data.updateData;
+        html.AppendLine(Section("Product"));
+        html.AppendLine(Row("Inventory Code", (object)inventoryCode, "N/A", true));
 
         // Show changes summary if available
         var changes = data.Changes;
         if (changes != null)
         {
-            html.AppendLine("<h6 class='text-primary mt-3'>Summary of Changes:</h6>");
-            html.AppendLine("<ul>");
+            html.AppendLine("<div class='mt-3'>");
+            html.AppendLine(Section("Summary of Changes"));
+            html.AppendLine("<ul class='mb-0'>");
             foreach (var change in changes)
             {
-                html.AppendLine($"<li>{change}</li>");
+                html.AppendLine($"<li>{E(change)}</li>");
             }
             html.AppendLine("</ul>");
+            html.AppendLine("</div>");
         }
 
         return html.ToString();
@@ -207,17 +249,17 @@
     {
         var html = new System.Text.StringBuilder();
         html.AppendLine("<div class='alert alert-warning'>");
-        html.AppendLine("<i class='fas fa-exclamation-triangle'></i> <strong>Product to be Deleted:</strong>");
+        html.AppendLine("<i class='fas fa-exclamation-triangle'></i> <strong>Product to be Deleted</strong>");
         html.AppendLine("</div>");
 
-        html.AppendLine($"<strong>Inventory Code:</strong> {data.InventoryCode ?? data.inventoryCode ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Model:</strong> {data.Model ?? data.model ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Vendor:</strong> {data.Vendor ?? data.vendor ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Department:</strong> {data.DepartmentName ?? data.departmentName ?? "N/A"}<br/>");
+        html.AppendLine(Row("Inventory Code", (object)(data.InventoryCode ?? data.inventoryCode), "N/A", true));
+        html.AppendLine(Row("Model", (object)(data.Model ?? data.model), "N/A", false));
+        html.AppendLine(Row("Vendor", (object)(data.Vendor ?? data.vendor), "N/A", false));
+        html.AppendLine(Row("Department", (object)(data.DepartmentName ?? data.departmentName), "N/A", false));
 
         if (data.DeleteReason != null)
         {
-            html.AppendLine($"<br/><strong>Reason:</strong> {data.DeleteReason}");
+            html.AppendLine(Row("Reason", (object)data.DeleteReason, "N/A", false));
         }
 
         return html.ToString();
@@ -229,27 +271,21 @@
 
         // Product Information
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Product Information</h6>");
-        html.AppendLine($"<strong>Inventory Code:</strong> {data.inventoryCode ?? data.InventoryCode ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Model:</strong> {data.productModel ?? data.ProductModel ?? "N/A"}<br/>");
-        html.AppendLine($"<strong>Vendor:</strong> {data.productVendor ?? data.ProductVendor ?? "N/A"}<br/>");
+        html.AppendLine(Section("Product Information"));
+        html.AppendLine(Row("Inventory Code", (object)(data.inventoryCode ?? data.InventoryCode), "N/A", true));
+        html.AppendLine(Row("Model", (object)(data.productModel ?? data.ProductModel), "N/A", false));
+        html.AppendLine(Row("Vendor", (object)(data.productVendor ?? data.ProductVendor), "N/A", false));
         html.AppendLine("</div>");
 
         // Transfer Details
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Transfer Details</h6>");
-        html.AppendLine("<table class='table table-sm'>");
-        html.AppendLine("<tr>");
-        html.AppendLine("<td><strong>From:</strong></td>");
-        html.AppendLine($"<td>{data.fromDepartmentName ?? data.FromDepartmentName ?? "Unknown"}<br/>");
-        html.AppendLine($"<small class='text-muted'>Worker: {data.fromWorker ?? data.FromWorker ?? "Not assigned"}</small></td>");
-        html.AppendLine("</tr>");
-        html.AppendLine("<tr>");
-        html.AppendLine("<td><strong>To:</strong></td>");
-        html.AppendLine($"<td>{data.toDepartmentName ?? data.ToDepartmentName ?? "Unknown"}<br/>");
-        html.AppendLine($"<small class='text-muted'>Worker: {data.toWorker ?? data.ToWorker ?? "Not assigned"}</small></td>");
-        html.AppendLine("</tr>");
-        html.AppendLine("</table>");
+        html.AppendLine(Section("Transfer Details"));
+        html.AppendLine(RowHtml("From", Place(
+            (object)(data.fromDepartmentName ?? data.FromDepartmentName),
+            (object)(data.fromWorker ?? data.FromWorker))));
+        html.AppendLine(RowHtml("To", Place(
+            (object)(data.toDepartmentName ?? data.ToDepartmentName),
+            (object)(data.toWorker ?? data.ToWorker))));
         html.AppendLine("</div>");
 
         // Notes
@@ -257,8 +293,8 @@
         if (notes != null && notes.ToString() != "{}" && !string.IsNullOrWhiteSpace(notes.ToString()))
         {
             html.AppendLine("<div class='mb-3'>");
-            html.AppendLine("<h6 class='text-primary'>Notes</h6>");
-            html.AppendLine($"{notes}");
+            html.AppendLine(Section("Notes"));
+            html.AppendLine($"<p class='mb-0'>{E(notes)}</p>");
             html.AppendLine("</div>");
         }
 
@@ -266,7 +302,7 @@
         if (data.imageData != null || data.imageFileName != null)
         {
             html.AppendLine("<div class='alert alert-info mb-0'>");
-            html.AppendLine($"<i class='fas fa-image'></i> Transfer image attached");
+            html.AppendLine("<i class='fas fa-image'></i> Transfer image attached");
             html.AppendLine("</div>");
         }
 
@@ -309,21 +345,21 @@
 
         // Route Information
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Route Information</h6>");
+        html.AppendLine(Section("Route Information"));
 
-        var routeId = data.RouteId ?? data.routeId ?? "Unknown";
+        string? routeId = (data.RouteId ?? data.routeId)?.ToString();
         var inventoryCode = data.InventoryCode ?? data.inventoryCode ?? "N/A";
         var model = data.Model ?? data.model ?? "N/A";
 
-        html.AppendLine($"<strong>Route ID:</strong> #{routeId}<br/>");
-        html.AppendLine($"<strong>Product:</strong> {inventoryCode} - {model}<br/>");
+        html.AppendLine(Row("Route ID", string.IsNullOrWhiteSpace(routeId) ? null : "#" + routeId, "Unknown", true));
+        html.AppendLine(Row("Product", (object)$"{inventoryCode} - {model}", "N/A", false));
 
         // Show transfer route if available
         var fromDept = data.FromDepartmentName ?? data.fromDepartmentName;
         var toDept = data.ToDepartmentName ?? data.toDepartmentName;
         if (fromDept != null && toDept != null)
         {
-            html.AppendLine($"<strong>Route:</strong> {fromDept} → {toDept}<br/>");
+            html.AppendLine(RowHtml("Route", $"{E(fromDept)} &rarr; {E(toDept)}"));
         }
 
         html.AppendLine("</div>");
@@ -333,22 +369,21 @@
         if (updateData != null)
         {
             html.AppendLine("<div class='mb-3'>");
-            html.AppendLine("<h6 class='text-primary'>Updates to Apply</h6>");
+            html.AppendLine(Section("Updates to Apply"));
 
             // Check for notes update
             var notes = updateData.notes ?? updateData.Notes;
             if (notes != null && notes.ToString() != "{}")
             {
-                html.AppendLine($"<strong>Notes:</strong><br/>");
-                html.AppendLine($"<div class='bg-light p-2 rounded'>{notes}</div>");
+                html.AppendLine(Row("Notes", (object?)notes, "N/A", false));
             }
 
             // Check for image update
             if (updateData.imageData != null || updateData.imageFileName != null)
             {
                 var fileName = updateData.imageFileName ?? updateData.ImageFileName ?? "route_image.jpg";
-                html.AppendLine($"<div class='alert alert-info mt-2'>");
-                html.AppendLine($"<i class='fas fa-image'></i> New route image will be uploaded: {fileName}");
+                html.AppendLine("<div class='alert alert-info mt-2'>");
+                html.AppendLine($"<i class='fas fa-image'></i> New route image will be uploaded: {E(fileName)}");
                 html.AppendLine("</div>");
             }
 
@@ -356,7 +391,7 @@
             var changesSummary = updateData.changesSummary ?? updateData.ChangesSummary;
             if (changesSummary != null && changesSummary.ToString() != "")
             {
-                html.AppendLine($"<strong>Summary:</strong> {changesSummary}");
+                html.AppendLine(Row("Summary", (object?)changesSummary, "N/A", false));
             }
 
             html.AppendLine("</div>");
@@ -367,7 +402,7 @@
         if (changes != null && changes.ToString() != "")
         {
             html.AppendLine("<div class='alert alert-warning mb-0'>");
-            html.AppendLine($"<strong>Changes:</strong> {changes}");
+            html.AppendLine($"<strong>Changes:</strong> {E(changes)}");
             html.AppendLine("</div>");
         }
 
@@ -385,36 +420,38 @@
 
         // Route details
         html.AppendLine("<div class='mb-3'>");
-        html.AppendLine("<h6 class='text-primary'>Route Information</h6>");
+        html.AppendLine(Section("Route Information"));
 
-        var routeId = data.RouteId ?? data.routeId ?? "Unknown";
+        string? routeId = (data.RouteId ?? data.routeId)?.ToString();
         var routeType = data.RouteType ?? data.routeType ?? "Transfer";
-        var productInfo = data.ProductInfo ?? data.productInfo ?? "Unknown Product";
-        var fromLocation = data.FromLocation ?? data.fromLocation ?? "N/A";
-        var toLocation = data.ToLocation ?? data.toLocation ?? "N/A";
+        var productInfo = data.ProductInfo ?? data.productInfo;
+        var fromLocation = data.FromLocation ?? data.fromLocation;
+        var toLocation = data.ToLocation ?? data.toLocation;
         var createdDate = data.CreatedDate ?? data.createdDate;
-        var isCompleted = GetBoolValue(data, "isCompleted", "IsCompleted", false);
+        bool isCompleted = GetBoolValue(data, "isCompleted", "IsCompleted", false);
 
-        html.AppendLine($"<strong>Route ID:</strong> #{routeId}<br/>");
-        html.AppendLine($"<strong>Type:</strong> <span class='badge bg-info'>{routeType}</span><br/>");
-        html.AppendLine($"<strong>Product:</strong> {productInfo}<br/>");
-        html.AppendLine($"<strong>From:</strong> {fromLocation}<br/>");
-        html.AppendLine($"<strong>To:</strong> {toLocation}<br/>");
+        html.AppendLine(Row("Route ID", string.IsNullOrWhiteSpace(routeId) ? null : "#" + routeId, "Unknown", true));
+        html.AppendLine(RowHtml("Type", $"<span class='badge bg-info'>{E(routeType)}</span>"));
+        html.AppendLine(Row("Product", (object)productInfo, "Unknown Product", false));
+        html.AppendLine(Row("From", (object)fromLocation, "N/A", false));
+        html.AppendLine(Row("To", (object)toLocation, "N/A", false));
 
         if (createdDate != null)
         {
             try
             {
-                var date = DateTime.Parse(createdDate.ToString());
-                html.AppendLine($"<strong>Created:</strong> {date:MM/dd/yyyy HH:mm}<br/>");
+                DateTime date = DateTime.Parse(createdDate.ToString());
+                html.AppendLine(Row("Created", date.ToString("MM/dd/yyyy HH:mm"), "N/A", true));
             }
             catch
             {
-                html.AppendLine($"<strong>Created:</strong> {createdDate}<br/>");
+                html.AppendLine(Row("Created", (object)createdDate, "N/A", true));
             }
         }
 
-        html.AppendLine($"<strong>Status:</strong> {(isCompleted ? "<span class='badge bg-success'>Completed</span>" : "<span class='badge bg-warning'>Pending</span>")}<br/>");
+        html.AppendLine(RowHtml("Status", isCompleted
+            ? "<span class='state state-ok'>Completed</span>"
+            : "<span class='state state-warn'>Pending</span>"));
         html.AppendLine("</div>");
 
         // Deletion reason if provided
@@ -422,8 +459,8 @@
         if (deleteReason != null && deleteReason.ToString() != "")
         {
             html.AppendLine("<div class='mb-3'>");
-            html.AppendLine("<h6 class='text-primary'>Deletion Reason</h6>");
-            html.AppendLine($"{deleteReason}");
+            html.AppendLine(Section("Deletion Reason"));
+            html.AppendLine($"<p class='mb-0'>{E(deleteReason)}</p>");
             html.AppendLine("</div>");
         }
 

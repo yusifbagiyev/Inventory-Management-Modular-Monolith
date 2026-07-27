@@ -1,166 +1,196 @@
-﻿@model RouteViewModel
+@model RouteViewModel
 @{
     ViewData["Title"] = "Route Details";
+
+    var typeClass = Model.RouteTypeName switch
+    {
+        "New" => "state-ok",
+        "Removal" => "state-crit",
+        "Update" => "state-warn",
+        "Transfer" => "state-info",
+        _ => "state-idle"
+    };
 }
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Route Details</h1>
-    <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
-        <li class="breadcrumb-item active">Details</li>
-    </ol>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
+        <div>
+            <h1 class="mb-1">Route Details</h1>
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
+                <li class="breadcrumb-item active">Details</li>
+            </ol>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
 
-    <div class="row">
+    <div class="row mt-3">
         <div class="col-lg-8">
-            <div class="card mb-4 shadow">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="col">
-                            <i class="fas fa-route me-1"></i>
-                            Route Information
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <span><i class="bi bi-signpost-split me-1"></i> Route Information</span>
+                    <span class="d-flex gap-2 flex-wrap">
+                        <span class="state state-flat @typeClass">@Model.RouteTypeName</span>
+                        @if (Model.IsCompleted)
+                        {
+                            <span class="state state-ok">Completed</span>
+                        }
+                        else
+                        {
+                            <span class="state state-warn">Pending</span>
+                        }
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    <h2 class="section-title">Transfer</h2>
+                    <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
+                        @if (Model.FromDepartmentName != null)
+                        {
+                            <div class="cell-text">
+                                <span class="cell-sub">From</span>
+                                <span class="cell-title">@Model.FromDepartmentName</span>
+                                <span class="cell-sub">Worker: @(Model.FromWorker ?? "N/A")</span>
+                            </div>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                        }
+                        <div class="cell-text">
+                            <span class="cell-sub">To</span>
+                            <span class="cell-title">@Model.ToDepartmentName</span>
+                            <span class="cell-sub">Worker: @(Model.ToWorker ?? "N/A")</span>
                         </div>
-                        <div class="col text-end">
-                            @if (Model.IsCompleted)
+                    </div>
+
+                    <h2 class="section-title">Product</h2>
+                    <div class="detail-grid mb-4">
+                        <div class="detail-row">
+                            <span class="d-label">Code</span>
+                            <span class="d-value mono">@Model.InventoryCode</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Model</span>
+                            @if (string.IsNullOrWhiteSpace(Model.Model))
                             {
-                                <span class="badge bg-success fs-6">
-                                    <i class="fas fa-check-circle"></i> Completed
-                                </span>
+                                <span class="d-value d-empty">Not set</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning fs-6">
-                                    <i class="fas fa-clock"></i> Pending
-                                </span>
+                                <span class="d-value">@Model.Model</span>
+                            }
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Vendor</span>
+                            @if (string.IsNullOrWhiteSpace(Model.Vendor))
+                            {
+                                <span class="d-value d-empty">Not set</span>
+                            }
+                            else
+                            {
+                                <span class="d-value">@Model.Vendor</span>
+                            }
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Category</span>
+                            @if (string.IsNullOrWhiteSpace(Model.CategoryName))
+                            {
+                                <span class="d-value d-empty">Not set</span>
+                            }
+                            else
+                            {
+                                <span class="d-value">@Model.CategoryName</span>
                             }
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Route Type</h6>
-                            <p class="mb-3">
-                                <span class="badge bg-info fs-6">@Model.RouteTypeName</span>
-                            </p>
 
-                            <h6 class="text-muted">Product Information</h6>
-                            <table class="table table-sm table-borderless">
-                                <tr>
-                                    <th width="40%">Code:</th>
-                                    <td>@Model.InventoryCode</td>
-                                </tr>
-                                <tr>
-                                    <th>Model:</th>
-                                    <td>@Model.Model</td>
-                                </tr>
-                                <tr>
-                                    <th>Vendor:</th>
-                                    <td>@Model.Vendor</td>
-                                </tr>
-                                <tr>
-                                    <th>Category:</th>
-                                    <td>@Model.CategoryName</td>
-                                </tr>
-                            </table>
+                    <h2 class="section-title">Route</h2>
+                    <div class="detail-grid mb-4">
+                        <div class="detail-row">
+                            <span class="d-label">Route type</span>
+                            <span class="d-value">@Model.RouteTypeName</span>
                         </div>
-
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Transfer Details</h6>
-                            <table class="table table-sm table-borderless">
-                                @if (Model.FromDepartmentName != null)
-                                {
-                                    <tr>
-                                        <th width="30%">From:</th>
-                                        <td>
-                                            <strong>@Model.FromDepartmentName</strong><br />
-                                            <small class="text-muted">Worker: @(Model.FromWorker ?? "N/A")</small>
-                                        </td>
-                                    </tr>
-                                }
-                                <tr>
-                                    <th>To:</th>
-                                    <td>
-                                        <strong>@Model.ToDepartmentName</strong><br />
-                                        <small class="text-muted">Worker: @(Model.ToWorker ?? "N/A")</small>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Created:</th>
-                                    <td>@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
-                                </tr>
-                                @if (Model.IsCompleted && Model.CompletedAt.HasValue)
-                                {
-                                    <tr>
-                                        <th>Completed:</th>
-                                        <td>@Model.CompletedAt.Value.ToString("MM/dd/yyyy HH:mm")</td>
-                                    </tr>
-                                }
-                            </table>
+                        <div class="detail-row">
+                            <span class="d-label">Created</span>
+                            <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="d-label">Completed</span>
+                            @if (Model.IsCompleted && Model.CompletedAt.HasValue)
+                            {
+                                <span class="d-value mono">@Model.CompletedAt.Value.ToString("MM/dd/yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="d-value d-empty">Not completed</span>
+                            }
                         </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.Notes))
                     {
-                        <hr />
-                        <h6 class="text-muted">Notes</h6>
-                        <p>@Model.Notes</p>
+                        <h2 class="section-title">Notes</h2>
+                        <p class="mb-4">@Model.Notes</p>
                     }
 
                     @if (!string.IsNullOrEmpty(Model.ImageUrl))
                     {
-                        <hr />
-                        <h6 class="text-muted">Transfer Image</h6>
-                        <img src="@Model.FullImageUrl"
-                             class="img-fluid rounded cursor-pointer"
-                             style="max-width: 400px; cursor: pointer;"
-                             alt="Transfer Image"
-                             onclick="showImageModal('@Model.FullImageUrl', 'Transfer Image')" />
+                        <h2 class="section-title">Transfer image</h2>
+                        <div class="image-preview">
+                            <img src="@Model.FullImageUrl"
+                                 style="cursor: pointer;"
+                                 alt="Transfer Image"
+                                 onclick="showImageModal('@Model.FullImageUrl', 'Transfer Image')" />
+                        </div>
                     }
                 </div>
-                <div class="card-footer">
-                    <div class="d-flex justify-content-between">
-                        <a asp-action="Index" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                        <div>
-                            @if (!Model.IsCompleted)
-                            {
-                                <button type="button" class="btn btn-success" onclick="completeRoute(@Model.Id)">
-                                    <i class="fas fa-check"></i> Mark as Complete
-                                </button>
-                                <button type="button" class="btn btn-danger" onclick="deleteRoute(@Model.Id)">
-                                    <i class="fas fa-trash"></i> Delete
-                                </button>
-                            }
+
+                <div class="page-actions">
+                    <div class="actions-right">
+                        @if (!Model.IsCompleted)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRoute(@Model.Id)">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
                             <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
-                               class="btn btn-primary">
+                               class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-box"></i> View Product
                             </a>
-                        </div>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="completeRoute(@Model.Id)">
+                                <i class="fas fa-check"></i> Mark as Complete
+                            </button>
+                        }
+                        else
+                        {
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-box"></i> View Product
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-4">
-            <div class="card mb-4 shadow">
+            <div class="card mb-4 side-panel">
                 <div class="card-header">
-                    <i class="fas fa-history me-1"></i>
+                    <i class="bi bi-lightning-charge me-1"></i>
                     Quick Actions
                 </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="btn btn-outline-primary">
-                            <i class="fas fa-timeline"></i> View Full Timeline
-                        </a>
-                        <a asp-action="Transfer" class="btn btn-outline-success">
-                            <i class="fas fa-exchange-alt"></i> New Transfer
-                        </a>
-                        <button type="button" class="btn btn-outline-info" onclick="printRoute()">
-                            <i class="fas fa-print"></i> Print Details
-                        </button>
-                    </div>
+                <div class="list-group list-group-flush">
+                    <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="list-group-item list-group-item-action">
+                        <i class="bi bi-clock-history me-2"></i> View Full Timeline
+                    </a>
+                    <a asp-action="Transfer" class="list-group-item list-group-item-action">
+                        <i class="bi bi-arrow-left-right me-2"></i> New Transfer
+                    </a>
+                    <button type="button" class="list-group-item list-group-item-action text-start" onclick="printRoute()">
+                        <i class="bi bi-printer me-2"></i> Print Details
+                    </button>
                 </div>
             </div>
         </div>

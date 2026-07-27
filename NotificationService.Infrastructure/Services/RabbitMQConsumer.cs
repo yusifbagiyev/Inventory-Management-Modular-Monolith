@@ -82,12 +82,42 @@ namespace NotificationService.Infrastructure.Services
                 _channel.QueueBind(_queueName, "inventory-events", "route.created");
                 _channel.QueueBind(_queueName, "inventory-events", "route.completed");
 
+                // Parking queue for messages that can never succeed (declared separately so the
+                // live queue keeps its original arguments).
+                _channel.QueueDeclare(DeadLetterQueueName, durable: true, exclusive: false, autoDelete: false);
+                _channel.BasicQos(prefetchSize: 0, prefetchCount: 10, global: false);
+
                 _logger.LogInformation("RabbitMQ Consumer successfully connected");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to initialize RabbitMQ connection");
                 throw;
+            }
+        }
+
+        private const string DeadLetterQueueName = "notification-queue-dead";
+
+        /// <summary>
+        /// Moves the delivery to the parking queue and acks the original, so a message that can
+        /// never succeed stops cycling through the live queue but stays available for inspection.
+        /// </summary>
+        private void DeadLetter(BasicDeliverEventArgs ea)
+        {
+            try
+            {
+                var properties = _channel!.CreateBasicProperties();
+                properties.Persistent = true;
+                _channel.BasicPublish(exchange: "", routingKey: DeadLetterQueueName,
+                    basicProperties: properties, body: ea.Body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to move a message to {DeadLetterQueue}", DeadLetterQueueName);
+            }
+            finally
+            {
+                _channel!.BasicAck(ea.DeliveryTag, false);
             }
         }
 
@@ -109,8 +139,18 @@ namespace NotificationService.Infrastructure.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing message");
-                    _channel?.BasicNack(ea.DeliveryTag, false, true);
+                    // Possibly transient: allow exactly one retry, then park it. Requeueing
+                    // unconditionally turns any persistent failure into an infinite hot loop.
+                    if (ea.Redelivered)
+                    {
+                        _logger.LogError(ex, "Notification message failed again after redelivery - dead-lettering");
+                        DeadLetter(ea);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Notification message failed, requeueing once: {Reason}", ex.Message);
+                        _channel?.BasicNack(ea.DeliveryTag, false, requeue: true);
+                    }
                 }
             };
 
@@ -329,23 +369,20 @@ namespace NotificationService.Infrastructure.Services
 
                 var allUsers = await GetAllUsersId();
 
-                foreach (var userId in allUsers)
-                {
-                    var notification = new Notification(
-                        userId,
-                        "ProductUpdate",
-                        "New Product Added",
-                        $"Product {productEvent.Model} by {productEvent.Vendor} (Code: {productEvent.InventoryCode}) has been added to {productEvent.DepartmentName}",
-                        JsonSerializer.Serialize(new
-                        {
-                            productId = productEvent.ProductId,
-                            inventoryCode = productEvent.InventoryCode,
-                            model = productEvent.Model
-                        })
-                    );
+                var notifications = allUsers.Select(userId => new Notification(
+                    userId,
+                    "ProductUpdate",
+                    "New Product Added",
+                    $"Product {productEvent.Model} by {productEvent.Vendor} (Code: {productEvent.InventoryCode}) has been added to {productEvent.DepartmentName}",
+                    JsonSerializer.Serialize(new
+                    {
+                        productId = productEvent.ProductId,
+                        inventoryCode = productEvent.InventoryCode,
+                        model = productEvent.Model
+                    })
+                )).ToList();
 
-                    await SaveAndSendNotification(notification);
-                }
+                await SaveAndSendNotifications(notifications);
             }
             catch (Exception ex)
             {
@@ -363,23 +400,20 @@ namespace NotificationService.Infrastructure.Services
                 // Notify relevant users
                 var allUsers = await GetAllUsersId();
 
-                foreach (var userId in allUsers)
-                {
-                    var notification = new Notification(
-                        userId,
-                        "ProductUpdate",
-                        "Product Deleted",
-                        $"Product {productEvent.Model} (Code: {productEvent.InventoryCode}) has been deleted from {productEvent.DepartmentName}",
-                        JsonSerializer.Serialize(new
-                        {
-                            productId = productEvent.ProductId,
-                            inventoryCode = productEvent.InventoryCode,
-                            departmentName = productEvent.DepartmentName
-                        })
-                    );
+                var notifications = allUsers.Select(userId => new Notification(
+                    userId,
+                    "ProductUpdate",
+                    "Product Deleted",
+                    $"Product {productEvent.Model} (Code: {productEvent.InventoryCode}) has been deleted from {productEvent.DepartmentName}",
+                    JsonSerializer.Serialize(new
+                    {
+                        productId = productEvent.ProductId,
+                        inventoryCode = productEvent.InventoryCode,
+                        departmentName = productEvent.DepartmentName
+                    })
+                )).ToList();
 
-                    await SaveAndSendNotification(notification);
-                }
+                await SaveAndSendNotifications(notifications);
             }
             catch (Exception ex)
             {
@@ -397,22 +431,19 @@ namespace NotificationService.Infrastructure.Services
                 // Notify destination department
                 var allUsers = await GetAllUsersId();
 
-                foreach (var userId in allUsers)
-                {
-                    var notification = new Notification(
-                        userId,
-                        "RouteUpdate",
-                        "Incoming Product Transfer",
-                        $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) is being transferred to {routeEvent.ToDepartmentName}",
-                        JsonSerializer.Serialize(new
-                        {
-                            routeId = routeEvent.RouteId,
-                            productId = routeEvent.ProductId
-                        })
-                    );
+                var notifications = allUsers.Select(userId => new Notification(
+                    userId,
+                    "RouteUpdate",
+                    "Incoming Product Transfer",
+                    $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) is being transferred to {routeEvent.ToDepartmentName}",
+                    JsonSerializer.Serialize(new
+                    {
+                        routeId = routeEvent.RouteId,
+                        productId = routeEvent.ProductId
+                    })
+                )).ToList();
 
-                    await SaveAndSendNotification(notification);
-                }
+                await SaveAndSendNotifications(notifications);
             }
             catch (Exception ex)
             {
@@ -432,22 +463,19 @@ namespace NotificationService.Infrastructure.Services
                 // Notify relevant users
                 var allUsers = await GetAllUsersId();
 
-                foreach (var userId in allUsers)
-                {
-                    var notification = new Notification(
-                        userId,
-                        "RouteUpdate",
-                        "Transfer Completed",
-                        $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) transfer to {routeEvent.ToDepartmentName} has been completed",
-                        JsonSerializer.Serialize(new
-                        {
-                            routeId = routeEvent.RouteId,
-                            productId = routeEvent.ProductId
-                        })
-                    );
+                var notifications = allUsers.Select(userId => new Notification(
+                    userId,
+                    "RouteUpdate",
+                    "Transfer Completed",
+                    $"Product {routeEvent.Model} (Code: {routeEvent.InventoryCode}) transfer to {routeEvent.ToDepartmentName} has been completed",
+                    JsonSerializer.Serialize(new
+                    {
+                        routeId = routeEvent.RouteId,
+                        productId = routeEvent.ProductId
+                    })
+                )).ToList();
 
-                    await SaveAndSendNotification(notification);
-                }
+                await SaveAndSendNotifications(notifications);
             }
             catch (Exception ex)
             {
@@ -490,6 +518,52 @@ namespace NotificationService.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error saving/sending notification for user {notification.UserId}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Persists a whole fan-out in ONE transaction, then pushes it over SignalR. The per-user
+        /// path opened a DI scope and committed a separate transaction for every single recipient,
+        /// so one published event cost N scopes and N round-trips to the database.
+        /// </summary>
+        private async Task SaveAndSendNotifications(IReadOnlyCollection<Notification> notifications)
+        {
+            if (notifications.Count == 0) return;
+
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var repository = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+                var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<NotificationHub>>();
+
+                foreach (var notification in notifications)
+                    await repository.AddAsync(notification);
+
+                await unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("Saved {Count} notification(s) in a single transaction", notifications.Count);
+
+                foreach (var notification in notifications)
+                {
+                    var notificationDto = new
+                    {
+                        id = notification.Id,
+                        type = notification.Type,
+                        title = notification.Title,
+                        message = notification.Message,
+                        createdAt = notification.CreatedAt,
+                        isRead = notification.IsRead,
+                        data = notification.Data
+                    };
+
+                    await hubContext.Clients.Group($"user-{notification.UserId}")
+                        .SendAsync("ReceiveNotification", notificationDto);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving/sending a batch of {Count} notification(s)", notifications.Count);
                 throw;
             }
         }
@@ -559,7 +633,10 @@ namespace NotificationService.Infrastructure.Services
                         var baseUrl = configuration["Services:ProductServiceUrl"] ?? "http://localhost:5001";
                         var fullImageUrl = $"{baseUrl}{productEvent.ImageUrl}";
 
-                        using var client = new HttpClient();
+                        // Pooled handler via the factory: a raw `new HttpClient()` per image burns
+                        // a socket per call (TIME_WAIT exhaustion) and reuses no connections.
+                        var client = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
+                        client.Timeout = TimeSpan.FromSeconds(30);
                         var imageBytes = await client.GetByteArrayAsync(fullImageUrl);
 
                         _logger.LogInformation($"Fetched image from URL for product {productEvent.InventoryCode}, sending to WhatsApp");
@@ -657,7 +734,9 @@ namespace NotificationService.Infrastructure.Services
                         var baseUrl = configuration["Services:RouteServiceUrl"] ?? "http://localhost:5002";
                         var fullImageUrl = $"{baseUrl}{routeEvent.ImageUrl}";
 
-                        using var client = new HttpClient();
+                        // Use the already-resolved factory instead of a per-call `new HttpClient()`.
+                        var client = (httpClientFactory ?? scope.ServiceProvider.GetRequiredService<IHttpClientFactory>()).CreateClient();
+                        client.Timeout = TimeSpan.FromSeconds(30);
                         var imageBytes = await client.GetByteArrayAsync(fullImageUrl);
 
                         _logger.LogInformation($"Fetched image from URL for route {routeEvent.InventoryCode}, sending to WhatsApp");
@@ -698,13 +777,16 @@ namespace NotificationService.Infrastructure.Services
             using var scope = _serviceProvider.CreateScope();
             var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
 
-            var users = await userService.GetUsersAsync("User");
-            var operators = await userService.GetUsersAsync("Operator");
-            var admins = await userService.GetUsersAsync("Admin");
+            // Three independent lookups - issue them together instead of three sequential
+            // round-trips, since this runs for every published event.
+            var usersTask = userService.GetUsersAsync("User");
+            var operatorsTask = userService.GetUsersAsync("Operator");
+            var adminsTask = userService.GetUsersAsync("Admin");
+            await Task.WhenAll(usersTask, operatorsTask, adminsTask);
 
-            return users.Select(u=>u.Id)
-                .Union(operators.Select(u => u.Id))
-                .Union(admins.Select(u => u.Id))
+            return (await usersTask).Select(u => u.Id)
+                .Union((await operatorsTask).Select(u => u.Id))
+                .Union((await adminsTask).Select(u => u.Id))
                 .Distinct()
                 .ToList();
         }

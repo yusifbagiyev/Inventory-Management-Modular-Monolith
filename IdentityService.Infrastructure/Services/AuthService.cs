@@ -54,7 +54,7 @@ namespace IdentityService.Infrastructure.Services
                 throw new UnauthorizedAccessException($"Account is locked until {lockoutEnd}");
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
 
             if (!result.Succeeded)
             {
@@ -94,8 +94,10 @@ namespace IdentityService.Infrastructure.Services
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // Assign default role
+            // Assign role - validate against existing roles so a caller cannot inject an arbitrary role string
             var role = dto.SelectedRole ?? AllRoles.User;
+            if (!await _roleManager.RoleExistsAsync(role))
+                throw new InvalidOperationException($"Invalid role: {role}");
             await _userManager.AddToRoleAsync(user, role);
 
             await AssignRolePermissionsToUser(user.Id, role);
@@ -201,15 +203,48 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
         {
-            var users = await _userManager.Users.ToListAsync();
-            var userDtos = new List<UserDto>();
+            // Four queries in total. The previous version looped over every user and issued
+            // GetRolesAsync + two permission queries each (3N+1), which NotificationService then
+            // triggered three times per published event.
+            var users = await _userManager.Users.AsNoTracking().ToListAsync();
 
-            foreach (var user in users)
+            var rolesByUser = (await (from ur in _context.UserRoles
+                                      join r in _context.Roles on ur.RoleId equals r.Id
+                                      select new { ur.UserId, RoleName = r.Name! })
+                                     .AsNoTracking()
+                                     .ToListAsync())
+                              .GroupBy(x => x.UserId)
+                              .ToDictionary(g => g.Key, g => g.Select(x => x.RoleName).ToList());
+
+            var permissionsByRole = (await _context.RolePermissions
+                                          .AsNoTracking()
+                                          .Select(rp => new { RoleName = rp.Role.Name!, PermissionName = rp.Permission.Name })
+                                          .ToListAsync())
+                                    .GroupBy(x => x.RoleName)
+                                    .ToDictionary(g => g.Key, g => g.Select(x => x.PermissionName).ToList());
+
+            var permissionsByUser = (await _context.UserPermissions
+                                          .AsNoTracking()
+                                          .Select(up => new { up.UserId, PermissionName = up.Permission.Name })
+                                          .ToListAsync())
+                                    .GroupBy(x => x.UserId)
+                                    .ToDictionary(g => g.Key, g => g.Select(x => x.PermissionName).ToList());
+
+            return users.Select(user =>
             {
-                var roles = await _userManager.GetRolesAsync(user);
-                var permissions = await GetUserPermissionsAsync(user.Id, roles);
+                var roles = rolesByUser.TryGetValue(user.Id, out var userRoleNames)
+                    ? userRoleNames
+                    : new List<string>();
 
-                userDtos.Add(new UserDto
+                var permissions = roles.SelectMany(role =>
+                    permissionsByRole.TryGetValue(role, out var rolePerms)
+                        ? rolePerms
+                        : Enumerable.Empty<string>());
+
+                if (permissionsByUser.TryGetValue(user.Id, out var directPerms))
+                    permissions = permissions.Concat(directPerms);
+
+                return new UserDto
                 {
                     Id = user.Id,
                     Username = user.UserName!,
@@ -217,14 +252,12 @@ namespace IdentityService.Infrastructure.Services
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     IsActive = user.IsActive,
-                    CreatedAt= user.CreatedAt,
-                    LastLoginAt= user.LastLoginAt,
-                    Roles = roles.ToList(),
-                    Permissions = permissions
-                });
-            }
-
-            return userDtos;
+                    CreatedAt = user.CreatedAt,
+                    LastLoginAt = user.LastLoginAt,
+                    Roles = roles,
+                    Permissions = permissions.Distinct().ToList()
+                };
+            }).ToList();
         }
 
         public async Task<bool> UpdateUserAsync(UpdateUserDto dto)

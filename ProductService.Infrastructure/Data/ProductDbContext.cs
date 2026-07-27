@@ -24,13 +24,18 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.UpdatedAt)
                       .HasColumnType("timestamp without time zone");
 
+                // Restrict, not the EF default of Cascade: deleting a category or department
+                // must never silently delete the products assigned to it. The delete commands
+                // check for referencing products first and return a 409 with the count.
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Products)
-                    .HasForeignKey(e => e.CategoryId);
+                    .HasForeignKey(e => e.CategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.Department)
                     .WithMany(d => d.Products)
-                    .HasForeignKey(e => e.DepartmentId);
+                    .HasForeignKey(e => e.DepartmentId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Category>(entity =>

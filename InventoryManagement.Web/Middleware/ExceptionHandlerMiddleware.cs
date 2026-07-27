@@ -74,7 +74,11 @@ namespace InventoryManagement.Web.Middleware
 
                 case InvalidOperationException:
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    errorResponse.Message = exception.Message;
+                    // Internal exception text stays out of the response in production (the other
+                    // branches already gate on the environment); the full message is still logged.
+                    errorResponse.Message = _environment.IsDevelopment()
+                        ? exception.Message
+                        : "The request could not be completed";
                     errorResponse.Type = "InvalidOperation";
 
                     _logger.LogWarning("Invalid operation: {ExceptionMessage} by {UserId} ({RequestId})",
@@ -147,7 +151,7 @@ namespace InventoryManagement.Web.Middleware
         }
         private bool IsAjaxRequest(HttpRequest request)
         {
-            return request.Headers["X-Requested-Width"] == "XMLHttpRequest" ||
+            return request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
                    request.ContentType?.Contains("application/json") == true ||
                    request.Headers.Accept.ToString().Contains("application/json");
         }

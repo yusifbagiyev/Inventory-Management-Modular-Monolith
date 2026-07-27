@@ -1,38 +1,78 @@
 ﻿@model List<UserListViewModel>
+@{
+    var allRoles = Model.SelectMany(u => u.Roles).Distinct().OrderBy(r => r).ToList();
+}
 <div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mt-4">User Management</h1>
-            <ol class="breadcrumb mb-4">
+            <h1 class="mb-1">Users</h1>
+            <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">User Management</li>
+                <li class="breadcrumb-item active">Users</li>
             </ol>
         </div>
-        <div>
-            <a href="@Url.Action("Create")" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Add New User
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportUsersToPDF()">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <a href="@Url.Action("Create")" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus"></i> New User
             </a>
         </div>
     </div>
-    <div class="card shadow">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-users"></i> All Users (@Model.Count)
-                    </h6>
-                </div>
-                <div class="col-auto">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search users...">
-                    </div>
+
+    @* The whole user list is rendered at once, so every filter here narrows the rows
+       instantly in the browser - there is no Apply step to wait for. *@
+    <div class="filter-panel mt-3">
+        <div class="filter-top">
+            <div class="filter-search">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchInput"
+                           placeholder="Search name, username, email...">
                 </div>
             </div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
         </div>
-        <div class="card-body">
+
+        <div class="filter-grid">
+            <div class="filter-field">
+                <label for="roleFilter">Role</label>
+                <select id="roleFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
+                    <option value="">All roles</option>
+                    @foreach (var role in allRoles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="loginFilter">Sign-in</label>
+                <select id="loginFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
+                    <option value="">All</option>
+                    <option value="signed">Has signed in</option>
+                    <option value="never">Never signed in</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-bar">
+        <span><b id="userCount">@Model.Count</b> of <b>@Model.Count</b> users</span>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover" id="usersTable">
                     <thead>
@@ -128,6 +168,15 @@
                                 </td>
                             </tr>
                         }
+                        <tr class="no-results-row" id="noUserResults" style="display: none;">
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <i class="fas fa-user-slash"></i>
+                                    <h5>No users match these filters</h5>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">Clear filters</button>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -159,21 +208,62 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            const searchTerm = this.value.toLowerCase();
-            const tableRows = document.querySelectorAll('#usersTable tbody tr');
+        // Every filter narrows the already-rendered rows, so results update as you type/select.
+        function applyUserFilters() {
+            const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            const role = document.getElementById('roleFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const login = document.getElementById('loginFilter').value;
+            const terms = term ? term.split(/\s+/) : [];
 
-            tableRows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            let shown = 0;
+            document.querySelectorAll('#usersTable tbody tr').forEach(row => {
+                if (row.classList.contains('no-results-row')) return;
+
+                const haystack = row.textContent.toLowerCase();
+                const rowRoles = (row.dataset.roles || '').split('|').filter(Boolean);
+                const isActive = row.dataset.active === 'true';
+                const hasLoggedIn = row.dataset.everLoggedIn === 'true';
+
+                const matches =
+                    terms.every(t => haystack.includes(t)) &&
+                    (!role || rowRoles.includes(role)) &&
+                    (!status || (status === 'active') === isActive) &&
+                    (!login || (login === 'signed') === hasLoggedIn);
+
+                row.style.display = matches ? '' : 'none';
+                if (matches) shown++;
             });
-        });
 
-        // Toggle user status
+            document.getElementById('userCount').textContent = shown;
+            const empty = document.getElementById('noUserResults');
+            if (empty) empty.style.display = shown === 0 ? '' : 'none';
+        }
+
+        function resetUserFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('loginFilter').value = '';
+            applyUserFilters();
+        }
+
+        function exportUsersToPDF() {
+            const table = document.getElementById('usersTable');
+            if (!table || typeof collectTableData !== 'function') return;
+            const data = collectTableData(table, ['Actions']);
+            if (!data.rows.length) { showToast('Nothing to export', 'warning'); return; }
+            renderPrintDocument({ title: 'Users', headers: data.headers, rows: data.rows });
+        }
+
+        document.getElementById('searchInput').addEventListener('keyup', applyUserFilters);
+
+        // Toggle user status. Razor renders the flag unquoted, so it arrives as a real boolean -
+        // the old `isActive === 'true'` string compare was always false and mislabelled the prompt.
             function toggleUserStatus(userId, isActive) {
-            const action = isActive === 'true' ? 'deactivate' : 'activate';
+            const action = (isActive === true || isActive === 'true') ? 'deactivate' : 'activate';
             if (confirm(`Are you sure you want to ${action} this user?`)) {
                 $.ajax({
                     url: '@Url.Action("QuickToggleStatus")',

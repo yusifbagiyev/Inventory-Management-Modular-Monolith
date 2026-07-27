@@ -113,6 +113,9 @@ function showToast(message, type = 'info', duration = 5000) {
     toastElement.addEventListener('hidden.bs.toast', function () {
         toastElement.remove();
     });
+
+    // Returned so callers can attach their own handlers (e.g. click-to-refresh toasts).
+    return toastElement;
 }
 
 

@@ -70,19 +70,31 @@ namespace ProductService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.Trim();
+                // Multi-word search: each whitespace-separated term must match somewhere on the
+                // product (AND across terms, OR across fields). Matching the whole phrase as a
+                // single string meant "tp link router" could never hit, because no single column
+                // contains all of it - the vendor holds "Tp Link" and the category holds "Router".
+                var terms = search
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Distinct()
+                    .ToArray();
 
                 // First, apply a broad database filter to reduce the dataset
                 // This uses standard SQL ILIKE which works but isn't perfect for Azerbaijani
-                var broadQuery = query.Where(r =>
-                    EF.Functions.ILike(r.InventoryCode.ToString(), $"%{search}%") ||
-                    EF.Functions.ILike(r.Vendor, $"%{search}%") ||
-                    EF.Functions.ILike(r.Model, $"%{search}%") ||
-                    (r.Category != null && EF.Functions.ILike(r.Category.Name, $"%{search}%")) ||
-                    (r.Department != null && EF.Functions.ILike(r.Department.Name, $"%{search}%")) ||
-                    EF.Functions.ILike(r.Description ?? "", $"%{search}%") ||
-                    EF.Functions.ILike(r.Worker ?? "", $"%{search}%")
-                );
+                var broadQuery = query;
+                foreach (var term in terms)
+                {
+                    var t = term;
+                    broadQuery = broadQuery.Where(r =>
+                        EF.Functions.ILike(r.InventoryCode.ToString(), $"%{t}%") ||
+                        EF.Functions.ILike(r.Vendor, $"%{t}%") ||
+                        EF.Functions.ILike(r.Model, $"%{t}%") ||
+                        (r.Category != null && EF.Functions.ILike(r.Category.Name, $"%{t}%")) ||
+                        (r.Department != null && EF.Functions.ILike(r.Department.Name, $"%{t}%")) ||
+                        EF.Functions.ILike(r.Description ?? "", $"%{t}%") ||
+                        EF.Functions.ILike(r.Worker ?? "", $"%{t}%")
+                    );
+                }
 
                 // Load the filtered results into memory
                 var allFilteredItems = await broadQuery
@@ -90,16 +102,16 @@ namespace ProductService.Infrastructure.Repositories
                     .ThenByDescending(r => r.UpdatedAt)
                     .ToListAsync(cancellationToken);
 
-                // Now apply Azerbaijani-aware search in memory for precision
-                items = allFilteredItems.Where(r =>
-                    SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Vendor, search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Model, search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Category?.Name, search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Department?.Name, search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Description, search) ||
-                    SearchHelper.ContainsAzerbaijani(r.Worker, search)
-                ).ToList();
+                // Now apply Azerbaijani-aware search in memory for precision - every term must hit
+                items = allFilteredItems.Where(r => terms.All(t =>
+                    SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Vendor, t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Model, t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Category?.Name, t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Department?.Name, t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Description, t) ||
+                    SearchHelper.ContainsAzerbaijani(r.Worker, t)
+                )).ToList();
 
                 totalCount = items.Count();
 
@@ -185,6 +197,18 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Products.AnyAsync(p => p.Id == id, cancellationToken);
+        }
+
+
+        public async Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Products.CountAsync(p => p.DepartmentId == departmentId, cancellationToken);
+        }
+
+
+        public async Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Products.CountAsync(p => p.CategoryId == categoryId, cancellationToken);
         }
     }
 }

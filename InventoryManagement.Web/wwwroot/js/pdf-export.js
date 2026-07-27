@@ -1,207 +1,193 @@
-﻿function exportProductsToPDF() {
+﻿// XSS guard: these exporters read rendered values back out with textContent (plain text) and
+// re-inject them through innerHTML / document.write, which would turn any HTML inside that
+// text into live markup. Everything derived from textContent must go through this first.
+function escapePdfText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+/**
+ * Reads a rendered list table into plain data.
+ * Driven by header NAMES, not column indexes - the old exporters hard-coded positions like
+ * "4th column = Location" and silently produced blank columns whenever a table changed.
+ * Only text is collected, so images never reach the PDF.
+ */
+function collectTableData(table, excludeHeaders = []) {
+    const skip = excludeHeaders.map(h => h.toLowerCase());
+    const allHeaders = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    const keep = allHeaders
+        .map((name, index) => ({ name, index }))
+        .filter(col => col.name && !skip.includes(col.name.toLowerCase()));
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'))
+        .filter(tr => tr.offsetParent !== null || tr.style.display !== 'none')
+        .map(tr => {
+            const cells = Array.from(tr.children);
+            return keep.map(col => readCellText(cells[col.index]));
+        })
+        .filter(cells => cells.some(v => v !== ''));
+
+    return { headers: keep.map(c => c.name), rows };
+}
+
+/** Joins a cell's distinct text blocks so "Surface" + "Microsoft" does not become "SurfaceMicrosoft". */
+function readCellText(td) {
+    if (!td) return '';
+    const parts = [];
+    const add = value => {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (text && !parts.includes(text)) parts.push(text);
+    };
+
+    const blocks = td.querySelectorAll('.cell-title, .cell-sub, .state, .badge');
+    if (blocks.length) {
+        blocks.forEach(b => add(b.textContent));
+    } else {
+        add(td.textContent);
+    }
+    return parts.join(' - ');
+}
+
+/**
+ * Renders collected data as a clean, printable document and opens the print dialog.
+ * Prints from a hidden same-page iframe rather than a popup window: a popup gets blocked by
+ * default, steals focus, and on returning to the list left the page unresponsive until a
+ * reload (selects stopped opening) - the iframe has none of those side effects.
+ */
+function renderPrintDocument({ title, headers, rows, filters }) {
+    const printed = new Date().toLocaleString();
+    const filterLine = filters ? `<div class="filters">${escapePdfText(filters)}</div>` : '';
+
+    const thead = headers.map(h => `<th>${escapePdfText(h)}</th>`).join('');
+    const tbody = rows.map(cells =>
+        `<tr>${cells.map(c => `<td>${escapePdfText(c) || '<span class="empty">-</span>'}</td>`).join('')}</tr>`
+    ).join('');
+
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(frame);
+
+    const printWindow = frame.contentWindow;
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapePdfText(title)}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 8mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #14232B; margin: 0; font-size: 9pt; }
+  header { display: flex; justify-content: space-between; align-items: flex-end;
+           border-bottom: 2px solid #0E9BC4; padding-bottom: 6px; margin-bottom: 4px; }
+  h1 { font-size: 15pt; margin: 0; font-weight: 650; letter-spacing: -.2px; }
+  .meta { text-align: right; font-size: 8pt; color: #5A6E7A; line-height: 1.5; }
+  .filters { font-size: 8pt; color: #445966; background: #EEF5F9; border-radius: 3px;
+             padding: 4px 7px; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; }
+  thead { display: table-header-group; }
+  th { background: #E7EFF5; text-align: left; font-size: 7.5pt; text-transform: uppercase;
+       letter-spacing: .04em; color: #445966; padding: 5px 6px; border-bottom: 1.2px solid #C2D4E0;
+       white-space: nowrap; }
+  td { padding: 4px 6px; border-bottom: .8px solid #E1EAF1; vertical-align: top;
+       word-break: break-word; }
+  tbody tr { page-break-inside: avoid; }
+  tbody tr:nth-child(even) td { background: #F6F9FB; }
+  .empty { color: #9AACB8; }
+  footer { margin-top: 8px; font-size: 7.5pt; color: #7C8F9B; text-align: right; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body>
+<header>
+  <h1>${escapePdfText(title)}</h1>
+  <div class="meta"><div>Printed: ${escapePdfText(printed)}</div><div>${rows.length} record(s)</div></div>
+</header>
+${filterLine}
+<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
+<footer>Inventory Pro</footer>
+</body></html>`);
+
+    printWindow.document.close();
+
+    // Give the iframe a tick to lay out, print, then always clean up - even if the user
+    // cancels the dialog - so no stray node is left behind on the page.
+    const cleanup = () => { if (frame.parentNode) frame.parentNode.removeChild(frame); };
+    setTimeout(() => {
+        try {
+            printWindow.focus();
+            printWindow.print();
+        } catch (e) {
+            console.error('Print failed', e);
+        }
+        setTimeout(cleanup, 1000);
+    }, 250);
+}
+
+/**
+ * Prints an HTML document from a hidden same-page iframe.
+ * Shared by the older exporters that still build their own markup. Replaces window.open:
+ * popups get blocked, steal focus, and left the list page unresponsive on return.
+ */
+function openPrintFrame(html) {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(frame);
+
+    const win = frame.contentWindow;
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+
+    setTimeout(() => {
+        try {
+            win.focus();
+            win.print();
+        } catch (e) {
+            console.error('Print failed', e);
+        }
+        setTimeout(() => { if (frame.parentNode) frame.parentNode.removeChild(frame); }, 1000);
+    }, 350);
+}
+
+/** Reads the applied-filter chips above a list so the export states what it was filtered by. */
+function currentFilterSummary() {
+    const chips = Array.from(document.querySelectorAll('.filter-applied .achip'))
+        .map(c => c.textContent.replace(/\s*×\s*$/, '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+    return chips.length ? 'Filters: ' + chips.join('   |   ') : '';
+}
+
+function exportProductsToPDF() {
     const table = document.getElementById('productsTable');
     if (!table) {
         showToast('Products table not found', 'error');
         return;
     }
 
-    // Clone and prepare table
-    const tableClone = table.cloneNode(true);
-
-    // Find headers to remove (Image and Actions columns)
-    const headers = tableClone.querySelectorAll('th');
-    headers[0].remove();  // Remove Image header
-    headers[headers.length - 1].remove();  // Actions column
-
-    // Process each row
-    tableClone.querySelectorAll('tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-
-        // Remove image and actions cells
-        cells[0].remove();
-        cells[cells.length - 1].remove();
-
-        // Clean up the Code column (now first column)
-        const codeCell = cells[1]; // After removing image, code is at index 0
-        if (codeCell) {
-            const badge = codeCell.querySelector('.badge');
-            if (badge) {
-                // Keep just the code number with better formatting
-                codeCell.innerHTML = `<strong style="color: #1e40af;">${badge.textContent.trim()}</strong>`;
-            }
-        }
-
-        // Clean up Product Details column to include category
-        const detailsCell = cells[2];
-        if (detailsCell) {
-            const model = detailsCell.querySelector('strong')?.textContent || '';
-            const vendor = detailsCell.querySelector('small:first-of-type')?.textContent?.replace('by ', '') || '';
-            const category = detailsCell.querySelector('.fa-tag')?.parentElement?.textContent?.trim() || '';
-
-            detailsCell.innerHTML = `
-                <div><strong>Vendor: ${vendor}</strong></div>
-                <div style="font-size: 9pt;">Model: ${model}</div>
-                <div style="font-size: 9pt;">Category: ${category}</div>
-            `;
-        }
-    });
-
-    tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => { // Assuming Location is 4th column
-        const deptText = cell.textContent.trim();
-        const parts = deptText.split('(');
-
-        if (parts.length > 1) {
-            const department = parts[0].trim();
-            const worker = parts[1].replace(')', '').trim();
-
-            cell.innerHTML = `
-                <div><strong>${department}</strong></div>
-                <div style="font-size: 8pt; color: #666;">${worker}</div>
-            `;
-        }
-    });
-
-    // Process Status column (Working + Active in one column)
-    tableClone.querySelectorAll('td:nth-child(5)').forEach(cell => { // Assuming Status is 5th column
-        const badges = cell.querySelectorAll('.badge');
-        let statusHTML = '';
-
-        badges.forEach(badge => {
-            const text = badge.textContent.trim();
-            statusHTML += `<span class="badge" style="display: block; margin: 2px 0;">${text}</span>`;
-        });
-
-        cell.innerHTML = statusHTML;
-    });
-
-    const customStyles = `
-        #productsPdfTable {
-            table-layout: fixed;
-            width: 100%;
-        }
-        #productsPdfTable th:nth-child(1) { width: 12%; }  /* Code */
-        #productsPdfTable th:nth-child(2) { width: 30%; }  /* Product Details */
-        #productsPdfTable th:nth-child(3) { width: 25%; }  /* Location */
-        #productsPdfTable th:nth-child(4) { width: 33%; }  /* Status */
-        
-        #productsPdfTable td {
-            vertical-align: top;
-            padding: 8px 5px;
-        }
-        
-        .badge {
-            white-space: nowrap;
-        }
-    `;
-
-    tableClone.id = 'productsPdfTable';
-    exportToPDF(tableClone.outerHTML, 'products_export.pdf', 'Products Report', customStyles);
+    const { headers, rows } = collectTableData(table, ['Actions']);
+    if (!rows.length) {
+        showToast('Nothing to export', 'warning');
+        return;
+    }
+    renderPrintDocument({ title: 'Products', headers, rows, filters: currentFilterSummary() });
 }
 
+
 function exportRoutesToPDF() {
-    const table = document.getElementById('routesTable');
-    if (!table) {
+    const routesTable = document.getElementById('routesTable');
+    if (!routesTable) {
         showToast('Routes table not found', 'error');
         return;
     }
 
-    // Clone the table to modify it
-    const tableClone = table.cloneNode(true);
-
-    // Find all headers to determine indices to remove
-    const headers = tableClone.querySelectorAll('th');
-    const indicesToRemove = [];
-    const headersToKeep = ['Date', 'Type', 'Product', 'From', 'To', 'Status'];
-
-    headers.forEach((header, index) => {
-        const headerText = header.textContent.trim();
-        // Keep only specified columns
-        if (!headersToKeep.some(keep => headerText.includes(keep))) {
-            indicesToRemove.push(index);
-        }
-    });
-
-    // Sort indices in descending order for safe removal
-    indicesToRemove.sort((a, b) => b - a);
-
-    // Remove headers
-    indicesToRemove.forEach(index => {
-        headers[index].remove();
-    });
-
-    // Remove corresponding cells in rows
-    tableClone.querySelectorAll('tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        indicesToRemove.forEach(index => {
-            if (cells[index]) cells[index].remove();
-        });
-    });
-
-    // Clean up columns
-    // After removal, the columns are: Date, Type, Product, From, To, Status
-    tableClone.querySelectorAll('td:nth-child(3)').forEach(cell => {
-        const badge = cell.querySelector('.badge');
-        const vendorModel = cell.textContent.replace(badge?.textContent || '', '').trim();
-
-        cell.innerHTML = `
-            <div><strong>Code: ${badge?.textContent || ''}</strong></div>
-            <div>${vendorModel}</div>
-        `;
-    });
-
-    // Clean up From column (now 4th column)
-    tableClone.querySelectorAll('td:nth-child(4)').forEach(cell => {
-        const div = cell.querySelector('div');
-        const small = cell.querySelector('small');
-        cell.innerHTML = `
-            <div style="font-weight: bold;">${div?.textContent || ''}</div>
-            ${small?.outerHTML || ''}
-        `;
-    });
-
-    // Clean up To column (now 5th column)
-    tableClone.querySelectorAll('td:nth-child(5)').forEach(cell => {
-        const div = cell.querySelector('div');
-        const small = cell.querySelector('small');
-        cell.innerHTML = `
-            <div style="font-weight: bold;">${div?.textContent || ''}</div>
-            ${small?.outerHTML || ''}
-        `;
-    });
-
-    // Clean up Status column (now 6th column)
-    tableClone.querySelectorAll('td:nth-child(6)').forEach(cell => {
-        // Remove icons and extra elements
-        cell.querySelectorAll('i').forEach(icon => icon.remove());
-        cell.querySelectorAll('br').forEach(br => br.remove());
-        cell.querySelectorAll('small').forEach(sm => sm.remove());
-    });
-
-    // Remove any remaining images
-    tableClone.querySelectorAll('img').forEach(img => img.remove());
-
-    // Set a fixed ID for the table in the PDF
-    tableClone.id = 'routesPdfTable';
-
-    const customStyles = `
-        #routesPdfTable {
-            table-layout: fixed;
-            width: 100%;
-        }
-        #routesPdfTable th:nth-child(1) { width: 12%; }  /* Date */
-        #routesPdfTable th:nth-child(2) { width: 10%; }  /* Type */
-        #routesPdfTable th:nth-child(3) { width: 23%; }  /* Product */
-        #routesPdfTable th:nth-child(4) { width: 15%; }  /* From */
-        #routesPdfTable th:nth-child(5) { width: 15%; }  /* To */
-        #routesPdfTable th:nth-child(6) { width: 25%; }  /* Status */
-    `;
-
-    exportToPDF(tableClone.outerHTML, 'routes_export.pdf', 'Routes Report', customStyles);
+    const data = collectTableData(routesTable, ['Actions']);
+    if (!data.rows.length) {
+        showToast('Nothing to export', 'warning');
+        return;
+    }
+    renderPrintDocument({ title: 'Routes', headers: data.headers, rows: data.rows, filters: currentFilterSummary() });
 }
 
-function exportToPDF(tableHTML, filename, title, customStyles = '') {
-    const printWindow = window.open('', '_blank');
 
+function exportToPDF(tableHTML, filename, title, customStyles = '') {
     // Modern UI styles for portrait mode
     const styles = `
         <style>
@@ -336,19 +322,7 @@ function exportToPDF(tableHTML, filename, title, customStyles = '') {
         </html>
     `;
 
-    // Write content and trigger print
-    printWindow.document.write(documentContent);
-    printWindow.document.close();
-
-    // Wait for content to load then print
-    printWindow.onload = function () {
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.onafterprint = function () {
-                printWindow.close();
-            };
-        }, 350);
-    };
+    openPrintFrame(documentContent);
 }
 
 function exportTimelineToPDF() {
@@ -404,8 +378,7 @@ function exportTimelineToPDF() {
         </div>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
+    openPrintFrame(`
         <!DOCTYPE html>
         <html>
         <head>
@@ -464,17 +437,6 @@ function exportTimelineToPDF() {
         </body>
         </html>
     `);
-    printWindow.document.close();
-
-    // Wait for content to load then print
-    printWindow.onload = function () {
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.onafterprint = function () {
-                printWindow.close();
-            };
-        }, 350);
-    };
 }
 
 function exportDepartmentsToPDF() {
@@ -503,7 +465,7 @@ function exportDepartmentsToPDF() {
     tableClone.querySelectorAll('td:first-child').forEach(cell => {
         const textDiv = cell.querySelector('.fw-semibold');
         if (textDiv) {
-            cell.innerHTML = `<strong>${textDiv.textContent}</strong>`;
+            cell.innerHTML = `<strong>${escapePdfText(textDiv.textContent)}</strong>`;
         }
     });
 
@@ -513,7 +475,7 @@ function exportDepartmentsToPDF() {
         if (text === 'Not assigned') {
             cell.innerHTML = '<span style="color: #999; font-style: italic;">Not assigned</span>';
         } else {
-            cell.innerHTML = text;
+            cell.textContent = text;
         }
     });
 
@@ -524,7 +486,7 @@ function exportDepartmentsToPDF() {
             cell.innerHTML = '<span style="color: #999; font-style: italic;">None</span>';
         } else {
             // Keep the description as is, but remove any extra whitespace
-            cell.innerHTML = text;
+            cell.textContent = text;
         }
     });
 

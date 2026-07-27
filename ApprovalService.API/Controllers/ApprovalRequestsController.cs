@@ -56,6 +56,12 @@ namespace ApprovalService.API.Controllers
         {
             var approvalRequest = await _mediator.Send(new GetRequestById.Query(Id));
             if (approvalRequest == null) return NotFound();
+
+            // Only the requester or an Admin may read a request (return NotFound to avoid an existence oracle)
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (!User.IsInRole("Admin") && approvalRequest.RequestedById != userId)
+                return NotFound();
+
             return Ok(approvalRequest);
         }
 
