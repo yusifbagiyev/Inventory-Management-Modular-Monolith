@@ -576,6 +576,19 @@ textarea.form-control { min-height: 84px; }
 }
 .image-preview img { max-width: 100%; max-height: 220px; border-radius: var(--r); }
 
+/* Selected-image preview on the product/route forms. The product preview was a bare
+   .img-fluid with no height cap, so a portrait photo filled the whole column. Cap every
+   #imagePreview to a thumbnail size (id beats .img-fluid / .img-thumbnail). */
+#imagePreview {
+    max-width: 260px;
+    max-height: 220px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+}
+
 /* inline inventory-code editor: floats above the narrow Code column instead of wrapping */
 .table td { position: relative; }
 .inventory-code-edit {
@@ -692,3 +705,65 @@ textarea.form-control { min-height: 84px; }
 @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
 }
+
+/* ============================================================================
+   Transfer page - depth + hierarchy so it stops reading as one flat white sheet.
+   Everything is scoped under .transfer-page, so no other view is touched.
+   ========================================================================== */
+
+/* Lift the cards off the ground with a real (still soft) elevation. */
+.transfer-page .card {
+    box-shadow: 0 1px 2px rgba(22, 38, 46, .06), 0 10px 26px -14px rgba(22, 38, 46, .22);
+}
+
+/* The main working card gets an accent-washed header so the eye lands on it first;
+   the two side cards keep the neutral header, so the hierarchy is obvious. */
+.transfer-page .col-lg-8 > .card > .card-header {
+    background: var(--accent-weak);
+    color: var(--accent-2);
+    border-bottom-color: #C7E7F2;
+}
+.transfer-page .card-header i { color: var(--accent-2); }
+
+/* Section headings: a small accent tick beats the faint grey underline-label. */
+.transfer-page .section-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--ink-2);
+}
+.transfer-page .section-title::before {
+    content: ""; flex: 0 0 auto; width: 3px; height: 13px; border-radius: 2px; background: var(--accent);
+}
+
+/* Search is the primary action - highlight its frame on focus. */
+.transfer-page #inventoryCodeInput { font-weight: 600; }
+.transfer-page .form-section:first-of-type .input-group:focus-within .input-group-text {
+    border-color: var(--accent); color: var(--accent-2);
+}
+
+/* Search result: a soft status pill instead of bare coloured text. */
+.transfer-page #searchFeedback:empty { display: none; }
+.transfer-page #searchFeedback > span {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 560; margin-top: 2px;
+}
+.transfer-page #searchFeedback .text-success { background: var(--ok-weak); color: var(--ok) !important; }
+.transfer-page #searchFeedback .text-danger { background: var(--crit-weak); color: var(--crit) !important; }
+.transfer-page #searchFeedback .text-info { background: var(--accent-weak); color: var(--accent-2) !important; }
+
+/* The found product sits in its own tinted, accent-edged panel so it clearly
+   stands apart from the empty form below it. */
+.transfer-page #productInfoContainer {
+    margin: 6px 16px 16px; padding: 12px 16px 4px;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r);
+}
+.transfer-page #productInfoContainer .detail-row { border-bottom-color: var(--line-2); }
+
+/* Guidelines: green ticks read as "steps done", warmer than flat grey. */
+.transfer-page .side-panel .list-group-item i.bi-check2 { color: var(--ok); font-weight: 700; }
+
+/* Recent transfers: emphasise the code, keep rows tidy. */
+.transfer-page #recentTransfers .mono { font-weight: 700; color: var(--ink); font-family: var(--font-mono); }
+.transfer-page #recentTransfers .empty-state { padding: 22px 12px; }
