@@ -122,16 +122,11 @@ namespace NotificationService.API.Controllers
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
-                var notifications = await _repository.GetByUserIdAsync(userId, unreadOnly: true);
+                // Set-based UPDATE. The old load-then-mutate path used AsNoTracking rows, so
+                // SaveChanges never persisted the change and "mark all read" silently no-op'd.
+                var count = await _repository.MarkAllAsReadAsync(userId);
 
-                foreach (var notification in notifications)
-                {
-                    notification.MarkAsRead();
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-
-                return Ok(new { success = true, count = notifications.Count() });
+                return Ok(new { success = true, count });
             }
             catch
             {

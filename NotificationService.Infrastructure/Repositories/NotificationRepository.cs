@@ -54,6 +54,18 @@ namespace NotificationService.Infrastructure.Repositories
                 .CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
         }
 
+        // Bulk mark-as-read. A set-based UPDATE, so it does not depend on change tracking - the
+        // previous controller loaded these rows with AsNoTracking(), mutated them, and SaveChanges
+        // persisted nothing. Mirrors Notification.MarkAsRead() (IsRead + ReadAt).
+        public async Task<int> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return await _context.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.IsRead, true)
+                    .SetProperty(n => n.ReadAt, DateTime.Now), cancellationToken);
+        }
+
         public Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
         {
             _context.Notifications.Remove(notification);
