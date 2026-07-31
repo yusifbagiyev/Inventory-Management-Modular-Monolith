@@ -589,6 +589,14 @@ textarea.form-control { min-height: 84px; }
     border-radius: var(--r);
 }
 
+/* Description column: narrow, clamped to 2 lines on screen. The full text stays in the
+   DOM (title attr + textContent), so the PDF export still receives the complete text. */
+.desc-cell { max-width: 240px; }
+.desc-cell .desc-text {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; color: var(--ink-2); font-size: 13px; line-height: 1.35;
+}
+
 /* inline inventory-code editor: floats above the narrow Code column instead of wrapping */
 .table td { position: relative; }
 .inventory-code-edit {

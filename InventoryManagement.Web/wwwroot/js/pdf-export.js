@@ -42,9 +42,13 @@ function readCellText(td) {
 
     const blocks = td.querySelectorAll('.cell-title, .cell-sub, .state, .badge');
     if (blocks.length) {
-        blocks.forEach(b => add(b.textContent));
+        blocks.forEach(b => { if (!b.closest('.pdf-omit')) add(b.textContent); });
     } else {
-        add(td.textContent);
+        // Placeholder spans (e.g. "Unassigned", an empty "-") are marked .pdf-omit so the
+        // exported value prints blank instead of a filler word.
+        const clone = td.cloneNode(true);
+        clone.querySelectorAll('.pdf-omit').forEach(el => el.remove());
+        add(clone.textContent);
     }
     return parts.join(' - ');
 }

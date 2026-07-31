@@ -182,6 +182,7 @@
                                 <th style="width: 96px;">Code</th>
                                 <th>Product</th>
                                 <th>Category</th>
+                                <th>Description</th>
                                 <th>Department</th>
                                 <th>Assigned</th>
                                 <th>State</th>
@@ -230,6 +231,16 @@
                                         </div>
                                     </td>
                                     <td>@product.CategoryName</td>
+                                    <td class="desc-cell">
+                                        @if (!string.IsNullOrEmpty(product.Description))
+                                        {
+                                            <span class="desc-text" title="@product.Description">@product.Description</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted pdf-omit">-</span>
+                                        }
+                                    </td>
                                     <td>@product.DepartmentName</td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(product.Worker))
@@ -238,7 +249,7 @@
                                         }
                                         else
                                         {
-                                            <span class="text-muted">Unassigned</span>
+                                            <span class="text-muted pdf-omit">Unassigned</span>
                                         }
                                     </td>
                                     <td>
