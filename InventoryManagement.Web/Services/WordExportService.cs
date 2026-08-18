@@ -414,10 +414,11 @@ namespace InventoryManagement.Web.Services
 
             // Header row - only the header row has golden background
             var headerRow = new TableRow();
-            headerRow.Append(CreateHeaderCell("Avadanlıq", 2000));
-            headerRow.Append(CreateHeaderCell("Vendor", 2000));
-            headerRow.Append(CreateHeaderCell("Model", 2000));
-            headerRow.Append(CreateHeaderCell("İnventar kodu", 1500));
+            headerRow.Append(CreateHeaderCell("Avadanlıq", 1800));
+            headerRow.Append(CreateHeaderCell("Vendor", 1600));
+            headerRow.Append(CreateHeaderCell("Model", 1900));
+            headerRow.Append(CreateHeaderCell("İstifadəçi", 2200));
+            headerRow.Append(CreateHeaderCell("İnventar kodu", 1300));
             table.Append(headerRow);
 
             // Sort products by category, then inventory code
@@ -434,6 +435,10 @@ namespace InventoryManagement.Web.Services
                 dataRow.Append(CreateCenteredDataCell(product.CategoryName ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Vendor ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Model ?? "N/A"));
+                // Unassigned products print a blank cell, not a filler word — same rule the
+                // PDF exporter follows (.pdf-omit placeholders are skipped there).
+                dataRow.Append(CreateCenteredDataCell(
+                    string.IsNullOrWhiteSpace(product.Worker) ? string.Empty : product.Worker));
                 dataRow.Append(CreateCenteredDataCell(product.InventoryCode.ToString()));
 
                 table.Append(dataRow);
@@ -444,8 +449,9 @@ namespace InventoryManagement.Web.Services
 
             var totalLabelCell = new TableCell();
             var totalLabelCellProp = new TableCellProperties();
-            totalLabelCellProp.Append(new GridSpan { Val = 3 });
-            totalLabelCellProp.Append(new TableCellWidth { Width = "6000", Type = TableWidthUnitValues.Dxa });
+            // Spans every column except "İnventar kodu", so the count stays under that header.
+            totalLabelCellProp.Append(new GridSpan { Val = 4 });
+            totalLabelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
             totalLabelCell.Append(totalLabelCellProp);
 
             var totalLabelPara = new Paragraph();
@@ -460,7 +466,7 @@ namespace InventoryManagement.Web.Services
 
             var countCell = new TableCell();
             var countCellProp = new TableCellProperties();
-            countCellProp.Append(new TableCellWidth { Width = "1500", Type = TableWidthUnitValues.Dxa });
+            countCellProp.Append(new TableCellWidth { Width = "1300", Type = TableWidthUnitValues.Dxa });
             countCellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
             countCell.Append(countCellProp);
 
