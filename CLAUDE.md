@@ -24,13 +24,18 @@ dotnet ef migrations add <Name> --project ProductService.Infrastructure --startu
 dotnet ef database update      --project ProductService.Infrastructure --startup-project ProductService.API
 ```
 
-Run the full stack via Docker Compose — **caveat: `docker-compose.yml` sets `context: ./src` and each Dockerfile expects sibling project directories inside its build context, but the projects live at the repo root today.** Either move projects under `src/` or edit each `context:` to `.` before `docker compose up`.
+Run the full stack via Docker Compose — **two caveats, both must be fixed before `docker compose up` works:**
+1. `docker-compose.yml` sets `context: ./src` (and `./src/ApiGateway` for the gateway) and each Dockerfile expects sibling project directories inside its build context, but the projects live at the repo root today. Either move projects under `src/` or edit each `context:` to `.`.
+2. The `nginx` service mounts `./nginx.conf` and `./ssl`, neither of which exists at the repo root. The real config is at `InventoryManagement.Web/nginx/nginx.conf`; there is no `ssl/` directory checked in.
+
 ```bash
 docker compose up -d --build
 docker compose logs -f product-service
 ```
 
 Secrets/config are read from `.env` at the repo root (used by compose interpolation). Do not commit real values; the checked-in `.env` currently contains sample credentials.
+
+**There are no tests and no CI** — `.github/workflows/` is empty and the solution has no test projects. `dotnet build InventoryManagement.sln` is the only automated verification available; anything behavioral has to be exercised by running the service.
 
 ## Service topology
 
@@ -48,7 +53,7 @@ Seven .NET web projects, all `net10.0`, all Serilog → Seq (`http://seq:80` in 
 
 Front door: `nginx` (host 80/443) → `web` and `api-gateway`. Seq UI: `http://localhost:5342`. RabbitMQ UI: `http://localhost:15672`.
 
-Dev ports referenced above come from `ApiGateway/ocelot.json`; prod routing (container→container) lives in `ApiGateway/ocelot.Production.json` and uses service names as hosts.
+**Three** Ocelot files exist and `ApiGateway/Program.cs` loads `ocelot.json` *then* `ocelot.{Environment}.json`, so the environment-specific file overrides the base. `ocelot.json` and `ocelot.Development.json` are currently byte-for-byte equivalent in intent (same 10 routes, all `localhost` + the dev ports above); `ocelot.Production.json` uses container hostnames on port 80. Adding a gateway route means editing **all three** to keep them in sync.
 
 ## Architecture
 
@@ -74,7 +79,7 @@ Dev ports referenced above come from `ApiGateway/ocelot.json`; prod routing (con
 - Neither → `InsufficientPermissionsException` → `403`.
 
 **Approval execution (non-obvious).** When an admin approves a request, `ApprovalService.Infrastructure.Services.ActionExecutor` **forges a short-lived (5 min) JWT** using the shared HMAC key, stuffed with `Admin` role and every `.direct` permission, then re-calls the target service through the API gateway on `/api/products/approved`, `/api/products/{id}/approved/multipart`, `/api/inventoryroutes/{id}/approved`, etc. Those endpoints are marked `[ApiExplorerSettings(IgnoreApi = true)]` + `[Authorize(Roles = "Admin")]` and are the only path that skips the approval detour. When adding an approvable action:
-1. Add a value to `SharedServices/Enum/RequestType.cs`.
+1. Add a value to `SharedServices/Enum/RequestType.cs` — despite the folder name it is a `static class` of `const string`, not an enum, and **each value is exactly the non-direct permission string** (`RequestType.CreateProduct == "product.create"`). Keep that identity; the dispatch logic relies on it.
 2. Add an action-data DTO in `SharedServices/DTOs`.
 3. Add an `Execute<X>` branch to `ActionExecutor.ExecuteAsync`.
 4. Add an `/approved` sibling endpoint on the target service with `[Authorize(Roles = "Admin")]` + `[ApiExplorerSettings(IgnoreApi = true)]`.
@@ -95,12 +100,21 @@ Every service owns its own PostgreSQL database (see table above). All DbContexts
 
 ## Frontend (InventoryManagement.Web)
 
-MVC + Razor (runtime compilation in Dev only). Talks to backend via two config knobs: `ApiGateway:BaseUrl` (all `IApiService` / `IAuthService` / `IApprovalService` / `IUserManagementService` calls) and `NotificationService:BaseUrl` (SignalR only). Typed `HttpClient`s live in `Services/`; **do not double-register them with `AddScoped` after `AddHttpClient<T>` — it silently discards the pooled handler** (see the comment in `Extensions/ServiceExtensions.cs`). Cookie config, AJAX 401 handling, and the `HasPermission(ClaimsPrincipal, string)` helper also live in `ServiceExtensions.cs`.
+MVC + Razor (runtime compilation in Dev only). Talks to backend via two config knobs: `ApiGateway:BaseUrl` (all `IApiService` / `IAuthService` / `IApprovalService` / `IUserManagementService` calls) and `NotificationService:BaseUrl` (SignalR only). Typed `HttpClient`s live in `Services/`; **do not double-register them with `AddScoped` after `AddHttpClient<T>` — it silently discards the pooled handler** (see the comment in `Extensions/ServiceExtensions.cs`). Cookie config, AJAX 401 handling, and the `HasPermission(ClaimsPrincipal, string)` helper also live in `ServiceExtensions.cs`. Request-side pieces are split across `Filters/PermissionAuthorizeAttribute.cs` (MVC-side permission gate, distinct from the backend `PermissionAttribute`) and `Middleware/{JwtMiddleware,ExceptionHandlerMiddleware}.cs`.
+
+**Client-side JS has a second, independent config layer** (`wwwroot/js/`) that does *not* read the server's `appsettings`. Changing a base URL in config alone will not move the browser:
+- `app-config.js` — `window.AppConfig` decides dev vs prod by **hostname string match on `inventory166.az`**, and from that derives `api.gateway`, the SignalR hub URL, and the product/route image prefixes. In prod everything is same-origin (`/api`, `/notificationHub`); in dev it points straight at `localhost:5000/5001/5002/5005`. Build request URLs with `AppConfig.buildApiUrl(endpoint)` rather than hardcoding.
+- `token-provider.js` — `window.SecureTokenProvider` fetches the JWT from the Web app's own `GET /api/token/current` (`TokenController` → `ITokenManager.GetValidTokenAsync()`, which auto-refreshes) and caches it **in memory for 5 minutes only** — deliberately never in `localStorage` or the DOM. This is how SignalR and direct-to-gateway AJAX calls get a bearer token; don't reintroduce a token in a Razor view or hidden field.
+- `ajaxHandler.js` — `window.AjaxHandler.handleForm(selector, options)` is the standard form-submit path (validation, double-submit guard via a `WeakMap`, success redirect/toast hooks). New forms should use it instead of bespoke `$.ajax`.
+- `notification-manager.js` / `admin-approvals.js` — SignalR client wiring and the approval inbox UI.
+
+**Exports.** Two unrelated mechanisms: department inventory **Word** docs are generated **server-side** by `Services/WordExportService.cs` (`DocumentFormat.OpenXml`, brand color `#FFC000`), surfaced from `DepartmentsController`. Product/route **PDF** export is **client-side** in `wwwroot/js/pdf-export.js` — it builds HTML into a popup window and relies on browser print-to-PDF (the `itext` package in the `.csproj` is referenced but unused). Two constraints are load-bearing there: values read back via `textContent` must pass through `escapePdfText()` before re-injection (XSS guard), and columns are selected by **header name, not index** — index-based selection silently produced blank columns whenever a table changed.
 
 ## Cross-service conventions
 
-- **Shared code lives in `SharedServices/`** — permissions, roles, authorization primitives, exception types (`ApprovalRequiredException`, `InsufficientPermissionsException`, `NotFoundException`, `DuplicateEntityException`), enums, and action-data DTOs.
+- **Shared code lives in `SharedServices/`** — permissions, roles, authorization primitives, exception types, enums, and action-data DTOs. **File names don't map to type names here:** `Exceptions/ApprovalRequiredException.cs` actually declares three classes — `ApprovalRequiredException`, `DuplicateEntityException`, and `InsufficientPermissionsException`. Grep for `class <Name>` rather than guessing the file.
+- **Search normalization.** `SharedServices/Services/SearchHelper.NormalizeForSearch` folds Azerbaijani characters to ASCII (`ə→e`, `ğ→g`, `ü→u`, `ş→s`, `ı`/`İ`/`I→i`, `ö→o`, `ç→c`) and lowercases. Any new search/filter over user-entered text should route through it, or Azerbaijani-language records won't match.
 - **Image storage.** Product / route images are written to `wwwroot/images/{products,routes}` inside their service container and bind-mounted to `./storage/images/{products,routes}` on the host; nginx serves them read-only. `ImageSettings:BaseUrl` (per-service `appsettings`) is the public URL prefix.
 - **Redis is opt-in on ProductService.** Setting `Redis:Enabled = true` in `ProductService.API/appsettings.json` swaps `NoCacheService` for `RedisCacheService` (see `ProductService.Infrastructure/DependencyInjection.cs` and `REDIS_INTEGRATION_GUIDE.md`). Nothing else uses Redis today.
 - **Rate limiting.** Only `IdentityService` uses `System.Threading.RateLimiting` — a per-IP `LoginPolicyPerIP` (5 attempts / 10 min) applied to the login endpoint, plus a global 100/min limiter.
-- **Ocelot dev vs prod.** `ocelot.Development.json` points at `localhost` + the ports table above; `ocelot.Production.json` uses container hostnames on port 80. When adding a new gateway route, update **both** files.
+- **Ocelot dev vs prod.** `ocelot.json` + `ocelot.Development.json` point at `localhost` + the ports table above; `ocelot.Production.json` uses container hostnames on port 80. When adding a new gateway route, update **all three** files (see the loading-order note under Service topology).
