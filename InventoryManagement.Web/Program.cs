@@ -1,5 +1,6 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
+using Microsoft.AspNetCore.DataProtection;
 using Serilog;
 
 try
@@ -29,6 +30,12 @@ try
     builder.Services.AddModules(mvcBuilder);
     builder.Services.AddCustomAuthentication(builder.Configuration);
     builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+
+    // Keys protect the auth cookie and antiforgery tokens. Persisted outside the container so a
+    // redeploy does not sign everybody out.
+    var dataProtection = builder.Services.AddDataProtection().SetApplicationName("InventoryManagement");
+    if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+        dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddCustomServices();
