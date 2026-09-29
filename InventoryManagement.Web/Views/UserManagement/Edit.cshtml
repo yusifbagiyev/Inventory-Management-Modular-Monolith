@@ -341,43 +341,27 @@
                 return; // User cancelled the action
             }
 
-            try {
-                // Get the authentication token securely
-                const token = await SecureTokenProvider.getToken();
-
-                // Build the proper API URL
-                const endpoint = isGranting ? 'grant-permission' : 'revoke-permission';
-                const apiUrl = AppConfig.buildApiUrl(`auth/users/@Model.Id/${endpoint}`);
-
-                $.ajax({
-                    url: apiUrl,
-                    type: 'POST',
-                    data: JSON.stringify({
-                        permissionName: permissionName
-                    }),
-                    contentType: 'application/json',
-                    headers: {
-                        'Authorization': `Bearer ${token}`, // FIX 6: Added missing comma
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(response) {
-                        showToast(`Permission ${action}ed successfully`, 'success');
-                        // Reload the permissions list to show the updated state
-                        loadUserPermissions();
-                    },
-                    error: function(xhr) {
-                        console.error('Failed to toggle permission:', xhr);
-
-                        const errorMsg = xhr.responseJSON?.message ||
-                                       xhr.responseJSON?.error ||
-                                       `Failed to ${action} permission`;
-                        showToast(errorMsg, 'error');
+            $.ajax({
+                url: '@Url.Action("TogglePermission", new { id = Model.Id })',
+                type: 'POST',
+                data: JSON.stringify({ permissionName: permissionName, isGranting: isGranting }),
+                contentType: 'application/json',
+                headers: AppConfig.antiforgeryHeaders(),
+                success: function(response) {
+                    if (response && response.success) {
+                        showToast(isGranting ? 'Permission granted' : 'Permission removed', 'success');
+                    } else {
+                        showToast(response?.message || 'Permission change failed', 'error');
                     }
-                });
-            } catch (error) {
-                console.error('Error getting authentication token:', error);
-                showToast('Authentication error. Please refresh the page.', 'error');
-            }
+                    loadUserPermissions();
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message ||
+                                   xhr.responseJSON?.error ||
+                                   'Permission change failed';
+                    showToast(errorMsg, 'error');
+                }
+            });
         }
     </script>
 }

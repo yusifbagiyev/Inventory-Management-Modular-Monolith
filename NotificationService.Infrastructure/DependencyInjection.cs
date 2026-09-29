@@ -17,6 +17,7 @@ namespace NotificationService.Infrastructure
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
+            services.AddScoped<INotificationInbox, NotificationInbox>();
 
             services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
             {

@@ -256,7 +256,7 @@ namespace IdentityService.API.Controllers
 
         [HttpGet("permissions")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<object>>> GetPermissions()
+        public async Task<ActionResult<IEnumerable<PermissionDto>>> GetPermissions()
         {
             try
             {
@@ -350,9 +350,9 @@ namespace IdentityService.API.Controllers
                 if (userId == 0)
                     return Unauthorized(new { message = "Invalid user token" });
 
-                var result = await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
-                if (!result)
-                    return BadRequest(new { message = "Failed to change password" });
+                var (succeeded, error) = await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
+                if (!succeeded)
+                    return BadRequest(new { message = error });
 
                 return NoContent();
             }

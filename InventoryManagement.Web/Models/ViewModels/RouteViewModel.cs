@@ -22,7 +22,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? ImageUrl { get; set; }
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }
-        public string? FullImageUrl { get; set; }
+        /// <summary>Images are served by this host, so the stored site-relative URL is used as-is.</summary>
+        public string? FullImageUrl => string.IsNullOrEmpty(ImageUrl) ? null : ImageUrl;
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
     }

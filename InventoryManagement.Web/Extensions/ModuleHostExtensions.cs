@@ -5,6 +5,7 @@ using IdentityService.API;
 using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
 using NotificationService.API;
 using NotificationService.Infrastructure.Data;
@@ -62,6 +63,7 @@ namespace InventoryManagement.Web.Extensions
 
             foreach (var assembly in ModuleAssemblies.Distinct())
                 mvc.AddApplicationPart(assembly);
+            mvc.AddMvcOptions(options => options.Conventions.Add(new ModuleApiAreaConvention(ModuleAssemblies)));
 
             services.AddSignalR(options =>
             {
@@ -171,6 +173,27 @@ namespace InventoryManagement.Web.Extensions
             }
 
             await next();
+        }
+    }
+
+    /// <summary>
+    /// Puts the modules' API controllers in the "Api" area. Their URLs are attribute routes and do
+    /// not change, but the area keeps MVC link generation (asp-action="Create" on the Products
+    /// page) from resolving to the same-named API action (/api/Products) instead of the UI one.
+    /// </summary>
+    internal sealed class ModuleApiAreaConvention : IControllerModelConvention
+    {
+        private readonly HashSet<Assembly> _moduleAssemblies;
+
+        public ModuleApiAreaConvention(IEnumerable<Assembly> moduleAssemblies)
+        {
+            _moduleAssemblies = moduleAssemblies.ToHashSet();
+        }
+
+        public void Apply(ControllerModel controller)
+        {
+            if (_moduleAssemblies.Contains(controller.ControllerType.Assembly))
+                controller.RouteValues["area"] = "Api";
         }
     }
 }

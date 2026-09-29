@@ -1,95 +1,32 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+using System.Security.Claims;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
-using Newtonsoft.Json;
-using System.Net.Http.Headers;
-using System.Text;
+using NotificationService.Application.Interfaces;
 
 namespace InventoryManagement.Web.Services
 {
+    /// <summary>The signed-in user's notifications, backed in-process by the notification module.</summary>
     public class NotificationService : INotificationService
     {
-        private readonly HttpClient _httpClient;
+        private readonly INotificationInbox _inbox;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IConfiguration _configuration;
 
-        public NotificationService(HttpClient httpClient, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
+        public NotificationService(INotificationInbox inbox, IHttpContextAccessor httpContextAccessor)
         {
-            _httpClient = httpClient;
+            _inbox = inbox;
             _httpContextAccessor = httpContextAccessor;
-            _configuration = configuration;
-
-            var apiGatewayUrl = configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000";
-            _httpClient.BaseAddress = new Uri(apiGatewayUrl);
         }
 
-        private void AddAuthorizationHeader()
-        {
-            var token = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
+        private int UserId => int.TryParse(
+            _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
         public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false)
-        {
-            AddAuthorizationHeader();
+            => ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly));
 
-            try
-            {
-                var response = await _httpClient.GetAsync($"/api/notifications?unreadOnly={unreadOnly}");
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<List<NotificationDto>>()
-                        ?? new List<NotificationDto>();
-                }
-                return new List<NotificationDto>();
-            }
-            catch (Exception ex)
-            {
-                // Log the error but don't throw
-                Console.WriteLine($"Failed to get notifications: {ex.Message}");
-                return new List<NotificationDto>();
-            }
-        }
+        public Task<int> GetUnreadCountAsync() => _inbox.GetUnreadCountAsync(UserId);
 
-        public async Task<int> GetUnreadCountAsync()
-        {
-            AddAuthorizationHeader();
+        public Task MarkAsReadAsync(int notificationId) => _inbox.MarkAsReadAsync(UserId, notificationId);
 
-            var response = await _httpClient.GetAsync("/api/notifications/unread-count");
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<int>(content);
-            }
-            return 0;
-        }
-
-        public async Task MarkAsReadAsync(int notificationId)
-        {
-            AddAuthorizationHeader();
-
-            var dto = new MarkAsReadDto
-            {
-                NotificationId = notificationId,
-            };
-
-            var json = JsonConvert.SerializeObject(dto);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync($"/api/notifications/mark-as-read",content);
-            response.EnsureSuccessStatusCode();
-        }
-
-        public async Task MarkAllAsReadAsync()
-        {
-            AddAuthorizationHeader();
-
-            // Instead of marking individually, use a bulk endpoint
-            var response = await _httpClient.PostAsync("/api/notifications/mark-all-read", null);
-            response.EnsureSuccessStatusCode();
-        }
+        public Task MarkAllAsReadAsync() => _inbox.MarkAllAsReadAsync(UserId);
     }
 }

@@ -1,6 +1,5 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Middleware;
-using InventoryManagement.Web.Services;
 using Serilog;
 
 try
@@ -31,22 +30,6 @@ try
     builder.Services.AddCustomAuthentication(builder.Configuration);
     builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
 
-    builder.Services.AddDistributedMemoryCache();
-    builder.Services.AddSession(options =>
-    {
-        options.IdleTimeout = TimeSpan.FromDays(7);
-        options.Cookie.Name = ".InventoryManagement.Session";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.IsEssential = true;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.MaxAge = TimeSpan.FromDays(7);
-        options.IOTimeout = TimeSpan.FromSeconds(30);
-    });
-
-    builder.Services.AddHostedService<TokenRefreshBackgroundService>();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddCustomServices();
 
@@ -67,16 +50,15 @@ try
     app.UseStaticFiles();
     app.UseRouting();
 
-    // HTML error pages for the UI only; /api keeps its JSON status codes.
-    app.UseWhen(context => !ModuleHostExtensions.IsApiRequest(context),
+    // HTML error pages for page navigations only; /api and AJAX callers keep their status codes
+    // (an AJAX 401 re-executed into an HTML 404 page is useless to the client).
+    app.UseWhen(context => !ModuleHostExtensions.IsApiRequest(context)
+                           && context.Request.Headers.XRequestedWith != "XMLHttpRequest",
         ui => ui.UseStatusCodePagesWithReExecute("/NotFound", "?statusCode={0}"));
 
-    app.UseSession();
     app.UseMiddleware<ExceptionHandlerMiddleware>();
     app.UseRateLimiter();
     app.UseAuthentication();
-    // Keeps the UI session's JWT fresh; /api callers authenticate on their own.
-    app.UseWhen(context => !ModuleHostExtensions.IsApiRequest(context), ui => ui.UseMiddleware<JwtMiddleware>());
     app.UseAuthorization();
 
     app.UseModules();

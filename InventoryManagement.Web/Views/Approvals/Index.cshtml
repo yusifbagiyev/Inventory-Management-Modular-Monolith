@@ -288,7 +288,7 @@
             }, function () {
                 showLoader();
 
-                $.post(`/Approvals/Approve/${requestId}`)
+                $.ajax({ url: `/Approvals/Approve/${requestId}`, type: 'POST', headers: AppConfig.antiforgeryHeaders() })
                     .done(function(response) {
                         hideLoader();
                         if (response.success) {
@@ -322,7 +322,7 @@
 
             showLoader();
 
-            $.post(`/Approvals/Reject/${currentRequestId}`, { reason: reason })
+            $.ajax({ url: `/Approvals/Reject/${currentRequestId}`, type: 'POST', data: { reason: reason }, headers: AppConfig.antiforgeryHeaders() })
                 .done(function(response) {
                     hideLoader();
                     $('#rejectModal').modal('hide');

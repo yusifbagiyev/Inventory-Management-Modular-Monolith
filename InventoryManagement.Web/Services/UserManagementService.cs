@@ -1,414 +1,145 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+using System.Security.Claims;
+using IdentityService.Application.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Net.Http.Headers;
-using System.Text;
+using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Services
 {
+    /// <summary>User administration for the UI, backed in-process by the identity module.</summary>
     public class UserManagementService : IUserManagementService
     {
-        private readonly HttpClient _httpClient;
+        private readonly IdentityAuth _auth;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<UserManagementService> _logger;
 
-        public UserManagementService(
-            HttpClient httpClient,
-            IHttpContextAccessor httpContextAccessor,
-            IConfiguration configuration,
-            ILogger<UserManagementService> logger)
+        public UserManagementService(IdentityAuth auth, IHttpContextAccessor httpContextAccessor, ILogger<UserManagementService> logger)
         {
-            _httpClient = httpClient;
+            _auth = auth;
             _httpContextAccessor = httpContextAccessor;
-            _configuration = configuration;
             _logger = logger;
-            _httpClient.BaseAddress = new Uri(_configuration["ApiGateway:BaseUrl"] ?? "http://localhost:5000");
-            AddAuthorizationHeader();
         }
-
-
-        private void AddAuthorizationHeader()
-        {
-            var token = _httpContextAccessor.HttpContext?.Session.GetString("JwtToken");
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
-            }
-        }
-
 
         public async Task<List<UserListViewModel>> GetAllUsersAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("api/auth/users");
-                if (response.IsSuccessStatusCode)
+            => (await _auth.GetAllUsersAsync())
+                .Select(u => new UserListViewModel
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var users = JsonConvert.DeserializeObject<List<UserDto>>(content);
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    FullName = $"{u.FirstName} {u.LastName}",
+                    IsActive = u.IsActive,
+                    Roles = u.Roles,
+                    CreatedAt = u.CreatedAt,
+                    LastLoginAt = u.LastLoginAt
+                })
+                .ToList();
 
-                    return users?.Select(u => new UserListViewModel
-                    {
-                        Id = u.Id,
-                        Username = u.Username,
-                        Email = u.Email,
-                        FullName = $"{u.FirstName} {u.LastName}",
-                        IsActive = u.IsActive,
-                        Roles = u.Roles,
-                        CreatedAt = u.CreatedAt,
-                        LastLoginAt = u.LastLoginAt
-                    }).ToList() ?? new List<UserListViewModel>();
-                }
-            }
-            catch (Exception ex)
+        public async Task<EditUserViewModel?> GetUserByIdAsync(int id)
+        {
+            var user = await _auth.GetUserAsync(id);
+            if (user == null)
+                return null;
+
+            var roles = await GetAllRolesAsync();
+            return new EditUserViewModel
             {
-                _logger.LogError(ex, "Error getting all users");
-            }
-            return new List<UserListViewModel>();
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsActive = user.IsActive,
+                CurrentRoles = user.Roles,
+                SelectedRoles = user.Roles,
+                AvailableRoles = roles
+                    .Select(r => new SelectListItem { Value = r, Text = r, Selected = user.Roles.Contains(r) })
+                    .ToList()
+            };
         }
 
-
-        public async Task<EditUserViewModel> GetUserByIdAsync(int id)
+        public async Task<UserProfileViewModel?> GetUserProfileAsync(int id)
         {
-            try
+            var user = await _auth.GetUserAsync(id);
+            if (user == null)
+                return null;
+
+            var descriptions = (await _auth.GetAllPermissionsAsync()).ToDictionary(p => p.Name, p => p);
+            return new UserProfileViewModel
             {
-                var response = await _httpClient.GetAsync($"api/auth/users/{id}");
-                if (response.IsSuccessStatusCode)
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                IsActive = user.IsActive,
+                Roles = user.Roles,
+                CreatedAt = user.CreatedAt,
+                LastLoginAt = user.LastLoginAt,
+                Permissions = user.Permissions.Select(p => new Permissions
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var user = JsonConvert.DeserializeObject<UserDto>(content);
-
-                    if (user != null)
-                    {
-                        var roles = await GetAllRolesAsync();
-                        return new EditUserViewModel
-                        {
-                            Id = user.Id,
-                            Username = user.Username,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            IsActive = user.IsActive,
-                            CurrentRoles = user.Roles,
-                            SelectedRoles = user.Roles,
-                            AvailableRoles = roles.Select(r => new SelectListItem
-                            {
-                                Value = r,
-                                Text = r,
-                                Selected = user.Roles.Contains(r)
-                            }).ToList()
-                        };
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user by id: {UserId}", id);
-            }
-            return new EditUserViewModel();
+                    Name = p,
+                    DisplayName = descriptions.TryGetValue(p, out var d) ? d.Description : p,
+                    Category = descriptions.TryGetValue(p, out var c) ? c.Category : p.Split('.')[0],
+                    Description = descriptions.TryGetValue(p, out var e) ? e.Description : string.Empty
+                }).ToList()
+            };
         }
-
-
-        public async Task<UserProfileViewModel> GetUserProfileAsync(int id)
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/auth/users/{id}");
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    var user = JsonConvert.DeserializeObject<UserDto>(content);
-
-                    if (user != null)
-                    {
-                        var roles = await GetAllRolesAsync();
-                        return new UserProfileViewModel
-                        {
-                            Id = user.Id,
-                            Username = user.Username,
-                            Email = user.Email,
-                            FirstName = user.FirstName,
-                            LastName = user.LastName,
-                            IsActive = user.IsActive,
-                            Roles = user.Roles,
-                            CreatedAt = user.CreatedAt,
-                            LastLoginAt = user.LastLoginAt,
-                            Permissions = user.Permissions.Select(p => new Permissions
-                            {
-                                Name = p,
-                                DisplayName = FormatPermissionName(p),
-                                Category = GetPermissionCategory(p),
-                                Description = GetPermissionDescription(p)
-                            }).ToList()
-                        };
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user by id: {UserId}", id);
-            }
-            return new UserProfileViewModel();
-        }
-
 
         public async Task<bool> CreateUserAsync(CreateUserViewModel model)
         {
             try
             {
-                var registerDto = new
+                await _auth.RegisterAsync(new RegisterDto
                 {
-                    model.Username,
-                    model.Email,
-                    model.Password,
-                    model.FirstName,
-                    model.LastName,
-                    model.SelectedRole
-                };
-
-                var json = JsonConvert.SerializeObject(registerDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync("api/auth/register-by-admin", content);
-                return response.IsSuccessStatusCode;
+                    Username = model.Username,
+                    Email = model.Email,
+                    Password = model.Password,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    SelectedRole = model.SelectedRole
+                });
+                return true;
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Error creating user");
+                _logger.LogWarning("Creating user {Username} failed: {Reason}", model.Username, ex.Message);
                 return false;
             }
         }
-
 
         public async Task<bool> UpdateUserAsync(EditUserViewModel model)
         {
-            try
+            var updated = await _auth.UpdateUserAsync(new UpdateUserDto
             {
-                // First, update the basic user information
-                var updateDto = new
-                {
-                    model.Id,
-                    model.Username,
-                    model.Email,
-                    model.FirstName,
-                    model.LastName,
-                    model.IsActive
-                };
+                Id = model.Id,
+                Username = model.Username,
+                Email = model.Email,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                IsActive = model.IsActive
+            });
 
-                var json = JsonConvert.SerializeObject(updateDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PutAsync($"api/auth/users/{model.Id}", content);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError("Failed to update user basic info. Status: {StatusCode}", response.StatusCode);
-                    return false;
-                }
-
-                // Now handle role updates with better error tracking
-                var roleUpdateSuccess = await UpdateUserRolesAsync(model.Id, model.CurrentRoles, model.SelectedRoles ?? new List<string>());
-
-                if (!roleUpdateSuccess)
-                {
-                    _logger.LogWarning("User info updated but role update failed for user {UserId}", model.Id);
-                    // You might want to return false here or handle it differently
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating user {UserId}", model.Id);
-                return false;
-            }
+            // Role failures used to be logged and then reported as success.
+            return updated && await _auth.SetRolesAsync(model.Id, model.SelectedRoles ?? []);
         }
 
-        private async Task<bool> UpdateUserRolesAsync(int userId, List<string> currentRoles, List<string> selectedRoles)
-        {
-            try
-            {
-                // Find roles to remove (in current but not in selected)
-                var rolesToRemove = currentRoles.Except(selectedRoles).ToList();
+        public Task<bool> DeleteUserAsync(int id) => _auth.DeleteUserAsync(id);
 
-                // Find roles to add (in selected but not in current)
-                var rolesToAdd = selectedRoles.Except(currentRoles).ToList();
+        public Task<bool> ToggleUserStatusAsync(int id) => _auth.ToggleUserStatusAsync(id);
 
-                _logger.LogInformation("User {UserId}: Removing roles: {RolesToRemove}, Adding roles: {RolesToAdd}",
-                    userId, string.Join(", ", rolesToRemove), string.Join(", ", rolesToAdd));
-
-                // Remove roles that are no longer selected
-                foreach (var role in rolesToRemove)
-                {
-                    var removeResponse = await _httpClient.PostAsync($"api/auth/users/{userId}/remove-role",
-                        new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
-                        Encoding.UTF8, "application/json"));
-
-                    if (!removeResponse.IsSuccessStatusCode)
-                    {
-                        _logger.LogError("Failed to remove role {Role} from user {UserId}", role, userId);
-                        return false;
-                    }
-                }
-
-                // Add newly selected roles
-                foreach (var role in rolesToAdd)
-                {
-                    var addResponse = await _httpClient.PostAsync($"api/auth/users/{userId}/assign-role",
-                        new StringContent(JsonConvert.SerializeObject(new { roleName = role }),
-                        Encoding.UTF8, "application/json"));
-
-                    if (!addResponse.IsSuccessStatusCode)
-                    {
-                        _logger.LogError("Failed to add role {Role} to user {UserId}", role, userId);
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating roles for user {UserId}", userId);
-                return false;
-            }
-        }
-
-
-        public async Task<bool> DeleteUserAsync(int id)
-        {
-            try
-            {
-                var response = await _httpClient.DeleteAsync($"api/auth/users/{id}");
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting user: {UserId}", id);
-                return false;
-            }
-        }
-
-
-        public async Task<bool> ToggleUserStatusAsync(int id)
-        {
-            try
-            {
-                var response = await _httpClient.PostAsync($"api/auth/users/{id}/toggle-status", null);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error toggling user status: {UserId}", id);
-                return false;
-            }
-        }
-
-
-        public async Task<bool> ResetPasswordAsync(int userId, string newPassword)
-        {
-            try
-            {
-                var resetDto = new ResetPasswordDto { NewPassword = newPassword };
-                var json = JsonConvert.SerializeObject(resetDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync($"api/auth/users/{userId}/reset-password", content);
-                return response.IsSuccessStatusCode;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error resetting password for user: {UserId}", userId);
-                return false;
-            }
-        }
+        public Task<bool> ResetPasswordAsync(int userId, string newPassword) => _auth.ResetPasswordAsync(userId, newPassword);
 
         public async Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword)
         {
-            try
-            {
-                var payload = new { CurrentPassword = currentPassword, NewPassword = newPassword };
-                var json = JsonConvert.SerializeObject(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+                return (false, "You are not signed in.");
 
-                var response = await _httpClient.PostAsync("api/auth/change-password", content);
-                if (response.IsSuccessStatusCode)
-                    return (true, null);
-
-                // Surface the identity service's reason (wrong current password, policy failure, ...)
-                var body = await response.Content.ReadAsStringAsync();
-                string? message = null;
-                try { message = JObject.Parse(body)["message"]?.ToString(); } catch { /* non-JSON body */ }
-                return (false, string.IsNullOrWhiteSpace(message) ? "Could not change the password." : message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error changing own password");
-                return (false, "A network error occurred. Please try again.");
-            }
+            return await _auth.ChangePasswordAsync(userId, currentPassword, newPassword);
         }
 
-        public async Task<List<string>> GetAllRolesAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("api/auth/roles");
-                if (response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<List<string>>(content) ?? new List<string>();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting all roles");
-            }
-            return new List<string> { "Admin", "Manager", "User" };
-        }
-
-
-        // Helper methods for permission formatting
-        private string FormatPermissionName(string permission)
-        {
-            // Convert "Product.View" to "View Products"
-            var parts = permission.Split('.');
-            if (parts.Length == 2)
-            {
-                return $"{parts[1]} {parts[0]}s";
-            }
-            return permission.Replace(".", " ");
-        }
-
-
-
-        private string GetPermissionCategory(string permission)
-        {
-            var parts = permission.Split('.');
-            return parts.Length > 0 ? parts[0] : "General";
-        }
-
-
-
-        private string GetPermissionDescription(string permission)
-        {
-            // You can expand this with actual descriptions
-            var descriptions = new Dictionary<string, string>
-            {
-                ["Product.View"] = "View product information",
-                ["Product.Create"] = "Create new products",
-                ["Product.Update"] = "Edit existing products",
-                ["Product.Delete"] = "Delete products",
-                ["Route.View"] = "View transfer routes",
-                ["Route.Create"] = "Create transfer routes",
-                // Add more as needed
-            };
-
-            return descriptions.ContainsKey(permission) ? descriptions[permission] : "";
-        }
+        public async Task<List<string>> GetAllRolesAsync() => (await _auth.GetAllRolesAsync()).ToList();
     }
 }

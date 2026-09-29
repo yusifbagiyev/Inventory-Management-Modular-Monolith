@@ -219,6 +219,24 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
+        public async Task<IReadOnlyList<TransferActivity>> GetTransferActivityAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+            => await _context.InventoryRoutes
+                .AsNoTracking()
+                .Where(r => r.RouteType == RouteType.Transfer && r.CreatedAt >= from && r.CreatedAt <= to)
+                .Select(r => new TransferActivity(
+                    r.ProductSnapshot.ProductId,
+                    r.FromDepartmentId,
+                    r.FromDepartmentName,
+                    r.ToDepartmentId,
+                    r.ToDepartmentName,
+                    r.FromWorker,
+                    r.ToWorker,
+                    r.ProductSnapshot.CategoryName,
+                    r.IsCompleted,
+                    r.CreatedAt))
+                .ToListAsync(cancellationToken);
+
+
         public Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default)
             => _context.InventoryRoutes.AnyAsync(
                 r => r.ProductSnapshot.ProductId == productId && !r.IsCompleted && r.RouteType == RouteType.Transfer,

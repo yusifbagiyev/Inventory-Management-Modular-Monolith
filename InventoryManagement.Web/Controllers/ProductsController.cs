@@ -1,147 +1,87 @@
-﻿using InventoryManagement.Web.Filters;
+using InventoryManagement.Web.Extensions;
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
-using InventoryManagement.Web.Services.Interfaces;
+using InventoryManagement.Web.Services;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Text;
+using ProductService.Application.Features.Lookups;
+using ProductService.Application.Features.Products.Commands;
+using ProductService.Application.Features.Products.Queries;
+using ProductService.Application.Interfaces;
+using SharedServices.Identity;
+using ModuleDtos = ProductService.Application.DTOs;
 
 namespace InventoryManagement.Web.Controllers
 {
     [Authorize]
     public class ProductsController : BaseController
     {
-        private readonly IApiService _apiService;
-        private readonly IUrlService _urlService;
+        private readonly IMediator _mediator;
+        private readonly IProductManagementService _productManagement;
+
         public ProductsController(
-            IApiService apiService,
-            IUrlService urlService) 
-            : base()
+            IMediator mediator,
+            IProductManagementService productManagement,
+            ILogger<ProductsController> logger)
+            : base(logger)
         {
-            _apiService = apiService;
-            _urlService = urlService;
+            _mediator = mediator;
+            _productManagement = productManagement;
         }
 
         public async Task<IActionResult> Index(
-            int? pageNumber=1,
-            int? pageSize=30,
-            string? search=null,
-            DateTime? startDate=null,
-            DateTime? endDate=null,
-            bool? status=null,
-            bool? availability=null,
-            int? categoryId=null,
-            int? departmentId=null,
-            bool? hasImage=null,
-            bool? assigned=null)
+            int? pageNumber = 1,
+            int? pageSize = 30,
+            string? search = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            bool? status = null,
+            bool? availability = null,
+            int? categoryId = null,
+            int? departmentId = null,
+            bool? hasImage = null,
+            bool? assigned = null)
         {
-            try
-            {
-                var queryString = new StringBuilder($"?pageNumber={pageNumber}&pageSize={pageSize}");
+            var result = await _mediator.Send(new GetAllProductsQuery(
+                pageNumber, pageSize, search, startDate, endDate,
+                status, availability, categoryId, departmentId, hasImage, assigned));
+            var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result);
 
-                if (!string.IsNullOrEmpty(search))
-                    queryString.Append($"&search={Uri.EscapeDataString(search)}");
+            ViewBag.ShowingStart = ((products.PageNumber - 1) * products.PageSize) + 1;
+            ViewBag.ShowingEnd = Math.Min(products.PageNumber * products.PageSize, products.TotalCount);
+            ViewBag.TotalCount = products.TotalCount;
 
-                if (startDate.HasValue)
-                    queryString.Append($"&startDate={startDate.Value:yyyy-MM-dd}");
+            ViewBag.PageNumber = pageNumber ?? 1;
+            ViewBag.PageSize = pageSize ?? 30;
+            ViewBag.CurrentSearch = search;
+            ViewBag.CurrentStatus = status;
+            ViewBag.CurrentAvailability = availability;
+            ViewBag.StartDate = startDate;
+            ViewBag.EndDate = endDate;
+            ViewBag.CurrentCategoryId = categoryId;
+            ViewBag.CurrentDepartmentId = departmentId;
+            ViewBag.CurrentHasImage = hasImage;
+            ViewBag.CurrentAssigned = assigned;
 
-                if (endDate.HasValue)
-                    queryString.Append($"&endDate={endDate.Value:yyyy-MM-dd}");
+            // The active state/quick filters narrow the cascading facets.
+            await LoadFilterLists(status, availability, hasImage, assigned);
 
-                if (status.HasValue)
-                    queryString.Append($"&status={status}");
-
-                if (availability.HasValue)
-                    queryString.Append($"&availability={availability}");
-
-                // The products API already supported these two; the list screen just never sent them.
-                if (categoryId.HasValue)
-                    queryString.Append($"&categoryId={categoryId}");
-
-                if (departmentId.HasValue)
-                    queryString.Append($"&departmentId={departmentId}");
-
-                // "No image" / "Unassigned" quick filters. Server-side so they span the whole
-                // inventory, not just the rows on the current page.
-                if (hasImage.HasValue)
-                    queryString.Append($"&hasImage={hasImage}");
-
-                if (assigned.HasValue)
-                    queryString.Append($"&assigned={assigned}");
-
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>($"api/products{queryString}");
-
-                if(products != null)
-                {
-                    foreach (var product in products.Items)
-                    {
-                        if (!string.IsNullOrEmpty(product.ImageUrl))
-                        {
-                            product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
-                        }
-                    }
-
-
-                    // Calculate actual displayed range
-                    var start = ((products.PageNumber - 1) * products.PageSize) + 1;
-                    var end = Math.Min(products.PageNumber * products.PageSize, products.TotalCount);
-                    ViewBag.ShowingStart = start;
-                    ViewBag.ShowingEnd = end;
-                    ViewBag.TotalCount = products.TotalCount;
-                }
-
-                ViewBag.PageNumber = pageNumber ?? 1;
-                ViewBag.PageSize = pageSize ?? 30;
-                ViewBag.CurrentSearch = search;
-                ViewBag.CurrentStatus = status;
-                ViewBag.CurrentAvailability = availability;
-                ViewBag.StartDate = startDate;
-                ViewBag.EndDate = endDate;
-                ViewBag.CurrentCategoryId = categoryId;
-                ViewBag.CurrentDepartmentId = departmentId;
-                ViewBag.CurrentHasImage = hasImage;
-                ViewBag.CurrentAssigned = assigned;
-
-                // Pass the active state/quick filters so the cascading facets narrow to them.
-                await LoadFilterLists(status, availability, hasImage, assigned);
-
-                return View(products ?? new PagedResultDto<ProductViewModel>());
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, new PagedResultDto<ProductViewModel>());
-            }
+            return View(products);
         }
 
 
         public async Task<IActionResult> Details(int id)
         {
-            try
-            {
-                var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
-                // Handle deleted product scenario
-                if (product == null)
-                {
-                    return RedirectToAction("NotFound","Home");
-                }
-
-                if (!string.IsNullOrEmpty(product.ImageUrl))
-                {
-                    product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
-                }
-
-                return View(product);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error loading product details for ID: {ProductId}", id);
-                return HandleException(ex);
-            }
+            var product = await _mediator.Send(new GetProductByIdQuery(id));
+            return product == null
+                ? RedirectToNotFound()
+                : View(ModelMapper.Map<ProductViewModel>(product));
         }
 
 
-        [PermissionAuthorize("product.create", "product.create.direct")]
+        [PermissionAuthorize(AllPermissions.ProductCreate, AllPermissions.ProductCreateDirect)]
         public async Task<IActionResult> Create()
         {
             var model = new ProductViewModel();
@@ -150,10 +90,9 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-
-        [HttpPost]  
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        [PermissionAuthorize("product.create", "product.create.direct")]
+        [PermissionAuthorize(AllPermissions.ProductCreate, AllPermissions.ProductCreateDirect)]
         public async Task<IActionResult> Create(ProductViewModel productModel)
         {
             if (!ModelState.IsValid)
@@ -161,7 +100,8 @@ namespace InventoryManagement.Web.Controllers
                 await LoadDropdowns(productModel);
                 return HandleValidationErrors(productModel);
             }
-            var dto = new CreateProductDto
+
+            var dto = new ModuleDtos.CreateProductDto
             {
                 InventoryCode = productModel.InventoryCode,
                 Model = productModel.Model,
@@ -172,56 +112,33 @@ namespace InventoryManagement.Web.Controllers
                 IsActive = productModel.IsActive,
                 IsNewItem = productModel.IsNewItem,
                 CategoryId = productModel.CategoryId,
-                DepartmentId = productModel.DepartmentId
+                DepartmentId = productModel.DepartmentId,
+                ImageFile = productModel.ImageFile
             };
 
-            try
-            {
-                var form = HttpContext.Request.Form;
-                var response = await _apiService.PostFormAsync<dynamic>("api/products", form, dto);
-
-                return HandleApiResponse(response, "Index");
-            }
-            catch (Exception ex)
-            {
-                await LoadDropdowns(productModel);
-                return HandleException(ex, productModel);
-            }
+            var response = await RunAsync(
+                () => _productManagement.CreateProductWithApprovalAsync(dto, GetCurrentUserId(), GetCurrentUserName(), GetCurrentUserPermissions()),
+                "Product created successfully");
+            return HandleApiResponse(response, nameof(Index));
         }
 
 
-
-        [PermissionAuthorize("product.update", "product.update.direct")]
+        [PermissionAuthorize(AllPermissions.ProductUpdate, AllPermissions.ProductUpdateDirect)]
         public async Task<IActionResult> Edit(int id)
         {
-            try
-            {
-                var product = await _apiService.GetAsync<ProductViewModel>($"api/products/{id}");
-                if (product == null)
-                    return RedirectToAction("NotFound","Home","?statusCode=404");
+            var product = await _mediator.Send(new GetProductByIdQuery(id));
+            if (product == null)
+                return RedirectToNotFound();
 
-                if (product != null)
-                {
-                    if (!string.IsNullOrEmpty(product.ImageUrl))
-                    {
-                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
-                    }
-                    await LoadDropdowns(product);
-                }
-
-                return View(product);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var model = ModelMapper.Map<ProductViewModel>(product);
+            await LoadDropdowns(model);
+            return View(model);
         }
-
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [PermissionAuthorize("product.update", "product.update.direct")]
+        [PermissionAuthorize(AllPermissions.ProductUpdate, AllPermissions.ProductUpdateDirect)]
         public async Task<IActionResult> Edit(int id, ProductViewModel productModel)
         {
             if (!ModelState.IsValid)
@@ -229,151 +146,73 @@ namespace InventoryManagement.Web.Controllers
                 await LoadDropdowns(productModel);
                 return HandleValidationErrors(productModel);
             }
-            try
-            {
-                var form = HttpContext.Request.Form;
-                var response = await _apiService.PutFormAsync<bool>($"api/products/{id}", form, productModel);
-                return HandleApiResponse(response, "Index");
-            }
-            catch(Exception ex)
-            {
-                await LoadDropdowns(productModel);
-                return HandleException(ex, productModel);
-            }
-        }
 
+            var dto = new ModuleDtos.UpdateProductDto
+            {
+                Model = productModel.Model,
+                Vendor = productModel.Vendor,
+                Worker = productModel.Worker,
+                Description = productModel.Description,
+                CategoryId = productModel.CategoryId,
+                DepartmentId = productModel.DepartmentId,
+                IsWorking = productModel.IsWorking,
+                IsActive = productModel.IsActive,
+                IsNewItem = productModel.IsNewItem,
+                ImageFile = productModel.ImageFile
+            };
+
+            var response = await RunAsync(
+                () => _productManagement.UpdateProductWithApprovalAsync(id, dto, GetCurrentUserId(), GetCurrentUserName(), GetCurrentUserPermissions()),
+                "Product updated successfully");
+            return HandleApiResponse(response, nameof(Index));
+        }
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [PermissionAuthorize("product.update", "product.update.direct")]
+        [PermissionAuthorize(AllPermissions.ProductUpdate, AllPermissions.ProductUpdateDirect)]
         public async Task<IActionResult> UpdateInventoryCode([FromBody] UpdateInventoryCodeDto request)
         {
-            try
-            {
-                var response = await _apiService.PutAsync<bool>(
-                    $"api/products/{request.Id}/inventory-code",
-                    new UpdateInventoryCodeDto { InventoryCode = request.InventoryCode });
-
-                if (response.IsSuccess)
-                {
-                    return Json(new { success = true });
-                }
-                else
-                {
-                    return BadRequest(new { error = response.Message });
-                }
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+            var response = await RunAsync(() => _mediator.Send(new UpdateProductInventoryCode.Command(request.Id, request.InventoryCode)));
+            return response.IsSuccess
+                ? Json(new { success = true })
+                : BadRequest(new { error = response.Message });
         }
-
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [PermissionAuthorize("product.delete", "product.delete.direct")]
+        [PermissionAuthorize(AllPermissions.ProductDelete, AllPermissions.ProductDeleteDirect)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                if(id== 0)
-                {
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
-                }
-                var response = await _apiService.DeleteAsync($"api/products/{id}");
-                return HandleApiResponse(response, "Index");
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var response = await RunAsync(
+                () => _productManagement.DeleteProductWithApprovalAsync(id, GetCurrentUserId(), GetCurrentUserName(), GetCurrentUserPermissions()),
+                "Product deleted successfully");
+            return HandleApiResponse(response, nameof(Index));
         }
 
 
         /// <summary>
-        /// Category/department options for the list screen's filter panel. Failure is non-fatal:
-        /// the list still renders, the two dropdowns just come back empty.
+        /// Category/department options for the filter panel, plus the (department, category) pairs
+        /// present in the inventory, emitted as a compact [[deptId, catId], ...] array that the
+        /// filter JS turns into cascading lookups.
         /// </summary>
-        private async Task LoadFilterLists(
-            bool? status = null, bool? availability = null, bool? hasImage = null, bool? assigned = null)
+        private async Task LoadFilterLists(bool? status, bool? availability, bool? hasImage, bool? assigned)
         {
-            try
-            {
-                var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
-                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
+            var lookups = await _mediator.Send(new GetLookupsQuery());
+            ViewBag.FilterCategories = lookups.Categories.ToSelectList();
+            ViewBag.FilterDepartments = lookups.Departments.ToSelectList();
 
-                ViewBag.FilterCategories = categories?
-                    .OrderBy(c => c.Name)
-                    .Select(c => new SelectListItem { Value = c.Id.ToString(), Text = c.Name })
-                    .ToList() ?? [];
-
-                ViewBag.FilterDepartments = departments?
-                    .OrderBy(d => d.Name)
-                    .Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name })
-                    .ToList() ?? [];
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to load product filter lists");
-                ViewBag.FilterCategories = new List<SelectListItem>();
-                ViewBag.FilterDepartments = new List<SelectListItem>();
-            }
-
-            // Cascading data: which categories occur in which department. Emitted to the view as a
-            // compact [[deptId, catId], ...] array the filter JS turns into two lookup maps. Kept in
-            // its own try so a facets failure (e.g. an older gateway without the endpoint) leaves the
-            // category/department dropdowns intact - cascading just falls back to "show everything".
-            try
-            {
-                var facetQuery = new StringBuilder("api/products/filter-facets?");
-                if (status.HasValue) facetQuery.Append($"&status={status}");
-                if (availability.HasValue) facetQuery.Append($"&availability={availability}");
-                if (hasImage.HasValue) facetQuery.Append($"&hasImage={hasImage}");
-                if (assigned.HasValue) facetQuery.Append($"&assigned={assigned}");
-
-                var facets = await _apiService.GetAsync<ProductFilterFacetsDto>(facetQuery.ToString());
-                var pairs = facets?.Pairs
-                    .Select(p => new[] { p.DepartmentId, p.CategoryId })
-                    .ToList() ?? [];
-                ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(pairs);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to load product filter facets");
-                ViewBag.FilterPairsJson = "[]";
-            }
+            var facets = await _mediator.Send(new GetProductFilterFacetsQuery(status, availability, hasImage, assigned));
+            ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(
+                facets.Pairs.Select(p => new[] { p.DepartmentId, p.CategoryId }));
         }
 
         private async Task LoadDropdowns(ProductViewModel model)
         {
-            try
-            {
-                var categories = await _apiService.GetAsync<List<CategoryDto>>("api/categories");
-                var departments = await _apiService.GetAsync<List<DepartmentDto>>("api/departments");
-
-                // Ordered by name: the API returns insertion order, which put the dropdowns in
-                // effectively random (id) order and made a long department list unusable.
-                model.Categories = categories?.OrderBy(c => c.Name).Select(c => new SelectListItem
-                {
-                    Value = c.Id.ToString(),
-                    Text = c.Name
-                }).ToList() ?? [];
-
-                model.Departments = departments?.OrderBy(d => d.Name).Select(d => new SelectListItem
-                {
-                    Value = d.Id.ToString(),
-                    Text = d.Name
-                }).ToList() ?? [];
-            }
-            catch(Exception ex)
-            {
-                _logger?.LogError(ex, "Failed to load dropdowns");
-                model.Categories = [];
-                model.Departments = [];
-            }
+            var lookups = await _mediator.Send(new GetLookupsQuery());
+            model.Categories = lookups.Categories.ToSelectList();
+            model.Departments = lookups.Departments.ToSelectList();
         }
     }
 }

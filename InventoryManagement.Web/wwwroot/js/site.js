@@ -1,4 +1,4 @@
-﻿/**
+/**
  * In-page confirmation dialog, replacing the browser's confirm() popup.
  * Enter confirms, Esc/Cancel dismisses (Bootstrap handles Esc).
  *
@@ -263,9 +263,12 @@ function setupSessionMonitor() {
 
     const monitorInterval = setInterval(async function () {
         try {
-            const isAuth = await SecureTokenProvider.isAuthenticated();
+            const response = await fetch('/Account/Ping', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            });
 
-            if (!isAuth) {
+            if (response.status === 401) {
                 clearInterval(monitorInterval);
                 showToast('Your session has expired. Please log in again.', 'warning');
                 setTimeout(() => {

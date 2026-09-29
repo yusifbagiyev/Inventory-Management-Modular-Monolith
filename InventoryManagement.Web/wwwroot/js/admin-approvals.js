@@ -1,4 +1,4 @@
-﻿let isLoadingApprovals = false;
+let isLoadingApprovals = false;
 async function loadPendingApprovalsCount() {
     if (isLoadingApprovals) {
         console.log('Already loading approvals, skipping duplicate call');
@@ -10,15 +10,9 @@ async function loadPendingApprovalsCount() {
 
     setTimeout(async () => {
         try {
-            // SECURITY: Get token from secure provider instead of DOM
-            const token = await SecureTokenProvider.getToken();
-
             $.ajax({
                 url: apiUrl,
                 type: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}` // Use token from secure provider
-                },
                 timeout: 10000,
                 success: function (data) {
                     const count = data.totalCount || 0;
@@ -39,10 +33,6 @@ async function loadPendingApprovalsCount() {
                     } else if (xhr.status === 0 || status === 'timeout') {
                         console.error('Network error or timeout occurred');
                     } else {
-                        if (AppConfig.environment === 'development') {
-                            console.error('API URL:', apiUrl);
-                            console.error('Response:', xhr.responseText);
-                        }
                     }
                 },
                 complete: function () {

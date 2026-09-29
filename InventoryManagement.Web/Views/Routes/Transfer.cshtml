@@ -203,7 +203,6 @@
 
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
-    <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script>
                     $(document).ready(function() {
             let currentProductData = null;
@@ -360,14 +359,10 @@
 
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
-                    const token = await SecureTokenProvider.getToken();
 
                     const response = await $.ajax({
                         url: apiUrl,
-                        type: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        type: 'GET'
                     });
 
                     if (response && response.id) {
@@ -419,14 +414,10 @@
             async function checkPendingRoutes(productId) {
                 try {
                     const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
-                    const token = await SecureTokenProvider.getToken();
 
                     const routes = await $.ajax({
                         url: apiUrl,
-                        type: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        type: 'GET'
                     });
 
                     const pendingRoutes = (routes || []).filter(r => !r.isCompleted);
@@ -450,14 +441,10 @@
             async function loadRecentTransfers() {
                 try {
                     const apiUrl = AppConfig.buildApiUrl('inventoryroutes?pageSize=5&pageNumber=1');
-                    const token = await SecureTokenProvider.getToken();
 
                     const response = await $.ajax({
                         url: apiUrl,
-                        type: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+                        type: 'GET'
                     });
 
                     if (response && response.items && response.items.length > 0) {
