@@ -265,8 +265,11 @@ namespace InventoryManagement.Web.Controllers
                     }
                 }
 
+                // "Təhvil verdi" is whoever exports the document
+                var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
+
                 // Generate Word document
-                var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(department, departmentProducts);
+                var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(department, departmentProducts, exportedByFullName);
 
                 // Return as downloadable file
                 var fileName = $"{department.Name}_Inventory_{DateTime.Now:yyyyMMdd}.docx";

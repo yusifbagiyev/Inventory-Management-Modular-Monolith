@@ -43,7 +43,7 @@ Seven .NET web projects, all `net10.0`, all Serilog → Seq (`http://seq:80` in 
 
 | Service | Local dev port | Compose port | Container name | DB |
 |---|---|---|---|---|
-| `ApiGateway` | — | `5000:80` | `inventory_api_gateway` | — |
+| `ApiGateway` | 5000 | `5000:80` | `inventory_api_gateway` | — |
 | `ProductService.API` | 5001 | (internal) | `inventory_product_service` | `product_service` |
 | `RouteService.API` | 5002 | (internal) | `inventory_route_service` | `route_service` |
 | `IdentityService.API` | 5003 | (internal) | `inventory_identity_service` | `identity_service` |
@@ -90,13 +90,20 @@ Front door: `nginx` (host 80/443) → `web` and `api-gateway`. Seq UI: `http://l
 
 `ProductService`, `RouteService`, `ApprovalService`, `NotificationService` each ship a `RabbitMQPublisher : IMessagePublisher` (singleton) and a `RabbitMQConsumer : BackgroundService` (hosted). Exchange: `inventory-events` (topic). Events like `ProductCreatedEvent` are published from command handlers after `SaveChangesAsync`. Consumers include their own dead-letter queue plumbing (see `PermanentMessageException` in `ProductService.Infrastructure/Services/RabbitMQConsumer.cs` — a permanent failure is routed to `<queue>-dead` instead of nacked-and-requeued). Config lookup order in every RabbitMQ init: `IConfiguration["RabbitMQ:*"]` → `Environment.GetEnvironmentVariable("RabbitMQ__*")` → `localhost`/`guest`.
 
+**Event graph** (queue bindings are hard-coded per consumer — a new routing key reaches nobody until you add a `QueueBind`):
+- `RouteService` consumes `product.created` / `product.updated` / `product.deleted` and **auto-writes an `InventoryRoute` entry for each** — the route table is the product audit trail, with a product snapshot embedded so history survives later renames.
+- Transfers loop back: `CompleteRoute` (RouteService) publishes `product.transferred` → `ProductService`'s consumer updates the product's department/worker. A transfer isn't reflected on the product until that message is processed.
+- `NotificationService` binds `approval.request.{created,processed,cancelled}`, `product.created`, `product.deleted`, `route.created`, `route.completed` — persists a notification, pushes via SignalR, and also posts to WhatsApp groups (`WhatsAppService`, WaSender API; settings under `WhatsApp` in its appsettings).
+
+`ReadMe.docx` at the repo root is the original design write-up (flows, event payloads). It says Notification consumes "all events" — the bindings above are what the code actually does.
+
 ## Real-time (SignalR)
 
 `NotificationService` hosts a `NotificationHub` at `/notificationHub` (mapped with `.RequireAuthorization()`). Because browsers can't set `Authorization` on the WebSocket upgrade, the JWT middleware reads it from the `?access_token=` query param when the path starts with `/notificationHub`. Clients are added to `user-{userId}` and `role-{roleName}` groups on connect for targeted push. `Web` opens the connection directly via `NotificationService__BaseUrl` — this is one of the few paths that does **not** go through the API gateway.
 
 ## Persistence & migrations
 
-Every service owns its own PostgreSQL database (see table above). All DbContexts are registered in the service's Infrastructure `DependencyInjection.cs`. **Migrations are applied automatically at startup** — every service's `Program.cs` calls `Database.MigrateAsync()` followed by `Database.EnsureCreatedAsync()` inside a startup scope. Adding a migration therefore only requires running `dotnet ef migrations add …` locally; deployment picks it up on next boot.
+Every service owns its own PostgreSQL database (see table above). All DbContexts are registered in the service's Infrastructure `DependencyInjection.cs`. **Migrations are applied automatically at startup** — every service's `Program.cs` calls `Database.Migrate()`/`MigrateAsync()` followed by `EnsureCreated[Async]()` inside a startup scope. Adding a migration therefore only requires running `dotnet ef migrations add …` locally; deployment picks it up on next boot.
 
 ## Frontend (InventoryManagement.Web)
 
