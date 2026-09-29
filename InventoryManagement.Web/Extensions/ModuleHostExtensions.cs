@@ -100,9 +100,9 @@ namespace InventoryManagement.Web.Extensions
         }
 
         /// <summary>Applies pending migrations for every module, then realigns identity sequences.</summary>
-        public static async Task MigrateModulesAsync(this WebApplication app)
+        public static async Task MigrateModulesAsync(this IServiceProvider services)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = services.CreateAsyncScope();
             foreach (var contextType in ModuleDbContexts)
             {
                 var context = (DbContext)scope.ServiceProvider.GetRequiredService(contextType);
@@ -113,7 +113,8 @@ namespace InventoryManagement.Web.Extensions
             // advance identity sequences; the first insert would then collide. Only ever raises.
             var db = (DbContext)scope.ServiceProvider.GetRequiredService(ModuleDbContexts[0]);
             var schemas = string.Join(",", ModuleSchemas.Select(s => $"'{s}'"));
-            await db.Database.ExecuteSqlRawAsync($$"""
+            // The only interpolated value is the fixed schema list above - no user input.
+            var alignSequences = $$"""
                 DO $$
                 DECLARE
                     r record; seq text; max_id bigint; last bigint; called boolean;
@@ -130,7 +131,8 @@ namespace InventoryManagement.Web.Extensions
                         END IF;
                     END LOOP;
                 END $$;
-                """);
+                """;
+            await db.Database.ExecuteSqlRawAsync(alignSequences);
         }
 
         /// <summary>/api error handling, CSRF protection for cookie-authenticated API calls, SignalR.</summary>
