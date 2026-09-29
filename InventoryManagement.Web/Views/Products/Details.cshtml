@@ -44,7 +44,7 @@
                                 <div class="image-preview">
                                     <img src="@Model.FullImageUrl"
                                          alt="Product Image"
-                                         onclick="showImageModal('@Model.FullImageUrl', 'Product Image')"
+                                         data-src="@Model.FullImageUrl" onclick="showImageModal(this.dataset.src, 'Product Image')"
                                          style="cursor: pointer;" />
                                 </div>
                             }

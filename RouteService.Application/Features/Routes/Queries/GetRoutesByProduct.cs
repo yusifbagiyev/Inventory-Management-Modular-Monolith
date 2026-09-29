@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using RouteService.Application.DTOs;
 using RouteService.Domain.Repositories;
+using RouteService.Application.Mappings;
 
 namespace RouteService.Application.Features.Routes.Queries
 {
@@ -10,18 +10,16 @@ namespace RouteService.Application.Features.Routes.Queries
     public class GetRoutesByProductHandler : IRequestHandler<GetRoutesByProductQuery, IEnumerable<InventoryRouteDto>>
     {
         private readonly IInventoryRouteRepository _repository;
-        private readonly IMapper _mapper;
 
-        public GetRoutesByProductHandler(IInventoryRouteRepository repository, IMapper mapper)
+        public GetRoutesByProductHandler(IInventoryRouteRepository repository)
         {
             _repository = repository;
-            _mapper = mapper;
         }
 
         public async Task<IEnumerable<InventoryRouteDto>> Handle(GetRoutesByProductQuery request, CancellationToken cancellationToken)
         {
             var routes = await _repository.GetByProductIdAsync(request.ProductId, cancellationToken);
-            return _mapper.Map<IEnumerable<InventoryRouteDto>>(routes);
+            return routes.Select(x => x.ToDto());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@using Microsoft.AspNetCore.Mvc.Rendering
 @model PagedResultDto<ProductViewModel>
 @{
     ViewData["Title"] = "Products";
@@ -217,7 +217,7 @@
                                             {
                                                 <img src="@product.FullImageUrl" class="cell-thumb"
                                                      style="cursor: pointer;"
-                                                     onclick="showImageModal('@product.FullImageUrl','@product.Model')"
+                                                     data-src="@product.FullImageUrl" data-title="@product.Model" onclick="showImageModal(this.dataset.src, this.dataset.title)"
                                                      alt="@product.Model">
                                             }
                                             else
@@ -688,11 +688,7 @@
                                 location.reload(); // Reload to show empty state
                             }
                         });
-
-                        // Update the product count if displayed
-                        updateProductCount(-1);
-
-                    } 
+                    }
                     else {
                         // Deletion failed
                         showToast(
@@ -759,18 +755,6 @@
             }, 10000);
         }
 
-        function updateProductCount(change) {
-            const $countElement = $('.showing-text');
-            if ($countElement.length) {
-                const currentText = $countElement.text();
-                const match = currentText.match(/of (\d+) products/);
-                if (match) {
-                    const currentTotal = parseInt(match[1]);
-                    const newTotal = Math.max(0, currentTotal + change);
-                    $countElement.text(currentText.replace(/of \d+ products/, `of ${newTotal} products`));
-                }
-            }
-        }
 
         $('#deleteModal').on('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -857,46 +841,5 @@
             $('#globalImageModal .modal-title').text(title || 'Image Preview');
             $('#globalImageModal').modal('show');
         }
-    </script>
-    <script>
-        // Real-time search functionality
-        let searchTimeout;
-        const searchInput = document.getElementById('searchInput');
-        const searchForm = document.getElementById('searchForm');
-
-        if (searchInput && searchForm) {
-            searchInput.addEventListener('input', function(e) {
-                clearTimeout(searchTimeout);
-
-                // Show loading indicator
-                const submitBtn = searchForm.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Searching...';
-                }
-
-                searchTimeout = setTimeout(() => {
-                    searchForm.submit();
-                }, 500); // Wait 500ms after user stops typing
-            });
-        }
-
-        // Update the showing text dynamically
-        function updateShowingText() {
-            const totalCount = @(ViewBag.TotalCount ?? 0);
-            const showingStart = @(ViewBag.ShowingStart ?? 0);
-            const showingEnd = @(ViewBag.ShowingEnd ?? 0);
-
-            const showingText = document.querySelector('.showing-text');
-            if (showingText) {
-                if (totalCount === 0) {
-                    showingText.textContent = 'No products found';
-                } else {
-                    showingText.textContent = `Showing ${showingStart}-${showingEnd} of ${totalCount} products`;
-                }
-            }
-        }
-
-        // Call on page load
-        document.addEventListener('DOMContentLoaded', updateShowingText);
     </script>
 }

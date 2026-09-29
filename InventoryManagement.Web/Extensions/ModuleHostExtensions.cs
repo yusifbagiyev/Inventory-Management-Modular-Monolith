@@ -53,7 +53,6 @@ namespace InventoryManagement.Web.Extensions
         public static IServiceCollection AddModules(this IServiceCollection services, IMvcBuilder mvc)
         {
             services.AddSharedKernel(ModuleAssemblies);
-            services.AddAutoMapper(cfg => { }, ModuleAssemblies);
 
             services.AddIdentityModule();
             services.AddProductModule();

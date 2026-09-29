@@ -14,6 +14,7 @@ namespace ProductService.Domain.Repositories
         Task<Department> AddAsync(Department category, CancellationToken cancellationToken = default);
         Task UpdateAsync(Department category, CancellationToken cancellationToken = default);
         Task DeleteAsync(Department category, CancellationToken cancellationToken = default);
-        Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
+        /// <summary>Products and distinct assigned workers per department for the given ids.</summary>
+        Task<Dictionary<int, (int Products, int Workers)>> GetUsageAsync(IEnumerable<int> departmentIds, CancellationToken cancellationToken = default);
     }
 }

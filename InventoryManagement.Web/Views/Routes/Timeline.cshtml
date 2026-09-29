@@ -112,7 +112,7 @@
                                                  class="img-thumbnail timeline-image-zoom mb-2"
                                                  style="max-width: 150px; cursor: pointer;"
                                                  alt="Transfer Image"
-                                                 onclick="showImageModal('@route.FullImageUrl', 'Transfer Image')" />
+                                                 data-src="@route.FullImageUrl" onclick="showImageModal(this.dataset.src, 'Transfer Image')" />
                                         }
 
                                         @if (route.IsCompleted)

@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Categories.Queries
 {
@@ -13,11 +13,9 @@ namespace ProductService.Application.Features.Categories.Queries
     public class  GetPagedCategoriesQueryHandler :IRequestHandler<GetPagedCategoriesQuery, PagedResultDto<CategoryDto>>
     {
         private readonly ICategoryRepository _categoryRepository;
-        private readonly IMapper _mapper;
-        public GetPagedCategoriesQueryHandler(ICategoryRepository categoryRepository ,IMapper mapper)
+        public GetPagedCategoriesQueryHandler(ICategoryRepository categoryRepository )
         {
             _categoryRepository= categoryRepository;
-            _mapper= mapper;
         }
 
         public async Task<PagedResultDto<CategoryDto>> Handle(GetPagedCategoriesQuery request, CancellationToken cancellationToken)
@@ -30,7 +28,7 @@ namespace ProductService.Application.Features.Categories.Queries
 
             return new PagedResultDto<CategoryDto>
             {
-                Items = _mapper.Map<IEnumerable<CategoryDto>>(categories.Items),
+                Items = await categories.Items.ToDtosAsync(_categoryRepository, cancellationToken),
                 TotalCount = categories.TotalCount,
                 PageNumber = categories.PageNumber,
                 PageSize = categories.PageSize

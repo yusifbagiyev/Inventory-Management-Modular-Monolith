@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using MediatR;
 using RouteService.Application.DTOs;
@@ -10,6 +9,7 @@ using RouteService.Domain.ValueObjects;
 using SharedServices.Contracts;
 using SharedServices.Exceptions;
 using SharedServices.Persistence;
+using RouteService.Application.Mappings;
 
 namespace RouteService.Application.Features.Routes.Commands
 {
@@ -33,7 +33,6 @@ namespace RouteService.Application.Features.Routes.Commands
             private readonly IProductCatalog _productCatalog;
             private readonly IImageService _imageService;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
             private readonly DbSession _session;
 
             public Handler(
@@ -41,14 +40,12 @@ namespace RouteService.Application.Features.Routes.Commands
                 IProductCatalog productCatalog,
                 IImageService imageService,
                 IUnitOfWork unitOfWork,
-                IMapper mapper,
                 DbSession session)
             {
                 _repository = repository;
                 _productCatalog = productCatalog;
                 _imageService = imageService;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
                 _session = session;
             }
 
@@ -96,7 +93,7 @@ namespace RouteService.Application.Features.Routes.Commands
                 await _repository.AddAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return _mapper.Map<InventoryRouteDto>(route);
+                return route.ToDto();
             }
         }
     }

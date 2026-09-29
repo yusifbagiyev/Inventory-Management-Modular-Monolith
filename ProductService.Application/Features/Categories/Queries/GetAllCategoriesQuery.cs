@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Categories.Queries
 {
@@ -10,18 +10,16 @@ namespace ProductService.Application.Features.Categories.Queries
     public class GetAllCategoriesQueryHandler : IRequestHandler<GetAllCategoriesQuery, IEnumerable<CategoryDto>>
     {
         private readonly ICategoryRepository _categoryRepository;
-        private readonly IMapper _mapper;
 
-        public GetAllCategoriesQueryHandler(ICategoryRepository categoryRepository,IMapper mapper)
+        public GetAllCategoriesQueryHandler(ICategoryRepository categoryRepository)
         {
             _categoryRepository = categoryRepository;
-            _mapper = mapper;
         }
 
         public async Task<IEnumerable<CategoryDto>> Handle(GetAllCategoriesQuery request, CancellationToken cancellationToken)
         {
             var categories = await _categoryRepository.GetAllAsync(cancellationToken);
-            return _mapper.Map<IEnumerable<CategoryDto>>(categories);
+            return await categories.ToDtosAsync(_categoryRepository, cancellationToken);
         }
     }
 }

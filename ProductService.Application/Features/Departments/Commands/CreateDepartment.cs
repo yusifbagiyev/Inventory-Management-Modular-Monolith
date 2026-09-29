@@ -1,8 +1,8 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Departments.Commands
 {
@@ -14,16 +14,13 @@ namespace ProductService.Application.Features.Departments.Commands
         {
             private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
 
             public CreateDepartmentCommandHandler(
                 IDepartmentRepository departmentRepository,
-                IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IUnitOfWork unitOfWork)
             {
                 _departmentRepository = departmentRepository;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
             }
 
             public async Task<DepartmentDto> Handle(Command request, CancellationToken cancellationToken)
@@ -37,7 +34,7 @@ namespace ProductService.Application.Features.Departments.Commands
                 await _departmentRepository.AddAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return _mapper.Map<DepartmentDto>(department);
+                return department.ToDto(productCount: 0, workerCount: 0);
             }
         }
     }

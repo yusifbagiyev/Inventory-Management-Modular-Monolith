@@ -154,7 +154,7 @@
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
-                                                    onclick="deleteCategory(@category.Id, '@category.Name')">
+                                                    data-name="@category.Name" onclick="deleteCategory(@category.Id, this.dataset.name)">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>

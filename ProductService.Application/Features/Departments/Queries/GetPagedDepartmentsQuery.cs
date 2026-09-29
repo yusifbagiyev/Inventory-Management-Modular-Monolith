@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Departments.Queries
 {
@@ -12,11 +12,9 @@ namespace ProductService.Application.Features.Departments.Queries
     public class  GetPagedDepartmentsQueryHandler : IRequestHandler<GetPagedDepartmentsQuery, PagedResultDto<DepartmentDto>>
     {
         private readonly IDepartmentRepository _departmentRepository;
-        private readonly IMapper _mapper;
-        public GetPagedDepartmentsQueryHandler(IDepartmentRepository departmentRepository ,IMapper mapper)
+        public GetPagedDepartmentsQueryHandler(IDepartmentRepository departmentRepository )
         {
             _departmentRepository= departmentRepository;
-            _mapper= mapper;
         }
 
         public async Task<PagedResultDto<DepartmentDto>> Handle(GetPagedDepartmentsQuery request, CancellationToken cancellationToken)
@@ -29,7 +27,7 @@ namespace ProductService.Application.Features.Departments.Queries
 
             return new PagedResultDto<DepartmentDto>
             {
-                Items = _mapper.Map<IEnumerable<DepartmentDto>>(departments.Items),
+                Items = await departments.Items.ToDtosAsync(_departmentRepository, cancellationToken),
                 TotalCount = departments.TotalCount,
                 PageNumber = departments.PageNumber,
                 PageSize = departments.PageSize
