@@ -1,4 +1,4 @@
-﻿@model List<UserListViewModel>
+@model List<UserListViewModel>
 @{
     var allRoles = Model.SelectMany(u => u.Roles).Distinct().OrderBy(r => r).ToList();
 }
@@ -156,7 +156,7 @@
                                             <i class="fas fa-key"></i>
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-danger"
-                                                onclick="deleteUser(@user.Id, '@user.Username')"
+                                                data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
                                                 title="Delete User">
                                             <i class="fas fa-trash"></i>
                                         </button>

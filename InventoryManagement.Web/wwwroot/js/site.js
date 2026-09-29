@@ -106,21 +106,6 @@ document.addEventListener('DOMContentLoaded', function () {
     setupSessionMonitor();
 });
 
-// AJAX helper functions
-function showSpinner() {
-    const spinner = document.createElement('div');
-    spinner.className = 'spinner-overlay';
-    spinner.innerHTML = '<div class="spinner-border text-light" style="width: 3rem; height: 3rem;"></div>';
-    document.body.appendChild(spinner);
-}
-
-function hideSpinner() {
-    const spinner = document.querySelector('.spinner-overlay');
-    if (spinner) {
-        spinner.remove();
-    }
-}
-
 // Image preview for file inputs
 function previewImage(input, previewId) {
     if (input.files && input.files[0]) {
@@ -208,37 +193,15 @@ function getToastIcon(type) {
 
 
 // Helper function to escape HTML
-function escapeHtml(unsafe) {
-    return unsafe.replace(/&/g, "&amp;")
-                 .replace(/</g, "&lt;")
-                 .replace(/>/g, "&gt;")
-                 .replace(/"/g, "&quot;")
-                 .replace(/'/g, "&#039;");
-}
-
-
-// Global function to reset form state
-function resetFormState(fromElement){
-    // Find all submit buttons in the form
-    const submitButtons = fromElement.querySelectorAll('button[type="submit"]');
-
-    submitButtons.forEach(button => {
-        // Reset button state
-        button.disabled = false;
-
-        // Restore original text (store it first if not already)
-        if (button.dataset.originalText) {
-            button.innerHTML = button.dataset.originalText;
-        } else {
-            // Remove spinner if present
-            const spinner = button.querySelector('.spinner-border');
-            if (spinner) {
-                spinner.remove();
-            }
-            // Remove "Processing..." text
-            button.innerHTML = button.innerHTML.replace('Processing...', 'Submit');
-        }
-    });
+/** HTML-escapes text for insertion into markup. null/undefined become ''. */
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 

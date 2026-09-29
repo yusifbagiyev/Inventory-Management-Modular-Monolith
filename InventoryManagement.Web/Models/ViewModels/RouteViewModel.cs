@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Models.ViewModels
@@ -49,7 +49,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? Notes { get; set; }
 
         // For dropdowns
-        public List<SelectListItem>? Products { get; set; }
         public List<SelectListItem>? Departments { get; set; }
     }
 

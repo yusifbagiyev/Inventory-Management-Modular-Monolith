@@ -19,7 +19,6 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<Department?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Departments
-                .Include(d => d.Products)
                 .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         }
 
@@ -40,7 +39,6 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<IEnumerable<Department>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Departments
-                .Include(p=>p.Products)
                 .ToListAsync(cancellationToken);
         }
 
@@ -51,7 +49,7 @@ namespace ProductService.Infrastructure.Repositories
             string search, 
             CancellationToken cancellationToken = default)
         {
-            var query = _context.Departments.Include(c => c.Products).AsQueryable();
+            var query = _context.Departments.AsNoTracking().AsQueryable();
 
             IEnumerable<Department> items;
             int totalCount;
@@ -121,9 +119,21 @@ namespace ProductService.Infrastructure.Repositories
             return Task.CompletedTask;
         }
 
-        public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<Dictionary<int, (int Products, int Workers)>> GetUsageAsync(IEnumerable<int> departmentIds, CancellationToken cancellationToken = default)
         {
-            return await _context.Departments.AnyAsync(d => d.Id == id, cancellationToken);
+            var ids = departmentIds.ToList();
+            var rows = await _context.Products
+                .Where(p => ids.Contains(p.DepartmentId))
+                .GroupBy(p => p.DepartmentId)
+                .Select(g => new
+                {
+                    g.Key,
+                    Products = g.Count(),
+                    // Distinct, case-insensitive, non-empty worker names.
+                    Workers = g.Where(p => p.Worker != null && p.Worker != "").Select(p => p.Worker!.ToLower()).Distinct().Count()
+                })
+                .ToListAsync(cancellationToken);
+            return rows.ToDictionary(x => x.Key, x => (x.Products, x.Workers));
         }
     }
 }

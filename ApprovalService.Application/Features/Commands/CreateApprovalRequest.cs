@@ -2,11 +2,11 @@ using System.Text.Json;
 using ApprovalService.Application.DTOs;
 using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Repositories;
-using AutoMapper;
 using MediatR;
 using SharedServices.DTOs;
 using SharedServices.Events;
 using SharedServices.Persistence;
+using ApprovalService.Application.Mappings;
 
 namespace ApprovalService.Application.Features.Commands
 {
@@ -20,18 +20,15 @@ namespace ApprovalService.Application.Features.Commands
             private readonly IApprovalRequestRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IPublisher _publisher;
-            private readonly IMapper _mapper;
 
             public Handler(
                 IApprovalRequestRepository repository,
                 IUnitOfWork unitOfWork,
-                IPublisher publisher,
-                IMapper mapper)
+                IPublisher publisher)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _publisher = publisher;
-                _mapper = mapper;
             }
 
             public async Task<ApprovalRequestDto> Handle(Command request, CancellationToken cancellationToken)
@@ -54,7 +51,7 @@ namespace ApprovalService.Application.Features.Commands
                     approvalRequest.RequestedByName,
                     approvalRequest.CreatedAt), cancellationToken);
 
-                return _mapper.Map<ApprovalRequestDto>(approvalRequest);
+                return approvalRequest.ToDto();
             }
         }
     }

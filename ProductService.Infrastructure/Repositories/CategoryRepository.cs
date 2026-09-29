@@ -19,7 +19,6 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<Category?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             return await _context.Categories
-                .Include(c => c.Products)
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         }
 
@@ -40,7 +39,6 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Categories
-                .Include(p=>p.Products)
                 .ToListAsync(cancellationToken);
         }
 
@@ -48,7 +46,7 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<PagedResult<Category>> GetPagedAsync(
             int pageNumber, int pageSize, string? search, CancellationToken cancellationToken = default)
         {
-            var query = _context.Categories.Include(c => c.Products).AsQueryable();
+            var query = _context.Categories.AsNoTracking().AsQueryable();
 
             IEnumerable<Category> items;
             int totalCount;
@@ -114,17 +112,14 @@ namespace ProductService.Infrastructure.Repositories
             return Task.CompletedTask;
         }
 
-        public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<Dictionary<int, int>> GetProductCountsAsync(IEnumerable<int> categoryIds, CancellationToken cancellationToken = default)
         {
-            return await _context.Categories.AnyAsync(c => c.Id == id, cancellationToken);
-        }
-
-        public async Task<int?> GetProductCountAsync(int categoryId, CancellationToken cancellationToken = default)
-        {
+            var ids = categoryIds.ToList();
             return await _context.Products
-                .Include(c=>c.Category)
-                .Where(c=>c.CategoryId==categoryId)
-                .CountAsync(cancellationToken);
+                .Where(p => ids.Contains(p.CategoryId))
+                .GroupBy(p => p.CategoryId)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace RouteService.Application
 {
     public static class DependencyInjection
     {
-        /// <remarks>MediatR handlers, validators and AutoMapper profiles are registered by the host.</remarks>
+        /// <remarks>MediatR handlers and validators are registered by the host.</remarks>
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<IImageService, ImageService>();

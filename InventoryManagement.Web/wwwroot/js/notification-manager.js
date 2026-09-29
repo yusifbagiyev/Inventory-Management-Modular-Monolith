@@ -425,9 +425,9 @@ window.NotificationManager = (function () {
                             try {
                                 // Use the getRequestSummary function from the page
                                 const summary = getRequestSummary(requestType, actionData);
-                                $this.html(summary);
+                                $this.text(summary);
                             } catch (e) {
-                                $this.html('<span class="text-danger">Error parsing data</span>');
+                                $this.empty().append($('<span class="text-danger">').text('Error parsing data'));
                             }
                         });
 

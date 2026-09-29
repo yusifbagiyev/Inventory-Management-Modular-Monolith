@@ -7,7 +7,7 @@ namespace ApprovalService.Application
 {
     public static class DependencyInjection
     {
-        /// <remarks>MediatR handlers and AutoMapper profiles are registered by the host.</remarks>
+        /// <remarks>MediatR handlers are registered by the host.</remarks>
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<IActionExecutor, ActionExecutor>();

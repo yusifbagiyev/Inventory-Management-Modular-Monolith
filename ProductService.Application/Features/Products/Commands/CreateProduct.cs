@@ -1,4 +1,3 @@
-using AutoMapper;
 using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
@@ -36,7 +35,6 @@ namespace ProductService.Application.Features.Products.Commands
         {
             private readonly IProductRepository _productRepository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
             private readonly IImageService _imageService;
             private readonly IPublisher _publisher;
             private readonly DbSession _session;
@@ -44,14 +42,12 @@ namespace ProductService.Application.Features.Products.Commands
             public CreateProductCommandHandler(
                 IProductRepository productRepository,
                 IUnitOfWork unitOfWork,
-                IMapper mapper,
                 IImageService imageService,
                 IPublisher publisher,
                 DbSession session)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
                 _imageService = imageService;
                 _publisher = publisher;
                 _session = session;
@@ -95,7 +91,7 @@ namespace ProductService.Application.Features.Products.Commands
 
                 await _publisher.Publish(new ProductCreatedEvent(created.ToState(), created.CreatedAt), cancellationToken);
 
-                return _mapper.Map<ProductDto>(created);
+                return created.ToDto();
             }
         }
     }
