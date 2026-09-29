@@ -1,52 +1,49 @@
-﻿using ApprovalService.Application.DTOs;
-using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
 using MediatR;
+using SharedServices.Events;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
 
 namespace ApprovalService.Application.Features.Commands
 {
     public class CancelRequest
     {
-        public record Command(int RequestId) : IRequest;    
+        /// <param name="UserId">The caller; only the requester may cancel.</param>
+        public record Command(int RequestId, int UserId) : IRequest, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command>
         {
             private readonly IApprovalRequestRepository _repository;
-            private readonly IMessagePublisher _messagePublisher;
+            private readonly IPublisher _publisher;
             private readonly IUnitOfWork _unitOfWork;
 
-            public Handler(
-                IApprovalRequestRepository repository,
-                IMessagePublisher messagePublisher,
-                IUnitOfWork unitOfWork)
+            public Handler(IApprovalRequestRepository repository, IPublisher publisher, IUnitOfWork unitOfWork)
             {
                 _repository = repository;
-                _messagePublisher = messagePublisher;
+                _publisher = publisher;
                 _unitOfWork = unitOfWork;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
-                    ?? throw new InvalidOperationException($"Request {request.RequestId} not found");
+                    ?? throw new NotFoundException($"Request {request.RequestId} not found");
+
+                if (approvalRequest.RequestedById != request.UserId)
+                    throw new InsufficientPermissionsException("You can only cancel your own requests");
 
                 if (approvalRequest.Status != ApprovalStatus.Pending)
                     throw new InvalidOperationException("Only pending requests can be cancelled");
 
-                // Publish cancellation event before deleting
-                var cancelEvent = new ApprovalRequestCancelledEvent
-                {
-                    RequestId = approvalRequest.Id,
-                    RequestType = approvalRequest.RequestType,
-                    RequestedById = approvalRequest.RequestedById,
-                    CancelledAt = DateTime.Now
-                };
-
-                await _messagePublisher.PublishAsync(cancelEvent, "approval.request.cancelled", cancellationToken);
-
                 await _repository.DeleteAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                await _publisher.Publish(new ApprovalRequestCancelledEvent(
+                    approvalRequest.Id,
+                    approvalRequest.RequestType,
+                    approvalRequest.RequestedById,
+                    DateTime.Now), cancellationToken);
             }
         }
     }

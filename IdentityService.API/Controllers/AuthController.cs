@@ -1,4 +1,4 @@
-﻿using IdentityService.Application.DTOs;
+using IdentityService.Application.DTOs;
 using IdentityService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,13 +22,12 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicyPerIP")]
+        [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
-            var ipAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim()
-                ?? HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault()
-                ?? HttpContext.Connection.RemoteIpAddress?.ToString()
-                ?? "unknown";
+            // RemoteIpAddress is the real client once the host's forwarded-headers middleware has
+            // processed X-Forwarded-For from the trusted proxy; the raw header is client-controlled.
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             _logger.LogInformation(
                 "Login attempt for user {Username} from IP {IpAddress}",
@@ -413,22 +412,6 @@ namespace IdentityService.API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet("users/by-role/{role}")]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersByRole(string role)
-        {
-            try
-            {
-                var users = await _authService.GetAllUsersAsync();
-                var usersInRole = users.Where(u => u.Roles.Contains(role));
-                return Ok(usersInRole);
-            }
-            catch 
-            {
-                return BadRequest();
             }
         }
     }

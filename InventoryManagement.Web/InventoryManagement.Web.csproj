@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,28 +21,24 @@
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-    <PackageReference Include="itext" Version="9.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Refit" Version="8.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
-    <PackageReference Include="Serilog.Enrichers.Process" Version="3.0.0" />
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
   </ItemGroup>
-	
-  <ItemGroup>
-    <ProjectReference Include="..\NotificationService.Application\NotificationService.Application.csproj" />
-  </ItemGroup>
 
+  <!-- The backend modules. This project is the single host for the UI and the /api surface. -->
   <ItemGroup>
-    <Folder Include="nginx\ssl\" />
+    <ProjectReference Include="..\ApprovalService.API\ApprovalService.API.csproj" />
+    <ProjectReference Include="..\IdentityService.API\IdentityService.API.csproj" />
+    <ProjectReference Include="..\NotificationService.API\NotificationService.API.csproj" />
+    <ProjectReference Include="..\ProductService.API\ProductService.API.csproj" />
+    <ProjectReference Include="..\RouteService.API\RouteService.API.csproj" />
   </ItemGroup>
 
 </Project>

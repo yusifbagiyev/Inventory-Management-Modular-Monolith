@@ -1,64 +1,58 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using ApprovalService.Application.DTOs;
-using ApprovalService.Application.Events;
-using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Repositories;
 using AutoMapper;
 using MediatR;
 using SharedServices.DTOs;
+using SharedServices.Events;
+using SharedServices.Persistence;
 
 namespace ApprovalService.Application.Features.Commands
 {
     public class CreateApprovalRequest
     {
-        public record Command(CreateApprovalRequestDto Dto, int UserId, string UserName) : IRequest<ApprovalRequestDto>;
-        
+        public record Command(CreateApprovalRequestDto Dto, int UserId, string UserName)
+            : IRequest<ApprovalRequestDto>, ITransactionalRequest;
+
         public class Handler : IRequestHandler<Command, ApprovalRequestDto>
         {
             private readonly IApprovalRequestRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMessagePublisher _messagePublisher;
+            private readonly IPublisher _publisher;
             private readonly IMapper _mapper;
-            
+
             public Handler(
                 IApprovalRequestRepository repository,
                 IUnitOfWork unitOfWork,
-                IMessagePublisher messagePublisher,
+                IPublisher publisher,
                 IMapper mapper)
             {
-                _repository= repository;
-                _unitOfWork= unitOfWork;
-                _messagePublisher= messagePublisher;
-                _mapper= mapper;
+                _repository = repository;
+                _unitOfWork = unitOfWork;
+                _publisher = publisher;
+                _mapper = mapper;
             }
 
             public async Task<ApprovalRequestDto> Handle(Command request, CancellationToken cancellationToken)
             {
-                var actionDataJson = JsonSerializer.Serialize(request.Dto.ActionData);
-
                 var approvalRequest = new ApprovalRequest(
                     request.Dto.RequestType,
                     request.Dto.EntityType,
                     request.Dto.EntityId,
-                    actionDataJson,
+                    JsonSerializer.Serialize(request.Dto.ActionData),
                     request.UserId,
                     request.UserName);
 
                 await _repository.AddAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                //Publish event for notification
-                var evt = new ApprovalRequestCreatedEvent
-                {
-                    RequestId = approvalRequest.Id,
-                    RequestType = approvalRequest.RequestType,
-                    RequestedById = approvalRequest.RequestedById,
-                    RequestedByName = approvalRequest.RequestedByName,
-                    CreatedAt = approvalRequest.CreatedAt
-                };
-
-                await _messagePublisher.PublishAsync(evt, "approval.request.created", cancellationToken);
+                await _publisher.Publish(new ApprovalRequestCreatedEvent(
+                    approvalRequest.Id,
+                    approvalRequest.RequestType,
+                    approvalRequest.RequestedById,
+                    approvalRequest.RequestedByName,
+                    approvalRequest.CreatedAt), cancellationToken);
 
                 return _mapper.Map<ApprovalRequestDto>(approvalRequest);
             }
