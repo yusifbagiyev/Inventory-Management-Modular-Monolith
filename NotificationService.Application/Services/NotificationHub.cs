@@ -1,83 +1,52 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace NotificationService.Application.Services
 {
+    /// <summary>
+    /// Pushes notifications to the browser. Each connection joins "user-{id}" and "role-{role}"
+    /// groups so the dispatcher can target a user or every holder of a role.
+    /// </summary>
     [Authorize]
     public class NotificationHub : Hub
     {
-        private readonly IConnectionManager _connectionManager;
         private readonly ILogger<NotificationHub> _logger;
 
-        public NotificationHub(IConnectionManager connectionManager, ILogger<NotificationHub> logger)
+        public NotificationHub(ILogger<NotificationHub> logger)
         {
-            _connectionManager = connectionManager;
             _logger = logger;
         }
 
         public override async Task OnConnectedAsync()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (!string.IsNullOrEmpty(userId))
             {
-                // Store connection for this user
-                await _connectionManager.AddConnection(userId, Context.ConnectionId);
-
-                // Add to user-specific group - this is crucial for targeted notifications
                 var userGroup = $"user-{userId}";
                 await Groups.AddToGroupAsync(Context.ConnectionId, userGroup);
-                _logger.LogInformation($"User {userId} joined group {userGroup}");
 
-                // Add to role groups for role-based notifications
-                var roles = Context.User?.FindAll(ClaimTypes.Role).Select(c => c.Value) ?? Enumerable.Empty<string>();
-                foreach (var role in roles)
-                {
-                    var roleGroup = $"role-{role}";
+                var roleGroups = (Context.User?.FindAll(ClaimTypes.Role) ?? [])
+                    .Select(c => $"role-{c.Value}")
+                    .ToList();
+                foreach (var roleGroup in roleGroups)
                     await Groups.AddToGroupAsync(Context.ConnectionId, roleGroup);
-                    _logger.LogInformation($"User {userId} added to role group: {roleGroup}");
-                }
 
-                // Send connection confirmation with initial data
                 await Clients.Caller.SendAsync("ConnectionEstablished", new
                 {
                     connectionId = Context.ConnectionId,
-                    userId = userId,
-                    userGroup = userGroup,
-                    roleGroups = roles.Select(r => $"role-{r}").ToList(),
+                    userId,
+                    userGroup,
+                    roleGroups,
                     timestamp = DateTime.Now,
                     message = "Connected successfully"
                 });
-                _logger.LogInformation($"User {userId} connected with ID {Context.ConnectionId}");
+
+                _logger.LogDebug("User {UserId} connected to the notification hub ({ConnectionId})", userId, Context.ConnectionId);
             }
 
             await base.OnConnectedAsync();
-        }
-
-        public override async Task OnDisconnectedAsync(Exception? exception)
-        {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await _connectionManager.RemoveConnection(userId, Context.ConnectionId);
-                _logger.LogInformation($"User {userId} disconnected: {exception?.Message ?? "Normal disconnect"}");
-            }
-
-            await base.OnDisconnectedAsync(exception);
-        }
-
-        public async Task JoinUserGroup()
-        {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-            {
-                var userGroup = $"user-{userId}";
-                await Groups.AddToGroupAsync(Context.ConnectionId, userGroup);
-                _logger.LogInformation($"User {userId} explicitly joined group {userGroup}");
-            }
         }
     }
 }

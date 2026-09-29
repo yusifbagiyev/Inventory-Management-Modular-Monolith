@@ -1,4 +1,4 @@
-﻿using RouteService.Domain.Common;
+using RouteService.Domain.Common;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 
@@ -8,11 +8,10 @@ namespace RouteService.Domain.Repositories
     {
         Task<InventoryRoute?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<InventoryRoute>> GetByProductIdAsync(int productId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<InventoryRoute>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<InventoryRoute>> GetByRouteTypeAsync(RouteType routeType, CancellationToken cancellationToken = default);
+        /// <summary>True when the product already has a transfer waiting to be completed.</summary>
+        Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
         Task<InventoryRoute> AddAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task UpdateAsync(InventoryRoute route, CancellationToken cancellationToken = default);
-        Task<InventoryRoute?> GetLatestRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
         Task<PagedResult<InventoryRoute>> GetAllAsync(
             int pageNumber = 1,
             int pageSize = 30,
@@ -35,9 +34,6 @@ namespace RouteService.Domain.Repositories
             bool? isCompleted = null,
             RouteType? routeType = null,
             CancellationToken cancellationToken = default);
-
-        Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default);
         Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default);
-        Task<InventoryRoute?> GetPreviousRouteForProductAsync(int productId, int currentRouteId, CancellationToken cancellationToken = default);
     }
 }

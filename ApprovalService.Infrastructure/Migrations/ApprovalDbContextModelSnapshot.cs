@@ -17,7 +17,8 @@ namespace ApprovalService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasDefaultSchema("approval")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -79,6 +80,12 @@ namespace ApprovalService.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
@@ -87,7 +94,7 @@ namespace ApprovalService.Infrastructure.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("ApprovalRequests");
+                    b.ToTable("ApprovalRequests", "approval");
                 });
 #pragma warning restore 612, 618
         }

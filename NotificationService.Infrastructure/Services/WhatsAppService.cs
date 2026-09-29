@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
@@ -55,11 +55,12 @@ namespace NotificationService.Infrastructure.Services
             _httpClient = httpClient;
             _logger = logger;
 
-            _settings = configuration.GetSection("WhatsApp").Get<WhatsAppSettings>()
-                ?? throw new InvalidOperationException("WhatsApp settings not found in configuration");
+            // Missing settings must not break construction: the notification dispatcher depends on
+            // this service, and a throwing constructor would stop in-app notifications too.
+            _settings = configuration.GetSection("WhatsApp").Get<WhatsAppSettings>() ?? new WhatsAppSettings();
 
-            // Configure the HTTP client with base address and authorization
-            _httpClient.BaseAddress = new Uri(_settings.ApiUrl);
+            if (Uri.TryCreate(_settings.ApiUrl, UriKind.Absolute, out var apiUrl))
+                _httpClient.BaseAddress = apiUrl;
             _httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", _settings.ApiToken);
             _httpClient.DefaultRequestHeaders.Accept.Add(
