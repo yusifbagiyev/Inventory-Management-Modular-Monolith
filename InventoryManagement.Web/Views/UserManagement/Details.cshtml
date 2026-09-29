@@ -220,13 +220,10 @@
                 okText: deactivating ? 'Deactivate' : 'Activate',
                 danger: deactivating
             }, function () {
-                fetch('@Url.Action("QuickToggleStatus")', {
+                // The id travels in the route: a JSON body never bound to the action's int id.
+                fetch(`@Url.Action("QuickToggleStatus")/${userId}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({ id: userId })
+                    headers: AppConfig.antiforgeryHeaders()
                 })
                 .then(response => response.json())
                 .then(data => {

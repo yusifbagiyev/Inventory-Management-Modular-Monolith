@@ -1,4 +1,4 @@
-﻿using ProductService.Domain.Common;
+using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 
 namespace ProductService.Domain.Repositories
@@ -40,6 +40,9 @@ namespace ProductService.Domain.Repositories
         Task UpdateAsync(Product product, CancellationToken cancellationToken = default);
         Task DeleteAsync(Product product, CancellationToken cancellationToken = default);
         Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<int> CountAsync(CancellationToken cancellationToken = default);
+        /// <summary>Total and active products, optionally only those created in [createdFrom, createdTo].</summary>
+        Task<(int Total, int Active)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);
         Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
     }

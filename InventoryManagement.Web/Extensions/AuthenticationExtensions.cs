@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using InventoryManagement.Web.Services;
 using ProductService.API.Authentication;
 
 namespace InventoryManagement.Web.Extensions
@@ -46,6 +47,12 @@ namespace InventoryManagement.Web.Extensions
                 options.AccessDeniedPath = "/Account/AccessDenied";
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue("Authentication:CookieExpirationMinutes", 480));
                 options.SlidingExpiration = true;
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                // TLS terminates at nginx; with forwarded headers applied the request is HTTPS.
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+                options.Events.OnValidatePrincipal = UserPrincipalFactory.RefreshAsync;
 
                 // AJAX and /api callers get a status code they can act on instead of a redirect
                 // to the login page.

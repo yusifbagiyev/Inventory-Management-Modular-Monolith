@@ -1,4 +1,4 @@
-﻿using ApprovalService.Domain.Entities;
+using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
 using ApprovalService.Infrastructure.Data;
@@ -48,12 +48,12 @@ namespace ApprovalService.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<ApprovalRequest>> GetByStatusAsync(ApprovalStatus status, CancellationToken cancellationToken = default)
+        public Task<int> CountAsync(ApprovalStatus status, DateTime? processedSince = null, CancellationToken cancellationToken = default)
         {
-            return await _context.ApprovalRequests
-                .Where(r => r.Status == status)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync(cancellationToken);
+            var query = _context.ApprovalRequests.Where(r => r.Status == status);
+            if (processedSince.HasValue)
+                query = query.Where(r => r.ProcessedAt >= processedSince.Value);
+            return query.CountAsync(cancellationToken);
         }
 
 

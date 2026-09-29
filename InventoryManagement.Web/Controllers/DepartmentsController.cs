@@ -1,288 +1,156 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProductService.Application.Features.Departments.Commands;
+using ProductService.Application.Features.Departments.Queries;
+using ProductService.Application.Features.Lookups;
+using ProductService.Application.Features.Products.Queries;
+using SharedServices.Identity;
+using ModuleDtos = ProductService.Application.DTOs;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = AllRoles.Admin)]
     public class DepartmentsController : BaseController
     {
-        private readonly IApiService _apiService;
-        private readonly IUrlService _urlService;
+        /// <summary>Upper bound for the product table on the details page and the Word export.</summary>
+        private const int MaxProductsListed = 10000;
+
+        private readonly IMediator _mediator;
         private readonly IWordExportService _wordExportService;
 
         public DepartmentsController(
-            IApiService apiService, 
-            ILogger<DepartmentsController> logger,
-            IUrlService urlService,
-            IWordExportService wordExportService)
+            IMediator mediator,
+            IWordExportService wordExportService,
+            ILogger<DepartmentsController> logger)
             : base(logger)
         {
-            _apiService = apiService;
-            _urlService = urlService;
+            _mediator = mediator;
             _wordExportService = wordExportService;
         }
 
-        public async Task<IActionResult> Index(
-            int pageNumber = 1, 
-            int pageSize = 20, 
-            string? search = null)
+        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
         {
-            try
-            {
-                var queryString = $"?pageNumber={pageNumber}&pageSize={pageSize}";
-                if (!string.IsNullOrWhiteSpace(search))
-                    queryString += $"&search={Uri.EscapeDataString(search)}";
+            var page = await _mediator.Send(new GetPagedDepartmentsQuery(pageNumber, pageSize, search));
+            var stats = await _mediator.Send(new GetDepartmentStatsQuery());
 
-                var result = await _apiService.GetAsync<PagedResultDto<DepartmentViewModel>>(
-                    $"api/departments/paged{queryString}");
+            ViewBag.ActiveDepartments = stats.Active;
+            ViewBag.InActiveDepartments = stats.Inactive;
+            ViewBag.DepartmentsInWithProducts = stats.Products;
+            ViewBag.CurrentSearch = search;
+            ViewBag.PageNumber = pageNumber;
+            ViewBag.PageSize = pageSize;
 
-                var allDepartments=await _apiService.GetAsync<List<DepartmentViewModel>>(
-                    $"api/departments");
-
-                if (result == null)
-                {
-                    result = new PagedResultDto<DepartmentViewModel>
-                    {
-                        Items = [],
-                        TotalCount = 0,
-                        PageNumber = pageNumber,
-                        PageSize = pageSize
-                    };
-                }
-
-                if (allDepartments != null)
-                {
-                    var activeDepartments = 0;
-                    var inActiveDepartments = 0;
-                    var departmentsInWithProducts = 0;
-
-                    if (!string.IsNullOrEmpty(search))
-                    {
-                        activeDepartments = result.Items.Count(c => c.IsActive);
-                        inActiveDepartments = result.Items.Count(c => !c.IsActive);
-                        departmentsInWithProducts = result.Items.Sum(c => c.ProductCount);
-                    }
-                    else
-                    {
-                        activeDepartments = allDepartments.Count(c => c.IsActive);
-                        inActiveDepartments = allDepartments.Count(c => !c.IsActive);
-                        departmentsInWithProducts = allDepartments.Sum(c => c.ProductCount);
-                    }
-                    
-                    ViewBag.ActiveDepartments = activeDepartments;
-                    ViewBag.InActiveDepartments = inActiveDepartments;
-                    ViewBag.DepartmentsInWithProducts = departmentsInWithProducts;
-                }
-
-                ViewBag.CurrentSearch = search;
-                ViewBag.PageNumber = pageNumber;
-                ViewBag.PageSize = pageSize;
-
-                return View(result);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, new PagedResultDto<DepartmentViewModel>
-                {
-                    Items = new List<DepartmentViewModel>(),
-                    TotalCount = 0,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize
-                });
-            }
+            return View(ModelMapper.Map<PagedResultDto<DepartmentViewModel>>(page));
         }
-
 
 
         public async Task<IActionResult> Details(int id)
         {
-            try
-            {
-                var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
-                if (department == null)
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+            var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
+            if (department == null)
+                return RedirectToNotFound();
 
-                // Get products for this department
-                var products = await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
-                    $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
+            var products = await GetDepartmentProducts(id);
+            var model = ModelMapper.Map<DepartmentViewModel>(department);
+            model.ProductCount = products.Count;
+            model.WorkerCount = products
+                .Where(p => !string.IsNullOrEmpty(p.Worker))
+                .Select(p => p.Worker)
+                .Distinct()
+                .Count();
+            ViewBag.Products = products;
 
-                var departmentProducts = products?.Items?? new List<ProductViewModel>();
-
-                // Update the image URLs for display
-                foreach (var product in departmentProducts)
-                {
-                    if (!string.IsNullOrEmpty(product.ImageUrl))
-                    {
-                        product.FullImageUrl = _urlService.GetImageUrl(product.ImageUrl);
-                    }
-                }
-
-                ViewBag.Products = departmentProducts.ToList();
-
-                // Update counts
-                department.ProductCount = departmentProducts.Count();
-                department.WorkerCount = departmentProducts
-                    .Where(w => !string.IsNullOrEmpty(w.Worker))
-                    .Select(w => w.Worker)
-                    .Distinct()
-                    .Count();
-
-                return View(department);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error loading department details for ID: {DepartmentId}", id);
-                return HandleException(ex);
-            }
+            return View(model);
         }
 
 
-
-        public IActionResult Create()
-        {
-            return View(new DepartmentViewModel());
-        }
-
+        public IActionResult Create() => View(new DepartmentViewModel());
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DepartmentViewModel model)
         {
-            if(!ModelState.IsValid)
-            {
-                return HandleValidationErrors(ModelState);
-            }
-            try
-            {
-                var dto = new CreateDepartmentDto
-                {
-                    Name = model.Name,
-                    Description = model.Description,
-                    IsActive = model.IsActive
-                };
+            if (!ModelState.IsValid)
+                return HandleValidationErrors(model);
 
-                var response = await _apiService.PostAsync<DepartmentDto>("api/departments", dto);
-                return HandleApiResponse(response, "Index");
-            }
-            catch(Exception ex)
+            var dto = new ModuleDtos.CreateDepartmentDto
             {
-                return HandleException(ex, model);
-            }
+                Name = model.Name,
+                DepartmentHead = model.DepartmentHead,
+                Description = model.Description,
+                IsActive = model.IsActive
+            };
+            var response = await RunAsync(() => _mediator.Send(new CreateDepartment.Command(dto)), "Department created successfully");
+            return HandleApiResponse(response, nameof(Index));
         }
-
 
 
         public async Task<IActionResult> Edit(int id)
         {
-            try
-            {
-                var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
-                if (department == null)
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
-
-                return View(department);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
+            return department == null
+                ? RedirectToNotFound()
+                : View(ModelMapper.Map<DepartmentViewModel>(department));
         }
-
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, DepartmentViewModel model)
         {
-            if(!ModelState.IsValid)
-            {
-                return HandleValidationErrors(ModelState);
-            }
-            try
-            {
-                var dto= new UpdateDepartmentDto
-                {
-                    Name = model.Name,
-                    DepartmentHead = model.DepartmentHead,
-                    Description = model.Description,
-                    IsActive = model.IsActive
-                };
-                var response = await _apiService.PutAsync<bool>($"api/departments/{id}", dto);
-                return HandleApiResponse(response, "Index");
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex, model);
-            }
-        }
+            if (!ModelState.IsValid)
+                return HandleValidationErrors(model);
 
+            var dto = new ModuleDtos.UpdateDepartmentDto
+            {
+                Name = model.Name,
+                DepartmentHead = model.DepartmentHead,
+                Description = model.Description,
+                IsActive = model.IsActive
+            };
+            var response = await RunAsync(() => _mediator.Send(new UpdateDepartment.Command(id, dto)), "Department updated successfully");
+            return HandleApiResponse(response, nameof(Index));
+        }
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                var response = await _apiService.DeleteAsync($"api/departments/{id}");
-                return HandleApiResponse(response, "Index");
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var response = await RunAsync(() => _mediator.Send(new DeleteDepartment.Command(id)), "Department deleted successfully");
+            return HandleApiResponse(response, nameof(Index));
         }
 
 
-
-        [HttpGet("{id}/export-word")]
+        /// <summary>Department inventory as a Word document ("Təhvil verdi" is the exporting user).</summary>
         public async Task<IActionResult> ExportToWord(int id)
         {
-            try
-            {
-                // Get department details
-                var department = await _apiService.GetAsync<DepartmentViewModel>($"api/departments/{id}");
-                if (department == null)
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+            var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
+            if (department == null)
+                return RedirectToNotFound();
 
-                // Get products for this department
-                var products=await _apiService.GetAsync<PagedResultDto<ProductViewModel>>(
-                                    $"api/products?pageSize=10000&pageNumber=1&departmentId={id}");
+            var products = await GetDepartmentProducts(id);
+            var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
 
-                var departmentProducts=products?.Items?.ToList() ?? new List<ProductViewModel>();
+            var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(
+                ModelMapper.Map<DepartmentViewModel>(department), products, exportedByFullName);
 
-                // Update the image URLs for display (though we won't include images in Word)
-                foreach(var product in departmentProducts)
-                {
-                    if (!string.IsNullOrEmpty(product.ImageUrl))
-                    {
-                        product.FullImageUrl=_urlService.GetImageUrl(product.ImageUrl);
-                    }
-                }
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                $"{department.Name}_Inventory_{DateTime.Now:yyyyMMdd}.docx");
+        }
 
-                // "Təhvil verdi" is whoever exports the document
-                var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
 
-                // Generate Word document
-                var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(department, departmentProducts, exportedByFullName);
-
-                // Return as downloadable file
-                var fileName = $"{department.Name}_Inventory_{DateTime.Now:yyyyMMdd}.docx";
-
-                return File(fileBytes,
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    fileName);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error exporting department {DepartmentId} to Word", id);
-                return HandleException(ex);
-            }
+        private async Task<List<ProductViewModel>> GetDepartmentProducts(int departmentId)
+        {
+            var products = await _mediator.Send(new GetAllProductsQuery(1, MaxProductsListed, departmentId: departmentId));
+            return ModelMapper.MapList<ProductViewModel>(products.Items);
         }
     }
 }

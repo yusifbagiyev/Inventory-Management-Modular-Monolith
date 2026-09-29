@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
@@ -22,6 +22,20 @@ namespace ProductService.Infrastructure.Repositories
                 .Include(d => d.Products)
                 .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
         }
+
+        public async Task<(int Active, int Inactive)> CountByActivityAsync(CancellationToken cancellationToken = default)
+        {
+            var active = await _context.Departments.CountAsync(x => x.IsActive, cancellationToken);
+            var inactive = await _context.Departments.CountAsync(x => !x.IsActive, cancellationToken);
+            return (active, inactive);
+        }
+
+        public async Task<IReadOnlyList<LookupItem>> GetLookupAsync(CancellationToken cancellationToken = default)
+            => await _context.Departments
+                .AsNoTracking()
+                .OrderBy(x => x.Name)
+                .Select(x => new LookupItem(x.Id, x.Name))
+                .ToListAsync(cancellationToken);
 
         public async Task<IEnumerable<Department>> GetAllAsync(CancellationToken cancellationToken = default)
         {

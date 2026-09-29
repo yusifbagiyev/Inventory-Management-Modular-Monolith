@@ -6,44 +6,19 @@ namespace InventoryManagement.Web.Extensions
 {
     public static class ServiceExtensions
     {
+        /// <summary>UI-side services; all backed in-process by the modules.</summary>
         public static IServiceCollection AddCustomServices(this IServiceCollection services)
         {
-            // Add HTTP clients
-            services.AddHttpClient<IApiService, ApiService>();
-            services.AddHttpClient<IAuthService, AuthService>();
-            services.AddHttpClient<IApprovalService, Services.ApprovalService>();
-            services.AddHttpClient<INotificationService, Services.NotificationService>();
-            services.AddHttpClient<IUserManagementService, UserManagementService>();
-
-            // Add other services. NOTE: the five interfaces above are registered by AddHttpClient
-            // (typed clients with a pooled handler); re-registering them with AddScoped here used
-            // to override that and throw away connection pooling, so only the rest are listed.
-            services.AddScoped<IUrlService, UrlService>();
-            services.AddScoped<ITokenManager, TokenManager>();
+            services.AddScoped<IApprovalService, Services.ApprovalService>();
+            services.AddScoped<INotificationService, Services.NotificationService>();
+            services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<IWordExportService, WordExportService>();
-
             return services;
         }
 
+        /// <summary>Same rule as the backend's PermissionHandler: Admins hold every permission.</summary>
         public static bool HasPermission(this ClaimsPrincipal user, string permission)
-        {
-            return user.Claims.Any(c => c.Type == "permission" && c.Value == permission);
-        }
-
-        public static string ToTitleCase(this string str)
-        {
-            if (string.IsNullOrEmpty(str))
-                return str;
-
-            var words = str.Split(' ');
-            for (int i = 0; i < words.Length; i++)
-            {
-                if (words[i].Length > 0)
-                {
-                    words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
-                }
-            }
-            return string.Join(" ", words);
-        }
+            => user.IsInRole(SharedServices.Identity.AllRoles.Admin)
+               || user.Claims.Any(c => c.Type == UserPrincipalFactory.PermissionClaim && c.Value == permission);
     }
 }

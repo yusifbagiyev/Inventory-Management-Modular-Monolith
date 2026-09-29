@@ -1,10 +1,15 @@
-﻿using IdentityService.Application.DTOs;
+using IdentityService.Application.DTOs;
 
 namespace IdentityService.Application.Services
 {
     public interface IAuthService
     {
         // Authentication methods
+        /// <summary>
+        /// Verifies username/password (with lockout) and records the login. Used by the UI's cookie
+        /// sign-in; throws UnauthorizedAccessException on failure.
+        /// </summary>
+        Task<UserDto> ValidateCredentialsAsync(string username, string password);
         Task<TokenDto> LoginAsync(LoginDto dto);
         Task<TokenDto> RegisterAsync(RegisterDto dto);
         Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto);
@@ -19,24 +24,22 @@ namespace IdentityService.Application.Services
 
         // Password management
         Task<bool> ResetPasswordAsync(int userId, string newPassword);
-        Task<bool> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
+        /// <returns>Error is the first identity error description when the change fails.</returns>
+        Task<(bool Succeeded, string? Error)> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
 
         // Role management
         Task<IEnumerable<string>> GetAllRolesAsync();
         Task<bool> AssignRoleAsync(int userId, string roleName);
         Task<bool> RemoveRoleAsync(int userId, string roleName);
+        /// <summary>Makes the user's roles exactly <paramref name="roleNames"/>.</summary>
+        Task<bool> SetRolesAsync(int userId, IEnumerable<string> roleNames);
 
         // Permission management
-        Task<IEnumerable<object>> GetAllPermissionsAsync();
+        Task<IReadOnlyList<PermissionDto>> GetAllPermissionsAsync();
         Task<bool> HasPermissionAsync(int userId, string permission);
         Task<bool> GrantPermissionToUserAsync(int userId, string permissionName, string grantedBy);
         Task<bool> RevokePermissionFromUserAsync(int userId, string permissionName);
         Task<List<PermissionDto>> GetUserDirectPermissionsAsync(int userId);
 
-        // Additional utility methods
-        Task<bool> UserExistsAsync(int userId);
-        Task<bool> UserExistsAsync(string username);
-        Task<UserDto?> GetUserByUsernameAsync(string username);
-        Task<UserDto?> GetUserByEmailAsync(string email);
     }
 }

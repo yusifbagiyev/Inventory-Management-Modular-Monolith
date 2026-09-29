@@ -1,4 +1,4 @@
-﻿using ApprovalService.Domain.Entities;
+using ApprovalService.Domain.Entities;
 using ApprovalService.Domain.Enums;
 
 namespace ApprovalService.Domain.Repositories
@@ -9,7 +9,8 @@ namespace ApprovalService.Domain.Repositories
         Task<IEnumerable<ApprovalRequest>> GetPendingAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
         Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<ApprovalRequest>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<ApprovalRequest>> GetByStatusAsync(ApprovalStatus status, CancellationToken cancellationToken = default);
+        /// <summary>Requests in <paramref name="status"/>, optionally only those processed since <paramref name="processedSince"/>.</summary>
+        Task<int> CountAsync(ApprovalStatus status, DateTime? processedSince = null, CancellationToken cancellationToken = default);
         Task<ApprovalRequest> AddAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
         Task UpdateAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
         Task<IEnumerable<ApprovalRequest>> GetAllAsync(CancellationToken cancellationToken = default);

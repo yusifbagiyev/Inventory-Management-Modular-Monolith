@@ -9,6 +9,8 @@ namespace RouteService.Domain.Repositories
         Task<InventoryRoute?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<InventoryRoute>> GetByProductIdAsync(int productId, CancellationToken cancellationToken = default);
         /// <summary>True when the product already has a transfer waiting to be completed.</summary>
+        /// <summary>Transfers created in [from, to], projected to what the dashboard needs.</summary>
+        Task<IReadOnlyList<TransferActivity>> GetTransferActivityAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
         Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
         Task<InventoryRoute> AddAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task UpdateAsync(InventoryRoute route, CancellationToken cancellationToken = default);
