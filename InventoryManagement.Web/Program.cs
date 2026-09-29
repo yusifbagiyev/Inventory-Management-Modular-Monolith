@@ -74,7 +74,7 @@ try
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
 
-    await app.MigrateModulesAsync();
+    await app.Services.MigrateModulesAsync();
 
     Log.Information("InventoryManagement configured successfully");
     app.Run();
@@ -87,3 +87,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+/// <summary>Entry point type, public so integration tests can host the app.</summary>
+public partial class Program;
