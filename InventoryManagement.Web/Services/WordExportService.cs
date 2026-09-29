@@ -23,7 +23,8 @@ namespace InventoryManagement.Web.Services
 
         public byte[] GenerateDepartmentInventoryDocument(
             DepartmentViewModel department,
-            List<ProductViewModel> products)
+            List<ProductViewModel> products,
+            string? exportedByFullName)
         {
             using var memoryStream = new MemoryStream();
 
@@ -66,7 +67,7 @@ namespace InventoryManagement.Web.Services
 
                 // 6. Add signature section with full-width golden highlighting
                 // This section is marked to keep together (won't split across pages)
-                AddSignatureSection(body, department);
+                AddSignatureSection(body, department, exportedByFullName);
             }
 
             return memoryStream.ToArray();
@@ -518,7 +519,7 @@ namespace InventoryManagement.Web.Services
         /// The entire line is highlighted from start to finish.
         /// Uses KeepNext property to prevent page breaks between signature lines.
         /// </summary>
-        private void AddSignatureSection(Body body, DepartmentViewModel department)
+        private void AddSignatureSection(Body body, DepartmentViewModel department, string? exportedByFullName)
         {
             // Create a table with full-width cells for complete background highlighting
             var signatureTable = new Table();
@@ -550,9 +551,13 @@ namespace InventoryManagement.Web.Services
             transferredParaProp.Append(new KeepNext());
             transferredPara.Append(transferredParaProp);
 
+            var transferredByName = !string.IsNullOrWhiteSpace(exportedByFullName)
+                ? exportedByFullName
+                : "_______________";
+
             // Changed from CreateHighlightedTextRun to CreateTextRun
             var transferredRun = CreateTextRun(
-                "Təhvil verdi: Yusif Bağıyev ____________________",
+                $"Təhvil verdi: {transferredByName} ____________________",
                 22,
                 true,
                 true);
