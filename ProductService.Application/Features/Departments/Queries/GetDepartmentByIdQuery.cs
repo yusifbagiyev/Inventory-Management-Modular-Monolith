@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Departments.Queries
 {
@@ -10,12 +10,10 @@ namespace ProductService.Application.Features.Departments.Queries
     public class GetDepartmentByIdQueryHandler : IRequestHandler<GetDepartmentByIdQuery, DepartmentDto?>
     {
         private readonly IDepartmentRepository _departmentRepository;
-        private readonly IMapper _mapper;
 
-        public GetDepartmentByIdQueryHandler(IDepartmentRepository departmentRepository,IMapper mapper)
+        public GetDepartmentByIdQueryHandler(IDepartmentRepository departmentRepository)
         {
             _departmentRepository = departmentRepository;
-            _mapper = mapper;
         }
 
         public async Task<DepartmentDto?> Handle(GetDepartmentByIdQuery request, CancellationToken cancellationToken)
@@ -23,7 +21,7 @@ namespace ProductService.Application.Features.Departments.Queries
             var department = await _departmentRepository.GetByIdAsync(request.Id, cancellationToken);
             if (department == null) return null;
 
-            return _mapper.Map<DepartmentDto>(department);
+            return (await new[] { department }.ToDtosAsync(_departmentRepository, cancellationToken))[0];
         }
     }
 }

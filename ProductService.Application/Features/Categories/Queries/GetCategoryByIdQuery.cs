@@ -1,7 +1,7 @@
-﻿using AutoMapper;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Categories.Queries
 {
@@ -10,12 +10,10 @@ namespace ProductService.Application.Features.Categories.Queries
     public class GetCategoryByIdQueryHandler : IRequestHandler<GetCategoryByIdQuery, CategoryDto?>
     {
         private readonly ICategoryRepository _categoryRepository;
-        private readonly IMapper _mapper;
 
-        public GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository,IMapper mapper)
+        public GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository)
         {
             _categoryRepository = categoryRepository;
-            _mapper = mapper;
         }
 
         public async Task<CategoryDto?> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
@@ -23,7 +21,7 @@ namespace ProductService.Application.Features.Categories.Queries
             var category = await _categoryRepository.GetByIdAsync(request.Id, cancellationToken);
             if (category == null) return null;
 
-            return _mapper.Map<CategoryDto>(category);
+            return (await new[] { category }.ToDtosAsync(_categoryRepository, cancellationToken))[0];
         }
     }
 }

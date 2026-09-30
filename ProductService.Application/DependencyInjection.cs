@@ -1,32 +1,18 @@
-﻿using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using ProductService.Application.Behaviors;
 using ProductService.Application.Interfaces;
 using ProductService.Application.Services;
-using System.Reflection;
+using SharedServices.Contracts;
 
 namespace ProductService.Application
 {
     public static class DependencyInjection
     {
+        /// <remarks>MediatR handlers and validators are registered by the host.</remarks>
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            var assembly = Assembly.GetExecutingAssembly();
-
-            services.AddAutoMapper(assembly);
-            services.AddValidatorsFromAssembly(assembly);
-            services.AddMediatR(config => config.RegisterServicesFromAssembly(assembly));
-
-            // Add services
             services.AddScoped<IImageService, ImageService>();
-            services.AddScoped<ITransactionService, TransactionService>();
             services.AddScoped<IProductManagementService, ProductManagementService>();
-
-
-            // Add validation behavior
-            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
-
+            services.AddScoped<IApprovalActionHandler, ProductApprovalActionHandler>();
             return services;
         }
     }

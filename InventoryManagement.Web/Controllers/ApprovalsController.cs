@@ -1,117 +1,70 @@
-﻿using InventoryManagement.Web.Models.ViewModels;
+using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = AllRoles.Admin)]
     public class ApprovalsController : BaseController
     {
         private readonly IApprovalService _approvalService;
 
         public ApprovalsController(IApprovalService approvalService, ILogger<ApprovalsController> logger)
-            :base(logger)
+            : base(logger)
         {
             _approvalService = approvalService;
         }
 
         public async Task<IActionResult> Index()
         {
-            try
-            {
-                var pendingRequests = await _approvalService.GetPendingRequestsAsync();
-                var statistics = await _approvalService.GetStatisticsAsync();
+            var pendingRequests = await _approvalService.GetPendingRequestsAsync();
+            var statistics = await _approvalService.GetStatisticsAsync();
 
-                var model = new ApprovalDashboardViewModel
-                {
-                    PendingRequests = pendingRequests,
-                    TotalPending = statistics.TotalPending,
-                    TotalApproved = statistics.TotalApprovedToday,
-                    TotalRejected = statistics.TotalRejectedToday
-                };
-
-                return View(model);
-            }
-            catch (Exception ex)
+            return View(new ApprovalDashboardViewModel
             {
-                return HandleException(ex, new ApprovalDashboardViewModel());
-            }
+                PendingRequests = pendingRequests,
+                TotalPending = statistics.TotalPending,
+                TotalApproved = statistics.TotalApprovedToday,
+                TotalRejected = statistics.TotalRejectedToday
+            });
         }
-
 
         public async Task<IActionResult> Details(int id)
         {
-            try
-            {
-                if(id== 0)
-                {
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
-                }
-                var request = await _approvalService.GetRequestDetailsAsync(id);
-                if (request == null)
-                {
-                    return RedirectToAction("NotFound","Home","?statusCode=404");
-                }
-                return PartialView("_ApprovalDetails", request);
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var request = await _approvalService.GetRequestDetailsAsync(id);
+            return request == null ? RedirectToNotFound() : PartialView("_ApprovalDetails", request);
         }
 
-
+        /// <summary>Approves and executes the request. A failed execution is reported, not thrown.</summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id)
         {
-            try
-            {
-                if(id== 0)
-                {
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
-                }
-                var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
-                if (approvalRequest == null)
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
+            var response = await RunAsync(() => _approvalService.ApproveRequestAsync(id));
+            if (!response.IsSuccess)
+                return BadRequest(new { success = false, message = response.Message });
 
-                await _approvalService.ApproveRequestAsync(id);
-                return Json(new { success = true, message = "Request approved successfully" });
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            return response.Data
+                ? Json(new { success = true, message = "Request approved successfully" })
+                : Json(new { success = false, message = "The request was approved but its action failed to execute. The requester has been notified." });
         }
 
-
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id, string reason)
         {
-            if (id == 0)
-            {
-                return RedirectToAction("NotFound", "Home", "?statusCode=404");
-            }
             if (string.IsNullOrWhiteSpace(reason))
             {
                 return HandleError("Rejection reason is required", null,
                     new Dictionary<string, string> { ["reason"] = "Please provide a reason for rejection" });
             }
 
-            try
-            {
-                var approvalRequest = await _approvalService.GetRequestDetailsAsync(id);
-                if (approvalRequest == null)
-                    return RedirectToAction("NotFound", "Home", "?statusCode=404");
-
-                await _approvalService.RejectRequestAsync(id, reason);
-
-                return Json(new { success = true, message = "Request rejected succesfully" });
-            }
-            catch (Exception ex)
-            {
-                return HandleException(ex);
-            }
+            var response = await RunAsync(() => _approvalService.RejectRequestAsync(id, reason));
+            return response.IsSuccess
+                ? Json(new { success = true, message = "Request rejected successfully" })
+                : BadRequest(new { success = false, message = response.Message });
         }
     }
 }

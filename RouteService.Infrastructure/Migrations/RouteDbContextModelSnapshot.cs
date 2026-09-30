@@ -17,7 +17,8 @@ namespace RouteService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasDefaultSchema("route")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -73,6 +74,12 @@ namespace RouteService.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");
@@ -83,7 +90,9 @@ namespace RouteService.Infrastructure.Migrations
                     b.HasIndex("ToDepartmentId")
                         .HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
 
-                    b.ToTable("InventoryRoutes");
+                    b.HasIndex("IsCompleted", "CompletedAt");
+
+                    b.ToTable("InventoryRoutes", "route");
                 });
 
             modelBuilder.Entity("RouteService.Domain.Entities.InventoryRoute", b =>
@@ -128,7 +137,7 @@ namespace RouteService.Infrastructure.Migrations
                             b1.HasIndex("ProductId")
                                 .HasDatabaseName("IX_InventoryRoutes_ProductId");
 
-                            b1.ToTable("InventoryRoutes");
+                            b1.ToTable("InventoryRoutes", "route");
 
                             b1.WithOwner()
                                 .HasForeignKey("InventoryRouteId");

@@ -1,10 +1,11 @@
-﻿namespace RouteService.Domain.Repositories
+namespace RouteService.Domain.Repositories
 {
+    /// <remarks>
+    /// Transactions are opened by the host's MediatR transaction behavior, which also covers the
+    /// products module when a route completes; commands only save.
+    /// </remarks>
     public interface IUnitOfWork
     {
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-        Task BeginTransactionAsync(CancellationToken cancellationToken = default);
-        Task CommitTransactionAsync(CancellationToken cancellationToken = default);
-        Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
     }
 }

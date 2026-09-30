@@ -1,80 +1,67 @@
-﻿using FluentValidation;
+using FluentValidation;
 using MediatR;
-using ProductService.Application.Events;
-using ProductService.Application.Interfaces;
-using SharedServices.Exceptions;
+using ProductService.Application.Mappings;
 using ProductService.Domain.Repositories;
-using ProductService.Application.DTOs;
+using SharedServices.Events;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
 
 namespace ProductService.Application.Features.Products.Commands
 {
     public class UpdateProductInventoryCode
     {
-        public record Command(int Id, int InventoryCode) : IRequest;
-        public class Validator:AbstractValidator<Command>
+        public record Command(int Id, int InventoryCode) : IRequest, ITransactionalRequest;
+
+        public class Validator : AbstractValidator<Command>
         {
             public Validator()
             {
+                // Same range as CreateProduct.
                 RuleFor(x => x.InventoryCode)
                     .GreaterThan(0).WithMessage("Inventory code must be greater than 0")
-                    .LessThan(9999).WithMessage("Inventory code must be less than 9999");
+                    .LessThan(10000).WithMessage("Inventory code must be less than 10000");
             }
         }
+
         public class Handler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
-            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMessagePublisher _messagePublisher;
-            public Handler(IProductRepository productRepository,
-                IUnitOfWork unitOfWork,
-                IMessagePublisher messagePublisher,
-                IDepartmentRepository departmentRepository)
+            private readonly IPublisher _publisher;
+
+            public Handler(IProductRepository productRepository, IUnitOfWork unitOfWork, IPublisher publisher)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
-                _messagePublisher = messagePublisher;
-                _departmentRepository = departmentRepository;
+                _publisher = publisher;
             }
+
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
-                var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken);
-                if (product == null)
-                {
-                    throw new NotFoundException($"Product with ID {request.Id} not found");
-                }
+                var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken)
+                    ?? throw new NotFoundException($"Product with ID {request.Id} not found");
 
-                // Track what changed
-                string changes = string.Empty;
+                if (product.InventoryCode == request.InventoryCode)
+                    return;
 
-                if (product.InventoryCode != request.InventoryCode)
-                    changes = $"Inventory code changed from {product.InventoryCode} to {request.InventoryCode}";
+                var existing = await _productRepository.GetByInventoryCodeAsync(request.InventoryCode, cancellationToken);
+                if (existing != null && existing.Id != product.Id)
+                    throw new DuplicateEntityException($"Inventory code {request.InventoryCode} already exists");
 
+                var before = product.ToState();
                 product.ChangeInventoryCode(request.InventoryCode);
+
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-                
-                var departmentName = await _departmentRepository.GetByIdAsync(product.DepartmentId, cancellationToken)
-                    ?? throw new ArgumentException($"Department with ID {product.DepartmentId} not found");
 
-                if (string.IsNullOrEmpty(changes))
-                {
-                    var eventMessage = new ProductUpdatedEvent
-                    {
-                        Product=new ProductDto
-                        {
-                            Id = product.Id,
-                            InventoryCode = product.InventoryCode,
-                            CategoryId = product.CategoryId,
-                            DepartmentId = product.DepartmentId,
-                            DepartmentName = departmentName.Name,
-                            Worker = product.Worker,
-                        },
-                        Changes = "Inventory code updated",
-                        UpdatedAt = DateTime.Now
-                    };
-                    await _messagePublisher.PublishAsync(eventMessage,"product.updated", cancellationToken);
-                }
+                // Previously this event was only sent when the code did NOT change, so real changes
+                // never reached the route history.
+                await _publisher.Publish(new ProductUpdatedEvent(
+                    before,
+                    product.ToState(),
+                    $"Inventory code changed from {before.InventoryCode} to {request.InventoryCode}",
+                    NewImageUrl: null,
+                    DateTime.Now), cancellationToken);
             }
         }
     }

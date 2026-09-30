@@ -9,6 +9,7 @@ namespace ProductService.Application.Interfaces
         Task<ProductDto> CreateProductWithApprovalAsync(CreateProductDto dto, int userId, string userName, List<string> userPermissions);
         Task<ProductDto> UpdateProductWithApprovalAsync(int id, UpdateProductDto dto, int userId, string userName, List<string> userPermissions);
         Task DeleteProductWithApprovalAsync(int id, int userId, string userName, List<string> userPermissions);
+        Task<List<string>> TrackWhatChanges(ProductDto existingProduct, UpdateProductDto updatedProduct);
         int GetUserId(ClaimsPrincipal User);
         string GetUserName(ClaimsPrincipal User);
         List<string> GetUserPermissions(ClaimsPrincipal User);

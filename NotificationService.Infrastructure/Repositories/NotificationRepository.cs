@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NotificationService.Domain.Entities;
 using NotificationService.Domain.Repositories;
 using NotificationService.Infrastructure.Data;
@@ -66,10 +66,18 @@ namespace NotificationService.Infrastructure.Repositories
                     .SetProperty(n => n.ReadAt, DateTime.Now), cancellationToken);
         }
 
-        public Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default)
+        public Task AddRangeAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default)
+            => _context.Notifications.AddRangeAsync(notifications, cancellationToken);
+
+        public Task<int> DeleteByApprovalRequestAsync(int approvalRequestId, CancellationToken cancellationToken = default)
         {
-            _context.Notifications.Remove(notification);
-            return Task.CompletedTask;
+            // Data is compact JSON written by NotificationDispatcher, so the id is followed by ',' or
+            // '}'. Matching the delimiter keeps request 1 from also deleting requests 10-19, 100...
+            var withComma = $"\"approvalRequestId\":{approvalRequestId},";
+            var atEnd = $"\"approvalRequestId\":{approvalRequestId}}}";
+            return _context.Notifications
+                .Where(n => n.Data != null && (n.Data.Contains(withComma) || n.Data.Contains(atEnd)))
+                .ExecuteDeleteAsync(cancellationToken);
         }
     }
 }

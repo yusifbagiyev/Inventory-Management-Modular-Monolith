@@ -1,4 +1,4 @@
-﻿namespace ProductService.Domain.Entities
+namespace ProductService.Domain.Entities
 {
     public class Department
     {
@@ -11,12 +11,6 @@
         public DateTime? UpdatedAt { get; private set; }
         // Navigation property
         public ICollection<Product> Products { get; private set; } = [];
-
-        public int WorkerCount => Products
-            .Where(p=>!string.IsNullOrEmpty(p.Worker))
-            .Select(p=>p.Worker)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count(); // Calculate count of workers which is not null in departments 
 
         // For EF Core
         protected Department() { }
@@ -43,16 +37,6 @@
 
             Name = name;
             IsActive = isActive;
-            UpdatedAt = DateTime.Now;
-        }
-        public void Activate()
-        {
-            IsActive = true;
-            UpdatedAt = DateTime.Now;
-        }
-        public void Deactivate()
-        {
-            IsActive = false;
             UpdatedAt = DateTime.Now;
         }
     }

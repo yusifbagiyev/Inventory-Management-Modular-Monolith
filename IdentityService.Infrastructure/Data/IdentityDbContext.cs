@@ -1,13 +1,17 @@
-﻿using IdentityService.Domain.Entities;
+using IdentityService.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SharedServices.Identity;
+using SharedServices.Persistence;
+using Microsoft.EntityFrameworkCore.Design;
 
 namespace IdentityService.Infrastructure.Data
 {
     public class IdentityDbContext : IdentityDbContext<User, Role, int>
     {
+        public const string Schema = "identity";
+
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -21,6 +25,7 @@ namespace IdentityService.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            builder.HasDefaultSchema(Schema);
 
             builder.Entity<User>(entity =>
             {
@@ -127,8 +132,8 @@ namespace IdentityService.Infrastructure.Data
             {
                 // Route permissions
                 new Permission { Id = 1, Name = AllPermissions.RouteView, Category = "Route", Description = "View routes" },
-                new Permission { Id = 2, Name = AllPermissions.RouteCreate, Category = "Route", Description = "Create routes" },
-                new Permission { Id = 3, Name = AllPermissions.RouteCreateDirect, Category = "Route", Description = "Create routes (requires approval)" },
+                new Permission { Id = 2, Name = AllPermissions.RouteCreate, Category = "Route", Description = "Create routes (requires approval)" },
+                new Permission { Id = 3, Name = AllPermissions.RouteCreateDirect, Category = "Route", Description = "Create routes directly" },
                 new Permission { Id = 4, Name = AllPermissions.RouteUpdate, Category = "Route", Description = "Update routes (requires approval)" },
                 new Permission { Id = 5, Name = AllPermissions.RouteUpdateDirect, Category = "Route", Description = "Update routes directly" },
                 new Permission { Id = 6, Name = AllPermissions.RouteDelete, Category = "Route", Description = "Delete routes (requires approval)" },
@@ -155,17 +160,19 @@ namespace IdentityService.Infrastructure.Data
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
 
-            // Manager (Operator) - Request permissions only
+            // Operator - request (approval) permissions plus route completion. The earlier seed was
+            // off by one and granted product.create.direct / product.update.direct instead.
             rolePermissions.AddRange(new[]
             {
-                new RolePermission { RoleId = 2, PermissionId = 1 }, // RouteView
-                new RolePermission { RoleId = 2, PermissionId = 2 }, // RouteCreate
-                new RolePermission { RoleId = 2, PermissionId = 4 }, // RouteUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 6 }, // RouteDelete (request)
-                new RolePermission { RoleId = 2, PermissionId = 8 }, // ProductView
-                new RolePermission { RoleId = 2, PermissionId = 9 }, // ProductCreate (request)
-                new RolePermission { RoleId = 2, PermissionId = 11 }, // ProductUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 13 }, // ProductDelete (request)
+                new RolePermission { RoleId = 2, PermissionId = 1 },  // RouteView
+                new RolePermission { RoleId = 2, PermissionId = 2 },  // RouteCreate (request)
+                new RolePermission { RoleId = 2, PermissionId = 4 },  // RouteUpdate (request)
+                new RolePermission { RoleId = 2, PermissionId = 6 },  // RouteDelete (request)
+                new RolePermission { RoleId = 2, PermissionId = 8 },  // RouteComplete
+                new RolePermission { RoleId = 2, PermissionId = 9 },  // ProductView
+                new RolePermission { RoleId = 2, PermissionId = 10 }, // ProductCreate (request)
+                new RolePermission { RoleId = 2, PermissionId = 12 }, // ProductUpdate (request)
+                new RolePermission { RoleId = 2, PermissionId = 14 }, // ProductDelete (request)
             });
 
             // User - View only
@@ -178,5 +185,12 @@ namespace IdentityService.Infrastructure.Data
             builder.Entity<RolePermission>().HasData(rolePermissions);
 
         }
+    }
+
+    /// <summary>Used by `dotnet ef` only.</summary>
+    public class IdentityDbContextFactory : IDesignTimeDbContextFactory<IdentityDbContext>
+    {
+        public IdentityDbContext CreateDbContext(string[] args)
+            => new(ModuleDbContextExtensions.DesignTimeOptions<IdentityDbContext>(IdentityDbContext.Schema));
     }
 }

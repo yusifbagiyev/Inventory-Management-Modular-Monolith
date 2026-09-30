@@ -17,7 +17,8 @@ namespace IdentityService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasDefaultSchema("identity")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -44,7 +45,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Permissions");
+                    b.ToTable("Permissions", "identity");
 
                     b.HasData(
                         new
@@ -58,14 +59,14 @@ namespace IdentityService.Infrastructure.Migrations
                         {
                             Id = 2,
                             Category = "Route",
-                            Description = "Create routes",
+                            Description = "Create routes (requires approval)",
                             Name = "route.create"
                         },
                         new
                         {
                             Id = 3,
                             Category = "Route",
-                            Description = "Create routes (requires approval)",
+                            Description = "Create routes directly",
                             Name = "route.create.direct"
                         },
                         new
@@ -191,7 +192,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", "identity");
                 });
 
             modelBuilder.Entity("IdentityService.Domain.Entities.Role", b =>
@@ -224,7 +225,7 @@ namespace IdentityService.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("RoleNameIndex");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("AspNetRoles", "identity");
 
                     b.HasData(
                         new
@@ -265,7 +266,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", "identity");
 
                     b.HasData(
                         new
@@ -376,12 +377,17 @@ namespace IdentityService.Infrastructure.Migrations
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 11
+                            PermissionId = 10
                         },
                         new
                         {
                             RoleId = 2,
-                            PermissionId = 13
+                            PermissionId = 12
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            PermissionId = 14
                         },
                         new
                         {
@@ -476,7 +482,7 @@ namespace IdentityService.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", "identity");
 
                     b.HasData(
                         new
@@ -520,7 +526,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.ToTable("UserPermissions");
+                    b.ToTable("UserPermissions", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
@@ -544,7 +550,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaims", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<int>", b =>
@@ -568,7 +574,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaims", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<int>", b =>
@@ -589,7 +595,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogins", "identity");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
@@ -604,7 +610,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("AspNetUserRoles", "identity");
 
                     b.HasData(
                         new
@@ -630,7 +636,7 @@ namespace IdentityService.Infrastructure.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserTokens", "identity");
                 });
 
             modelBuilder.Entity("IdentityService.Domain.Entities.RefreshToken", b =>

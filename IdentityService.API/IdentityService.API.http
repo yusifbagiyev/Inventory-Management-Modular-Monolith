@@ -1,6 +1,0 @@
-@IdentityService.API_HostAddress = http://localhost:5269
-
-GET {{IdentityService.API_HostAddress}}/swagger/
-Accept: application/json
-
-###

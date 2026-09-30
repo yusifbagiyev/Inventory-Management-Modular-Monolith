@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RouteService.Domain.Common;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
@@ -29,15 +29,6 @@ namespace RouteService.Infrastructure.Repositories
         {
             return await _context.InventoryRoutes
                 .Where(r => r.ProductSnapshot.ProductId == productId)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync(cancellationToken);
-        }
-
-
-        public async Task<IEnumerable<InventoryRoute>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
-        {
-            return await _context.InventoryRoutes
-                .Where(r => r.FromDepartmentId == departmentId || r.ToDepartmentId == departmentId)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
         }
@@ -86,14 +77,6 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<InventoryRoute>> GetByRouteTypeAsync(RouteType routeType, CancellationToken cancellationToken = default)
-        {
-            return await _context.InventoryRoutes
-                .Where(r => r.RouteType == routeType)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync(cancellationToken);
-        }
-
         
         public async Task<InventoryRoute> AddAsync(InventoryRoute route, CancellationToken cancellationToken = default)
         {
@@ -109,15 +92,6 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
-        public async Task<InventoryRoute?> GetLatestRouteForProductAsync(int productId, CancellationToken cancellationToken = default)
-        {
-            return await _context.InventoryRoutes
-                .Where(r => r.ProductSnapshot.ProductId == productId)
-                .OrderByDescending(r => r.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
-
-
         public async Task<PagedResult<InventoryRoute>> GetAllAsync(
             int pageNumber,
             int pageSize,
@@ -130,7 +104,7 @@ namespace RouteService.Infrastructure.Repositories
             RouteType? routeType = null,
             CancellationToken cancellationToken = default)
         {
-            var query = _context.InventoryRoutes.AsQueryable();
+            var query = _context.InventoryRoutes.AsNoTracking().AsQueryable();
 
             if (isCompleted.HasValue)
                 query = query.Where(r => r.IsCompleted == isCompleted.Value);
@@ -189,6 +163,10 @@ namespace RouteService.Infrastructure.Repositories
                 var allFilteredItems = await broadQuery
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
+                    // Pending routes all share CompletedAt = default, so without a tiebreaker
+                    // their order - and therefore paging - was nondeterministic.
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.Id)
                     .ToListAsync(cancellationToken);
 
                 // Azerbaijani-aware refine in memory: every word must match at least one field.
@@ -222,6 +200,10 @@ namespace RouteService.Infrastructure.Repositories
                 items = await query
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
+                    // Pending routes all share CompletedAt = default, so without a tiebreaker
+                    // their order - and therefore paging - was nondeterministic.
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.Id)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync(cancellationToken);
@@ -237,13 +219,28 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<InventoryRoute>> GetIncompleteRoutesAsync(CancellationToken cancellationToken = default)
-        {
-            return await _context.InventoryRoutes
-                .Where(r => !r.IsCompleted)
-                .OrderBy(r => r.CreatedAt)
+        public async Task<IReadOnlyList<TransferActivity>> GetTransferActivityAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+            => await _context.InventoryRoutes
+                .AsNoTracking()
+                .Where(r => r.RouteType == RouteType.Transfer && r.CreatedAt >= from && r.CreatedAt <= to)
+                .Select(r => new TransferActivity(
+                    r.ProductSnapshot.ProductId,
+                    r.FromDepartmentId,
+                    r.FromDepartmentName,
+                    r.ToDepartmentId,
+                    r.ToDepartmentName,
+                    r.FromWorker,
+                    r.ToWorker,
+                    r.ProductSnapshot.CategoryName,
+                    r.IsCompleted,
+                    r.CreatedAt))
                 .ToListAsync(cancellationToken);
-        }
+
+
+        public Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default)
+            => _context.InventoryRoutes.AnyAsync(
+                r => r.ProductSnapshot.ProductId == productId && !r.IsCompleted && r.RouteType == RouteType.Transfer,
+                cancellationToken);
 
 
         public Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default)
@@ -253,12 +250,5 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
-        public async Task<InventoryRoute?> GetPreviousRouteForProductAsync(int productId, int currentRouteId, CancellationToken cancellationToken = default)
-        {
-            return await _context.InventoryRoutes
-                .Where(r => r.ProductSnapshot.ProductId == productId && r.Id < currentRouteId)
-                .OrderByDescending(r => r.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
     }
 }

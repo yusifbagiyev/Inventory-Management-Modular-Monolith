@@ -1,4 +1,4 @@
-﻿using ProductService.Domain.Common;
+using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 
 namespace ProductService.Domain.Repositories
@@ -7,11 +7,14 @@ namespace ProductService.Domain.Repositories
     {
         Task<Category?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default);
+        /// <summary>Id and name only, ordered by name.</summary>
+        Task<IReadOnlyList<LookupItem>> GetLookupAsync(CancellationToken cancellationToken = default);
+        Task<(int Active, int Inactive)> CountByActivityAsync(CancellationToken cancellationToken = default);
         Task<PagedResult<Category>> GetPagedAsync(int pageNumber, int pageSize, string? search,CancellationToken cancellationToken = default);
         Task<Category> AddAsync(Category category, CancellationToken cancellationToken = default);
         Task UpdateAsync(Category category, CancellationToken cancellationToken = default);
         Task DeleteAsync(Category category, CancellationToken cancellationToken = default);
-        Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
-        Task<int?> GetProductCountAsync(int  categoryId, CancellationToken cancellationToken = default);
+        /// <summary>Products per category for the given ids (ids without products are absent).</summary>
+        Task<Dictionary<int, int>> GetProductCountsAsync(IEnumerable<int> categoryIds, CancellationToken cancellationToken = default);
     }
 }

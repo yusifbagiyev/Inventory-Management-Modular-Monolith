@@ -114,7 +114,7 @@
                                         <img src="@Model.FullImageUrl"
                                              alt="@Model.Model"
                                              id="currentImage"
-                                             onclick="showImageModal('@Model.FullImageUrl', '@Model.Model')"
+                                             data-src="@Model.FullImageUrl" data-title="@Model.Model" onclick="showImageModal(this.dataset.src, this.dataset.title)"
                                              style="cursor: pointer;" />
                                         <button type="button" class="btn btn-outline-danger btn-sm mt-2"
                                                 onclick="removeCurrentImage()" title="Remove image">

@@ -1,7 +1,7 @@
-﻿using ApprovalService.Application.DTOs;
+using ApprovalService.Application.DTOs;
 using ApprovalService.Domain.Repositories;
-using AutoMapper;
 using MediatR;
+using ApprovalService.Application.Mappings;
 
 namespace ApprovalService.Application.Features.Queries
 {
@@ -12,18 +12,15 @@ namespace ApprovalService.Application.Features.Queries
         public class Handler : IRequestHandler<Query,ApprovalRequestDto?>
         {
             private readonly IApprovalRequestRepository _repository;
-            private readonly IMapper _mapper;
-            public Handler(IApprovalRequestRepository repository,
-                IMapper mapper)
+            public Handler(IApprovalRequestRepository repository)
             {
                 _repository=repository;
-                _mapper=mapper;
             }
             public async Task<ApprovalRequestDto?> Handle(Query request,CancellationToken cancellationToken)
             {
                 var approvalRequest= await _repository.GetByIdAsync(request.Id,cancellationToken);
                 if (approvalRequest == null) return null;
-                return _mapper.Map<ApprovalRequestDto>(approvalRequest);
+                return approvalRequest.ToDto();
             }
         }
     }

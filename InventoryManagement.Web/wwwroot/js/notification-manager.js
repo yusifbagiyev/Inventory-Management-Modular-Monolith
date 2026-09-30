@@ -1,4 +1,4 @@
-﻿window.NotificationManager = (function () {
+window.NotificationManager = (function () {
     'use strict';
 
     let connection = null;
@@ -14,40 +14,16 @@
 
 
     // Initialize the notification system (with duplicate protection)
-   async function initialize(isAdmin) {
-        // Prevent multiple initializations
+    function initialize(isAdmin) {
         if (isInitialized) {
-            console.log('NotificationManager already initialized, skipping');
             return;
         }
 
-       // Check if user is authenticated by trying to validate their session
-       // This doesn't require checking for a token in the DOM
-       try {
-           const isAuthenticated = await SecureTokenProvider.isAuthenticated();
-
-           if (!isAuthenticated) {
-               console.log('User not authenticated, skipping notification initialization');
-               return;
-           }
-
-           // Mark as initialized before proceeding
-           isInitialized = true;
-
-           // Store admin status passed from the page
-           window.isAdmin = isAdmin;
-
-           console.log('Initializing notification system for ' + (isAdmin ? 'admin' : 'regular') + ' user');
-
-           // Establish the connection - it will fetch the token when needed
-           establishConnection();
-
-       } catch (error) {
-           console.error('Failed to check authentication status:', error);
-           // Don't initialize if we can't verify authentication
-           return;
-       }
-   }
+        // Only rendered for signed-in users; the hub authenticates with the auth cookie.
+        isInitialized = true;
+        window.isAdmin = isAdmin;
+        establishConnection();
+    }
 
 
     // Establish SignalR connection with improved error handling
@@ -70,23 +46,6 @@
         // Create the connection with proper configuration
         connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {
-                accessTokenFactory: async () => {
-                    try {
-                        // SECURITY: Fetch token from secure server endpoint
-                        // Token is never stored in DOM, only in JavaScript memory temporarily
-                        const token = await SecureTokenProvider.getToken();
-
-                        if (!token) {
-                            throw new Error('No authentication token available');
-                        }
-
-                        console.log('Token provided to SignalR connection');
-                        return token;
-                    } catch (error) {
-                        console.error('Failed to get token for SignalR:', error);
-                        throw new Error('Authentication failed - please refresh the page');
-                    }
-                },
                 transport: signalR.HttpTransportType.WebSockets |
                     signalR.HttpTransportType.ServerSentEvents |
                     signalR.HttpTransportType.LongPolling,
@@ -466,9 +425,9 @@
                             try {
                                 // Use the getRequestSummary function from the page
                                 const summary = getRequestSummary(requestType, actionData);
-                                $this.html(summary);
+                                $this.text(summary);
                             } catch (e) {
-                                $this.html('<span class="text-danger">Error parsing data</span>');
+                                $this.empty().append($('<span class="text-danger">').text('Error parsing data'));
                             }
                         });
 

@@ -1,9 +1,9 @@
-﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
+using ProductService.Application.Mappings;
 
 namespace ProductService.Application.Features.Categories.Commands
 {
@@ -26,16 +26,13 @@ namespace ProductService.Application.Features.Categories.Commands
         {
             private readonly ICategoryRepository _categoryRepository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
 
             public CreateCategoryCommandHandler(
                 ICategoryRepository categoryRepository,
-                IUnitOfWork unitOfWork,
-                IMapper mapper)
+                IUnitOfWork unitOfWork)
             {
                 _categoryRepository = categoryRepository;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
             }
 
             public async Task<CategoryDto> Handle(Command request, CancellationToken cancellationToken)
@@ -45,7 +42,7 @@ namespace ProductService.Application.Features.Categories.Commands
                 await _categoryRepository.AddAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                return _mapper.Map<CategoryDto>(category);
+                return category.ToDto(productCount: 0);
             }
         }
     }

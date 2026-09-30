@@ -1,8 +1,8 @@
-﻿using AutoMapper;
 using MediatR;
 using RouteService.Application.DTOs;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Repositories;
+using RouteService.Application.Mappings;
 
 namespace RouteService.Application.Features.Routes.Queries
 {
@@ -20,12 +20,10 @@ namespace RouteService.Application.Features.Routes.Queries
     public class GetAllRoutesHandler : IRequestHandler<GetAllRoutesQuery, PagedResultDto<InventoryRouteDto>>
     {
         private readonly IInventoryRouteRepository _repository;
-        private readonly IMapper _mapper;
 
-        public GetAllRoutesHandler(IInventoryRouteRepository repository, IMapper mapper)
+        public GetAllRoutesHandler(IInventoryRouteRepository repository)
         {
             _repository = repository;
-            _mapper = mapper;
         }
 
         public async Task<PagedResultDto<InventoryRouteDto>> Handle(GetAllRoutesQuery request, CancellationToken cancellationToken)
@@ -44,7 +42,7 @@ namespace RouteService.Application.Features.Routes.Queries
 
             return new PagedResultDto<InventoryRouteDto>
             {
-                Items = _mapper.Map<IEnumerable<InventoryRouteDto>>(routes.Items),
+                Items = routes.Items.Select(x => x.ToDto()),
                 TotalCount = routes.TotalCount,
                 PageNumber = routes.PageNumber,
                 PageSize = routes.PageSize

@@ -34,3 +34,7 @@ README.md
 *.crt
 *.pem
 ssl/
+**/wwwroot/images
+storage
+logs
+deploy
