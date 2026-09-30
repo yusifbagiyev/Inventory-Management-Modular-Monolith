@@ -1,101 +1,102 @@
-﻿using ApprovalService.Application.Events;
 using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using SharedServices.Contracts;
+using SharedServices.Events;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
 
 namespace ApprovalService.Application.Features.Commands
 {
     public class ApproveRequest
     {
-        public record Command(int RequestId,int UserId,string UserName): IRequest<bool>;
+        public record Command(int RequestId, int UserId, string UserName) : IRequest<bool>, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command, bool>
         {
+            private const string ExecutionSavepoint = "approval_execution";
+
             private readonly IApprovalRequestRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IActionExecutor _actionExecutor;
-            private readonly IMessagePublisher _messagePublisher;
+            private readonly IPublisher _publisher;
+            private readonly DbSession _session;
             private readonly ILogger<Handler> _logger;
 
             public Handler(
                 IApprovalRequestRepository repository,
                 IUnitOfWork unitOfWork,
                 IActionExecutor actionExecutor,
-                IMessagePublisher messagePublisher,
+                IPublisher publisher,
+                DbSession session,
                 ILogger<Handler> logger)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _actionExecutor = actionExecutor;
-                _messagePublisher = messagePublisher;
+                _publisher = publisher;
+                _session = session;
                 _logger = logger;
             }
 
-            public async Task<bool> Handle(Command request, CancellationToken cancellationToken = default)
+            /// <returns>True when the approved action executed.</returns>
+            public async Task<bool> Handle(Command request, CancellationToken cancellationToken)
             {
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
-                    ?? throw new InvalidOperationException($"Request {request.RequestId} not found");
+                    ?? throw new NotFoundException($"Request {request.RequestId} not found");
 
                 if (approvalRequest.Status != ApprovalStatus.Pending)
-                {
                     throw new InvalidOperationException($"Request is no longer pending. Current status: {approvalRequest.Status}");
-                }
 
                 approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);
+                // Row version check: a second admin approving concurrently fails here, before
+                // the action could run twice.
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Execute the action
+                // The action runs in the same transaction behind a savepoint: on failure only its
+                // own changes are undone and the request is recorded as Failed, instead of the old
+                // behaviour of an "Approved" request whose action never ran.
+                await _session.SavepointAsync(ExecutionSavepoint, cancellationToken);
                 try
                 {
-                    var executed = await _actionExecutor.ExecuteAsync(
+                    await _actionExecutor.ExecuteAsync(
                         approvalRequest.RequestType,
                         approvalRequest.ActionData,
-                        request.UserId,      // Pass the admin's user ID
-                        request.UserName,    // Pass the admin's user name
+                        new ApprovalActor(request.UserId, request.UserName),
                         cancellationToken);
 
-                    if (executed)
-                    {
-                        approvalRequest.MarkAsExecuted();
-                        _logger.LogInformation("Request {RequestId} executed successfully by admin {AdminName}",
-                            request.RequestId, request.UserName);
-                    }
-
-                    else
-                    {
-                        approvalRequest.MarkAsFailed("Execution failed");
-                        _logger.LogWarning("Request {RequestId} execution failed for admin {AdminName}",
-                            request.RequestId, request.UserName);
-                    }
+                    approvalRequest.MarkAsExecuted();
+                    _logger.LogInformation("Request {RequestId} executed by admin {AdminName}",
+                        request.RequestId, request.UserName);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    approvalRequest.MarkAsFailed($"Execution error: {ex.Message}");
-                    _logger.LogError(ex, "Error executing request {RequestId} by admin {AdminName}",
+                    await _session.RollbackToSavepointAsync(ExecutionSavepoint, cancellationToken);
+                    approvalRequest.MarkAsFailed(Truncate($"Execution error: {ex.Message}", 500));
+                    _logger.LogWarning(ex, "Request {RequestId} failed to execute for admin {AdminName}",
                         request.RequestId, request.UserName);
                 }
 
-
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Notify requester
-                var evt = new ApprovalRequestProcessedEvent
-                {
-                    RequestId = approvalRequest.Id,
-                    RequestType = approvalRequest.RequestType,
-                    Status = approvalRequest.Status == ApprovalStatus.Executed ? "Approved" : "Failed",
-                    ProcessedById = request.UserId,
-                    ProcessedByName = request.UserName,
-                    RequestedById = approvalRequest.RequestedById,
-                    RejectionReason = approvalRequest.Status == ApprovalStatus.Failed ? approvalRequest.RejectionReason : null
-                };
+                var executed = approvalRequest.Status == ApprovalStatus.Executed;
+                await _publisher.Publish(new ApprovalRequestProcessedEvent(
+                    approvalRequest.Id,
+                    approvalRequest.RequestType,
+                    executed ? "Approved" : "Failed",
+                    request.UserId,
+                    request.UserName,
+                    approvalRequest.RequestedById,
+                    executed ? null : approvalRequest.RejectionReason), cancellationToken);
 
-                await _messagePublisher.PublishAsync(evt, "approval.request.processed", cancellationToken);
-                return true;
+                return executed;
             }
+
+            private static string Truncate(string value, int maxLength)
+                => value.Length <= maxLength ? value : value[..maxLength];
         }
     }
 }

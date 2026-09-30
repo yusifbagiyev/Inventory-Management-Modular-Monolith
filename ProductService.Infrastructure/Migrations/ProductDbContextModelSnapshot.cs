@@ -17,6 +17,7 @@ namespace ProductService.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("product")
                 .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -42,57 +43,15 @@ namespace ProductService.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Electronic devices and equipment",
-                            IsActive = true,
-                            Name = "Electronics"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Office and warehouse furniture",
-                            IsActive = true,
-                            Name = "Furniture"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Transportation vehicles and equipment",
-                            IsActive = true,
-                            Name = "Vehicles"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Hand and power tools",
-                            IsActive = true,
-                            Name = "Tools"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Personal protective equipment",
-                            IsActive = true,
-                            Name = "Safety Equipment"
-                        });
+                    b.ToTable("Categories", "product");
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Department", b =>
@@ -125,54 +84,7 @@ namespace ProductService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentHead = "John Smith",
-                            Description = "Main storage warehouse",
-                            IsActive = true,
-                            Name = "Warehouse A"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentHead = "Sarah Johnson",
-                            Description = "Secondary storage facility",
-                            IsActive = true,
-                            Name = "Warehouse B"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentHead = "Michael Brown",
-                            Description = "Administrative office",
-                            IsActive = true,
-                            Name = "Office"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentHead = "David Wilson",
-                            Description = "Shipping and receiving area",
-                            IsActive = true,
-                            Name = "Loading Dock"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentHead = "Emily Davis",
-                            Description = "Equipment maintenance department",
-                            IsActive = true,
-                            Name = "Maintenance"
-                        });
+                    b.ToTable("Departments", "product");
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Product", b =>
@@ -230,102 +142,14 @@ namespace ProductService.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("DepartmentId");
 
                     b.HasIndex("InventoryCode")
                         .IsUnique();
 
-                    b.ToTable("Products");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CategoryId = 1,
-                            CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 3,
-                            Description = "Business laptop",
-                            InventoryCode = 1001,
-                            IsActive = true,
-                            IsNewItem = false,
-                            IsWorking = true,
-                            Model = "ThinkPad X1",
-                            Vendor = "Lenovo",
-                            Worker = "John Doe"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CategoryId = 3,
-                            CreatedAt = new DateTime(2024, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 1,
-                            Description = "Electric forklift",
-                            InventoryCode = 1002,
-                            IsActive = true,
-                            IsNewItem = false,
-                            IsWorking = true,
-                            Model = "Forklift 3000",
-                            Vendor = "Toyota",
-                            Worker = "Mike Johnson"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            CategoryId = 2,
-                            CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 3,
-                            Description = "Height adjustable desk",
-                            InventoryCode = 1003,
-                            IsActive = true,
-                            IsNewItem = true,
-                            IsWorking = true,
-                            Model = "Office Desk Pro",
-                            Vendor = "IKEA"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            CategoryId = 4,
-                            CreatedAt = new DateTime(2024, 2, 10, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 5,
-                            Description = "Cordless impact drill",
-                            InventoryCode = 1004,
-                            IsActive = true,
-                            IsNewItem = false,
-                            IsWorking = true,
-                            Model = "Impact Drill",
-                            Vendor = "DeWalt",
-                            Worker = "Sarah Smith"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            CategoryId = 5,
-                            CreatedAt = new DateTime(2024, 2, 15, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 1,
-                            Description = "Hard hat with face shield",
-                            InventoryCode = 1005,
-                            IsActive = true,
-                            IsNewItem = true,
-                            IsWorking = true,
-                            Model = "Safety Helmet",
-                            Vendor = "3M"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            CategoryId = 3,
-                            CreatedAt = new DateTime(2024, 2, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 4,
-                            Description = "Manual pallet jack",
-                            InventoryCode = 1006,
-                            IsActive = true,
-                            IsNewItem = false,
-                            IsWorking = false,
-                            Model = "Pallet Jack",
-                            Vendor = "Crown",
-                            Worker = "Tom Wilson"
-                        });
+                    b.ToTable("Products", "product");
                 });
 
             modelBuilder.Entity("ProductService.Domain.Entities.Product", b =>

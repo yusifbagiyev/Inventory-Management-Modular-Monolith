@@ -1,10 +1,18 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Options;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
 
 namespace ProductService.API.Authentication
 {
+    /// <summary>
+    /// Authenticates internal integrations (e.g. ServiceDesk) by the X-Api-Key header against the
+    /// "ApiKeys" configuration list:
+    /// <code>"ApiKeys": [ { "Key": "...", "ServiceName": "ServiceDesk", "ServiceId": "servicedesk-001", "Permissions": [ "product.view" ] } ]</code>
+    /// Supply keys through environment variables (ApiKeys__0__Key=...), never appsettings.
+    /// </summary>
     public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthenticationOptions>
     {
         private const string ApiKeyHeaderName = "X-Api-Key";
@@ -20,48 +28,29 @@ namespace ProductService.API.Authentication
             _configuration = configuration;
         }
 
-        protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
-            // Check if the API key is present in the request headers
-            if (!Request.Headers.TryGetValue(ApiKeyHeaderName, out var apiKeyHeaderValues))
-            {
-                return AuthenticateResult.NoResult();
-            }
+            if (!Request.Headers.TryGetValue(ApiKeyHeaderName, out var values) || string.IsNullOrEmpty(values.FirstOrDefault()))
+                return Task.FromResult(AuthenticateResult.NoResult());
 
-            var providedApiKey = apiKeyHeaderValues.FirstOrDefault();
+            var provided = Encoding.UTF8.GetBytes(values.First()!);
+            var client = (_configuration.GetSection("ApiKeys").Get<List<ApiKeyConfig>>() ?? [])
+                .FirstOrDefault(c => !string.IsNullOrEmpty(c.Key)
+                    && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(c.Key), provided));
 
-            if (string.IsNullOrEmpty(providedApiKey))
-            {
-                return AuthenticateResult.NoResult();
-            }
+            if (client == null)
+                return Task.FromResult(AuthenticateResult.Fail("Invalid API Key"));
 
-            // Get the configured API keys from appsettings
-            var validApiKeys = _configuration.GetSection("ApiKeys").Get<Dictionary<string, ApiKeyConfig>>();
-
-            if (validApiKeys == null || !validApiKeys.TryGetValue(providedApiKey, out var apiKeyConfig))
-            {
-                return AuthenticateResult.Fail("Invalid API Key");
-            }
-
-            // Create claims for the authenticated service
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, apiKeyConfig.ServiceName),
-                new Claim(ClaimTypes.NameIdentifier, apiKeyConfig.ServiceId),
-                new Claim("ServiceType", "Internal"),
+                new(ClaimTypes.Name, client.ServiceName),
+                new(ClaimTypes.NameIdentifier, client.ServiceId),
+                new("ServiceType", "Internal"),
             };
+            claims.AddRange(client.Permissions.Select(p => new Claim("permission", p)));
 
-            // Add any additional permissions configured for this API key
-            foreach (var permission in apiKeyConfig.Permissions)
-            {
-                claims.Add(new Claim("permission", permission));
-            }
-
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, Scheme.Name);
-
-            return AuthenticateResult.Success(ticket);
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name));
+            return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name)));
         }
     }
 
@@ -69,6 +58,7 @@ namespace ProductService.API.Authentication
 
     public record ApiKeyConfig
     {
+        public string Key { get; set; } = string.Empty;
         public string ServiceName { get; set; } = string.Empty;
         public string ServiceId { get; set; } = string.Empty;
         public List<string> Permissions { get; set; } = new();

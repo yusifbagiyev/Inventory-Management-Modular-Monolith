@@ -1,10 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
 using ProductService.Domain.Entities;
+using SharedServices.Persistence;
 
 namespace ProductService.Infrastructure.Data
 {
     public class ProductDbContext : DbContext
     {
+        public const string Schema = "product";
+
         public ProductDbContext(DbContextOptions<ProductDbContext> options) : base(options) { }
 
         public DbSet<Product> Products => Set<Product>();
@@ -13,10 +17,13 @@ namespace ProductService.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.HasDefaultSchema(Schema);
+
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.HasIndex(e => e.InventoryCode).IsUnique();
+                entity.HasIndex(e => e.CreatedAt);
                 entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
                 entity.Property(e => e.CreatedAt)
@@ -41,7 +48,9 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Category>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Name).HasMaxLength(20).IsRequired();
+                // Matches the 100-character limit the create/update validators enforce; the column
+                // used to be 20, so longer names passed validation and then failed with a 500.
+                entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");
                 entity.Property(e => e.UpdatedAt)
@@ -57,135 +66,13 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.UpdatedAt)
                       .HasColumnType("timestamp without time zone");
             });
-
-            SeedData(modelBuilder);
         }
+    }
 
-        protected void SeedData(ModelBuilder modelBuilder)
-        {
-            //Seed Categories
-            modelBuilder.Entity<Category>().HasData(
-                new { Id = 1, Name = "Electronics", Description = "Electronic devices and equipment", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 2, Name = "Furniture", Description = "Office and warehouse furniture", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 3, Name = "Vehicles", Description = "Transportation vehicles and equipment", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 4, Name = "Tools", Description = "Hand and power tools", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 5, Name = "Safety Equipment", Description = "Personal protective equipment", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null }
-            );
-
-            // Seed Departments
-            modelBuilder.Entity<Department>().HasData(
-                new { Id = 1, Name = "Warehouse A", Description = "Main storage warehouse", DepartmentHead = "John Smith", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 2, Name = "Warehouse B", Description = "Secondary storage facility", DepartmentHead = "Sarah Johnson", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 3, Name = "Office", Description = "Administrative office", DepartmentHead = "Michael Brown", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 4, Name = "Loading Dock", Description = "Shipping and receiving area", DepartmentHead = "David Wilson", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null },
-                new { Id = 5, Name = "Maintenance", Description = "Equipment maintenance department", DepartmentHead = "Emily Davis", IsActive = true, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), UpdatedAt = (DateTime?)null }
-            );
-
-            // Seed Products
-            modelBuilder.Entity<Product>().HasData(
-                new
-                {
-                    Id = 1,
-                    InventoryCode = 1001,
-                    Model = "ThinkPad X1",
-                    Vendor = "Lenovo",
-                    Worker = "John Doe",
-                    ImageUrl = (string?)null,
-                    Description = "Business laptop",
-                    IsWorking = true,
-                    IsActive = true,
-                    IsNewItem = false,
-                    CategoryId = 1,
-                    DepartmentId = 3,
-                    CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                },
-                new
-                {
-                    Id = 2,
-                    InventoryCode = 1002,
-                    Model = "Forklift 3000",
-                    Vendor = "Toyota",
-                    Worker = "Mike Johnson",
-                    ImageUrl = (string?)null,
-                    Description = "Electric forklift",
-                    IsWorking = true,
-                    IsActive = true,
-                    IsNewItem = false,
-                    CategoryId = 3,
-                    DepartmentId = 1,
-                    CreatedAt = new DateTime(2024, 1, 20, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                },
-                new
-                {
-                    Id = 3,
-                    InventoryCode = 1003,
-                    Model = "Office Desk Pro",
-                    Vendor = "IKEA",
-                    Worker = (string?)null,
-                    ImageUrl = (string?)null,
-                    Description = "Height adjustable desk",
-                    IsWorking = true,
-                    IsActive = true,
-                    IsNewItem = true,
-                    CategoryId = 2,
-                    DepartmentId = 3,
-                    CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                },
-                new
-                {
-                    Id = 4,
-                    InventoryCode = 1004,
-                    Model = "Impact Drill",
-                    Vendor = "DeWalt",
-                    Worker = "Sarah Smith",
-                    ImageUrl = (string?)null,
-                    Description = "Cordless impact drill",
-                    IsWorking = true,
-                    IsActive = true,
-                    IsNewItem = false,
-                    CategoryId = 4,
-                    DepartmentId = 5,
-                    CreatedAt = new DateTime(2024, 2, 10, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                },
-                new
-                {
-                    Id = 5,
-                    InventoryCode = 1005,
-                    Model = "Safety Helmet",
-                    Vendor = "3M",
-                    Worker = (string?)null,
-                    ImageUrl = (string?)null,
-                    Description = "Hard hat with face shield",
-                    IsWorking = true,
-                    IsActive = true,
-                    IsNewItem = true,
-                    CategoryId = 5,
-                    DepartmentId = 1,
-                    CreatedAt = new DateTime(2024, 2, 15, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                },
-                new
-                {
-                    Id = 6,
-                    InventoryCode = 1006,
-                    Model = "Pallet Jack",
-                    Vendor = "Crown",
-                    Worker = "Tom Wilson",
-                    ImageUrl = (string?)null,
-                    Description = "Manual pallet jack",
-                    IsWorking = false,
-                    IsActive = true,
-                    IsNewItem = false,
-                    CategoryId = 3,
-                    DepartmentId = 4,
-                    CreatedAt = new DateTime(2024, 2, 20, 0, 0, 0, DateTimeKind.Utc),
-                    UpdatedAt = (DateTime?)null
-                }
-            );
-        }
+    /// <summary>Used by `dotnet ef` only.</summary>
+    public class ProductDbContextFactory : IDesignTimeDbContextFactory<ProductDbContext>
+    {
+        public ProductDbContext CreateDbContext(string[] args)
+            => new(ModuleDbContextExtensions.DesignTimeOptions<ProductDbContext>(ProductDbContext.Schema));
     }
 }

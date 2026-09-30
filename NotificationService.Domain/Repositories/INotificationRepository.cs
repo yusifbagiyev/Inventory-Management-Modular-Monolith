@@ -1,4 +1,4 @@
-﻿using NotificationService.Domain.Entities;
+using NotificationService.Domain.Entities;
 
 namespace NotificationService.Domain.Repositories
 {
@@ -11,6 +11,8 @@ namespace NotificationService.Domain.Repositories
         Task<int> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default);
         /// <summary>Marks every unread notification for the user as read in a single UPDATE. Returns the affected count.</summary>
         Task<int> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default);
-        Task DeleteAsync(Notification notification, CancellationToken cancellationToken = default);
+        Task AddRangeAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);
+        /// <summary>Deletes every user's notifications about one approval request. Returns the deleted count.</summary>
+        Task<int> DeleteByApprovalRequestAsync(int approvalRequestId, CancellationToken cancellationToken = default);
     }
 }

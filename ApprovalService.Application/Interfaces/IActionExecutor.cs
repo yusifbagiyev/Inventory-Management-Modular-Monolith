@@ -1,12 +1,14 @@
-﻿namespace ApprovalService.Application.Interfaces
+using SharedServices.Contracts;
+
+namespace ApprovalService.Application.Interfaces
 {
     public interface IActionExecutor
     {
-        Task<bool> ExecuteAsync(
-            string requestType, 
-            string actionData, 
-            int userId,
-            string userName,
+        /// <summary>Runs the approved action. Throws when it cannot be executed.</summary>
+        Task ExecuteAsync(
+            string requestType,
+            string actionData,
+            ApprovalActor approver,
             CancellationToken cancellationToken = default);
     }
 }

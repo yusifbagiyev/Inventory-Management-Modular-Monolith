@@ -6,6 +6,7 @@ namespace InventoryManagement.Web.Services.Interfaces
     {
         byte[] GenerateDepartmentInventoryDocument(
             DepartmentViewModel department,
-            List<ProductViewModel> products);
+            List<ProductViewModel> products,
+            string? exportedByFullName);
     }
 }

@@ -1,9 +1,10 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using RouteService.Application.DTOs;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
+using SharedServices.Contracts;
 using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
@@ -15,19 +16,19 @@ namespace RouteService.Application.Services
     public class RouteManagementService : IRouteManagementService
     {
         private readonly IMediator _mediator;
-        private readonly IApprovalService _approvalService;
-        private readonly IProductServiceClient _productClient;
+        private readonly IApprovalRequests _approvalRequests;
+        private readonly IProductCatalog _productCatalog;
         private readonly ILogger<RouteManagementService> _logger;
 
         public RouteManagementService(
             IMediator mediator,
-            IApprovalService approvalService,
-            IProductServiceClient productClient,
+            IApprovalRequests approvalRequests,
+            IProductCatalog productCatalog,
             ILogger<RouteManagementService> logger)
         {
             _mediator = mediator;
-            _approvalService = approvalService;
-            _productClient = productClient;
+            _approvalRequests = approvalRequests;
+            _productCatalog = productCatalog;
             _logger = logger;
         }
 
@@ -61,10 +62,10 @@ namespace RouteService.Application.Services
                 ActionData = transferData
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for transfer of product {dto.ProductId}");
-            throw new ApprovalRequiredException(result.Id, "Transfer request has been submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for transfer of product {dto.ProductId}");
+            throw new ApprovalRequiredException(requestId, "Transfer request has been submitted for approval");
         }
 
 
@@ -123,10 +124,10 @@ namespace RouteService.Application.Services
                 }
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for updating route {id}");
-            throw new ApprovalRequiredException(result.Id, "Route update request submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for updating route {id}");
+            throw new ApprovalRequiredException(requestId, "Route update request submitted for approval");
         }
 
 
@@ -182,30 +183,29 @@ namespace RouteService.Application.Services
                 }
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for deleting route {id}");
-            throw new ApprovalRequiredException(result.Id, "Route deletion request submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for deleting route {id}");
+            throw new ApprovalRequiredException(requestId, "Route deletion request submitted for approval");
         }
 
 
         private async Task<Dictionary<string, object>> BuildTransferApprovalData(TransferInventoryDto dto)
         {
             // Fetch comprehensive product information
-            var product = await _productClient.GetProductByIdAsync(dto.ProductId);
+            var product = await _productCatalog.GetProductAsync(dto.ProductId);
             if (product == null)
             {
                 throw new NotFoundException($"Product {dto.ProductId} not found");
             }
 
-            var toDepartment = await _productClient.GetDepartmentByIdAsync(dto.ToDepartmentId);
+            var toDepartment = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId);
             if (toDepartment == null)
             {
                 throw new NotFoundException($"Target department {dto.ToDepartmentId} not found");
             }
 
-            var fromDepartment = await _productClient.GetDepartmentByIdAsync(product.DepartmentId);
-
+            
             var actionData = new Dictionary<string, object>
             {
                 ["productId"] = dto.ProductId,
@@ -214,13 +214,13 @@ namespace RouteService.Application.Services
                 ["productVendor"] = product.Vendor ?? "",
                 ["productCategory"] = product.CategoryName ?? "",
                 ["fromDepartmentId"] = product.DepartmentId,
-                ["fromDepartmentName"] = fromDepartment?.Name ?? "",
+                ["fromDepartmentName"] = product.DepartmentName,
                 ["fromWorker"] = product.Worker ?? "",
                 ["toDepartmentId"] = dto.ToDepartmentId,
                 ["toDepartmentName"] = toDepartment.Name,
                 ["toWorker"] = dto.ToWorker ?? "",
                 ["notes"] = dto.Notes ?? "",
-                ["transferReason"] = BuildTransferReason(product, fromDepartment, toDepartment)
+                ["transferReason"] = BuildTransferReason(product, toDepartment)
             };
 
             // Add image data if present
@@ -316,9 +316,9 @@ namespace RouteService.Application.Services
 
 
 
-        private string BuildTransferReason(ProductInfoDto product, DepartmentDto? from, DepartmentDto to)
+        private static string BuildTransferReason(ProductSummary product, DepartmentSummary to)
         {
-            return $"Transfer of {product.Model} ({product.InventoryCode}) from {from?.Name ?? "Unknown"} to {to.Name}";
+            return $"Transfer of {product.Model} ({product.InventoryCode}) from {product.DepartmentName} to {to.Name}";
         }
 
 

@@ -2,119 +2,88 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Stack & prerequisites
+## Stack
 
-.NET 10 (`net10.0`), PostgreSQL 15, RabbitMQ 3, Seq (logging), Ocelot (gateway), MediatR + FluentValidation + AutoMapper, Serilog, SignalR (real-time), Entity Framework Core (Npgsql provider), Docker Compose for orchestration, optional Redis caching for `ProductService`. There are no test projects in the solution.
+.NET 10 modular monolith: ASP.NET Core MVC + Razor UI and a JSON `/api` in **one host** (`InventoryManagement.Web`), MediatR + FluentValidation, EF Core on PostgreSQL 15 (Npgsql), SignalR, Serilog → Seq, xUnit + Testcontainers. The system used to be five microservices behind Ocelot with RabbitMQ; the project names (`ProductService.*` etc.) are the old service names, now modules.
 
-## Common commands
+## Commands
 
-Build everything from the repo root:
 ```bash
 dotnet build InventoryManagement.sln
+dotnet test InventoryManagement.sln          # integration tests; needs Docker (Testcontainers starts PostgreSQL)
+dotnet test InventoryManagement.Tests --filter "FullyQualifiedName~RouteFlowTests.A_product_cannot_have_two_pending_transfers"
+dotnet run --project InventoryManagement.Web  # http://localhost:5051
 ```
 
-Run a single service locally (ports below). Each service auto-runs `Database.MigrateAsync()` on startup, so ensure `.env` values are exported or `appsettings.Development.json` has valid `ConnectionStrings:DefaultConnection` / `RabbitMQ:*` / `Jwt:*`:
+Local run needs a PostgreSQL and two secrets. `appsettings.Development.json` holds a password-less `ConnectionStrings:DefaultConnection`; set the full string and the JWT key with user-secrets (or `ConnectionStrings__DefaultConnection` / `Jwt__Key` env vars):
 ```bash
-dotnet run --project ProductService.API
+dotnet user-secrets --project InventoryManagement.Web set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=inventory;Username=postgres;Password=..."
+dotnet user-secrets --project InventoryManagement.Web set "Jwt:Key" "<32+ chars>"
 ```
+Every module's migrations run at startup (`MigrateModulesAsync`), followed by an identity-sequence realignment.
 
-Add an EF Core migration for a service (run from that service's Infrastructure project directory; the DbContext lives in Infrastructure but the tools entrypoint is `*.API`):
+Add a migration (each Infrastructure project has an `IDesignTimeDbContextFactory`, so it is its own startup project):
 ```bash
-dotnet ef migrations add <Name> --project ProductService.Infrastructure --startup-project ProductService.API
-dotnet ef database update      --project ProductService.Infrastructure --startup-project ProductService.API
+dotnet ef migrations add <Name> --project ProductService.Infrastructure --startup-project ProductService.Infrastructure
 ```
 
-Run the full stack via Docker Compose — **two caveats, both must be fixed before `docker compose up` works:**
-1. `docker-compose.yml` sets `context: ./src` (and `./src/ApiGateway` for the gateway) and each Dockerfile expects sibling project directories inside its build context, but the projects live at the repo root today. Either move projects under `src/` or edit each `context:` to `.`.
-2. The `nginx` service mounts `./nginx.conf` and `./ssl`, neither of which exists at the repo root. The real config is at `InventoryManagement.Web/nginx/nginx.conf`; there is no `ssl/` directory checked in.
+Docker: `docker compose up -d --build` (root `Dockerfile`, `docker-compose.yml`, `deploy/nginx/nginx.conf`; secrets from `.env`, see `.env.example`). CI: `.github/workflows/ci.yml` (build, tests, vulnerable-package check, image build).
 
-```bash
-docker compose up -d --build
-docker compose logs -f product-service
-```
+## Layout
 
-Secrets/config are read from `.env` at the repo root (used by compose interpolation). Do not commit real values; the checked-in `.env` currently contains sample credentials.
+| Module | Projects | Schema | Owns |
+|---|---|---|---|
+| Identity | `IdentityService.{Domain,Application,Infrastructure,API}` | `identity` | users, roles, permissions, JWT issuing |
+| Products | `ProductService.*` | `product` | products, categories, departments, images |
+| Routes | `RouteService.*` | `route` | transfers + the product audit trail |
+| Approvals | `ApprovalService.*` | `approval` | approval requests and their execution |
+| Notifications | `NotificationService.*` | `notification` | stored notifications, SignalR hub, WhatsApp |
 
-**There are no tests and no CI** — `.github/workflows/` is empty and the solution has no test projects. `dotnet build InventoryManagement.sln` is the only automated verification available; anything behavioral has to be exercised by running the service.
+- `*.API` projects are **class libraries** holding the module's API controllers and a `XxxModule` class (`AddXxxModule()`, `Assemblies`). The host composes them in `InventoryManagement.Web/Extensions/ModuleHostExtensions.cs`.
+- `SharedServices` is the shared kernel: contracts between modules, integration events, `DbSession` + `TransactionBehavior`, the background queue, `ImageStorage`, permissions and authorization, exceptions, `SearchHelper`, `ApiExceptionMiddleware`.
+- Inside a module the old clean-architecture split remains (API → Application → Domain, Infrastructure implements Domain), CQRS via MediatR: `Features/<Aggregate>/{Commands,Queries}`, one file per command with nested `Command`/`Validator`/`Handler`. Entities have private setters; mutate through their methods.
+- Mapping is explicit (`Mappings/*Mappings.cs` → `ToDto()`); AutoMapper was removed (unpatched advisory).
 
-## Service topology
+## How modules talk (read this before crossing a module boundary)
 
-Seven .NET web projects, all `net10.0`, all Serilog → Seq (`http://seq:80` in prod, `http://localhost:5342` in dev). Compose containers, host port → container port `:80`:
+- **Never reference another module's Application/Infrastructure.** Use a contract in `SharedServices/Contracts` implemented by the owning module: `IProductCatalog` / `IProductTransfers` (products), `IApprovalRequests` + `IApprovalActionHandler` (approvals), `IUserDirectory` (identity).
+- **Events** are MediatR `INotification`s in `SharedServices/Events` (`ProductCreated/Updated/DeletedEvent`, `RouteCompletedEvent`, `ApprovalRequest*Event`), published with `IPublisher` after the handler's `SaveChanges`. They carry image **URLs**, never bytes.
+- **Transactions span modules.** All module DbContexts share one `NpgsqlConnection` per request (`DbSession`, registered via `AddModuleDbContext<T>(schema)`). A request implementing `ITransactionalRequest` is wrapped by `TransactionBehavior`; nested sends and event handlers join it (an enlistment interceptor calls `UseTransaction`). So product create + its route-history row, route completion + the product move, and approval + execution each commit or roll back together. Don't open transactions yourself.
+- **Side effects outside the DB**: `DbSession.OnRollback(...)` for compensation (e.g. delete an uploaded file); `DbSession.AfterCommit(...)` for work that must only happen once committed. `AfterCommit` items run on the in-process background queue (`BackgroundWorkQueue`, lost on crash). Notification handlers only enqueue, so WhatsApp/SignalR never slow or fail a request.
+- Savepoints: `ApproveRequest` runs the action behind `DbSession.SavepointAsync`; on failure it rolls back to the savepoint (also discarding that span's after-commit work and running its compensations) and records the request as `Failed`.
+- Row versions (`xmin`) on `InventoryRoute` and `ApprovalRequest`: concurrent complete/approve fail with `DbUpdateConcurrencyException` → 409.
 
-| Service | Local dev port | Compose port | Container name | DB |
-|---|---|---|---|---|
-| `ApiGateway` | — | `5000:80` | `inventory_api_gateway` | — |
-| `ProductService.API` | 5001 | (internal) | `inventory_product_service` | `product_service` |
-| `RouteService.API` | 5002 | (internal) | `inventory_route_service` | `route_service` |
-| `IdentityService.API` | 5003 | (internal) | `inventory_identity_service` | `identity_service` |
-| `ApprovalService.API` | 5004 | (internal) | `inventory_approval_service` | `approval_service` |
-| `NotificationService.API` | 5005 | (internal) | `inventory_notification_service` | `notification_service` |
-| `InventoryManagement.Web` (MVC) | 5051 / 7171 | (internal) | `inventory_web` | — (session-only) |
+## Approvals (two-tier permissions)
 
-Front door: `nginx` (host 80/443) → `web` and `api-gateway`. Seq UI: `http://localhost:5342`. RabbitMQ UI: `http://localhost:15672`.
+Every write permission has `x` and `x.direct` (`product.create` / `product.create.direct`). `ProductManagementService` / `RouteManagementService` dispatch: `.direct` → run the command; `x` only → `IApprovalRequests.SubmitAsync` then throw `ApprovalRequiredException` (API → 202 `{approvalRequestId}`, UI → "submitted for approval"); neither → `InsufficientPermissionsException` (403). On approval `ActionExecutor` finds the `IApprovalActionHandler` whose `CanHandle(requestType)` matches and runs the owning module's command in-process. `ActionData` is stored JSON; old rows use PascalCase and nested `ProductData`/`UpdateData` — always read it through `SharedServices.Contracts.ApprovalActionData` helpers, which accept every shape. To add an approvable action: add a `RequestType` constant, build the ActionData in the management service, handle it in the module's `IApprovalActionHandler`.
 
-**Three** Ocelot files exist and `ApiGateway/Program.cs` loads `ocelot.json` *then* `ocelot.{Environment}.json`, so the environment-specific file overrides the base. `ocelot.json` and `ocelot.Development.json` are currently byte-for-byte equivalent in intent (same 10 routes, all `localhost` + the dev ports above); `ocelot.Production.json` uses container hostnames on port 80. Adding a gateway route means editing **all three** to keep them in sync.
+`RequestType` values equal the non-direct permission string, **except** `product.transfer`, which is gated by `route.create`.
 
-## Architecture
+## Auth
 
-**Clean-architecture per service.** Each backend service ships four projects — `.API`, `.Application`, `.Domain`, `.Infrastructure` (Approval also has `.Shared`). Dependency direction is `API → Application → Domain`, with `Infrastructure` implementing `Domain` interfaces (repositories, message publisher, cache) and wired via `AddApplication()` / `AddInfrastructure(config)` extension methods in each service's `DependencyInjection.cs`.
+- **UI**: cookie auth only (`AuthenticationExtensions`). Login validates in-process (`IAuthService.ValidateCredentialsAsync`), rate-limited per IP. Claims come from `UserPrincipalFactory` and are **re-read from the DB every 5 minutes** (`OnValidatePrincipal`), so role/permission changes and deactivation apply without a re-login.
+- **/api**: a policy scheme picks `X-Api-Key` (ServiceDesk; keys in `ApiKeys:[{Key,ServiceName,ServiceId,Permissions}]`, env only), `Bearer` JWT (issued by `/api/auth/login` for external clients), else the cookie. Unauthenticated /api and AJAX calls get 401/403, not a login redirect.
+- **CSRF**: cookie-authenticated unsafe `/api` calls must send the `RequestVerificationToken` header (JS: `AppConfig.antiforgeryHeaders()`); MVC POSTs use `[ValidateAntiForgeryToken]`.
+- Permissions: `[Permission("x")]` (API) and `[PermissionAuthorize]` / `User.HasPermission` (UI). Policies are resolved dynamically by `PermissionPolicyProvider`. **Admin role bypasses every permission check** on both sides.
+- Behind nginx: forwarded headers trust exactly one hop; client IP = `RemoteIpAddress`, never the raw `X-Forwarded-For`.
 
-**CQRS via MediatR.** Feature folders under `.Application/Features/<Aggregate>/{Commands,Queries}`. A single `ValidationBehavior<TRequest,TResponse>` pipeline runs all FluentValidation validators. Convention: one command/query per file, containing nested `record Command : IRequest<...>`, `class Validator : AbstractValidator<Command>`, and `class Handler : IRequestHandler<Command, ...>`.
+## UI (InventoryManagement.Web)
 
-**Domain-driven entities.** `Product`, `InventoryRoute`, `ApprovalRequest` etc. have private setters and mutate via named methods (`Product.Update(...)`, `InventoryRoute.CreateTransfer(...)`, `ApprovalRequest.Approve(...)`). Never assign properties directly from handlers — use the mutator, or add one.
+- MVC controllers call MediatR / module services directly. `BaseController.RunAsync` turns module outcomes (approval required, validation, not found, conflict…) into the `ApiResponse` shape the JS expects (`isSuccess`, `isApprovalRequest`, `approvalRequestId`, `message`); `HandleApiResponse` returns JSON for AJAX or redirects with a TempData toast.
+- View models are filled from module DTOs with `ModelMapper` (Newtonsoft JToken round-trip — same semantics as when they were deserialized from HTTP JSON).
+- Module API controllers are put in the `Api` **area** by a convention, so MVC link generation (`asp-action="Create"` on the Products page) never resolves to the same-named API action. Keep it that way when adding API controllers.
+- Client JS (`wwwroot/js`): everything is same-origin (`AppConfig.buildApiUrl`), SignalR at `/notificationHub` authenticates with the cookie, `AjaxHandler.handleForm` is the standard form path, `escapeHtml` (site.js) must wrap any API/user data put into HTML, and Razor values go into `data-*` attributes, not inline `onclick` strings.
+- Exports: department inventory **Word** is server-side (`WordExportService`, brand color `#FFC000`, logo `wwwroot/logo.jpg`); product/route **PDF** is client-side print-to-PDF (`pdf-export.js`) — select columns by header name and escape with `escapePdfText()`.
 
-**API Gateway is Ocelot + JWT.** `ApiGateway/ocelot.{env}.json` maps upstream `/api/{route}` templates to downstream services. All routes except `/api/auth/*` require Bearer auth. Polly retry (2 attempts, exponential) + circuit breaker (5 fails / 30s) are attached to the outbound HTTP client. The gateway strips CORS + adds `X-Forwarded-*` headers.
+## Conventions
 
-## Authentication & authorization (critical to understand before changing any controller)
+- `SharedServices/Exceptions/ApprovalRequiredException.cs` declares three exception types (`ApprovalRequiredException`, `DuplicateEntityException`, `InsufficientPermissionsException`) — grep `class <Name>`.
+- Search over user text goes through `SearchHelper.NormalizeForSearch` (folds Azerbaijani letters) or Azerbaijani records won't match.
+- Images: `ImageStorage` writes `{ImageSettings:RootPath}/{products|routes}/{inventoryCode}/{unique}` and returns `/images/...` URLs; the root is the web root's `images` folder (bind-mounted to `./storage/images` in Docker, served by nginx too). Route history keeps its own copy of the product image.
+- Timestamps are `timestamp without time zone` with `DateTime.Now` (container `TZ`).
 
-**Login flow.** `InventoryManagement.Web` uses cookie auth (`.AspNetCore.Cookies`, 8-hour sliding expiry). On login, `AuthService` calls `IdentityService`, stashes the JWT and refresh token in the session, and `TokenRefreshBackgroundService` renews them in the background. Outbound API calls attach the JWT via `ApiService`. AJAX requests get 401/403 instead of a 302 to `/Account/Login` — see `AddCustomAuthentication` in `InventoryManagement.Web/Extensions/ServiceExtensions.cs`.
+## Deployment / data
 
-**JWT contents.** Issued by `IdentityService`, signed with the shared HMAC key from `.env` (`JWT_SECRET_KEY`). Carries `ClaimTypes.NameIdentifier`, `ClaimTypes.Name`, roles, and a **`permission` claim per granted permission** (`SharedServices/Identity/AllPermissions.cs`). Every downstream service validates against `Jwt:Issuer` / `Jwt:Audience` / `Jwt:Key`.
-
-**Permission enforcement.** `SharedServices.Authorization.PermissionAttribute(perm)` extends `AuthorizeAttribute` with `Policy = perm`. Services register the policy list explicitly in `Program.cs` (`options.AddPolicy(AllPermissions.ProductView, …)`). `PermissionRequirement` / `PermissionHandler` (registered as `IAuthorizationHandler` singleton) check the `permission` claim — and **`Admin` role bypasses all permission checks**.
-
-**Two-tier permissions.** Each write action has both `xxx` and `xxx.direct` (e.g. `product.create`, `product.create.direct`). `ProductManagementService`, `RouteManagementService`, etc. dispatch as follows:
-- Holder of `.direct` → command handler runs immediately.
-- Holder of the non-direct permission → an `ApprovalRequest` is enqueued and `ApprovalRequiredException` is thrown (controllers translate this to `202 Accepted` with the approval id).
-- Neither → `InsufficientPermissionsException` → `403`.
-
-**Approval execution (non-obvious).** When an admin approves a request, `ApprovalService.Infrastructure.Services.ActionExecutor` **forges a short-lived (5 min) JWT** using the shared HMAC key, stuffed with `Admin` role and every `.direct` permission, then re-calls the target service through the API gateway on `/api/products/approved`, `/api/products/{id}/approved/multipart`, `/api/inventoryroutes/{id}/approved`, etc. Those endpoints are marked `[ApiExplorerSettings(IgnoreApi = true)]` + `[Authorize(Roles = "Admin")]` and are the only path that skips the approval detour. When adding an approvable action:
-1. Add a value to `SharedServices/Enum/RequestType.cs` — despite the folder name it is a `static class` of `const string`, not an enum, and **each value is exactly the non-direct permission string** (`RequestType.CreateProduct == "product.create"`). Keep that identity; the dispatch logic relies on it.
-2. Add an action-data DTO in `SharedServices/DTOs`.
-3. Add an `Execute<X>` branch to `ActionExecutor.ExecuteAsync`.
-4. Add an `/approved` sibling endpoint on the target service with `[Authorize(Roles = "Admin")]` + `[ApiExplorerSettings(IgnoreApi = true)]`.
-
-**Product API-key auth.** `ProductService` additionally supports `X-Api-Key` for internal integrations (ServiceDesk) via `AddPolicyScheme("JWT_OR_APIKEY", …)` — see `ProductService.API/Authentication/ApiKeyAuthenticationHandler.cs`; keys are declared under `ApiKeys` in `appsettings.Production.json`.
-
-## Messaging (RabbitMQ)
-
-`ProductService`, `RouteService`, `ApprovalService`, `NotificationService` each ship a `RabbitMQPublisher : IMessagePublisher` (singleton) and a `RabbitMQConsumer : BackgroundService` (hosted). Exchange: `inventory-events` (topic). Events like `ProductCreatedEvent` are published from command handlers after `SaveChangesAsync`. Consumers include their own dead-letter queue plumbing (see `PermanentMessageException` in `ProductService.Infrastructure/Services/RabbitMQConsumer.cs` — a permanent failure is routed to `<queue>-dead` instead of nacked-and-requeued). Config lookup order in every RabbitMQ init: `IConfiguration["RabbitMQ:*"]` → `Environment.GetEnvironmentVariable("RabbitMQ__*")` → `localhost`/`guest`.
-
-## Real-time (SignalR)
-
-`NotificationService` hosts a `NotificationHub` at `/notificationHub` (mapped with `.RequireAuthorization()`). Because browsers can't set `Authorization` on the WebSocket upgrade, the JWT middleware reads it from the `?access_token=` query param when the path starts with `/notificationHub`. Clients are added to `user-{userId}` and `role-{roleName}` groups on connect for targeted push. `Web` opens the connection directly via `NotificationService__BaseUrl` — this is one of the few paths that does **not** go through the API gateway.
-
-## Persistence & migrations
-
-Every service owns its own PostgreSQL database (see table above). All DbContexts are registered in the service's Infrastructure `DependencyInjection.cs`. **Migrations are applied automatically at startup** — every service's `Program.cs` calls `Database.MigrateAsync()` followed by `Database.EnsureCreatedAsync()` inside a startup scope. Adding a migration therefore only requires running `dotnet ef migrations add …` locally; deployment picks it up on next boot.
-
-## Frontend (InventoryManagement.Web)
-
-MVC + Razor (runtime compilation in Dev only). Talks to backend via two config knobs: `ApiGateway:BaseUrl` (all `IApiService` / `IAuthService` / `IApprovalService` / `IUserManagementService` calls) and `NotificationService:BaseUrl` (SignalR only). Typed `HttpClient`s live in `Services/`; **do not double-register them with `AddScoped` after `AddHttpClient<T>` — it silently discards the pooled handler** (see the comment in `Extensions/ServiceExtensions.cs`). Cookie config, AJAX 401 handling, and the `HasPermission(ClaimsPrincipal, string)` helper also live in `ServiceExtensions.cs`. Request-side pieces are split across `Filters/PermissionAuthorizeAttribute.cs` (MVC-side permission gate, distinct from the backend `PermissionAttribute`) and `Middleware/{JwtMiddleware,ExceptionHandlerMiddleware}.cs`.
-
-**Client-side JS has a second, independent config layer** (`wwwroot/js/`) that does *not* read the server's `appsettings`. Changing a base URL in config alone will not move the browser:
-- `app-config.js` — `window.AppConfig` decides dev vs prod by **hostname string match on `inventory166.az`**, and from that derives `api.gateway`, the SignalR hub URL, and the product/route image prefixes. In prod everything is same-origin (`/api`, `/notificationHub`); in dev it points straight at `localhost:5000/5001/5002/5005`. Build request URLs with `AppConfig.buildApiUrl(endpoint)` rather than hardcoding.
-- `token-provider.js` — `window.SecureTokenProvider` fetches the JWT from the Web app's own `GET /api/token/current` (`TokenController` → `ITokenManager.GetValidTokenAsync()`, which auto-refreshes) and caches it **in memory for 5 minutes only** — deliberately never in `localStorage` or the DOM. This is how SignalR and direct-to-gateway AJAX calls get a bearer token; don't reintroduce a token in a Razor view or hidden field.
-- `ajaxHandler.js` — `window.AjaxHandler.handleForm(selector, options)` is the standard form-submit path (validation, double-submit guard via a `WeakMap`, success redirect/toast hooks). New forms should use it instead of bespoke `$.ajax`.
-- `notification-manager.js` / `admin-approvals.js` — SignalR client wiring and the approval inbox UI.
-
-**Exports.** Two unrelated mechanisms: department inventory **Word** docs are generated **server-side** by `Services/WordExportService.cs` (`DocumentFormat.OpenXml`, brand color `#FFC000`), surfaced from `DepartmentsController`. Product/route **PDF** export is **client-side** in `wwwroot/js/pdf-export.js` — it builds HTML into a popup window and relies on browser print-to-PDF (the `itext` package in the `.csproj` is referenced but unused). Two constraints are load-bearing there: values read back via `textContent` must pass through `escapePdfText()` before re-injection (XSS guard), and columns are selected by **header name, not index** — index-based selection silently produced blank columns whenever a table changed.
-
-## Cross-service conventions
-
-- **Shared code lives in `SharedServices/`** — permissions, roles, authorization primitives, exception types, enums, and action-data DTOs. **File names don't map to type names here:** `Exceptions/ApprovalRequiredException.cs` actually declares three classes — `ApprovalRequiredException`, `DuplicateEntityException`, and `InsufficientPermissionsException`. Grep for `class <Name>` rather than guessing the file.
-- **Search normalization.** `SharedServices/Services/SearchHelper.NormalizeForSearch` folds Azerbaijani characters to ASCII (`ə→e`, `ğ→g`, `ü→u`, `ş→s`, `ı`/`İ`/`I→i`, `ö→o`, `ç→c`) and lowercases. Any new search/filter over user-entered text should route through it, or Azerbaijani-language records won't match.
-- **Image storage.** Product / route images are written to `wwwroot/images/{products,routes}` inside their service container and bind-mounted to `./storage/images/{products,routes}` on the host; nginx serves them read-only. `ImageSettings:BaseUrl` (per-service `appsettings`) is the public URL prefix.
-- **Redis is opt-in on ProductService.** Setting `Redis:Enabled = true` in `ProductService.API/appsettings.json` swaps `NoCacheService` for `RedisCacheService` (see `ProductService.Infrastructure/DependencyInjection.cs` and `REDIS_INTEGRATION_GUIDE.md`). Nothing else uses Redis today.
-- **Rate limiting.** Only `IdentityService` uses `System.Threading.RateLimiting` — a per-IP `LoginPolicyPerIP` (5 attempts / 10 min) applied to the login endpoint, plus a global 100/min limiter.
-- **Ocelot dev vs prod.** `ocelot.json` + `ocelot.Development.json` point at `localhost` + the ports table above; `ocelot.Production.json` uses container hostnames on port 80. When adding a new gateway route, update **all three** files (see the loading-order note under Service topology).
+- `deploy/MIGRATION.md` (Azerbaijani) is the cut-over runbook from the old per-service databases; `deploy/migrate-data.sh` copies them into the module schemas (single transaction, row-count check, sequence realignment). `deploy/sql/fix-operator-permissions.sql` optionally fixes the Operator role's off-by-one seed.
+- Data-protection keys persist to `DataProtection:KeysPath` (`./storage/keys` in compose) — without it every redeploy signs everyone out.
+- The container runs as uid 1654; bind-mounted `storage/keys` and `storage/images` must be writable by it.

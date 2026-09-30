@@ -1,58 +1,57 @@
-﻿using MediatR;
-using ProductService.Application.Events;
-using ProductService.Application.Interfaces;
-using SharedServices.Exceptions;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using ProductService.Application.Mappings;
 using ProductService.Domain.Repositories;
+using SharedServices.Events;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
+using SharedServices.Storage;
 
 namespace ProductService.Application.Features.Products.Commands
 {
     public class DeleteProduct
     {
-        public record Command(int Id,string? userName) : IRequest;
+        public record Command(int Id, string? UserName) : IRequest, ITransactionalRequest;
+
         public class DeleteProductCommandHandler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IImageService _imageService;
-            private readonly IMessagePublisher _messagePublisher;
+            private readonly IPublisher _publisher;
+            private readonly DbSession _session;
 
             public DeleteProductCommandHandler(
                 IProductRepository productRepository,
                 IUnitOfWork unitOfWork,
-                IImageService ımageService,
-                IMessagePublisher messagePublisher)
+                IPublisher publisher,
+                DbSession session)
             {
                 _productRepository = productRepository;
                 _unitOfWork = unitOfWork;
-                _imageService = ımageService;
-                _messagePublisher = messagePublisher;
+                _publisher = publisher;
+                _session = session;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
-                var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ??
-                    throw new NotFoundException($"Product with ID {request.Id} not found");
+                var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken)
+                    ?? throw new NotFoundException($"Product with ID {request.Id} not found");
 
-                var deletedEvent = new ProductDeletedEvent
-                {
-                    ProductId = product.Id,
-                    InventoryCode = product.InventoryCode,
-                    Model = product.Model,
-                    Vendor = product.Vendor,
-                    Worker = product.Worker,
-                    CategoryName = product.Category?.Name ?? "Unknown",
-                    DepartmentName=product.Department?.Name?? "Unknown",
-                    DepartmentId=product.DepartmentId,
-                    IsWorking= product.IsWorking,
-                    DeletedAt = DateTime.Now,
-                    RemovedBy=request.userName ?? "Unknown"
-                };
-                await _messagePublisher.PublishAsync(deletedEvent, "product.deleted", cancellationToken);
-
-                await _imageService.DeleteInventoryFolderAsync(product.InventoryCode);
+                var state = product.ToState();
 
                 await _productRepository.DeleteAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                await _publisher.Publish(new ProductDeletedEvent(state, request.UserName ?? "Unknown", DateTime.Now), cancellationToken);
+
+                // Files go only after the delete is durable. The image may live in a folder named
+                // after an earlier inventory code, so remove it by URL as well as the current folder.
+                _session.AfterCommit(async (sp, _) =>
+                {
+                    var storage = sp.GetRequiredService<ImageStorage>();
+                    await storage.DeleteAsync(state.ImageUrl);
+                    await storage.DeleteFolderAsync(ImageStorage.Products, state.InventoryCode);
+                });
             }
         }
     }

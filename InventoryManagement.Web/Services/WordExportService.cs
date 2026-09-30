@@ -1,4 +1,4 @@
-﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using InventoryManagement.Web.Models.ViewModels;
@@ -12,18 +12,21 @@ namespace InventoryManagement.Web.Services
     public class WordExportService : IWordExportService
     {
         private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<WordExportService> _logger;
 
         // The golden brand color #FFC000 - we'll use this for text highlighting
         private const string BRAND_COLOR = "FFC000";
 
-        public WordExportService(IWebHostEnvironment environment)
+        public WordExportService(IWebHostEnvironment environment, ILogger<WordExportService> logger)
         {
             _environment = environment;
+            _logger = logger;
         }
 
         public byte[] GenerateDepartmentInventoryDocument(
             DepartmentViewModel department,
-            List<ProductViewModel> products)
+            List<ProductViewModel> products,
+            string? exportedByFullName)
         {
             using var memoryStream = new MemoryStream();
 
@@ -66,7 +69,7 @@ namespace InventoryManagement.Web.Services
 
                 // 6. Add signature section with full-width golden highlighting
                 // This section is marked to keep together (won't split across pages)
-                AddSignatureSection(body, department);
+                AddSignatureSection(body, department, exportedByFullName);
             }
 
             return memoryStream.ToArray();
@@ -143,77 +146,18 @@ namespace InventoryManagement.Web.Services
             logoParaProp.Append(new SpacingBetweenLines { Before = "0", After = "0" });
             logoPara.Append(logoParaProp);
 
+            // A missing or unreadable logo falls back to a placeholder instead of failing the export.
+            var logoPath = Path.Combine(_environment.WebRootPath, "logo.jpg");
             try
             {
-                // Log the environment information for debugging
-                var webRootPath = _environment.WebRootPath;
-                var contentRootPath = _environment.ContentRootPath;
-                var environmentName = _environment.EnvironmentName;
-
-                Console.WriteLine($"=== LOGO LOADING DEBUG ===");
-                Console.WriteLine($"Environment: {environmentName}");
-                Console.WriteLine($"WebRootPath: {webRootPath}");
-                Console.WriteLine($"ContentRootPath: {contentRootPath}");
-                Console.WriteLine($"Current Directory: {Directory.GetCurrentDirectory()}");
-
-                var logoPath = Path.Combine(webRootPath, "logo.jpg");
-                Console.WriteLine($"Looking for logo at: {logoPath}");
-                Console.WriteLine($"File exists: {File.Exists(logoPath)}");
-
-                // List all files in wwwroot to see what's actually there
-                if (Directory.Exists(webRootPath))
-                {
-                    var files = Directory.GetFiles(webRootPath, "*.*", SearchOption.TopDirectoryOnly);
-                    Console.WriteLine($"Files in wwwroot: {string.Join(", ", files.Select(Path.GetFileName))}");
-
-                    // Check permissions
-                    try
-                    {
-                        var fileInfo = new FileInfo(logoPath);
-                        if (fileInfo.Exists)
-                        {
-                            Console.WriteLine($"Logo file size: {fileInfo.Length} bytes");
-                            Console.WriteLine($"Logo file last modified: {fileInfo.LastWriteTime}");
-
-                            // Try to actually read the file to test permissions
-                            using (var testStream = File.OpenRead(logoPath))
-                            {
-                                Console.WriteLine($"Successfully opened logo file for reading");
-                            }
-                        }
-                    }
-                    catch (Exception permEx)
-                    {
-                        Console.WriteLine($"Permission error checking logo: {permEx.Message}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"WebRootPath directory does not exist!");
-                }
-
-                if (File.Exists(logoPath))
-                {
-                    Console.WriteLine("Attempting to create image run...");
-                    var logoRun = CreateImageRun(mainPart, logoPath, "Logo", 200, 200);
-                    logoPara.Append(logoRun);
-                    Console.WriteLine("Image run created successfully!");
-                }
-                else
-                {
-                    Console.WriteLine("Logo file not found, using text placeholder");
-                    var logoRun = CreateTextRun("[LOGO]", 24, true, true);
-                    logoPara.Append(logoRun);
-                }
+                logoPara.Append(File.Exists(logoPath)
+                    ? CreateImageRun(mainPart, logoPath, "Logo", 200, 200)
+                    : CreateTextRun("[LOGO]", 24, true, true));
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ERROR loading logo: {ex.GetType().Name}");
-                Console.WriteLine($"Error message: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-
-                var logoRun = CreateTextRun("[LOGO]", 24, true, true);
-                logoPara.Append(logoRun);
+                _logger.LogWarning(ex, "Could not embed the logo from {LogoPath}", logoPath);
+                logoPara.Append(CreateTextRun("[LOGO]", 24, true, true));
             }
 
             logoCell.Append(logoPara);
@@ -267,30 +211,12 @@ namespace InventoryManagement.Web.Services
         /// </summary>
         private Run CreateImageRun(MainDocumentPart mainPart, string imagePath, string imageName, int widthInPoints, int heightInPoints)
         {
-            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg); // Changed from Png to Jpeg since logo.jpg is a JPEG
+            ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
 
-            // IMPORTANT CHANGE: Read the entire file into memory first
-            // This avoids file permission issues that can occur in Docker containers
-            // where the app user might not have the same permissions as the build user
-            byte[] imageBytes;
-            try
-            {
-                // Read the entire file into a byte array
-                imageBytes = File.ReadAllBytes(imagePath);
-                Console.WriteLine($"Successfully read {imageBytes.Length} bytes from logo file");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to read image bytes: {ex.Message}");
-                throw;
-            }
-
-            // Now create a memory stream from those bytes and feed it to the ImagePart
-            // This completely avoids any file permission issues
-            using (var memoryStream = new MemoryStream(imageBytes))
+            // Read into memory first: feeding a file stream directly failed on permissions in the container.
+            using (var memoryStream = new MemoryStream(File.ReadAllBytes(imagePath)))
             {
                 imagePart.FeedData(memoryStream);
-                Console.WriteLine("Successfully fed image data to ImagePart");
             }
 
             string relationshipId = mainPart.GetIdOfPart(imagePart);
@@ -348,7 +274,6 @@ namespace InventoryManagement.Web.Services
             headerParaProp.Append(new SpacingBetweenLines { Before = "120", After = "60" });
             headerPara.Append(headerParaProp);
 
-            // Changed from CreateHighlightedTextRun to CreateTextRun
             var headerRun = CreateTextRun("Təhvil-təslim Heyəti:", 32, true, true);
             headerPara.Append(headerRun);
             body.Append(headerPara);
@@ -360,7 +285,6 @@ namespace InventoryManagement.Web.Services
             nameParaProp.Append(new SpacingBetweenLines { Before = "60", After = "120" });
             namePara.Append(nameParaProp);
 
-            // Changed from CreateHighlightedTextRun to CreateTextRun
             var nameRun = CreateTextRun("Kənan Əhədzadə", 28, false, true);
             namePara.Append(nameRun);
             body.Append(namePara);
@@ -379,7 +303,6 @@ namespace InventoryManagement.Web.Services
             dateParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             datePara.Append(dateParaProp);
 
-            // Changed from CreateHighlightedTextRun to CreateTextRun
             var dateRun = CreateTextRun($"Tarix: {DateTime.Now:dd.MM.yyyy}", 32, true, true);
             datePara.Append(dateRun);
             body.Append(datePara);
@@ -518,7 +441,7 @@ namespace InventoryManagement.Web.Services
         /// The entire line is highlighted from start to finish.
         /// Uses KeepNext property to prevent page breaks between signature lines.
         /// </summary>
-        private void AddSignatureSection(Body body, DepartmentViewModel department)
+        private void AddSignatureSection(Body body, DepartmentViewModel department, string? exportedByFullName)
         {
             // Create a table with full-width cells for complete background highlighting
             var signatureTable = new Table();
@@ -550,9 +473,12 @@ namespace InventoryManagement.Web.Services
             transferredParaProp.Append(new KeepNext());
             transferredPara.Append(transferredParaProp);
 
-            // Changed from CreateHighlightedTextRun to CreateTextRun
+            var transferredByName = !string.IsNullOrWhiteSpace(exportedByFullName)
+                ? exportedByFullName
+                : "_______________";
+
             var transferredRun = CreateTextRun(
-                "Təhvil verdi: Yusif Bağıyev ____________________",
+                $"Təhvil verdi: {transferredByName} ____________________",
                 22,
                 true,
                 true);
@@ -571,7 +497,6 @@ namespace InventoryManagement.Web.Services
                 ? department.DepartmentHead
                 : "_______________";
 
-            // Changed from CreateHighlightedTextRun to CreateTextRun
             var receivedRun = CreateTextRun(
                 $"Təhvil aldı: {departmentHeadName} ____________________",
                 22,
@@ -636,41 +561,6 @@ namespace InventoryManagement.Web.Services
 
             // Apply color to the text itself
             runProp.Append(new Color { Val = color });
-
-            run.Append(runProp);
-            run.Append(new Text(text));
-
-            return run;
-        }
-
-
-
-        /// <summary>
-        /// Creates a text run with HIGHLIGHTING (like using a highlighter pen).
-        /// This is different from colored text - it adds a colored background behind the text.
-        /// The key is using the Highlight property instead of Shading.
-        /// </summary>
-        private Run CreateHighlightedTextRun(string text, int fontSize, bool bold, bool timesNewRoman, string highlightColor)
-        {
-            var run = new Run();
-            var runProp = new RunProperties();
-
-            if (timesNewRoman)
-            {
-                runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman" });
-            }
-
-            runProp.Append(new FontSize { Val = fontSize.ToString() });
-
-            if (bold)
-            {
-                runProp.Append(new Bold());
-            }
-
-            // This is the key difference: Highlight creates text-level highlighting
-            // Note: Highlight in OpenXML uses predefined color names, not hex codes
-            // "yellow" is the closest to our golden color
-            runProp.Append(new Highlight { Val = HighlightColorValues.Yellow });
 
             run.Append(runProp);
             run.Append(new Text(text));

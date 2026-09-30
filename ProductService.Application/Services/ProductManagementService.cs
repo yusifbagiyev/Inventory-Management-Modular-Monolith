@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using ProductService.Application.DTOs;
 using ProductService.Application.Features.Categories.Queries;
@@ -7,6 +7,7 @@ using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
 using ProductService.Domain.Repositories;
+using SharedServices.Contracts;
 using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
@@ -18,20 +19,20 @@ namespace ProductService.Application.Services
     public class ProductManagementService : IProductManagementService
     {
         private readonly IMediator _mediator;
-        private readonly IApprovalService _approvalService;
+        private readonly IApprovalRequests _approvalRequests;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IDepartmentRepository _departmentRepository;
         private readonly ILogger<ProductManagementService> _logger;
 
         public ProductManagementService(
             IMediator mediator,
-            IApprovalService approvalService,
+            IApprovalRequests approvalRequests,
             ICategoryRepository categoryRepository,
             IDepartmentRepository departmentRepository,
             ILogger<ProductManagementService> logger)
         {
             _mediator = mediator;
-            _approvalService = approvalService;
+            _approvalRequests = approvalRequests;
             _categoryRepository = categoryRepository;
             _departmentRepository = departmentRepository;
             _logger = logger;
@@ -72,10 +73,10 @@ namespace ProductService.Application.Services
                 }
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for product {dto.InventoryCode}");
-            throw new ApprovalRequiredException(result.Id, "Product creation request has been submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for product {dto.InventoryCode}");
+            throw new ApprovalRequiredException(requestId, "Product creation request has been submitted for approval");
         }
 
 
@@ -131,10 +132,10 @@ namespace ProductService.Application.Services
                 }
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for updating product {id}");
-            throw new ApprovalRequiredException(result.Id, "Product update request submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for updating product {id}");
+            throw new ApprovalRequiredException(requestId, "Product update request submitted for approval");
         }
 
 
@@ -179,10 +180,10 @@ namespace ProductService.Application.Services
                 }
             };
 
-            var result = await _approvalService.CreateApprovalRequestAsync(approvalRequest, userId, userName);
+            var requestId = await _approvalRequests.SubmitAsync(approvalRequest, userId, userName);
 
-            _logger.LogInformation($"Approval request {result.Id} created for deleting product {id}");
-            throw new ApprovalRequiredException(result.Id, "Product deletion request submitted for approval");
+            _logger.LogInformation($"Approval request {requestId} created for deleting product {id}");
+            throw new ApprovalRequiredException(requestId, "Product deletion request submitted for approval");
         }
 
 

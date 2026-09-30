@@ -1,19 +1,21 @@
-﻿using AutoMapper;
 using FluentValidation;
 using MediatR;
 using RouteService.Application.DTOs;
-using RouteService.Application.Events;
 using RouteService.Application.Interfaces;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Exceptions;
 using RouteService.Domain.Repositories;
 using RouteService.Domain.ValueObjects;
+using SharedServices.Contracts;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
+using RouteService.Application.Mappings;
 
 namespace RouteService.Application.Features.Routes.Commands
 {
     public class TransferInventory
     {
-        public record Command(TransferInventoryDto Dto) : IRequest<InventoryRouteDto>;
+        public record Command(TransferInventoryDto Dto) : IRequest<InventoryRouteDto>, ITransactionalRequest;
 
         public class Validator : AbstractValidator<Command>
         {
@@ -21,102 +23,77 @@ namespace RouteService.Application.Features.Routes.Commands
             {
                 RuleFor(x => x.Dto.ProductId).GreaterThan(0);
                 RuleFor(x => x.Dto.ToDepartmentId).GreaterThan(0);
+                RuleFor(x => x.Dto.Notes).MaximumLength(500);
             }
         }
 
         public class Handler : IRequestHandler<Command, InventoryRouteDto>
         {
             private readonly IInventoryRouteRepository _repository;
-            private readonly IProductServiceClient _productClient;
+            private readonly IProductCatalog _productCatalog;
             private readonly IImageService _imageService;
-            private readonly IMessagePublisher _messagePublisher;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMapper _mapper;
+            private readonly DbSession _session;
 
             public Handler(
                 IInventoryRouteRepository repository,
-                IProductServiceClient productClient,
+                IProductCatalog productCatalog,
                 IImageService imageService,
-                IMessagePublisher messagePublisher,
                 IUnitOfWork unitOfWork,
-                IMapper mapper)
+                DbSession session)
             {
                 _repository = repository;
-                _productClient = productClient;
+                _productCatalog = productCatalog;
                 _imageService = imageService;
-                _messagePublisher = messagePublisher;
                 _unitOfWork = unitOfWork;
-                _mapper = mapper;
+                _session = session;
             }
 
             public async Task<InventoryRouteDto> Handle(Command request, CancellationToken cancellationToken)
             {
                 var dto = request.Dto;
 
-                // Get product info
-                var product = await _productClient.GetProductByIdAsync(dto.ProductId, cancellationToken)
-                    ?? throw new RouteException($"Product {dto.ProductId} not found");
+                var product = await _productCatalog.GetProductAsync(dto.ProductId, cancellationToken)
+                    ?? throw new NotFoundException($"Product {dto.ProductId} not found");
 
-                // Get departments info
-                var fromDepartment = await _productClient.GetDepartmentByIdAsync(product.DepartmentId, cancellationToken)
-                    ?? throw new RouteException($"Department {product.DepartmentId} not found");
+                var toDepartment = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId, cancellationToken)
+                    ?? throw new NotFoundException($"Department {dto.ToDepartmentId} not found");
 
-                var toDepartment = await _productClient.GetDepartmentByIdAsync(dto.ToDepartmentId, cancellationToken)
-                    ?? throw new RouteException($"Department {dto.ToDepartmentId} not found");
+                // Two open transfers for one product could be completed in either order, leaving the
+                // product wherever the last one pointed.
+                if (await _repository.HasPendingRouteForProductAsync(product.Id, cancellationToken))
+                    throw new RouteException("This product already has a pending transfer. Complete or delete it first.");
 
                 string? imageUrl = null;
-                byte[]? imageData = null;
-
-                await _unitOfWork.BeginTransactionAsync(cancellationToken);
-                try
+                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
                 {
-                    // Prepare image data
-                    if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-                    {
-                        using var ms = new MemoryStream();
-                        await dto.ImageFile.CopyToAsync(ms, cancellationToken);
-                        imageData = ms.ToArray();
+                    await using var stream = dto.ImageFile.OpenReadStream();
+                    imageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
+                    var uploaded = imageUrl;
+                    _session.OnRollback(() => _imageService.DeleteImageAsync(uploaded));
+                }
 
-                        ms.Position = 0;
-                        imageUrl = await _imageService.UploadImageAsync(ms, dto.ImageFile.FileName, product.InventoryCode);
-                    }
-
-                    // Create product snapshot
-                    var productSnapshot = new ProductSnapshot(
+                var route = InventoryRoute.CreateTransfer(
+                    new ProductSnapshot(
                         product.Id,
                         product.InventoryCode,
                         product.Model,
                         product.Vendor,
                         product.CategoryName,
-                        product.IsWorking);
+                        product.IsWorking),
+                    product.DepartmentId,
+                    product.DepartmentName,
+                    toDepartment.Id,
+                    toDepartment.Name,
+                    product.Worker,
+                    dto.ToWorker,
+                    imageUrl,
+                    dto.Notes);
 
-                    // Create route
-                    var route = InventoryRoute.CreateTransfer(
-                        productSnapshot,
-                        product.DepartmentId,
-                        fromDepartment.Name,
-                        dto.ToDepartmentId,
-                        toDepartment.Name,
-                        product.Worker,
-                        dto.ToWorker,
-                        imageUrl,
-                        dto.Notes);
+                await _repository.AddAsync(route, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                    await _repository.AddAsync(route, cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                    await _unitOfWork.CommitTransactionAsync(cancellationToken);
-
-                    return _mapper.Map<InventoryRouteDto>(route);
-                }
-                catch
-                {
-                    await _unitOfWork.RollbackTransactionAsync(cancellationToken);
-
-                    if (!string.IsNullOrEmpty(imageUrl))
-                        await _imageService.DeleteImageAsync(imageUrl);
-
-                    throw;
-                }
+                return route.ToDto();
             }
         }
     }

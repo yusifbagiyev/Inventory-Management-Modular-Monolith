@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
@@ -259,6 +259,20 @@ namespace ProductService.Infrastructure.Repositories
             return await _context.Products.AnyAsync(p => p.Id == id, cancellationToken);
         }
 
+
+        public async Task<(int Total, int Active)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Products.AsNoTracking();
+            if (createdFrom.HasValue) query = query.Where(p => p.CreatedAt >= createdFrom.Value);
+            if (createdTo.HasValue) query = query.Where(p => p.CreatedAt <= createdTo.Value);
+
+            var total = await query.CountAsync(cancellationToken);
+            var active = await query.CountAsync(p => p.IsActive, cancellationToken);
+            return (total, active);
+        }
+
+        public Task<int> CountAsync(CancellationToken cancellationToken = default)
+            => _context.Products.CountAsync(cancellationToken);
 
         public async Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
         {

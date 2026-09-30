@@ -143,7 +143,7 @@
                             <img src="@Model.FullImageUrl"
                                  style="cursor: pointer;"
                                  alt="Transfer Image"
-                                 onclick="showImageModal('@Model.FullImageUrl', 'Transfer Image')" />
+                                 data-src="@Model.FullImageUrl" onclick="showImageModal(this.dataset.src, 'Transfer Image')" />
                         </div>
                     }
                 </div>

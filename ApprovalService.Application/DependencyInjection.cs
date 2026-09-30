@@ -1,17 +1,17 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
+using ApprovalService.Application.Interfaces;
+using ApprovalService.Application.Services;
+using Microsoft.Extensions.DependencyInjection;
+using SharedServices.Contracts;
 
 namespace ApprovalService.Application
 {
     public static class DependencyInjection
     {
+        /// <remarks>MediatR handlers are registered by the host.</remarks>
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            var assembly = Assembly.GetExecutingAssembly();
-
-            services.AddAutoMapper(assembly);
-            services.AddMediatR(config => config.RegisterServicesFromAssembly(assembly));
-
+            services.AddScoped<IActionExecutor, ActionExecutor>();
+            services.AddScoped<IApprovalRequests, ApprovalRequests>();
             return services;
         }
     }

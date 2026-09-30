@@ -1,4 +1,4 @@
-﻿using IdentityService.Application.DTOs;
+using IdentityService.Application.DTOs;
 using IdentityService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,13 +22,12 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPost("login")]
-        [EnableRateLimiting("LoginPolicyPerIP")]
+        [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
-            var ipAddress = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim()
-                ?? HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault()
-                ?? HttpContext.Connection.RemoteIpAddress?.ToString()
-                ?? "unknown";
+            // RemoteIpAddress is the real client once the host's forwarded-headers middleware has
+            // processed X-Forwarded-For from the trusted proxy; the raw header is client-controlled.
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
             _logger.LogInformation(
                 "Login attempt for user {Username} from IP {IpAddress}",
@@ -257,7 +256,7 @@ namespace IdentityService.API.Controllers
 
         [HttpGet("permissions")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<object>>> GetPermissions()
+        public async Task<ActionResult<IEnumerable<PermissionDto>>> GetPermissions()
         {
             try
             {
@@ -351,9 +350,9 @@ namespace IdentityService.API.Controllers
                 if (userId == 0)
                     return Unauthorized(new { message = "Invalid user token" });
 
-                var result = await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
-                if (!result)
-                    return BadRequest(new { message = "Failed to change password" });
+                var (succeeded, error) = await _authService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword);
+                if (!succeeded)
+                    return BadRequest(new { message = error });
 
                 return NoContent();
             }
@@ -413,22 +412,6 @@ namespace IdentityService.API.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet("users/by-role/{role}")]
-        [Authorize]
-        public async Task<ActionResult<IEnumerable<UserDto>>> GetUsersByRole(string role)
-        {
-            try
-            {
-                var users = await _authService.GetAllUsersAsync();
-                var usersInRole = users.Where(u => u.Roles.Contains(role));
-                return Ok(usersInRole);
-            }
-            catch 
-            {
-                return BadRequest();
             }
         }
     }

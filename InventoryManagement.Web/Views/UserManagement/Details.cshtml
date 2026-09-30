@@ -176,7 +176,7 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>
-                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteUser(@Model.Id, '@Model.Username')">
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
                         <i class="fas fa-trash"></i> Delete User
                     </button>
                 </div>
@@ -220,13 +220,10 @@
                 okText: deactivating ? 'Deactivate' : 'Activate',
                 danger: deactivating
             }, function () {
-                fetch('@Url.Action("QuickToggleStatus")', {
+                // The id travels in the route: a JSON body never bound to the action's int id.
+                fetch(`@Url.Action("QuickToggleStatus")/${userId}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({ id: userId })
+                    headers: AppConfig.antiforgeryHeaders()
                 })
                 .then(response => response.json())
                 .then(data => {

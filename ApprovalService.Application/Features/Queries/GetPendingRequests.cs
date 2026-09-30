@@ -1,7 +1,7 @@
-﻿using ApprovalService.Application.DTOs;
+using ApprovalService.Application.DTOs;
 using ApprovalService.Domain.Repositories;
-using AutoMapper;
 using MediatR;
+using ApprovalService.Application.Mappings;
 
 namespace ApprovalService.Application.Features.Queries
 {
@@ -12,12 +12,10 @@ namespace ApprovalService.Application.Features.Queries
         public class Handler : IRequestHandler<Query, PagedResultDto<ApprovalRequestDto>>
         {
             private readonly IApprovalRequestRepository _repository;
-            private readonly IMapper _mapper;
 
-            public Handler(IApprovalRequestRepository repository, IMapper mapper)
+            public Handler(IApprovalRequestRepository repository)
             {
                 _repository = repository;
-                _mapper = mapper;
             }
 
             public async Task<PagedResultDto<ApprovalRequestDto>> Handle(Query request, CancellationToken cancellationToken)
@@ -27,7 +25,7 @@ namespace ApprovalService.Application.Features.Queries
 
                 return new PagedResultDto<ApprovalRequestDto>
                 {
-                    Items = _mapper.Map<IEnumerable<ApprovalRequestDto>>(requests),
+                    Items = requests.Select(x => x.ToDto()),
                     TotalCount = totalCount,
                     PageNumber = request.PageNumber,
                     PageSize = request.PageSize

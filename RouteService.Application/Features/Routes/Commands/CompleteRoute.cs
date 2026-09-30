@@ -1,86 +1,63 @@
-﻿using MediatR;
-using Microsoft.Extensions.Logging;
-using RouteService.Application.Events;
-using RouteService.Application.Interfaces;
+using MediatR;
+using RouteService.Domain.Enums;
 using RouteService.Domain.Exceptions;
 using RouteService.Domain.Repositories;
+using SharedServices.Contracts;
+using SharedServices.Events;
+using SharedServices.Exceptions;
+using SharedServices.Persistence;
 
 namespace RouteService.Application.Features.Routes.Commands
 {
     public class CompleteRoute
     {
-        public record Command(int Id) : IRequest;
+        public record Command(int Id) : IRequest, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command>
         {
             private readonly IInventoryRouteRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
-            private readonly IMessagePublisher _messagePublisher;
-            private readonly ILogger<Handler> _logger;
+            private readonly IProductTransfers _productTransfers;
+            private readonly IPublisher _publisher;
 
             public Handler(
-                IInventoryRouteRepository repository, 
-                IUnitOfWork unitOfWork, 
-                IMessagePublisher messagePublisher,
-                ILogger<Handler> logger)
+                IInventoryRouteRepository repository,
+                IUnitOfWork unitOfWork,
+                IProductTransfers productTransfers,
+                IPublisher publisher)
             {
                 _repository = repository;
                 _unitOfWork = unitOfWork;
-                _messagePublisher = messagePublisher;
-                _logger = logger;
+                _productTransfers = productTransfers;
+                _publisher = publisher;
             }
 
             public async Task Handle(Command request, CancellationToken cancellationToken)
             {
                 var route = await _repository.GetByIdAsync(request.Id, cancellationToken)
-                    ?? throw new RouteException($"Route with ID {request.Id} not found");
+                    ?? throw new NotFoundException($"Route with ID {request.Id} not found");
 
                 if (route.IsCompleted)
                     throw new RouteException("Route is already completed");
 
                 route.Complete();
-
                 await _repository.UpdateAsync(route, cancellationToken);
+                // The row version makes a concurrent second completion fail here instead of
+                // moving the product twice.
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Prepare image data if available
-                byte[]? imageData = null;
-                string? imageFileName = null;
-                
-                if(!string.IsNullOrEmpty(route.ImageUrl))
+                // Same transaction: the route is never marked complete without the product moving.
+                if (route.RouteType == RouteType.Transfer)
                 {
-                    try
-                    {
-                        var webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                        var imagePath = Path.Combine(webRootPath, route.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-                        if (File.Exists(imagePath))
-                        {
-                            imageData = await File.ReadAllBytesAsync(imagePath, cancellationToken);
-                            imageFileName = Path.GetFileName(imagePath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to read image data for route {RouteId}", route.Id);
-                    }
+                    await _productTransfers.ApplyTransferAsync(
+                        route.ProductSnapshot.ProductId,
+                        route.ToDepartmentId,
+                        route.ToWorker,
+                        route.ImageUrl,
+                        cancellationToken);
                 }
 
-                // Now publish the transfer event to update the product
-                var transferEvent = new ProductTransferredEvent
-                {
-                    ProductId = route.ProductSnapshot.ProductId,
-                    ToDepartmentId = route.ToDepartmentId,
-                    ToWorker = route.ToWorker,
-                    ImageData = imageData,
-                    ImageFileName = imageFileName,
-                    TransferredAt = DateTime.Now
-                };
-
-                await _messagePublisher.PublishAsync(transferEvent, "product.transferred", cancellationToken);
-
-                // Publish route completed event for notifications
-                var completedEvent = new RouteCompletedEvent
+                await _publisher.Publish(new RouteCompletedEvent
                 {
                     RouteId = route.Id,
                     ProductId = route.ProductSnapshot.ProductId,
@@ -88,20 +65,15 @@ namespace RouteService.Application.Features.Routes.Commands
                     Model = route.ProductSnapshot.Model,
                     Vendor = route.ProductSnapshot.Vendor,
                     CategoryName = route.ProductSnapshot.CategoryName,
-                    FromDepartmentId = route.FromDepartmentId ?? 0,
-                    FromDepartmentName = route.FromDepartmentName ?? "",
+                    FromDepartmentName = route.FromDepartmentName ?? string.Empty,
                     FromWorker = route.FromWorker,
-                    ToWorker = route.ToWorker ?? "",
                     ToDepartmentId = route.ToDepartmentId,
                     ToDepartmentName = route.ToDepartmentName,
+                    ToWorker = route.ToWorker,
                     Notes = route.Notes,
                     ImageUrl = route.ImageUrl,
-                    ImageData = imageData,
-                    ImageFileName=imageFileName,
-                    CompletedAt = DateTime.Now
-                };
-
-                await _messagePublisher.PublishAsync(completedEvent, "route.completed", cancellationToken);
+                    CompletedAt = route.CompletedAt
+                }, cancellationToken);
             }
         }
     }
