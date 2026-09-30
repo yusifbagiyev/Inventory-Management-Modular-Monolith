@@ -177,6 +177,10 @@ window.NotificationManager = (function () {
 
     // Set up message handlers with duplicate prevention
     function setupMessageHandlers() {
+        // The layout loads the list on page load; after a reconnect it may be stale.
+        let connectedBefore = false;
+        let pendingReceived = 0;
+
         // Connection established confirmation
         connection.on("ConnectionEstablished", function (data) {
             connectionState = 'connected';
@@ -191,11 +195,10 @@ window.NotificationManager = (function () {
             };
 
 
-            // Initial load of data (with slight delay to ensure UI is ready)
-            setTimeout(() => {
-                loadRecentNotifications();
-                loadNotificationCount();
-            }, 500);
+            if (connectedBefore) {
+                setTimeout(() => window.loadRecentNotifications(), 500);
+            }
+            connectedBefore = true;
         });
 
         // Handle incoming notifications with duplicate prevention
@@ -214,18 +217,18 @@ window.NotificationManager = (function () {
 
         // Handle pending notifications (sent when connecting)
         connection.on("ReceivePendingNotification", function (notification) {
-            // For pending notifications, we don't want to show individual toasts
-            // Just update the badge count
-            window.incrementNotificationCount();
+            // For pending notifications, we don't want to show individual toasts;
+            // the list is reloaded once when they are all in.
+            pendingReceived++;
         });
 
         // Pending notifications complete
         connection.on("PendingNotificationsComplete", function (data) {
-            // Reload the notification list and count after receiving all pending
-            setTimeout(() => {
-                window.loadRecentNotifications();
-                window.loadNotificationCount();
-            }, 100);
+            // Reload the notification list (and count) once, only if something arrived
+            if (pendingReceived > 0) {
+                pendingReceived = 0;
+                setTimeout(() => window.loadRecentNotifications(), 100);
+            }
         });
 
         // Handle approval refresh (for admins) with rate limiting

@@ -88,6 +88,7 @@ Every write permission has `x` and `x.direct` (`product.create` / `product.creat
 - Products and routes have several images: `ImageUrls` (`text[]`, cover first) with `ImageUrl` kept equal to the cover for lists, exports, WhatsApp and API clients — always change them through `SetImages`. Edits send `ImageFiles` (added), `RemoveImageUrls`, `CoverImageUrl` (`SharedServices/Storage/ImageSet`); the legacy single `ImageFile` still means "replace all". Approval ActionData stores new files base64 under `images` (`ApprovalActionData.EncodeImagesAsync`/`GetImages`). Completing a transfer with photos replaces the product's images with copies of them. UI: `_ImageManager` partial + `image-manager.js` (picker), `_ImageGallery` (details).
 - Notifications that go to everyone skip the user who caused them (actor read from the request in `NotificationEventHandlers`).
 - Timestamps are `timestamp without time zone` with `DateTime.Now` (container `TZ`).
+- Every request is logged with its duration (`UseSerilogRequestLogging`, visible in Seq). `StartupWarmup` runs the main pages' queries once after startup (a cold dashboard took ~3 s); add a page's new heavy query there.
 
 ## Deployment / data
 

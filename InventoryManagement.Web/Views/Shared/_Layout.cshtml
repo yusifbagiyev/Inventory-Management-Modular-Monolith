@@ -268,8 +268,7 @@
                 // Set up UI handlers for notifications
                 setupNotificationUIHandlers();
 
-                // Load initial data
-                loadNotificationCount();
+                // Load initial data (the list request also refreshes the count)
                 loadRecentNotifications();
 
                 if (isAdmin) {

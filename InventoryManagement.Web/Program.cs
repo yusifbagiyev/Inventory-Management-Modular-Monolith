@@ -61,6 +61,14 @@ try
     }
 
     app.UseStaticFiles();
+
+    // One line per request with its duration ("HTTP GET /Products responded 200 in 12.3 ms"), after
+    // static files so those are not logged; the container healthcheck stays out of the log.
+    app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
+        exception != null || context.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
+        : context.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
+        : Serilog.Events.LogEventLevel.Information);
+
     app.UseUiLocalization();
     app.UseRouting();
 

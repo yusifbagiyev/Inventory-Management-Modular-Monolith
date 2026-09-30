@@ -13,6 +13,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddScoped<INotificationService, Services.NotificationService>();
             services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<IWordExportService, WordExportService>();
+            services.AddHostedService<StartupWarmup>();
             return services;
         }
 
