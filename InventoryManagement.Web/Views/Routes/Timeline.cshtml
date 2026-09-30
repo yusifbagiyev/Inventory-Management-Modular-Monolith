@@ -189,20 +189,4 @@
 
 @section Scripts {
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
-    <script>
-        $(document).ready(function() {
-            // Make timeline images clickable
-            $('.timeline-content img').on('click', function() {
-                const imageUrl = $(this).attr('src');
-                showImageModal(imageUrl, 'Transfer Image');
-            });
-        });
-
-        function showImageModal(imageUrl, title) {
-            // Use the global image modal from _Layout
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
-        }
-    </script>
 }

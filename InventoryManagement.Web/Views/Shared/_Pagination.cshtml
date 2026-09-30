@@ -1,12 +1,9 @@
-﻿@model PagedResultDto<CategoryViewModel>
-@{
-    var startItem = ((Model.PageNumber - 1) * Model.PageSize) + 1;
-    var endItem = Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount);
-}
+@model PaginationViewModel
+@* Prev/next for any paged list; changePage (site.js) keeps the current filters in the URL. *@
 
 <div class="gmail-pagination d-flex align-items-center justify-content-between">
     <div class="pagination-info">
-        <span class="text-muted">@startItem–@endItem of @Model.TotalCount</span>
+        <span class="text-muted">@Model.FirstItem–@Model.LastItem of @Model.TotalCount</span>
     </div>
 
     <div class="pagination-controls">
@@ -20,11 +17,3 @@
         </button>
     </div>
 </div>
-
-<script>
-    function changePage(page) {
-        const params = new URLSearchParams(window.location.search);
-        params.set('pageNumber', page);
-        window.location.href = '/Categories?' + params.toString();
-    }
-</script>
