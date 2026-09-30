@@ -48,8 +48,8 @@
             </div>
         </div>
         <div class="ip-page-actions">
-            <button type="button" class="btn btn-outline-secondary" onclick="exportRoutesToPDF()">
-                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()">
+                <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
             </button>
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
             {
@@ -165,7 +165,7 @@
                                 </td>
                                 <td>
                                     <div class="cell-text">
-                                        <span>@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
+                                        <span class="cell-title fw-normal">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
                                         @if (!string.IsNullOrEmpty(route.FromWorker))
                                         {
                                             <span class="cell-sub">@route.FromWorker</span>
@@ -175,7 +175,7 @@
                                 <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                                 <td>
                                     <div class="cell-text">
-                                        <span class="fw-semibold">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
+                                        <span class="cell-title">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
                                         @if (!string.IsNullOrEmpty(route.ToWorker))
                                         {
                                             <span class="cell-sub">@route.ToWorker</span>

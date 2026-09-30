@@ -3,189 +3,154 @@
     ViewData["Title"] = "Transfer Timeline";
     var productId = ViewBag.ProductId;
     var ordered = Model.OrderByDescending(r => r.CreatedAt).ToList();
+    var product = ordered.FirstOrDefault();
+    var pendingCount = Model.Count(r => !r.IsCompleted);
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
+    string Place(string? department, string? worker)
+        => string.IsNullOrWhiteSpace(worker) ? Or(department, "-") : $"{Or(department, "-")} ({worker})";
+}
+
+@section Styles {
+    <style>
+        .timeline { list-style: none; margin: 0; padding: var(--ip-space-6) 0 0; }
+        .timeline-item { position: relative; display: flex; gap: var(--ip-space-4); padding-bottom: var(--ip-space-6); }
+        .timeline-item:not(:last-child)::before { content: ""; position: absolute; left: 13px; top: 32px; bottom: 4px; width: 2px; background: var(--ip-border); }
+        .timeline-marker { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--ip-sunken); color: var(--ip-text-3); display: grid; place-items: center; font-size: 12px; }
+        .timeline-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-top: 3px; }
+        .timeline-move { display: flex; align-items: flex-start; gap: var(--ip-space-3); flex-wrap: wrap; }
+        .timeline-move > i { color: var(--ip-text-3); margin-top: 4px; }
+        .timeline-thumbs { display: flex; gap: var(--ip-space-2); flex-wrap: wrap; }
+        .timeline-thumbs .ip-thumb { border: 0; padding: 0; cursor: zoom-in; }
+    </style>
 }
 
 <div class="container-fluid px-4" id="detailsRegion">
-    <div class="ip-page-head">
+    <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">@L["Products"]</a></li>
+                @if (product != null)
+                {
+                    <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-mono">@product.InventoryCode</a></li>
+                }
                 <li class="breadcrumb-item active">@L["Timeline"]</li>
             </ol>
             <h1>@L[(string)ViewData["Title"]!]</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                @if (product != null)
+                {
+                    <span class="ip-mono text-body">@product.InventoryCode</span>
+                    <span>@Or(product.Model, "-") · @Or(product.Vendor, "-")</span>
+                    <span aria-hidden="true">·</span>
+                }
+                <span class="ip-num">@L["{0} routes, {1} pending", Model.Count, pendingCount]</span>
+            </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary btn-sm" onclick="exportTimelineToPDF()">
-                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
+    </div>
+
+    <div class="ip-page-actions mb-4">
+        <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-btn ip-btn-secondary">
+            <i class="fa-solid fa-box"></i><span>@L["View Product"]</span>
+        </a>
+        @if (ordered.Any())
+        {
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportTimelineToPDF()">
+                <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
-            <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="btn btn-primary btn-sm">
-                <i class="fas fa-box"></i> @L["View Product"]
-            </a>
-        </div>
+        }
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-clock-rotate-left me-1"></i>
-                    @L["Product Transfer History"]
-                </div>
-                <div class="card-body">
-                    @if (ordered.Any())
-                    {
-                        var product = ordered[0];
-                        <div class="timeline" data-product="@($"{product.InventoryCode} · {product.Model} ({product.Vendor})")">
-                            @for (var i = 0; i < ordered.Count; i++)
-                            {
-                                var route = ordered[i];
-                                var isLast = i == ordered.Count - 1;
-                                var typeClass = route.RouteTypeName switch
-                                {
-                                    "New" => "state-ok",
-                                    "Removal" => "state-crit",
-                                    "Update" => "state-warn",
-                                    "Transfer" => "state-info",
-                                    _ => "state-idle"
-                                };
+    <hr class="ip-rule" />
 
-                                <div class="timeline-item d-flex gap-3 py-3 @(isLast ? "" : "border-bottom")">
-                                    <div class="timeline-marker">
-                                        @if (route.IsCompleted)
-                                        {
-                                            <i class="fas fa-check-circle text-success"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-clock text-warning"></i>
-                                        }
-                                    </div>
-                                    <div class="timeline-content flex-grow-1">
-                                        <h6 class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                                            <span class="d-flex align-items-center flex-wrap gap-2">
-                                                <span class="state state-flat @typeClass">@L[route.RouteTypeName ?? ""]</span>
-                                                @if (route.IsCompleted)
-                                                {
-                                                    <span class="state state-ok">@L["Completed"]</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="state state-warn">@L["Pending"]</span>
-                                                }
-                                            </span>
-                                            <span class="cell-sub mono">@route.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                                        </h6>
-
-                                        <div class="d-flex align-items-center flex-wrap gap-3 mb-2">
-                                            @if (route.FromDepartmentName != null)
-                                            {
-                                                <div class="cell-text">
-                                                    <span class="cell-sub">@L["From"]</span>
-                                                    <span class="cell-title">@route.FromDepartmentName</span>
-                                                    @if (!string.IsNullOrEmpty(route.FromWorker))
-                                                    {
-                                                        <span class="cell-sub">@route.FromWorker</span>
-                                                    }
-                                                </div>
-                                                <i class="fas fa-arrow-right text-muted"></i>
-                                            }
-                                            <div class="cell-text">
-                                                <span class="cell-sub">@L["To"]</span>
-                                                <span class="cell-title">@route.ToDepartmentName</span>
-                                                @if (!string.IsNullOrEmpty(route.ToWorker))
-                                                {
-                                                    <span class="cell-sub">@route.ToWorker</span>
-                                                }
-                                            </div>
-                                        </div>
-
-                                        @if (!string.IsNullOrEmpty(route.Notes))
-                                        {
-                                            <p class="text-muted mb-2">
-                                                <i class="fas fa-note-sticky me-1"></i> @route.Notes
-                                            </p>
-                                        }
-
-                                        @if (!string.IsNullOrEmpty(route.FullImageUrl))
-                                        {
-                                            <img src="@route.FullImageUrl"
-                                                 class="img-thumbnail timeline-image-zoom mb-2"
-                                                 style="max-width: 150px; cursor: pointer;"
-                                                 alt="@L["Transfer image"]"
-                                                 data-src="@route.FullImageUrl" data-title="@L["Transfer image"]"
-                                                 onclick="showImageModal(this.dataset.src, this.dataset.title)" />
-                                        }
-
-                                        @if (route.IsCompleted)
-                                        {
-                                            <div class="cell-sub mono">
-                                                @L["Completed"]: @route.CompletedAt?.ToString("dd.MM.yyyy HH:mm")
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-clock-rotate-left"></i>
-                            <h5>@L["No transfers yet"]</h5>
-                            <p class="mb-0">@L["No transfer history available for this product."]</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-line me-1"></i>
-                    @L["Statistics"]
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Total Transfers"]</span>
-                            <span class="d-value mono">@Model.Count</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Completed"]</span>
-                            <span class="d-value mono">@Model.Count(r => r.IsCompleted)</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Pending"]</span>
-                            <span class="d-value mono">@Model.Count(r => !r.IsCompleted)</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["First Transfer"]</span>
-                            @if (Model.Any())
-                            {
-                                <span class="d-value mono">@Model.Min(r => r.CreatedAt).ToString("dd.MM.yyyy")</span>
-                            }
-                            else
-                            {
-                                <span class="d-value d-empty">@L["Not available"]</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Last Transfer"]</span>
-                            @if (Model.Any())
-                            {
-                                <span class="d-value mono">@Model.Max(r => r.CreatedAt).ToString("dd.MM.yyyy")</span>
-                            }
-                            else
-                            {
-                                <span class="d-value d-empty">@L["Not available"]</span>
-                            }
-                        </div>
+    @if (product != null)
+    {
+        <ol class="timeline" data-product="@($"{product.InventoryCode} · {product.Model} ({product.Vendor})")">
+            @foreach (var route in ordered)
+            {
+                <li class="timeline-item"
+                    data-when="@route.CreatedAt.ToString("dd.MM.yyyy HH:mm")"
+                    data-type="@L[route.RouteTypeName ?? ""]"
+                    data-status="@(route.IsCompleted ? "completed" : "pending")"
+                    data-status-text="@(route.IsCompleted ? L["Completed"] : L["Pending"])"
+                    data-from="@(route.FromDepartmentName == null ? "" : Place(route.FromDepartmentName, route.FromWorker))"
+                    data-to="@Place(route.ToDepartmentName, route.ToWorker)"
+                    data-notes="@route.Notes"
+                    data-completed="@(route.IsCompleted ? route.CompletedAt?.ToString("dd.MM.yyyy HH:mm") : "")">
+                    <div class="timeline-marker" aria-hidden="true">
+                        <i class="fa-solid @(route.IsCompleted ? "fa-check" : "fa-clock")"></i>
                     </div>
-                </div>
-            </div>
+                    <div class="timeline-content">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <a asp-action="Details" asp-route-id="@route.Id" class="ip-num fw-semibold text-body">
+                                @route.CreatedAt.ToString("dd.MM.yyyy") <span class="ip-muted fw-normal">@route.CreatedAt.ToString("HH:mm")</span>
+                            </a>
+                            <span class="ip-tag-plain">@L[route.RouteTypeName ?? ""]</span>
+                            @if (route.IsCompleted)
+                            {
+                                <span class="ip-badge ip-badge-success">@L["Completed"]</span>
+                            }
+                            else
+                            {
+                                <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                            }
+                        </div>
+
+                        <div class="timeline-move">
+                            @if (route.FromDepartmentName != null)
+                            {
+                                <div class="cell-text">
+                                    <span>@route.FromDepartmentName</span>
+                                    @if (!string.IsNullOrEmpty(route.FromWorker))
+                                    {
+                                        <span class="ip-faint">@route.FromWorker</span>
+                                    }
+                                </div>
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            }
+                            <div class="cell-text">
+                                <span class="fw-semibold">@route.ToDepartmentName</span>
+                                @if (!string.IsNullOrEmpty(route.ToWorker))
+                                {
+                                    <span class="ip-faint">@route.ToWorker</span>
+                                }
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(route.Notes))
+                        {
+                            <p class="ip-muted mb-0">@route.Notes</p>
+                        }
+
+                        @if (route.ImageUrls.Count > 0)
+                        {
+                            <div class="timeline-thumbs">
+                                @for (var i = 0; i < route.ImageUrls.Count; i++)
+                                {
+                                    <button type="button" class="ip-thumb" data-src="@route.ImageUrls[i]" data-title="@L["Transfer image"]"
+                                            aria-label="@L["Image {0}", i + 1]" onclick="showImageModal(this.dataset.src, this.dataset.title)">
+                                        <img src="@route.ImageUrls[i]" alt="" loading="lazy" />
+                                    </button>
+                                }
+                            </div>
+                        }
+
+                        @if (route.IsCompleted && route.CompletedAt.HasValue)
+                        {
+                            <span class="ip-faint ip-num">@L["Completed"]: @route.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                        }
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+    else
+    {
+        <div class="ip-empty">
+            <span class="icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            <div class="title">@L["No transfers yet"]</div>
+            <div class="text">@L["No transfer history available for this product."]</div>
         </div>
-    </div>
+    }
 </div>
 
 @section Scripts {

@@ -1,156 +1,147 @@
 @model MyRequestsViewModel
-    @Html.AntiForgeryToken()
 @{
     ViewData["Title"] = "My Requests";
+    var pendingCount = Model.Requests.Count(r => r.Status == "Pending");
 }
+@Html.AntiForgeryToken()
+
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
             <h1>@L["My Approval Requests"]</h1>
+            <div class="ip-sub ip-num" id="myRequestsSummary">@L["{0} requests, {1} pending", Model.Requests.Count, pendingCount]</div>
         </div>
     </div>
 
-    @* Status filter chips - the click handler keys off .filter-btn + data-filter *@
-    <div class="filter-panel mt-3">
-        <div class="filter-quick pt-2">
-            <span class="qlabel">@L["Status"]</span>
-            <button type="button" class="qchip filter-btn active" data-filter="all">
-                @L["All"] <span class="mono">@Model.Requests.Count</span>
-            </button>
-            <button type="button" class="qchip filter-btn" data-filter="pending">
-                @L["Pending"] <span class="mono">@Model.Requests.Count(r => r.Status == "Pending")</span>
-            </button>
-            <button type="button" class="qchip filter-btn" data-filter="approved">
-                @L["Approved"] <span class="mono">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
-            </button>
-            <button type="button" class="qchip filter-btn" data-filter="rejected">
-                @L["Rejected"] <span class="mono">@Model.Requests.Count(r => r.Status == "Rejected")</span>
-            </button>
-            <button type="button" class="qchip filter-btn" data-filter="failed">
-                @L["Failed"] <span class="mono">@Model.Requests.Count(r => r.Status == "Failed")</span>
-            </button>
-        </div>
-    </div>
+    @* Status tabs filter the rows on the client: the click handler keys off .filter-btn + data-filter. *@
+    <nav class="ip-tabs strong" aria-label="@L["Status"]" id="myRequestsTabs">
+        <button type="button" class="ip-tab filter-btn active" data-filter="all">
+            @L["All"] <span class="count">@Model.Requests.Count</span>
+        </button>
+        <button type="button" class="ip-tab filter-btn" data-filter="pending">
+            @L["Pending"] <span class="count warning">@pendingCount</span>
+        </button>
+        <button type="button" class="ip-tab filter-btn" data-filter="approved">
+            @L["Approved"] <span class="count">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
+        </button>
+        <button type="button" class="ip-tab filter-btn" data-filter="rejected">
+            @L["Rejected"] <span class="count">@Model.Requests.Count(r => r.Status == "Rejected")</span>
+        </button>
+        <button type="button" class="ip-tab filter-btn" data-filter="failed">
+            @L["Failed"] <span class="count">@Model.Requests.Count(r => r.Status == "Failed")</span>
+        </button>
+    </nav>
 
-    <div class="card mb-4" id="myRequestsRegion">
-        <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="fas fa-list-check me-1"></i> @L["Your Approval Requests"]</span>
-            <span class="text-muted mono">@Model.Requests.Count</span>
-        </div>
-        <div class="card-body">
-            @if (Model.Requests.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover" id="myRequestsTable">
-                        <thead>
-                            <tr>
-                                <th>@L["Date"]</th>
-                                <th>@L["Type"]</th>
-                                <th>@L["Entity"]</th>
-                                <th>@L["Status"]</th>
-                                <th>@L["Processed By"]</th>
-                                <th>@L["Actions"]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var request in Model.Requests)
-                            {
-                                <tr data-status="@GetStatusFilter(request.Status)">
-                                    <td class="num text-muted" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">@request.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            @L[GetRequestTypeDisplay(request.RequestType)]
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="cell-text">
-                                            <span class="cell-title">@L[request.EntityType]</span>
-                                            @if (request.EntityId.HasValue)
-                                            {
-                                                <span class="cell-sub mono">#@request.EntityId</span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @switch (request.Status)
+    <div id="myRequestsRegion">
+        @if (Model.Requests.Any())
+        {
+            <div class="ip-table-wrap">
+                <table class="ip-table" id="myRequestsTable">
+                    <thead>
+                        <tr>
+                            <th>@L["Request"]</th>
+                            <th>@L["What changes"]</th>
+                            <th>@L["Date"]</th>
+                            <th>@L["Status"]</th>
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in Model.Requests)
+                        {
+                            var view = ApprovalView.From(request.RequestType, request.ActionData);
+                            var fields = view.FieldNames.Select(f => L[f].Value).ToList();
+                            <tr data-status="@GetStatusFilter(request.Status)" data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
+                                <td class="ip-mono ip-muted">#@request.Id</td>
+                                <td>
+                                    <div class="cell-text">
+                                        <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
+                                        @if (fields.Count > 0)
                                         {
-                                            case "Pending":
-                                                <span class="state state-warn">@L["Pending"]</span>
-                                                break;
-                                            case "Approved":
-                                            case "Executed":
-                                                <span class="state state-ok">@L["Approved"]</span>
-                                                break;
-                                            case "Rejected":
-                                                <span class="state state-crit">@L["Rejected"]</span>
-                                                @if (!string.IsNullOrEmpty(request.RejectionReason))
-                                                {
-                                                    <br />
-
-                                                    <small class="text-muted">@request.RejectionReason</small>
-                                                }
-                                                break;
-                                            case "Failed":
-                                                <span class="state state-crit">@L["Failed"]</span>
-                                                @if (!string.IsNullOrEmpty(request.RejectionReason))
-                                                {
-                                                    <br />
-
-                                                    <small class="text-muted">@L["Reason"]: @JsonStringLocalizer.TranslateMessage(request.RejectionReason)</small>
-                                                }
-                                                break;
-                                            default:
-                                                <span class="state state-idle">@L[request.Status]</span>
-                                                break;
+                                            <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
                                         }
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(request.ApprovedByName))
-                                        {
-                                            @request.ApprovedByName
+                                    </div>
+                                </td>
+                                <td class="ip-num text-nowrap">
+                                    @request.CreatedAt.ToString("dd.MM.yyyy")
+                                    <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
+                                </td>
+                                <td>
+                                    @switch (request.Status)
+                                    {
+                                        case "Pending":
+                                            <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                                            break;
+                                        case "Approved":
+                                        case "Executed":
+                                            <span class="ip-badge ip-badge-success">@L["Approved"]</span>
+                                            break;
+                                        case "Rejected":
+                                            <span class="ip-badge ip-badge-danger">@L["Rejected"]</span>
+                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                            {
+                                                <div class="sub">@request.RejectionReason</div>
+                                            }
+                                            break;
+                                        case "Failed":
+                                            <span class="ip-badge ip-badge-danger">@L["Failed"]</span>
+                                            @if (!string.IsNullOrEmpty(request.RejectionReason))
+                                            {
+                                                <div class="sub">@L["Reason"]: @JsonStringLocalizer.TranslateMessage(request.RejectionReason)</div>
+                                            }
+                                            break;
+                                        default:
+                                            <span class="ip-badge ip-badge-neutral">@L[request.Status]</span>
+                                            break;
+                                    }
+                                    @if (!string.IsNullOrEmpty(request.ApprovedByName))
+                                    {
+                                        <div class="sub">
+                                            <span>@L["Decided by {0}", request.ApprovedByName]</span>
                                             @if (request.ProcessedAt.HasValue)
                                             {
-                                                <br />
-                                                <small class="text-muted mono">@request.ProcessedAt.Value.ToString("dd.MM HH:mm")</small>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span class="d-empty">@L["Not processed"]</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="@L["View details"]">
-                                                <i class="fas fa-eye"></i> @L["Details"]
-                                            </button>
-                                            @if (request.Status == "Pending")
-                                            {
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequest(@request.Id)" title="@L["Cancel request"]">
-                                                    <i class="fas fa-times"></i> @L["Cancel"]
-                                                </button>
+                                                <span class="ip-num">· @request.ProcessedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                                             }
                                         </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h5>@L["You have not submitted any requests"]</h5>
-                    <p class="text-muted mb-0">@L["Actions that need an administrator's approval show up here with their status."]</p>
-                </div>
-            }
-        </div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="actions">
+                                        <button type="button" class="ip-btn-icon" title="@L["View details"]" aria-label="@L["View details"]"
+                                                onclick="event.stopPropagation(); viewDetails(@request.Id)">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </button>
+                                        @if (request.Status == "Pending")
+                                        {
+                                            <button type="button" class="ip-btn ip-btn-danger-ghost ip-btn-sm" data-cancel-id="@request.Id"
+                                                    onclick="event.stopPropagation(); cancelRequest(@request.Id)">
+                                                <i class="fa-solid fa-xmark"></i><span>@L["Cancel request"]</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="ip-empty d-none" id="myRequestsFilterEmpty">
+                <span class="icon"><i class="fa-solid fa-filter"></i></span>
+                <div class="title">@L["No requests with this status"]</div>
+            </div>
+        }
+        else
+        {
+            <div class="ip-empty">
+                <span class="icon"><i class="fa-solid fa-inbox"></i></span>
+                <div class="title">@L["You have not submitted any requests"]</div>
+                <div class="text">@L["Actions that need an administrator's approval show up here with their status."]</div>
+            </div>
+        }
     </div>
 </div>
 
-<!-- Details Modal -->
+@* Decision dialog, read-only here. The header and body come from Approvals/_ApprovalDetails. *@
 <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -168,49 +159,36 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            initRequestsTable();
-
-            $('.filter-btn').click(function() {
-                $('.filter-btn').removeClass('active');
-                $(this).addClass('active');
-                applyStatusFilter();
-            });
+        // Delegated: the tabs are replaced by live-updates.js.
+        $(document).on('click', '.filter-btn', function () {
+            $('.filter-btn').removeClass('active');
+            $(this).addClass('active');
+            applyStatusFilter();
         });
-
-        // Runs on load and again after live-updates.js swaps in a fresh table.
-        function initRequestsTable() {
-            // the table is only rendered when the user has at least one request
-            if ($('#myRequestsTable').length) {
-                $('#myRequestsTable').DataTable({
-                    order: [[0, 'desc']],
-                    pageLength: 25
-                });
-            }
-        }
 
         function applyStatusFilter() {
             const filter = $('.filter-btn.active').data('filter') || 'all';
+            const $rows = $('#myRequestsTable tr[data-status]');
 
-            if (filter === 'all') {
-                $('tr[data-status]').show();
-            } else {
-                $('tr[data-status]').hide();
-                $(`tr[data-status="${filter}"]`).show();
-            }
+            $rows.each(function () {
+                $(this).toggleClass('d-none', filter !== 'all' && this.dataset.status !== filter);
+            });
 
-            if ($.fn.DataTable.isDataTable('#myRequestsTable')) $('#myRequestsTable').DataTable().draw();
+            const none = $rows.length > 0 && $rows.filter(':not(.d-none)').length === 0;
+            $('#myRequestsTable').closest('.ip-table-wrap').toggleClass('d-none', none);
+            $('#myRequestsFilterEmpty').toggleClass('d-none', !none);
         }
 
-        // An admin approving or rejecting one of your requests updates its status here.
+        // An admin approving or rejecting one of your requests updates its status and the counts here.
+        let activeFilter = 'all';
         LiveUpdates.watch({
             entities: ['approval'],
-            regions: ['#myRequestsRegion'],
+            regions: ['#myRequestsSummary', '#myRequestsTabs', '#myRequestsRegion'],
             beforeRefresh() {
-                if ($.fn.DataTable.isDataTable('#myRequestsTable')) $('#myRequestsTable').DataTable().destroy();
+                activeFilter = $('.filter-btn.active').data('filter') || 'all';
             },
             afterRefresh() {
-                initRequestsTable();
+                $('.filter-btn').removeClass('active').filter(`[data-filter="${activeFilter}"]`).addClass('active');
                 applyStatusFilter();
             }
         });
@@ -219,21 +197,25 @@
             loadApprovalDetails(`/MyRequests/Details/${requestId}`, document.getElementById('detailsModal'));
         }
 
-         function cancelRequest(requestId) {
+        // Opened from a product or a notification (?open=5): show that request straight away.
+        $(function () {
+            const openId = parseInt(new URLSearchParams(location.search).get('open'), 10);
+            if (openId > 0) viewDetails(openId);
+        });
+
+        function cancelRequest(requestId) {
             confirmAction({
                 title: t('Cancel request'),
                 message: t('Cancel this request? It will be withdrawn from the approval queue.'),
                 okText: t('Cancel request'),
                 danger: true
             }, function () {
-                // Get the anti-forgery token from the page
                 const token = $('input[name="__RequestVerificationToken"]').val();
 
-                // Show loading state
-                const $cancelButton = $(`button[onclick="cancelRequest(${requestId})"]`);
+                const $cancelButton = $(`[data-cancel-id="${requestId}"]`);
                 const originalButtonText = $cancelButton.html();
                 $cancelButton.prop('disabled', true)
-                            .html(`<span class="spinner-border spinner-border-sm me-2"></span>${escapeHtml(t('Cancelling...'))}`);
+                            .html(`<span class="spinner-border spinner-border-sm"></span><span>${escapeHtml(t('Cancelling...'))}</span>`);
 
                 $.ajax({
                     url: `/MyRequests/Cancel/${requestId}`,
@@ -246,39 +228,30 @@
                         __RequestVerificationToken: token
                     },
                     success: function(response) {
-                        // Be very explicit about what constitutes success
                         let isSuccess = false;
                         let message = t('Request cancelled successfully');
 
-                        // Handle different response formats your server might return
+                        // Handle the response shapes the server may return
                         if (typeof response === 'object' && response !== null) {
-                            // Check for explicit success indicators
                             isSuccess = response.success === true ||
                                        response.isSuccess === true ||
                                        response.Success === true;
 
-                            // Extract the message if available
                             if (response.message) message = response.message;
                             else if (response.Message) message = response.Message;
                         } else if (typeof response === 'string') {
-                            // Sometimes servers return plain text success messages
                             isSuccess = true;
                             message = response;
                         } else {
-                            // If we get here and the AJAX call reached 'success', assume it worked
                             isSuccess = true;
                         }
 
                         if (isSuccess) {
-                            // Explicitly show success toast
                             showToast(message, 'success');
-
-                            // Refresh the page after a brief delay to show the success message
                             setTimeout(function() {
                                 window.location.reload();
                             }, 1500);
                         } else {
-                            // Handle case where server returned success HTTP status but indicates failure in response
                             showToast(message || t('Failed to cancel request'), 'error');
                             $cancelButton.prop('disabled', false).html(originalButtonText);
                         }
@@ -290,7 +263,6 @@
                             error: error
                         });
 
-                        // Extract meaningful error message
                         let errorMessage = t('Failed to cancel request');
 
                         if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -326,20 +298,6 @@
             "Rejected" => "rejected",
             "Failed" => "failed",
             _ => "all"
-        };
-    }
-
-    string GetRequestTypeDisplay(string requestType)
-    {
-        return requestType switch
-        {
-            "product.create" => "Create Product",
-            "product.update" => "Update Product",
-            "product.delete" => "Delete Product",
-            "product.transfer" => "Transfer Product",
-            "route.update" => "Update Route",
-            "route.delete" => "Delete Route",
-            _ => requestType
         };
     }
 }

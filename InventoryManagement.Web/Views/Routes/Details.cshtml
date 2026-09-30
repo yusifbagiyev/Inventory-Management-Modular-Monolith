@@ -1,193 +1,120 @@
 @model RouteViewModel
 @{
     ViewData["Title"] = "Route Details";
-
-    var typeClass = Model.RouteTypeName switch
-    {
-        "New" => "state-ok",
-        "Removal" => "state-crit",
-        "Update" => "state-warn",
-        "Transfer" => "state-info",
-        _ => "state-idle"
-    };
+    var canComplete = User.HasPermission("route.complete");
+    var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
+    var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
 <div class="container-fluid px-4" id="detailsRegion">
-    <div class="ip-page-head">
+    <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index">@L["Routes"]</a></li>
-                <li class="breadcrumb-item active">@L["Details"]</li>
+                <li class="breadcrumb-item active ip-num">#@Model.Id</li>
             </ol>
-            <h1>@L[(string)ViewData["Title"]!]</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to List"]
-            </a>
+            <h1>@L["Route {0}", $"#{Model.Id}"]</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                @if (Model.IsCompleted)
+                {
+                    <span class="ip-badge ip-badge-success">@L["Completed"]</span>
+                }
+                else
+                {
+                    <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                }
+                <span class="ip-tag-plain">@L[Model.RouteTypeName ?? ""]</span>
+                <span class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+            </div>
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <span><i class="fas fa-signs-post me-1"></i> @L["Route Information"]</span>
-                    <span class="d-flex gap-2 flex-wrap">
-                        <span class="state state-flat @typeClass">@L[Model.RouteTypeName ?? ""]</span>
-                        @if (Model.IsCompleted)
-                        {
-                            <span class="state state-ok">@L["Completed"]</span>
-                        }
-                        else
-                        {
-                            <span class="state state-warn">@L["Pending"]</span>
-                        }
-                    </span>
+    <div class="ip-page-actions mb-4">
+        @if (canDelete && !Model.IsCompleted)
+        {
+            <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)">
+                <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
+            </button>
+        }
+        <button type="button" class="ip-btn-icon lg" onclick="printRoute()" title="@L["Print Details"]" aria-label="@L["Print Details"]">
+            <i class="fa-solid fa-print"></i>
+        </button>
+        <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="ip-btn ip-btn-secondary">
+            <i class="fa-solid fa-clock-rotate-left"></i><span>@L["Full history"]</span>
+        </a>
+        @if (canUpdate && !Model.IsCompleted)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
+                <i class="fa-solid fa-pen"></i><span>@L["Edit"]</span>
+            </a>
+        }
+        @if (canComplete && !Model.IsCompleted)
+        {
+            <button type="button" class="ip-btn ip-btn-primary" onclick="completeRoute(@Model.Id)">
+                <span>@L["Complete"]</span><i class="fa-solid fa-check"></i>
+            </button>
+        }
+    </div>
+
+    <hr class="ip-rule" />
+
+    <div class="row g-5 pt-4">
+        <div class="@(Model.ImageUrls.Count > 0 ? "col-lg-6" : "col-lg-8")">
+            <dl class="ip-dl">
+                <div>
+                    <dt>@L["Product"]</dt>
+                    <dd>
+                        <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId">@Or(Model.Model, L["N/A"].Value)</a>
+                        <div class="ip-faint">@Or(Model.Vendor, "-") · @Or(Model.CategoryName, "-")</div>
+                    </dd>
                 </div>
-
-                <div class="card-body">
-                    <h2 class="section-title">@L["Transfer"]</h2>
-                    <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
-                        @if (Model.FromDepartmentName != null)
+                <div><dt>@L["Inventory Code"]</dt><dd class="ip-mono">@Model.InventoryCode</dd></div>
+                <div>
+                    <dt>@L["From"]</dt>
+                    <dd>
+                        @Or(Model.FromDepartmentName, "-")
+                        @if (!string.IsNullOrWhiteSpace(Model.FromWorker))
                         {
-                            <div class="cell-text">
-                                <span class="cell-sub">@L["From"]</span>
-                                <span class="cell-title">@Model.FromDepartmentName</span>
-                                <span class="cell-sub">@L["Worker"]: @(Model.FromWorker ?? L["N/A"].Value)</span>
-                            </div>
-                            <i class="fas fa-arrow-right text-muted"></i>
+                            <div class="ip-faint">@Model.FromWorker</div>
                         }
-                        <div class="cell-text">
-                            <span class="cell-sub">@L["To"]</span>
-                            <span class="cell-title">@Model.ToDepartmentName</span>
-                            <span class="cell-sub">@L["Worker"]: @(Model.ToWorker ?? L["N/A"].Value)</span>
-                        </div>
-                    </div>
-
-                    <h2 class="section-title">@L["Product"]</h2>
-                    <div class="detail-grid mb-4">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Code"]</span>
-                            <span class="d-value mono">@Model.InventoryCode</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Model"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.Model))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.Model</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Vendor"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.Vendor))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.Vendor</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Category"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.CategoryName))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.CategoryName</span>
-                            }
-                        </div>
-                    </div>
-
-                    <h2 class="section-title">@L["Route"]</h2>
-                    <div class="detail-grid mb-4">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Route type"]</span>
-                            <span class="d-value">@L[Model.RouteTypeName ?? ""]</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Created"]</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Completed"]</span>
-                            @if (Model.IsCompleted && Model.CompletedAt.HasValue)
-                            {
-                                <span class="d-value mono">@Model.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
-                            }
-                            else
-                            {
-                                <span class="d-value d-empty">@L["Not completed"]</span>
-                            }
-                        </div>
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["To"]</dt>
+                    <dd>
+                        <span class="fw-semibold">@Or(Model.ToDepartmentName, "-")</span>
+                        @if (!string.IsNullOrWhiteSpace(Model.ToWorker))
+                        {
+                            <div class="ip-faint">@Model.ToWorker</div>
+                        }
+                    </dd>
+                </div>
+                <div><dt>@L["Type"]</dt><dd>@L[Model.RouteTypeName ?? ""]</dd></div>
+                <div><dt>@L["Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd></div>
+                <div>
+                    <dt>@L["Completed"]</dt>
+                    @if (Model.IsCompleted && Model.CompletedAt.HasValue)
                     {
-                        <h2 class="section-title">@L["Notes"]</h2>
-                        <p class="mb-4">@Model.Notes</p>
+                        <dd class="ip-num">@Model.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")</dd>
                     }
-
-                    @if (Model.ImageUrls.Count > 0)
+                    else
                     {
-                        <h2 class="section-title">@L["Images"]</h2>
-                        <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = L["Transfer image"].Value }' />
+                        <dd class="ip-muted">@L["Not completed"]</dd>
                     }
                 </div>
-
-                <div class="page-actions">
-                    <div class="actions-right">
-                        @if (!Model.IsCompleted)
-                        {
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRoute(@Model.Id)">
-                                <i class="fas fa-trash"></i> @L["Delete"]
-                            </button>
-                            <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
-                               class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-box"></i> @L["View Product"]
-                            </a>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="completeRoute(@Model.Id)">
-                                <i class="fas fa-check"></i> @L["Mark as Complete"]
-                            </button>
-                        }
-                        else
-                        {
-                            <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
-                               class="btn btn-primary btn-sm">
-                                <i class="fas fa-box"></i> @L["View Product"]
-                            </a>
-                        }
-                    </div>
-                </div>
-            </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                {
+                    <div><dt>@L["Notes"]</dt><dd>@Model.Notes</dd></div>
+                }
+            </dl>
         </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4 side-panel">
-                <div class="card-header">
-                    <i class="fas fa-bolt me-1"></i>
-                    @L["Quick Actions"]
-                </div>
-                <div class="list-group list-group-flush">
-                    <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="list-group-item list-group-item-action">
-                        <i class="fas fa-clock-rotate-left me-2"></i> @L["View Full Timeline"]
-                    </a>
-                    <a asp-action="Transfer" class="list-group-item list-group-item-action">
-                        <i class="fas fa-arrow-right-arrow-left me-2"></i> @L["New Transfer"]
-                    </a>
-                    <button type="button" class="list-group-item list-group-item-action text-start" onclick="printRoute()">
-                        <i class="fas fa-print me-2"></i> @L["Print Details"]
-                    </button>
-                </div>
+        @if (Model.ImageUrls.Count > 0)
+        {
+            <div class="col-lg-6">
+                <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = L["Transfer image"].Value }' />
             </div>
-        </div>
+        }
     </div>
 </div>
 

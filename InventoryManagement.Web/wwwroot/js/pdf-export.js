@@ -22,6 +22,7 @@ function collectTableData(table, excludeHeaders = []) {
         .map((th, index) => ({ name: th.textContent.trim(), index, th }))
         .filter(col => col.name
             && !col.th.classList.contains('actions-column')
+            && !col.th.classList.contains('pdf-omit')
             && !skip.includes(col.name.toLowerCase()));
 
     const rows = Array.from(table.querySelectorAll('tbody tr'))
@@ -52,7 +53,7 @@ function readCellText(td) {
         return clone.textContent;
     };
 
-    const blocks = td.querySelectorAll('.cell-title, .cell-sub, .state, .badge');
+    const blocks = td.querySelectorAll('.cell-title, .cell-sub, .state, .badge, .ip-badge, .ip-status-text, .ip-tag-plain');
     if (blocks.length) {
         blocks.forEach(b => { if (!b.closest('.pdf-omit')) add(textWithoutPlaceholders(b)); });
     } else {
@@ -216,6 +217,11 @@ function exportRoutesToPDF() {
     exportListTable(document.getElementById('routesTable'), 'Routes');
 }
 
+/**
+ * Prints the product's route history. Each `.timeline-item` carries its values as data-*
+ * attributes (Routes/Timeline.cshtml), so the printout does not depend on the on-screen markup;
+ * images and links are left out.
+ */
 function exportTimelineToPDF() {
     const timeline = document.querySelector('.timeline');
     if (!timeline) {
@@ -223,105 +229,71 @@ function exportTimelineToPDF() {
         return;
     }
 
-    // Clone the timeline to modify it
-    const timelineClone = timeline.cloneNode(true);
-
-    // Remove images
-    timelineClone.querySelectorAll('img').forEach(img => img.remove());
-
-    // Remove action buttons
-    timelineClone.querySelectorAll('.btn').forEach(btn => btn.remove());
-
-    // Simplify timeline items
-    timelineClone.querySelectorAll('.timeline-item').forEach(item => {
-        const marker = item.querySelector('.timeline-marker');
-        const content = item.querySelector('.timeline-content');
-
-        // Create simplified HTML
-        item.innerHTML = `
-            <div style="display: flex; margin-bottom: 15px;">
-                ${marker.outerHTML}
-                <div style="flex: 1; margin-left: 15px; border-left: 2px solid #e0e0e0; padding-left: 15px;">
-                    ${content.innerHTML}
+    const items = Array.from(timeline.querySelectorAll('.timeline-item'));
+    const rows = items.map(item => {
+        const d = item.dataset;
+        const move = d.from
+            ? `${escapePdfText(d.from)} <span class="arrow">&rarr;</span> <b>${escapePdfText(d.to)}</b>`
+            : `<b>${escapePdfText(d.to)}</b>`;
+        const chip = d.status === 'completed' ? 'ok' : 'wait';
+        return `
+            <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="head">
+                        <span class="when">${escapePdfText(d.when)}</span>
+                        <span class="type">${escapePdfText(d.type)}</span>
+                        <span class="chip ${chip}">${escapePdfText(d.statusText)}</span>
+                    </div>
+                    <div class="move">${move}</div>
+                    ${d.notes ? `<div class="notes">${escapePdfText(d.notes)}</div>` : ''}
+                    ${d.completed ? `<div class="done">${escapePdfText(t('Completed'))}: ${escapePdfText(d.completed)}</div>` : ''}
                 </div>
-            </div>
-        `;
-    });
+            </div>`;
+    }).join('');
 
-    // Generate HTML for PDF
-    const htmlContent = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <h1 style="text-align: center; color: #1B1C1E; margin-bottom: 4px;">
-                ${escapePdfText(t('Transfer Timeline Report'))}
-            </h1>
-            ${timeline.dataset.product ? `<div style="text-align: center; font-size: 12pt; font-weight: 600; margin-bottom: 10px;">${escapePdfText(timeline.dataset.product)}</div>` : ''}
-            <div style="text-align: center; color: #6b7280; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                <div>${escapePdfText(t('Generated on: {0}', formatDate(new Date(), true)))}</div>
-                <div>${escapePdfText(t('Total Transfers: {0}', timelineClone.querySelectorAll('.timeline-item').length))}</div>
-            </div>
-            ${timelineClone.outerHTML}
-        </div>
-    `;
-
-    openPrintFrame(`
-        <!DOCTYPE html>
-        <html lang="${document.documentElement.lang || 'en'}">
-        <head>
-            <meta charset="UTF-8">
-            <title>${escapePdfText(t('Transfer Timeline Report'))}</title>
-            <style>
-                @page { 
-                    size: portrait; 
-                    margin: 1cm;
-                }
-                body { 
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    font-size: 10pt;
-                    color: #333;
-                    line-height: 1.4;
-                }
-                .timeline-item {
-                    margin-bottom: 15px;
-                }
-                .timeline-marker {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin-top: 5px;
-                }
-                .fa-check-circle { color: #1E6B45; }
-                .fa-clock { color: #7F5200; }
-                .timeline-content {
-                    background: #f8f9fa;
-                    padding: 10px;
-                    border-radius: 5px;
-                    border: 1px solid #e0e0e0;
-                }
-                h6 {
-                    font-size: 11pt;
-                    margin: 0 0 5px 0;
-                    display: flex;
-                    justify-content: space-between;
-                }
-                .badge {
-                    display: inline-block;
-                    padding: 3px 8px;
-                    border-radius: 4px;
-                    font-weight: 600;
-                    margin: 2px 0;
-                }
-                .bg-success { background-color: #E7F3EC; color: #1E6B45; }
-                .bg-warning { background-color: #FBF0D9; color: #7F5200; }
-            </style>
-        </head>
-        <body>
-            ${htmlContent}
-        </body>
-        </html>
-    `);
+    const title = t('Transfer Timeline Report');
+    openPrintFrame(`<!DOCTYPE html>
+<html lang="${document.documentElement.lang || 'en'}">
+<head>
+<meta charset="UTF-8">
+<title>${escapePdfText(title)}</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #1B1C1E; margin: 0; }
+  header { border-bottom: 2px solid #1B1C1E; padding-bottom: 6px; margin-bottom: 12px; }
+  h1 { font-size: 15pt; margin: 0; font-weight: 650; }
+  .product { font-size: 11pt; font-weight: 600; margin-top: 2px; }
+  .meta { font-size: 8pt; color: #4F5358; margin-top: 4px; }
+  .timeline-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: .8px solid #E4E4E1; page-break-inside: avoid; }
+  .timeline-item:last-child { border-bottom: 0; }
+  .timeline-marker { width: 8px; height: 8px; flex: none; margin-top: 5px; border-radius: 50%; background: #8A8E94; }
+  .timeline-content { flex: 1; min-width: 0; }
+  .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .when { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .type { color: #6B6F75; font-size: 9pt; }
+  .chip { font-size: 8pt; font-weight: 500; padding: 1px 6px; border-radius: 3px; }
+  .chip.ok { background: #E7F3EC; color: #1E6B45; }
+  .chip.wait { background: #FBF0D9; color: #7F5200; }
+  .move { margin-top: 2px; }
+  .arrow { color: #6B6F75; }
+  .notes { color: #4F5358; margin-top: 2px; white-space: pre-wrap; }
+  .done { color: #6B6F75; font-size: 8pt; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 10px; font-size: 7.5pt; color: #6B6F75; text-align: right; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>${escapePdfText(title)}</h1>
+  ${timeline.dataset.product ? `<div class="product">${escapePdfText(timeline.dataset.product)}</div>` : ''}
+  <div class="meta">${escapePdfText(t('Generated on: {0}', formatDate(new Date(), true)))} &middot; ${escapePdfText(t('Total Transfers: {0}', items.length))}</div>
+</header>
+<div class="timeline">${rows}</div>
+<footer>Inventory Pro</footer>
+</body>
+</html>`);
 }
 
 function exportDepartmentsToPDF() {

@@ -12,66 +12,55 @@
             </ol>
             <h1>@L["Create Category"]</h1>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to List"]
-            </a>
-        </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-xl-7 col-lg-9">
-            <form asp-action="Create" method="post">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fas fa-plus-circle me-1"></i>
-                        @L["New Category Information"]
-                    </div>
+    <form asp-action="Create" method="post" class="ip-form" id="categoryForm">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+        }
 
-                    <div class="form-section">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-                        <div class="form-grid">
-                            <div class="full">
-                                <label asp-for="Name" class="form-label"></label>
-                                <input asp-for="Name" class="form-control" placeholder="@L["Enter category name"]" autofocus />
-                                <span asp-validation-for="Name" class="text-danger"></span>
-                            </div>
-
-                            <div class="full">
-                                <label asp-for="Description" class="form-label"></label>
-                                <textarea asp-for="Description" class="form-control" rows="3" placeholder="@L["Enter category description"]"></textarea>
-                                <span asp-validation-for="Description" class="text-danger"></span>
-                            </div>
-
-                            <div class="full">
-                                <div class="form-check">
-                                    <input asp-for="IsActive" class="form-check-input" />
-                                    <label asp-for="IsActive" class="form-check-label"></label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@L["Cancel"]</a>
-                        <div class="actions-right">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> @L["Create Category"]
-                            </button>
-                        </div>
-                    </div>
+        <section class="ip-form-section">
+            <h2>@L["Basic information"]</h2>
+            <div class="ip-form-grid">
+                <div class="ip-field span-2">
+                    <label asp-for="Name" class="ip-label"><span>@L["Category Name"]</span> <span class="req">*</span></label>
+                    <input asp-for="Name" class="ip-input" placeholder="@L["Enter category name"]" autofocus />
+                    <span asp-validation-for="Name" class="ip-error"></span>
                 </div>
-            </form>
+                <div class="ip-field span-2">
+                    <label asp-for="Description" class="ip-label"></label>
+                    <textarea asp-for="Description" class="ip-textarea" rows="3" placeholder="@L["Enter category description"]"></textarea>
+                    <span asp-validation-for="Description" class="ip-error"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="ip-form-section">
+            <h2>@L["Status"]</h2>
+            <div class="ip-switch-list">
+                <label class="ip-switch-row">
+                    <span class="fw-medium">@L["Active"]</span>
+                    <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
+                </label>
+            </div>
+        </section>
+
+        <div class="ip-form-foot">
+            <span class="note"></span>
+            <a asp-action="Index" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+            <button type="submit" class="ip-btn ip-btn-primary">
+                <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
+            </button>
         </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            AjaxHandler.handleForm('form', {
+            AjaxHandler.handleForm('#categoryForm', {
                 successMessage: t('Category created successfully!'),
                 successRedirect: '@Url.Action("Index")',
                 redirectDelay: 1500

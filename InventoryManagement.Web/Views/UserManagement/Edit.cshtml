@@ -7,225 +7,194 @@
     <div class="ip-page-head">
         <div>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["User Management"]</a></li>
-                <li class="breadcrumb-item active">@L["Edit User"]</li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["Users"]</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Details", new { id = Model.Id })">@Model.Username</a></li>
+                <li class="breadcrumb-item active">@L["Edit"]</li>
             </ol>
             <h1>@L["Edit User"]</h1>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to Users"]
+        <div class="ip-page-actions">
+            <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="ip-btn ip-btn-secondary">
+                <i class="fa-solid fa-key"></i><span>@L["Reset Password"]</span>
             </a>
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-user-gear me-1"></i> @L["User Information"]
+    <form asp-action="Edit" method="post" class="ip-form" id="editUserForm">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="Username" type="hidden" />
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+        }
+
+        <section class="ip-form-section">
+            <h2>@L["Account"]</h2>
+            <div class="ip-form-grid">
+                <div class="ip-field">
+                    <label for="UsernameDisplay" class="ip-label">@L["Username"]</label>
+                    <input id="UsernameDisplay" value="@Model.Username" class="ip-input" readonly disabled />
+                    <span class="ip-hint">@L["Username cannot be changed."]</span>
                 </div>
+                <div class="ip-field">
+                    <label asp-for="Email" class="ip-label"><span>@L["Email"]</span> <span class="req">*</span></label>
+                    <input asp-for="Email" class="ip-input" placeholder="@L["Enter email address"]" />
+                    <span asp-validation-for="Email" class="ip-error"></span>
+                </div>
+                <div class="ip-field">
+                    <label asp-for="FirstName" class="ip-label"><span>@L["First Name"]</span> <span class="req">*</span></label>
+                    <input asp-for="FirstName" class="ip-input" placeholder="@L["Enter first name"]" />
+                    <span asp-validation-for="FirstName" class="ip-error"></span>
+                </div>
+                <div class="ip-field">
+                    <label asp-for="LastName" class="ip-label"><span>@L["Last Name"]</span> <span class="req">*</span></label>
+                    <input asp-for="LastName" class="ip-input" placeholder="@L["Enter last name"]" />
+                    <span asp-validation-for="LastName" class="ip-error"></span>
+                </div>
+            </div>
+        </section>
 
-                <form asp-action="Edit" method="post">
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Id" type="hidden" />
-                    <input asp-for="Username" type="hidden" />
+        <section class="ip-form-section">
+            <h2>@L["Status"]</h2>
+            <div class="ip-switch-list">
+                <label class="ip-switch-row">
+                    <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
+                    <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
+                </label>
+            </div>
+        </section>
 
-                    <div class="form-section">
-                        <div class="section-title">@L["Account"]</div>
-                        <div class="form-grid">
-                            <div>
-                                <label class="form-label">@L["Username"]</label>
-                                <input value="@Model.Username" class="form-control" readonly disabled />
-                                <div class="form-text">@L["Username cannot be changed."]</div>
-                            </div>
-                            <div>
-                                <label asp-for="Email" class="form-label">@L["Email"] <span class="text-danger">*</span></label>
-                                <input asp-for="Email" class="form-control" placeholder="@L["Enter email address"]" />
-                                <span asp-validation-for="Email" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label asp-for="FirstName" class="form-label">@L["First Name"] <span class="text-danger">*</span></label>
-                                <input asp-for="FirstName" class="form-control" placeholder="@L["Enter first name"]" />
-                                <span asp-validation-for="FirstName" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label asp-for="LastName" class="form-label">@L["Last Name"] <span class="text-danger">*</span></label>
-                                <input asp-for="LastName" class="form-control" placeholder="@L["Enter last name"]" />
-                                <span asp-validation-for="LastName" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label class="form-label">@L["Status"]</label>
-                                <div class="form-check">
-                                    <input asp-for="IsActive" class="form-check-input" type="checkbox" />
-                                    <label asp-for="IsActive" class="form-check-label">
-                                        @L["Active User"]
-                                    </label>
-                                </div>
-                                <div class="form-text">@L["Inactive users cannot login to the system."]</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="section-title">@L["Roles"]</div>
-                        @* Always send role data, even when every box is cleared. *@
-                        <input type="hidden" name="RoleUpdateFlag" value="true" />
-                        <div class="role-selection form-grid">
-                            @foreach (var role in Model.AvailableRoles)
+        <section class="ip-form-section">
+            <h2>@L["Roles"]</h2>
+            @* Always send role data, even when every box is cleared. *@
+            <input type="hidden" name="RoleUpdateFlag" value="true" />
+            @if (Model.AvailableRoles.Any())
+            {
+                <div class="role-selection d-flex flex-column">
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        var isCurrent = Model.CurrentRoles.Contains(role.Value);
+                        <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role.Value">
+                            <input type="checkbox"
+                                   class="ip-check role-checkbox"
+                                   name="SelectedRoles"
+                                   value="@role.Value"
+                                   id="role_@role.Value"
+                                   @(isCurrent ? "checked" : "") />
+                            <span class="fw-medium">@role.Text</span>
+                            @if (isCurrent)
                             {
-                                <div class="form-check">
-                                    <input type="checkbox"
-                                           class="form-check-input role-checkbox"
-                                           name="SelectedRoles"
-                                           value="@role.Value"
-                                           id="role_@role.Value"
-                                           @(Model.CurrentRoles.Contains(role.Value) ? "checked" : "") />
-                                    <label class="form-check-label" for="role_@role.Value">
-                                        @role.Text
-                                        @if (Model.CurrentRoles.Contains(role.Value))
-                                        {
-                                            <small class="text-muted">(@L["Current"])</small>
-                                        }
-                                    </label>
-                                </div>
+                                <span class="ip-tag-plain">@L["Current"]</span>
                             }
-                        </div>
-                        @if (!Model.AvailableRoles.Any())
-                        {
-                            <div class="empty-state">
-                                <i class="fas fa-id-badge"></i>
-                                <h5>@L["No roles available"]</h5>
-                            </div>
-                        }
-                        @* Hidden fields to track original roles *@
-                        @foreach (var role in Model.CurrentRoles)
-                        {
-                            <input type="hidden" name="CurrentRoles" value="@role" />
-                        }
-                        <div class="form-text">
-                            @L["Select one or more roles for this user. Changes will be applied immediately upon save."]
-                        </div>
-                    </div>
+                        </label>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="ip-muted py-2 mb-0">@L["No roles available"]</p>
+            }
+            @* Hidden fields to track original roles *@
+            @foreach (var role in Model.CurrentRoles)
+            {
+                <input type="hidden" name="CurrentRoles" value="@role" />
+            }
+            <p class="ip-hint mt-3 mb-0">
+                @L["Select one or more roles for this user. Changes will be applied immediately upon save."]
+            </p>
+        </section>
 
-                    <div class="page-actions">
-                        <div class="actions-right">
-                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-times"></i> @L["Cancel"]
-                            </a>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> @L["Update User"]
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+        <div class="ip-form-foot">
+            <span class="note"></span>
+            <a href="@Url.Action("Index")" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+            <button type="submit" class="ip-btn ip-btn-primary">
+                <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
+            </button>
         </div>
+    </form>
 
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-user-shield me-1"></i> @L["User Permissions"]
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <input type="text" id="permissionSearch" class="form-control form-control-sm"
-                               placeholder="@L["Search permissions..."]">
-                    </div>
-
-                    @* Fixed-height scroll region: the permission list can run to hundreds of rows. *@
-                    <div id="permissionsContainer" style="max-height: 500px; overflow-y: auto;">
-                        <partial name="_Skeleton" model="6" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="card side-panel mb-4">
-                <div class="card-header">
-                    <i class="fas fa-lock me-1"></i> @L["Password Management"]
-                </div>
-                <div class="list-group list-group-flush">
-                    <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="fas fa-key me-2"></i>@L["Reset Password"]
-                    </a>
-                </div>
-            </div>
+    @* Direct permissions are granted and revoked one by one (AJAX, applied at once), so they
+       live outside the form and its Save button. *@
+    <section class="ip-section ip-form mt-5" id="permissionsSection">
+        <h2 class="mb-1">@L["User Permissions"]</h2>
+        <p class="ip-hint mb-3">@L["Permission changes apply immediately."]</p>
+        <label class="ip-filter search col-12 col-md-6 mb-3">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="permissionSearch" autocomplete="off"
+                   placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
+        </label>
+        <div id="permissionsContainer">
+            <partial name="_Skeleton" model="6" />
         </div>
-    </div>
+    </section>
 </div>
 
 @section Scripts {
     <script>
-        let allPermissions = [];
-        let originalPermissions = {};
-
         $(document).ready(function() {
             loadUserPermissions();
 
-                    $('#permissionSearch').on('keyup', function() {
-                const searchTerm = $(this).val().toLowerCase();
-                let visible = 0;
-                $('.permission-item').each(function() {
-                    const text = $(this).text().toLowerCase();
-                    const match = text.includes(searchTerm);
-                    $(this).toggle(match);
-                    if (match) visible++;
-                });
-                $('#permissionsNoResults').toggle(visible === 0);
+            $('#permissionSearch').on('input', filterPermissions);
+
+            // Buttons are rendered from data: the permission name travels in a data attribute.
+            $('#permissionsContainer').on('click', '.permission-toggle', function() {
+                togglePermission(this.dataset.permission, this.dataset.grant === 'true');
             });
         });
 
-                async function loadUserPermissions() {
-            try {
-                // Call the MVC controller action directly (no API gateway needed)
-                const url = '/UserManagement/GetUserPermissions?id=@Model.Id';
+        function filterPermissions() {
+            const searchTerm = ($('#permissionSearch').val() || '').toLowerCase();
+            let visible = 0;
+            $('.permission-item').each(function() {
+                const match = $(this).text().toLowerCase().includes(searchTerm);
+                $(this).toggle(match);
+                if (match) visible++;
+            });
+            // A group whose rows are all filtered out hides its heading too.
+            $('.permission-group').each(function() {
+                const any = $(this).find('.permission-item').filter(function() { return this.style.display !== 'none'; }).length > 0;
+                $(this).toggle(any);
+            });
+            $('#permissionsNoResults').toggle(visible === 0);
+        }
 
-                $.ajax({
-                    url: url,
-                    type: 'GET',
-                    // For MVC controller actions, we don't need the Bearer token
-                    // The cookie authentication handles it automatically
-                    success: function(data) {
-                        if (data.error) {
-                            $('#permissionsContainer').html(
-                                `<p class="text-danger">${t('Failed to load permissions')}</p>`
-                            );
-                            return;
-                        }
-                        renderPermissions(data);
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Failed to load permissions:', xhr.status, error);
+        function showPermissionsError(message) {
+            $('#permissionsContainer').html(
+                `<div class="ip-banner ip-banner-danger"><i class="fa-solid fa-circle-exclamation"></i><span>${escapeHtml(message)}</span></div>`
+            );
+        }
 
-                        let errorMessage = t('Error loading permissions');
-                        if (xhr.status === 401) {
-                            errorMessage = t('Session expired. Please refresh the page.');
-                        } else if (xhr.status === 403) {
-                            errorMessage = t('You do not have permission to view user permissions.');
-                        }
-
-                        $('#permissionsContainer').html(
-                            `<p class="text-danger">${errorMessage}</p>`
-                        );
+        function loadUserPermissions() {
+            $.ajax({
+                // MVC action on this controller; the cookie authenticates it.
+                url: '/UserManagement/GetUserPermissions?id=@Model.Id',
+                type: 'GET',
+                success: function(data) {
+                    if (data.error) {
+                        showPermissionsError(t('Failed to load permissions'));
+                        return;
                     }
-                });
-            } catch (error) {
-                console.error('Error loading permissions:', error);
-                $('#permissionsContainer').html(
-                    `<p class="text-danger">${t('Error loading permissions. Please refresh the page.')}</p>`
-                );
-            }
+                    renderPermissions(data);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load permissions:', xhr.status, error);
+
+                    let errorMessage = t('Error loading permissions');
+                    if (xhr.status === 401) {
+                        errorMessage = t('Session expired. Please refresh the page.');
+                    } else if (xhr.status === 403) {
+                        errorMessage = t('You do not have permission to view user permissions.');
+                    }
+                    showPermissionsError(errorMessage);
+                }
+            });
         }
 
         function renderPermissions(permissions) {
-            // Nothing came back at all - show the standard empty block instead of a blank panel.
+            // Nothing came back at all - say so instead of leaving a blank section.
             if (!permissions || permissions.length === 0) {
-                $('#permissionsContainer').html(`
-                    <div class="empty-state">
-                        <i class="fas fa-user-slash"></i>
-                        <h5>${t('No permissions defined')}</h5>
-                    </div>
-                `);
+                $('#permissionsContainer').html(`<p class="ip-muted py-2 mb-0">${escapeHtml(t('No permissions defined'))}</p>`);
                 return;
             }
 
@@ -239,76 +208,66 @@
                 grouped[category].push(p);
             });
 
-            let html = '<div class="permissions-list">';
+            let html = '';
 
-            // Show assigned permissions first
+            // Directly granted permissions first
             const assignedPerms = permissions.filter(p => p.isAssigned);
             if (assignedPerms.length > 0) {
                 html += `
-                    <div class="mb-4">
-                        <div class="section-title">${t('Current Permissions ({0})', assignedPerms.length)}</div>
-                        <div class="assigned-permissions">
+                    <div class="permission-group mb-4">
+                        <h3 class="mb-1">${escapeHtml(t('Current Permissions ({0})', assignedPerms.length))}</h3>
+                        <div class="row row-cols-1 row-cols-md-2 g-0">
+                            ${assignedPerms.map(p => createPermissionItem(p, true)).join('')}
+                        </div>
+                    </div>
                 `;
-
-                assignedPerms.forEach(perm => {
-                    html += createPermissionItem(perm, true);
-                });
-
-                html += '</div></div>';
             }
 
-            // Show available permissions by category
-            html += `<div class="section-title">${t('Available Permissions')}</div>`;
+            html += `<h3 class="mb-1">${escapeHtml(t('Available Permissions'))}</h3>`;
 
             for (const [category, perms] of Object.entries(grouped)) {
                 const availableInCategory = perms.filter(p => !p.isAssigned);
                 if (availableInCategory.length === 0) continue;
 
                 html += `
-                    <div class="category-section mb-3">
-                        <div class="category-header form-label mb-2">${t(category)}</div>
-                        <div class="category-permissions">
+                    <div class="permission-group mt-3">
+                        <div class="ip-faint fw-medium">${escapeHtml(t(category))}</div>
+                        <div class="row row-cols-1 row-cols-md-2 g-0">
+                            ${availableInCategory.map(p => createPermissionItem(p, false)).join('')}
+                        </div>
+                    </div>
                 `;
-
-                availableInCategory.forEach(perm => {
-                    html += createPermissionItem(perm, false);
-                });
-
-                html += '</div></div>';
             }
 
-            // Search filters the rendered rows, so it needs its own no-match block.
-            html += `
-                <div id="permissionsNoResults" class="empty-state" style="display: none;">
-                    <i class="fas fa-magnifying-glass"></i>
-                    <h5>${t('No permissions match')}</h5>
-                </div>
-            `;
+            // Search filters the rendered rows, so it needs its own no-match line.
+            html += `<p id="permissionsNoResults" class="ip-muted py-2 mb-0" style="display: none;">${escapeHtml(t('No permissions match'))}</p>`;
 
-            html += '</div>';
             $('#permissionsContainer').html(html);
+            filterPermissions();
         }
 
         function createPermissionItem(permission, isAssigned) {
-            const action = isAssigned ? 'remove' : 'add';
-            // Removing a granted permission is the destructive side of this control.
-            const buttonClass = isAssigned ? 'btn-outline-danger' : 'btn-outline-secondary';
-            const buttonIcon = isAssigned ? 'fa-times' : 'fa-plus';
-            const buttonText = isAssigned ? t('Remove permission') : t('Add permission');
+            const name = escapeHtml(permission.name);
+            const description = escapeHtml(permission.description ? t(permission.description) : t('No description'));
+            // Held through a role: shown so a missing direct grant is not mistaken for no access.
+            const fromRole = !isAssigned && permission.isFromRole
+                ? `<span class="ip-tag-plain ms-2">${escapeHtml(t('From role'))}</span>`
+                : '';
+            const label = escapeHtml(isAssigned ? t('Remove permission') : t('Add permission'));
 
             // The wrapper stays a plain block: jQuery .toggle() writes an inline display,
             // which a Bootstrap d-* display utility would override with !important.
             return `
-                <div class="permission-item ${isAssigned ? 'assigned' : 'available'}" data-name="${permission.name}">
-                    <div class="d-flex justify-content-between align-items-start gap-2 py-2 border-bottom">
-                        <div class="permission-info">
-                            <div class="fw-semibold">${permission.name}</div>
-                            <small class="text-muted">${permission.description ? t(permission.description) : t('No description')}</small>
+                <div class="permission-item col" data-name="${name}">
+                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom me-md-4">
+                        <div class="flex-grow-1">
+                            <div class="fw-medium text-break">${name}${fromRole}</div>
+                            <div class="ip-faint">${description}</div>
                         </div>
-                        <button class="btn btn-sm ${buttonClass}"
-                                onclick="togglePermission('${permission.name}', ${!isAssigned})"
-                                title="${buttonText}">
-                            <i class="fas ${buttonIcon}"></i>
+                        <button type="button" class="ip-btn-icon permission-toggle ${isAssigned ? 'ip-btn-icon-danger' : ''}"
+                                data-permission="${name}" data-grant="${!isAssigned}"
+                                title="${label}" aria-label="${label}">
+                            <i class="fa-solid ${isAssigned ? 'fa-xmark' : 'fa-plus'}"></i>
                         </button>
                     </div>
                 </div>

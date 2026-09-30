@@ -1,206 +1,109 @@
 @model EditUserViewModel
 @{
     ViewData["Title"] = "User Details";
+    var fullName = $"{Model.FirstName} {Model.LastName}".Trim();
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
 <div class="container-fluid px-4" id="detailsRegion">
-    <div class="ip-page-head">
+    <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["User Management"]</a></li>
-                <li class="breadcrumb-item active">@L["User Details"]</li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["Users"]</a></li>
+                <li class="breadcrumb-item active">@Model.Username</li>
             </ol>
-            <h1>@L["User Details"]</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to Users"]
-            </a>
-            <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> @L["Edit User"]
-            </a>
+            <h1>@Or(fullName, Model.Username)</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span>@Model.Username</span>
+                @if (Model.IsActive)
+                {
+                    <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                }
+                else
+                {
+                    <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                }
+                @if (Model.CurrentRoles.Any())
+                {
+                    <span class="ip-tag-plain">@string.Join(", ", Model.CurrentRoles)</span>
+                }
+            </div>
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-user me-1"></i> @L["User Information"]
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Username"]</span>
-                            <span class="d-value mono">@Model.Username</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Email"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.Email))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.Email</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["First Name"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.FirstName))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.FirstName</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Last Name"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.LastName))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.LastName</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Status"]</span>
-                            <span class="d-value">
-                                @if (Model.IsActive)
-                                {
-                                    <span class="state state-ok">@L["Active"]</span>
-                                }
-                                else
-                                {
-                                    <span class="state state-idle">@L["Inactive"]</span>
-                                }
-                            </span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Roles"]</span>
-                            <span class="d-value">
-                                @if (Model.CurrentRoles.Any())
-                                {
-                                    foreach (var role in Model.CurrentRoles)
-                                    {
-                                        <span class="badge bg-primary me-1">@role</span>
-                                    }
-                                }
-                                else
-                                {
-                                    <span class="d-empty">@L["No roles assigned"]</span>
-                                }
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="ip-page-actions mb-4">
+        <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
+            <i class="fa-solid fa-trash-can"></i><span>@L["Delete User"]</span>
+        </button>
+        <button type="button" class="ip-btn ip-btn-secondary" onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
+            @if (Model.IsActive)
+            {
+                <i class="fa-solid fa-user-slash"></i><span>@L["Deactivate User"]</span>
+            }
+            else
+            {
+                <i class="fa-solid fa-user-check"></i><span>@L["Activate User"]</span>
+            }
+        </button>
+        <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="ip-btn ip-btn-secondary">
+            <i class="fa-solid fa-key"></i><span>@L["Reset Password"]</span>
+        </a>
+        <a href="@Url.Action("Edit", new { id = Model.Id })" class="ip-btn ip-btn-primary">
+            <span>@L["Edit User"]</span><i class="fa-solid fa-pen"></i>
+        </a>
+    </div>
 
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-column me-1"></i> @L["Activity Summary"]
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Total Logins"]</span>
-                            <span class="d-value mono">15</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Last Login"]</span>
-                            <span class="d-value mono">@L["{0} days ago", 2]</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Account Age"]</span>
-                            <span class="d-value mono">@L["{0} days", 30]</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <hr class="ip-rule" />
 
-        <div class="col-lg-4">
-            <div class="card side-panel mb-4">
-                <div class="card-header">
-                    <i class="fas fa-bolt me-1"></i> @L["Quick Actions"]
+    <div class="row pt-2">
+        <div class="col-xl-8">
+            <dl class="ip-dl">
+                <div><dt>@L["Username"]</dt><dd>@Model.Username</dd></div>
+                <div><dt>@L["First Name"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.FirstName) ? "ip-muted" : "")">@Or(Model.FirstName, L["Not set"].Value)</dd></div>
+                <div><dt>@L["Last Name"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.LastName) ? "ip-muted" : "")">@Or(Model.LastName, L["Not set"].Value)</dd></div>
+                <div><dt>@L["Email"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.Email) ? "ip-muted" : "")">@Or(Model.Email, L["Not set"].Value)</dd></div>
+                <div>
+                    <dt>@L["Roles"]</dt>
+                    <dd class="@(Model.CurrentRoles.Any() ? "" : "ip-muted")">@(Model.CurrentRoles.Any() ? string.Join(", ", Model.CurrentRoles) : L["No roles assigned"].Value)</dd>
                 </div>
-                <div class="list-group list-group-flush">
-                    <a href="@Url.Action("Edit", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="fas fa-pen-to-square me-2"></i>@L["Edit User"]
-                    </a>
-                    <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="fas fa-key me-2"></i>@L["Reset Password"]
-                    </a>
-                    <button type="button" class="list-group-item list-group-item-action text-start w-100"
-                            onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
+                <div>
+                    <dt>@L["Status"]</dt>
+                    <dd>
                         @if (Model.IsActive)
                         {
-                            <span><i class="fas fa-user-minus me-2"></i>@L["Deactivate User"]</span>
+                            <span class="ip-badge ip-badge-success">@L["Active"]</span>
                         }
                         else
                         {
-                            <span><i class="fas fa-user-check me-2"></i>@L["Activate User"]</span>
+                            <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                         }
-                    </button>
+                    </dd>
                 </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-circle-info me-1"></i> @L["Account Information"]
-                </div>
-                <div class="card-body">
-                    <div class="detail-row">
-                        <span class="d-label">@L["User ID"]</span>
-                        <span class="d-value mono">#@Model.Id</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="d-label">@L["Created"]</span>
-                        <span class="d-value mono">15.01.2024</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="d-label">@L["Last Modified"]</span>
-                        <span class="d-value mono">20.01.2024</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-triangle-exclamation me-1"></i> @L["Danger Zone"]
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">@L["Once you delete a user, there is no going back. Please be certain."]</p>
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
-                        <i class="fas fa-trash"></i> @L["Delete User"]
-                    </button>
-                </div>
-            </div>
+                <div><dt>@L["User ID"]</dt><dd class="ip-mono">#@Model.Id</dd></div>
+            </dl>
         </div>
     </div>
 </div>
 
 <!-- Delete User Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="deleteModalTitle">@L["Delete User"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
             <div class="modal-body">
-                <p>@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger">@L["This action cannot be undone."]</p>
+                <p class="mb-2">@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
+                <p class="ip-muted mb-0">@L["Once you delete a user, there is no going back. Please be certain."]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
                 <form id="deleteForm" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-danger">@L["Delete"]</button>
+                    <button type="submit" class="ip-btn ip-btn-danger">
+                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </form>
             </div>
         </div>
@@ -246,7 +149,6 @@
             const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
             modal.show();
         }
-
 
         // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
         LiveUpdates.watch({

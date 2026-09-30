@@ -2,198 +2,190 @@
 @{
     ViewData["Title"] = "Users";
     var allRoles = Model.SelectMany(u => u.Roles).Distinct().OrderBy(r => r).ToList();
+    var activeCount = Model.Count(u => u.IsActive);
 }
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
             <h1>@L["Users"]</h1>
+            <div class="ip-sub ip-num" id="usersSummary">
+                <span id="userCount">@L["{0} users", Model.Count]</span> · @L["{0} active", activeCount]
+            </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary btn-sm" onclick="exportUsersToPDF()">
-                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
+        <div class="ip-page-actions">
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportUsersToPDF()">
+                <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
-            <a href="@Url.Action("Create")" class="btn btn-primary btn-sm">
-                <i class="fas fa-user-plus"></i> @L["New User"]
+            <a href="@Url.Action("Create")" class="ip-btn ip-btn-primary">
+                <span>@L["New User"]</span><i class="fa-solid fa-user-plus"></i>
             </a>
         </div>
     </div>
 
     @* The whole user list is rendered at once, so every filter here narrows the rows
        instantly in the browser - there is no Apply step to wait for. *@
-    <div class="filter-panel mt-3">
-        <div class="filter-top">
-            <div class="filter-search">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="searchInput"
-                           placeholder="@L["Search name, username, email..."]">
-                </div>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">
-                <i class="fas fa-redo"></i> @L["Reset"]
-            </button>
-        </div>
+    <div class="ip-filterbar">
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="searchInput" autocomplete="off"
+                   placeholder="@L["Search name, username, email..."]" aria-label="@L["Search"]" />
+        </label>
+        <label class="ip-filter">
+            <span>@L["Role"]</span>
+            <select id="roleFilter" onchange="applyUserFilters()">
+                <option value="">@L["All"]</option>
+                @foreach (var role in allRoles)
+                {
+                    <option value="@role">@role</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Status"]</span>
+            <select id="statusFilter" onchange="applyUserFilters()">
+                <option value="">@L["All"]</option>
+                <option value="active">@L["Active"]</option>
+                <option value="inactive">@L["Inactive"]</option>
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Sign-in"]</span>
+            <select id="loginFilter" onchange="applyUserFilters()">
+                <option value="">@L["All"]</option>
+                <option value="signed">@L["Has signed in"]</option>
+                <option value="never">@L["Never signed in"]</option>
+            </select>
+        </label>
+        <button type="button" class="ip-btn ip-btn-ghost d-none" id="resetUserFiltersBtn" onclick="resetUserFilters()">
+            <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
 
-        <div class="filter-grid">
-            <div class="filter-field">
-                <label for="roleFilter">@L["Role"]</label>
-                <select id="roleFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">@L["All roles"]</option>
-                    @foreach (var role in allRoles)
+    <div id="usersRegion">
+        <div class="ip-table-wrap">
+            <table class="ip-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>@L["User"]</th>
+                        <th>@L["Email"]</th>
+                        <th>@L["Roles"]</th>
+                        <th>@L["Status"]</th>
+                        <th>@L["Created"]</th>
+                        <th>@L["Last Login"]</th>
+                        <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
                     {
-                        <option value="@role">@role</option>
-                    }
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="statusFilter">@L["Status"]</label>
-                <select id="statusFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">@L["All"]</option>
-                    <option value="active">@L["Active"]</option>
-                    <option value="inactive">@L["Inactive"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="loginFilter">@L["Sign-in"]</label>
-                <select id="loginFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">@L["All"]</option>
-                    <option value="signed">@L["Has signed in"]</option>
-                    <option value="never">@L["Never signed in"]</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <div class="result-bar" id="usersSummary">
-        <span><b id="userCount">@Model.Count</b> @L["of"] <b>@Model.Count</b> @L["users"]</span>
-    </div>
-
-    <div class="card mb-4" id="usersRegion">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover" id="usersTable">
-                    <thead>
-                        <tr>
-                            <th>@L["User"]</th>
-                            <th>@L["Email"]</th>
-                            <th>@L["Status"]</th>
-                            <th>@L["Roles"]</th>
-                            <th>@L["Created"]</th>
-                            <th>@L["Last Login"]</th>
-                            <th>@L["Actions"]</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var user in Model)
-                        {
-                            <tr>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="user-initial-badge me-3 pdf-omit">@user.Username.Substring(0, 1).ToUpper()</span>
-                                        <div>
-                                            <h6 class="mb-0">@user.FullName</h6>
-                                            <small class="text-muted">@user.Username</small>
-                                        </div>
+                        var everLoggedIn = user.LastLoginAt.HasValue && user.LastLoginAt.Value != default(DateTime);
+                        <tr data-href="@Url.Action("Details", new { id = user.Id })"
+                            data-roles="@string.Join("|", user.Roles)"
+                            data-active="@user.IsActive.ToString().ToLower()"
+                            data-ever-logged-in="@everLoggedIn.ToString().ToLower()">
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="ip-avatar pdf-omit" aria-hidden="true">@user.Username.Substring(0, 1).ToUpper()</span>
+                                    <div class="cell-text">
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = user.Id })">@user.FullName</a>
+                                        <span class="cell-sub">@user.Username</span>
                                     </div>
-                                </td>
-                                <td>@user.Email</td>
-                                <td>
-                                    @if (user.IsActive)
-                                    {
-                                        <span class="badge bg-success">@L["Active"]</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">@L["Inactive"]</span>
-                                    }
-                                </td>
-                                <td>
-                                    @foreach (var role in user.Roles)
-                                    {
-                                        <span class="badge bg-primary me-1">@role</span>
-                                    }
-                                </td>
-                                <td>
-                                    <small>@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</small>
-                                </td>
-                                <td>
-                                    @if (user.LastLoginAt.HasValue && user.LastLoginAt.Value != default(DateTime))
-                                    {
-                                        <small>@user.LastLoginAt.Value.ToString("dd.MM.yyyy HH:mm")</small>
-                                    }
-                                    else
-                                    {
-                                        <small class="text-muted">@L["Never"]</small>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="@Url.Action("Details", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="@L["View Details"]">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a href="@Url.Action("Edit", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="@L["Edit User"]">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-warning"
-                                                onclick="toggleUserStatus(@user.Id, @user.IsActive.ToString().ToLower())"
-                                                title="@L["Toggle Status"]">
-                                            @if (user.IsActive)
-                                            {
-                                                <i class="fas fa-user-slash"></i>
-                                            }
-                                            else
-                                            {
-                                                <i class="fas fa-user-check"></i>
-                                            }
-                                        </button>
-                                        <a href="@Url.Action("ResetPassword", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="@L["Reset Password"]">
-                                            <i class="fas fa-key"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-outline-danger"
-                                                data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
-                                                title="@L["Delete User"]">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                        <tr class="no-results-row" id="noUserResults" style="display: none;">
-                            <td colspan="7">
-                                <div class="empty-state">
-                                    <i class="fas fa-user-slash"></i>
-                                    <h5>@L["No users match these filters"]</h5>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">@L["Clear filters"]</button>
+                                </div>
+                            </td>
+                            <td>@user.Email</td>
+                            <td>
+                                @if (user.Roles.Any())
+                                {
+                                    @string.Join(", ", user.Roles)
+                                }
+                                else
+                                {
+                                    <span class="ip-faint">-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.IsActive)
+                                {
+                                    <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                                }
+                                else
+                                {
+                                    <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                                }
+                            </td>
+                            <td class="ip-num text-nowrap">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
+                            <td class="ip-num text-nowrap">
+                                @if (everLoggedIn)
+                                {
+                                    @(user.LastLoginAt.GetValueOrDefault().ToString("dd.MM.yyyy")) <div class="sub">@(user.LastLoginAt.GetValueOrDefault().ToString("HH:mm"))</div>
+                                }
+                                else
+                                {
+                                    <span class="ip-faint">@L["Never"]</span>
+                                }
+                            </td>
+                            <td data-no-row-link>
+                                <div class="actions">
+                                    <a href="@Url.Action("Details", new { id = user.Id })" class="ip-btn-icon"
+                                       title="@L["View Details"]" aria-label="@L["View Details"]">
+                                        <i class="fa-regular fa-eye"></i>
+                                    </a>
+                                    <a href="@Url.Action("Edit", new { id = user.Id })" class="ip-btn-icon"
+                                       title="@L["Edit User"]" aria-label="@L["Edit User"]">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <button type="button" class="ip-btn-icon"
+                                            onclick="toggleUserStatus(@user.Id, @user.IsActive.ToString().ToLower())"
+                                            title="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])"
+                                            aria-label="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])">
+                                        <i class="fa-solid @(user.IsActive ? "fa-user-slash" : "fa-user-check")"></i>
+                                    </button>
+                                    <a href="@Url.Action("ResetPassword", new { id = user.Id })" class="ip-btn-icon"
+                                       title="@L["Reset Password"]" aria-label="@L["Reset Password"]">
+                                        <i class="fa-solid fa-key"></i>
+                                    </a>
+                                    <button type="button" class="ip-btn-icon ip-btn-icon-danger"
+                                            data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
+                                            title="@L["Delete User"]" aria-label="@L["Delete User"]">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="ip-empty" id="noUserResults" style="display: none;">
+            <span class="icon"><i class="fa-solid fa-user-slash"></i></span>
+            <div class="title">@L["Nothing found"]</div>
+            <div class="text">@L["No users match these filters"]</div>
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="resetUserFilters()">
+                <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="deleteModalTitle">@L["Delete User"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
             <div class="modal-body">
-                <p>@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger">@L["This action cannot be undone."]</p>
+                <p class="mb-2">@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
+                <p class="ip-muted mb-0">@L["This action cannot be undone."]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form id="deleteForm" method="post" style="display: inline;">
+                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                <form id="deleteForm" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">@L["Delete"]</button>
+                    <button type="submit" class="ip-btn ip-btn-danger">
+                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </form>
             </div>
         </div>
@@ -212,9 +204,8 @@
             const terms = term ? term.split(/\s+/) : [];
 
             let shown = 0;
-            document.querySelectorAll('#usersTable tbody tr').forEach(row => {
-                if (row.classList.contains('no-results-row')) return;
-
+            const rows = document.querySelectorAll('#usersTable tbody tr');
+            rows.forEach(row => {
                 const haystack = row.textContent.toLowerCase();
                 const rowRoles = (row.dataset.roles || '').split('|').filter(Boolean);
                 const isActive = row.dataset.active === 'true';
@@ -230,8 +221,18 @@
                 if (matches) shown++;
             });
 
-            document.getElementById('userCount').textContent = shown;
+            const count = document.getElementById('userCount');
+            if (count) {
+                const total = rows.length;
+                count.textContent = shown === total ? t('{0} users', total) : t('{0} of {1} users', shown, total);
+            }
+
+            const filtered = !!(term || role || status || login);
+            document.getElementById('resetUserFiltersBtn').classList.toggle('d-none', !filtered);
+
+            const table = document.getElementById('usersTable');
             const empty = document.getElementById('noUserResults');
+            if (table) table.style.display = shown === 0 ? 'none' : '';
             if (empty) empty.style.display = shown === 0 ? '' : 'none';
         }
 
@@ -251,13 +252,12 @@
             renderPrintDocument({ title: t('Users'), headers: data.headers, rows: data.rows });
         }
 
-        document.getElementById('searchInput').addEventListener('keyup', applyUserFilters);
+        document.getElementById('searchInput').addEventListener('input', applyUserFilters);
 
         // Toggle user status. Razor renders the flag unquoted, so it arrives as a real boolean -
         // the old `isActive === 'true'` string compare was always false and mislabelled the prompt.
-            function toggleUserStatus(userId, isActive) {
+        function toggleUserStatus(userId, isActive) {
             const deactivating = (isActive === true || isActive === 'true');
-            const action = deactivating ? 'deactivate' : 'activate';
             confirmAction({
                 title: deactivating ? t('Deactivate user') : t('Activate user'),
                 message: deactivating
@@ -296,15 +296,6 @@
             const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
             modal.show();
         }
-
-        // Auto-hide alerts
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                const bsAlert = new bootstrap.Alert(alert);
-                bsAlert.close();
-            });
-        }, 5000);
 
         // Other users' changes refresh the count and the table in place (live-updates.js).
         LiveUpdates.watch({

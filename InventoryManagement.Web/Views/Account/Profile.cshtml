@@ -1,260 +1,155 @@
 @model UserProfileViewModel
 @{
     ViewData["Title"] = "My Profile";
+    var initials = $"{Model.FirstName.FirstOrDefault()}{Model.LastName.FirstOrDefault()}".Trim();
+    var permissionsByCategory = Model.Permissions
+        .GroupBy(p => p.Category)
+        .OrderBy(g => g.Key)
+        .ToList();
 }
 
 <div class="container-fluid px-4">
     <div class="ip-page-head">
-        <div>
-            <h1>@L["My Profile"]</h1>
+        <div class="d-flex align-items-center gap-3">
+            <span class="ip-avatar" aria-hidden="true">@(string.IsNullOrEmpty(initials) ? "?" : initials)</span>
+            <div>
+                <h1>@L["My Profile"]</h1>
+                <div class="ip-sub">@Model.FullName · <span class="ip-mono">@@@Model.Username</span></div>
+            </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            @* Self-service change (verifies the current password). Previously this pointed at the
-               Admin-only ResetPassword action, so a non-admin got Access Denied. *@
-            <a href="@Url.Action("ChangePassword")" class="btn btn-sm btn-primary">
-                <i class="fas fa-key me-1"></i> @L["Change Password"]
-            </a>
+        <div class="ip-page-actions">
             <form asp-action="Logout" method="post" class="mb-0">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-sm btn-outline-danger">
-                    <i class="fas fa-sign-out-alt me-1"></i> @L["Sign Out"]
+                <button type="submit" class="ip-btn ip-btn-danger-ghost">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i><span>@L["Sign Out"]</span>
                 </button>
             </form>
+            @* Self-service change (verifies the current password). Previously this pointed at the
+               Admin-only ResetPassword action, so a non-admin got Access Denied. *@
+            <a href="@Url.Action("ChangePassword")" class="ip-btn ip-btn-secondary">
+                <i class="fa-solid fa-key"></i><span>@L["Change Password"]</span>
+            </a>
         </div>
     </div>
 
-    <div class="row mt-3">
-        <!-- Left Column - Account summary -->
-        <div class="col-lg-4 mb-3">
-            <div class="card">
-                <div class="card-header">
-                    <i class="fas fa-id-badge me-2"></i>@L["Account"]
-                </div>
-                <div class="card-body">
-                    <div class="cell-item mb-3">
-                        <div class="user-avatar">
-                            <span>@Model.FirstName[0]@Model.LastName[0]</span>
-                        </div>
-                        <div class="cell-text">
-                            <span class="cell-title">@Model.FullName</span>
-                            <span class="cell-sub">@@@Model.Username</span>
-                        </div>
-                    </div>
+    <hr class="ip-rule" />
 
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Status"]</span>
-                            <span class="d-value">
-                                @if (Model.IsActive)
-                                {
-                                    <span class="state state-ok">@L["Active Account"]</span>
-                                }
-                                else
-                                {
-                                    <span class="state state-idle">@L["Inactive"]</span>
-                                }
-                            </span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Roles"] (@Model.Roles.Count)</span>
-                            <span class="d-value">
-                                @if (Model.Roles.Any())
-                                {
-                                    <span class="state-stack">
-                                        @foreach (var role in Model.Roles)
-                                        {
-                                            <span class="badge bg-primary">@role</span>
-                                        }
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="d-empty">@L["No roles"]</span>
-                                }
-                            </span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Permissions"]</span>
-                            <span class="d-value mono">@Model.Permissions.Count</span>
-                        </div>
-                    </div>
+    <div class="row g-5 pt-4">
+        <div class="col-lg-5">
+            <h2 class="mb-3">@L["Personal Information"]</h2>
+            <dl class="ip-dl">
+                <div><dt>@L["First Name"]</dt><dd>@Model.FirstName</dd></div>
+                <div><dt>@L["Last Name"]</dt><dd>@Model.LastName</dd></div>
+                <div><dt>@L["Username"]</dt><dd class="ip-mono">@Model.Username</dd></div>
+                <div><dt>@L["Email Address"]</dt><dd>@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</dd></div>
+                <div>
+                    <dt>@L["Status"]</dt>
+                    <dd>
+                        @if (Model.IsActive)
+                        {
+                            <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                        }
+                    </dd>
                 </div>
-            </div>
+                <div>
+                    <dt>@L["Roles"]</dt>
+                    <dd>
+                        @if (Model.Roles.Any())
+                        {
+                            @(string.Join(", ", Model.Roles.Select(r => L[r].Value)))
+                        }
+                        else
+                        {
+                            <span class="ip-muted">@L["No roles"]</span>
+                        }
+                    </dd>
+                </div>
+                <div><dt>@L["Account Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy")</dd></div>
+                <div>
+                    <dt>@L["Last Login"]</dt>
+                    <dd class="ip-num">
+                        @if (Model.LastLoginAt.HasValue)
+                        {
+                            @Model.LastLoginAt.Value.ToString("dd.MM.yyyy HH:mm")
+                        }
+                        else
+                        {
+                            <span class="ip-muted">@L["Never"]</span>
+                        }
+                    </dd>
+                </div>
+            </dl>
+            <p class="ip-hint mt-3 mb-0">@L["To update your profile information, please contact your system administrator."]</p>
         </div>
 
-        <!-- Right Column - Details -->
-        <div class="col-lg-8">
-            <!-- Personal Information -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <i class="fas fa-circle-info me-2"></i>@L["Personal Information"]
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["First Name"]</span>
-                            <span class="d-value">@Model.FirstName</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Last Name"]</span>
-                            <span class="d-value">@Model.LastName</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Username"]</span>
-                            <span class="d-value">@Model.Username</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Email Address"]</span>
-                            <span class="d-value">@Model.Email</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Account Created"]</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Last Login"]</span>
-                            <span class="d-value">
-                                @if (Model.LastLoginAt.HasValue)
-                                {
-                                    <span class="mono">@Model.LastLoginAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
-                                }
-                                else
-                                {
-                                    <span class="d-empty">@L["Never"]</span>
-                                }
-                            </span>
-                        </div>
-                    </div>
+        <div class="col-lg-7">
+            <h2 class="mb-3">@L["My Permissions"] <span class="ip-faint ip-num fw-normal ms-1">@Model.Permissions.Count</span></h2>
 
-                    <p class="form-text mb-0 mt-3">
-                        @L["To update your profile information, please contact your system administrator."]
-                    </p>
+            @if (permissionsByCategory.Any())
+            {
+                <div class="ip-filterbar">
+                    <label class="ip-filter search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" id="permissionSearch" autocomplete="off"
+                               placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
+                    </label>
                 </div>
-            </div>
 
-            <!-- Permissions -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                    <span><i class="fas fa-shield-halved me-2"></i>@L["My Permissions"] (@Model.Permissions.Count)</span>
-                    <div class="filter-search">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-magnifying-glass"></i>
-                            </span>
-                            <input type="text"
-                                   id="permissionSearch"
-                                   class="form-control"
-                                   placeholder="@L["Search permissions..."]">
+                @foreach (var category in permissionsByCategory)
+                {
+                    <section class="permission-category pt-4">
+                        <div class="d-flex align-items-baseline gap-2 mb-2">
+                            <span class="fw-semibold">@L[category.Key]</span>
+                            <span class="ip-faint ip-num">@category.Count()</span>
                         </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @if (Model.Permissions.Any())
-                    {
-                        var permissionsByCategory = Model.Permissions
-                            .GroupBy(p => p.Category)
-                            .OrderBy(g => g.Key);
-
-                        <div class="accordion accordion-flush" id="permissionsAccordion">
-                            @foreach (var category in permissionsByCategory)
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var permission in category.OrderBy(p => p.Name))
                             {
-                                var categoryId = category.Key.Replace(" ", "");
-                                var isFirst = category.Key == permissionsByCategory.First().Key;
-
-                                <div class="accordion-item permission-category">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button @(isFirst ? "" : "collapsed")"
-                                                type="button"
-                                                data-bs-toggle="collapse"
-                                                data-bs-target="#@categoryId">
-                                            <span class="fw-semibold">@L[category.Key]</span>
-                                            <span class="badge bg-primary ms-2">@category.Count()</span>
-                                        </button>
-                                    </h2>
-                                    <div id="@categoryId"
-                                         class="accordion-collapse collapse @(isFirst ? "show" : "")"
-                                         data-bs-parent="#permissionsAccordion">
-                                        <div class="accordion-body">
-                                            <div class="list-group list-group-flush side-panel">
-                                                @foreach (var permission in category.OrderBy(p => p.Name))
-                                                {
-                                                    <div class="list-group-item permission-item"
-                                                         data-permission-name="@permission.Name.ToLower()">
-                                                        <div class="d-flex align-items-start gap-2">
-                                                            <i class="fas fa-circle-check text-success"></i>
-                                                            <div>
-                                                                <div class="mono">@permission.Name</div>
-                                                                @if (!string.IsNullOrEmpty(permission.Description))
-                                                                {
-                                                                    <div class="form-text">@L[permission.Description]</div>
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                var description = string.IsNullOrEmpty(permission.Description) ? "" : L[permission.Description].Value;
+                                <li class="permission-item py-2 border-top"
+                                    data-permission-name="@($"{permission.Name} {description}".ToLowerInvariant())">
+                                    <div class="ip-mono">@permission.Name</div>
+                                    @if (!string.IsNullOrEmpty(description))
+                                    {
+                                        <div class="ip-faint">@description</div>
+                                    }
+                                </li>
                             }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-triangle-exclamation"></i>
-                            <h5>@L["No permissions assigned"]</h5>
-                            <p class="mb-0">@L["Ask your administrator to grant the access you need."]</p>
-                        </div>
-                    }
+                        </ul>
+                    </section>
+                }
+
+                <p class="ip-muted pt-4 mb-0 d-none" id="permissionSearchEmpty">@L["No matching permissions."]</p>
+            }
+            else
+            {
+                <div class="ip-empty pt-0">
+                    <span class="icon"><i class="fa-solid fa-shield-halved"></i></span>
+                    <div class="title">@L["No permissions assigned"]</div>
+                    <div class="text">@L["Ask your administrator to grant the access you need."]</div>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Permission search functionality
-        $(document).ready(function() {
-            $('#permissionSearch').on('keyup', function() {
-                const searchTerm = $(this).val().toLowerCase();
+        // Permission search: hides non-matching permissions and the categories left empty.
+        $('#permissionSearch').on('input', function () {
+            const term = $(this).val().trim().toLowerCase();
 
-                if (searchTerm === '') {
-                    // Show all
-                    $('.permission-item').show();
-                    $('.permission-category').show();
-                } else {
-                    // Filter permissions
-                    $('.permission-item').each(function() {
-                        const permissionName = $(this).data('permission-name');
-                        if (permissionName.includes(searchTerm)) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-
-                    // Hide categories with no visible items
-                    $('.permission-category').each(function() {
-                        const visibleItems = $(this).find('.permission-item:visible').length;
-                        if (visibleItems > 0) {
-                            $(this).show();
-                            // Expand the accordion
-                            $(this).find('.accordion-collapse').addClass('show');
-                            $(this).find('.accordion-button').removeClass('collapsed');
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                }
+            $('.permission-item').each(function () {
+                $(this).toggleClass('d-none', term !== '' && !String($(this).data('permission-name')).includes(term));
             });
+            $('.permission-category').each(function () {
+                $(this).toggleClass('d-none', $(this).find('.permission-item:not(.d-none)').length === 0);
+            });
+            $('#permissionSearchEmpty').toggleClass('d-none', $('.permission-category:not(.d-none)').length > 0);
         });
-
-        function logoutAllDevices() {
-            // Nothing is wired up behind this yet, so asking for confirmation first would be
-            // misleading - say plainly that it is not available instead.
-            showToast(t('Signing out other devices is not available yet.'), 'info');
-        }
     </script>
 }

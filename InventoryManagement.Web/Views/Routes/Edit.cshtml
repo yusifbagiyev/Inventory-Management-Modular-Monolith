@@ -2,15 +2,9 @@
 @model RouteViewModel
 @{
     ViewData["Title"] = "Edit Route";
-
-    var typeClass = Model.RouteTypeName switch
-    {
-        "New" => "state-ok",
-        "Removal" => "state-crit",
-        "Update" => "state-warn",
-        "Transfer" => "state-info",
-        _ => "state-idle"
-    };
+    var direct = User.HasPermission("route.update.direct");
+    var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
 <div class="container-fluid px-4">
@@ -18,230 +12,147 @@
         <div>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index">@L["Routes"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id" class="ip-num">#@Model.Id</a></li>
                 <li class="breadcrumb-item active">@L["Edit"]</li>
             </ol>
             <h1>@L[(string)ViewData["Title"]!]</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-eye"></i> @L["View Details"]
-            </a>
-        </div>
-    </div>
-
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <span><i class="fas fa-circle-info me-1"></i> @L["Route Information"]</span>
-                    <span class="d-flex gap-2 flex-wrap">
-                        <span class="state state-flat @typeClass">@L[Model.RouteTypeName ?? ""]</span>
-                        @if (Model.IsCompleted)
-                        {
-                            <span class="state state-ok">@L["Completed"]</span>
-                        }
-                        else
-                        {
-                            <span class="state state-warn">@L["Pending"]</span>
-                        }
-                    </span>
-                </div>
-                <div class="card-body">
-                    <div class="detail-grid">
-                        <div class="detail-row">
-                            <span class="d-label">@L["Route type"]</span>
-                            <span class="d-value">@L[Model.RouteTypeName ?? ""]</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Product"]</span>
-                            <span class="d-value"><span class="mono">@Model.InventoryCode</span> - @Model.Model</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Vendor"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.Vendor))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                <span class="d-value">@Model.Vendor</span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["From"]</span>
-                            @if (string.IsNullOrWhiteSpace(Model.FromDepartmentName))
-                            {
-                                <span class="d-value d-empty">@L["Not set"]</span>
-                            }
-                            else
-                            {
-                                @* Only append the worker when there is one - otherwise this rendered
-                                   "IT Storage ()" with empty brackets. *@
-                                <span class="d-value">
-                                    @Model.FromDepartmentName@(string.IsNullOrWhiteSpace(Model.FromWorker) ? "" : $" ({Model.FromWorker})")
-                                </span>
-                            }
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Created"]</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="d-label">@L["Status"]</span>
-                            <span class="d-value">
-                                @if (Model.IsCompleted)
-                                {
-                                    <span class="state state-ok">@L["Completed"]</span>
-                                }
-                                else
-                                {
-                                    <span class="state state-warn">@L["Pending"]</span>
-                                }
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-pen-to-square me-1"></i>
-                    @L["Edit Route Information"]
-                </div>
-
-                <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editRouteForm">
-                    <div>
-                    <div class="form-section">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
-
-                        <h2 class="section-title">@L["Destination"]</h2>
-                        <div class="form-grid">
-                            <div>
-                                <label class="form-label" for="ToDepartmentId">@L["To Department"]</label>
-                                @{
-                                    var departmentOptions = ViewBag.Departments as List<SelectListItem> ?? new List<SelectListItem>();
-                                }
-                                @if (departmentOptions.Any())
-                                {
-                                    <select name="ToDepartmentId" id="ToDepartmentId" class="form-select">
-                                        @foreach (var dept in departmentOptions)
-                                        {
-                                            <option value="@dept.Value" selected="@(dept.Value == Model.ToDepartmentId.ToString())">@dept.Text</option>
-                                        }
-                                    </select>
-                                    <div class="form-text">@L["Moving the route to another department updates its destination."]</div>
-                                }
-                                else
-                                {
-                                    @* Department list unavailable - keep the current value rather than posting an empty one. *@
-                                    <input type="text" class="form-control" value="@Model.ToDepartmentName" readonly disabled />
-                                    <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
-                                    <div class="form-text">@L["Department list could not be loaded; try reloading the page."]</div>
-                                }
-                            </div>
-                            <div>
-                                <label class="form-label">@L["To Worker"]</label>
-                                @* The visible box had no name attribute, so edits never reached the
-                                   server - a hidden field posted the ORIGINAL value instead. Bind the
-                                   visible input itself and drop the shadow field. *@
-                                <input type="text" name="ToWorker" class="form-control" value="@Model.ToWorker"
-                                       placeholder="@L["Not assigned"]" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h2 class="section-title">@L["Images"]</h2>
-                        <partial name="_ImageManager" model='new ImageManagerModel { Existing = Model.ImageUrls, Hint = "When the transfer is completed these become the product images, and the cover (★) becomes its main image." }' />
-                    </div>
-
-                    <div class="form-section">
-                        <h2 class="section-title">@L["Notes"]</h2>
-                        <div class="form-grid">
-                            <div class="full">
-                                <label class="form-label">@L["Notes"]</label>
-                                <textarea name="Notes" class="form-control" rows="3" placeholder="@L["Add any notes..."]">@Model.Notes</textarea>
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-
-                    <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> @L["Back to List"]
-                        </a>
-                        <div class="actions-right">
-                            @if (!Model.IsCompleted)
-                            {
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmDelete(@Model.Id)">
-                                    <i class="fas fa-trash"></i> @L["Delete Route"]
-                                </button>
-                            }
-                            <button type="submit" class="btn btn-primary btn-sm" id="submitBtn">
-                                <i class="fas fa-save"></i> @L["Save Changes"]
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4 side-panel">
-                <div class="card-header">
-                    <i class="fas fa-lightbulb me-1"></i>
-                    @L["Edit Guidelines"]
-                </div>
-                <div class="list-group list-group-flush">
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Changing department will update product location"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Worker assignment tracks responsibility"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Add or remove images; the first image is the cover"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-triangle-exclamation me-2"></i>
-                        @L["Completed routes cannot be edited"]
-                    </div>
-                </div>
-                @if (!Model.IsCompleted)
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span class="ip-mono text-body">@Model.InventoryCode</span>
+                <span>@Or(Model.Model, "-")</span>
+                @if (Model.IsCompleted)
                 {
-                    <div class="card-body">
-                        <div class="alert alert-warning mb-0">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <strong>@L["Note:"]</strong> @L["Deleting this route will revert the product to its previous location."]
-                        </div>
-                    </div>
+                    <span class="ip-badge ip-badge-success">@L["Completed"]</span>
                 }
+                else
+                {
+                    <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                }
+                <span class="ip-tag-plain">@L[Model.RouteTypeName ?? ""]</span>
             </div>
         </div>
     </div>
+
+    @if (Model.IsCompleted)
+    {
+        <div class="ip-banner ip-banner-warning mb-3">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>@L["Completed routes cannot be edited"]</span>
+        </div>
+    }
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" class="ip-form" id="editRouteForm">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+        }
+
+        <section class="ip-form-section">
+            <h2>@L["Route"]</h2>
+            <dl class="ip-dl">
+                <div>
+                    <dt>@L["Product"]</dt>
+                    <dd>
+                        <span class="ip-mono">@Model.InventoryCode</span> · @Or(Model.Model, "-")
+                        <div class="ip-faint">@Or(Model.Vendor, "-") · @Or(Model.CategoryName, "-")</div>
+                    </dd>
+                </div>
+                <div>
+                    <dt>@L["From"]</dt>
+                    <dd>
+                        @Or(Model.FromDepartmentName, "-")
+                        @if (!string.IsNullOrWhiteSpace(Model.FromWorker))
+                        {
+                            <div class="ip-faint">@Model.FromWorker</div>
+                        }
+                    </dd>
+                </div>
+                <div><dt>@L["Type"]</dt><dd>@L[Model.RouteTypeName ?? ""]</dd></div>
+                <div><dt>@L["Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd></div>
+            </dl>
+        </section>
+
+        <section class="ip-form-section">
+            <h2>@L["Destination"]</h2>
+            <div class="ip-form-grid">
+                <div class="ip-field">
+                    <label class="ip-label" for="ToDepartmentId"><span>@L["To Department"]</span> <span class="req">*</span></label>
+                    @{
+                        var departmentOptions = ViewBag.Departments as List<SelectListItem> ?? new List<SelectListItem>();
+                    }
+                    @if (departmentOptions.Any())
+                    {
+                        <select name="ToDepartmentId" id="ToDepartmentId" class="ip-select">
+                            @foreach (var dept in departmentOptions)
+                            {
+                                <option value="@dept.Value" selected="@(dept.Value == Model.ToDepartmentId.ToString())">@dept.Text</option>
+                            }
+                        </select>
+                        <span class="ip-hint">@L["Moving the route to another department updates its destination."]</span>
+                    }
+                    else
+                    {
+                        @* Department list unavailable - keep the current value rather than posting an empty one. *@
+                        <input type="text" id="ToDepartmentId" class="ip-input" value="@Model.ToDepartmentName" readonly disabled />
+                        <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
+                        <span class="ip-error"><i class="fa-solid fa-circle-exclamation"></i>@L["Department list could not be loaded; try reloading the page."]</span>
+                    }
+                </div>
+                <div class="ip-field">
+                    <label class="ip-label" for="ToWorker">@L["To Worker"]</label>
+                    @* The visible input itself is bound (a hidden shadow field used to post the original value). *@
+                    <input type="text" name="ToWorker" id="ToWorker" class="ip-input" value="@Model.ToWorker"
+                           placeholder="@L["Not assigned"]" />
+                </div>
+            </div>
+        </section>
+
+        <section class="ip-form-section">
+            <h2 class="mb-2">@L["Images"]</h2>
+            <partial name="_ImageManager" model='new ImageManagerModel { Existing = Model.ImageUrls, Hint = "When the transfer is completed these become the product images, and the cover (★) becomes its main image." }' />
+        </section>
+
+        <section class="ip-form-section">
+            <h2>@L["Notes"]</h2>
+            <textarea name="Notes" id="Notes" class="ip-textarea" rows="3" aria-label="@L["Notes"]"
+                      placeholder="@L["Add any notes..."]">@Model.Notes</textarea>
+        </section>
+
+        <div class="ip-form-foot">
+            <span class="note">
+                @if (!direct)
+                {
+                    <i class="fa-solid fa-circle-info me-1"></i>@L["Operator changes are applied after an administrator approves them."]
+                }
+            </span>
+            @if (canDelete && !Model.IsCompleted)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="confirmDelete(@Model.Id)">
+                    <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
+                </button>
+            }
+            <a asp-action="Details" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+            <button type="submit" class="ip-btn ip-btn-primary" id="submitBtn">
+                <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
+            </button>
+        </div>
+    </form>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Confirm Delete"]</h5>
+                <h5 class="modal-title" id="deleteModalTitle">@L["Delete route"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
             <div class="modal-body">
-                <p>@L["Are you sure you want to delete this route?"]</p>
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-info-circle"></i> @L["The product will be reverted to its previous location and worker assignment."]
-                </div>
+                <p class="mb-2">@L["Are you sure you want to delete this route?"]</p>
+                <p class="ip-muted mb-0">@L["The product will be reverted to its previous location and worker assignment."]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRoute()">
-                    <i class="fas fa-trash"></i> @L["Delete Route"]
+                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                <button type="button" class="ip-btn ip-btn-danger" onclick="deleteRoute()">
+                    <span>@L["Delete Route"]</span><i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
         </div>

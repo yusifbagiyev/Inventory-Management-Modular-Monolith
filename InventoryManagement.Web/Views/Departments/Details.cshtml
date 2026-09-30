@@ -5,161 +5,146 @@
 }
 
 <div class="container-fluid px-4" id="detailsRegion">
-    <div class="ip-page-head">
+    <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/Departments">@L["Departments"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Departments"]</a></li>
                 <li class="breadcrumb-item active">@Model.Name</li>
             </ol>
             <h1>@Model.Name</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to List"]
-            </a>
-            <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-file-word"></i> @L["Export to Word"]
-            </a>
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> @L["Edit Department"]
-            </a>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                @if (Model.IsActive)
+                {
+                    <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                }
+                else
+                {
+                    <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                }
+                <span class="ip-num">@L["{0} products", Model.ProductCount] · @L["{0} workers", Model.WorkerCount]</span>
+            </div>
         </div>
     </div>
 
-    <div class="card mt-3 mb-4">
-        <div class="card-header">@L["Department"]</div>
-        <div class="card-body">
-            <div class="detail-grid">
-                <div class="detail-row">
-                    <span class="d-label">@L["Department head"]</span>
+    <div class="ip-page-actions mb-4">
+        <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
+            <i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span>
+        </a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary">
+            <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
+        </a>
+    </div>
+
+    <hr class="ip-rule" />
+
+    <div class="row pt-2 mb-5">
+        <div class="col-lg-8 col-xl-7">
+            <dl class="ip-dl">
+                <div>
+                    <dt>@L["Department head"]</dt>
                     @if (!string.IsNullOrEmpty(Model.DepartmentHead))
                     {
-                        <span class="d-value">@Model.DepartmentHead</span>
+                        <dd>@Model.DepartmentHead</dd>
                     }
                     else
                     {
-                        <span class="d-value d-empty">@L["Not assigned"]</span>
+                        <dd class="ip-muted">@L["Not assigned"]</dd>
                     }
                 </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Status"]</span>
-                    <span class="d-value">
-                        @if (Model.IsActive)
-                        {
-                            <span class="state state-ok">@L["Active"]</span>
-                        }
-                        else
-                        {
-                            <span class="state state-idle">@L["Inactive"]</span>
-                        }
-                    </span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Products"]</span>
-                    <span class="d-value mono">@Model.ProductCount</span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Workers"]</span>
-                    <span class="d-value mono">@Model.WorkerCount</span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Created"]</span>
-                    <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Description"]</span>
+                <div><dt>@L["Products"]</dt><dd class="ip-num">@Model.ProductCount</dd></div>
+                <div><dt>@L["Workers"]</dt><dd class="ip-num">@Model.WorkerCount</dd></div>
+                <div><dt>@L["Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy")</dd></div>
+                <div>
+                    <dt>@L["Description"]</dt>
                     @if (!string.IsNullOrEmpty(Model.Description))
                     {
-                        <span class="d-value">@Model.Description</span>
+                        <dd>@Model.Description</dd>
                     }
                     else
                     {
-                        <span class="d-value d-empty">@L["No description provided"]</span>
+                        <dd class="ip-muted">@L["No description provided"]</dd>
                     }
                 </div>
-            </div>
+            </dl>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                @L["Department Inventory"]
-                <div class="text-muted fw-normal">@L["Complete list of products in this department"]</div>
-            </div>
+    <section class="ip-section">
+        <div class="d-flex align-items-baseline gap-3 flex-wrap mb-2">
+            <h2>@L["Department Inventory"]</h2>
             @if (products.Any())
             {
-                <span class="badge bg-primary">@L["{0} Total Items", products.Count]</span>
+                <span class="ip-faint ip-num">@L["{0} Total Items", products.Count]</span>
             }
         </div>
-        <div class="card-body p-0">
-            @if (products.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="departmentProductsTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 10%">@L["Code"]</th>
-                                <th style="width: 18%">@L["Category"]</th>
-                                <th style="width: 20%">@L["Model"]</th>
-                                <th style="width: 15%">@L["Vendor"]</th>
-                                <th style="width: 15%">@L["Assigned To"]</th>
-                                <th style="width: 12%" class="text-center">@L["Status"]</th>
-                                <th style="width: 10%" class="text-center">@L["Actions"]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var product in products.OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode))
-                            {
-                                <tr>
-                                    <td>
-                                        <span class="badge bg-primary mono">@product.InventoryCode</span>
-                                    </td>
-                                    <td>@(product.CategoryName ?? L["Uncategorized"].Value)</td>
-                                    <td>@(product.Model ?? L["N/A"].Value)</td>
-                                    <td class="text-muted">@(product.Vendor ?? L["N/A"].Value)</td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(product.Worker))
-                                        {
-                                            @product.Worker
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted fst-italic">@L["Not assigned"]</span>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        @if (product.IsWorking)
-                                        {
-                                            <span class="state state-ok">@L["Working"]</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="state state-crit">@L["Not Working"]</span>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id"
-                                           class="btn btn-sm btn-outline-secondary" title="@L["View Details"]">
-                                            <i class="fas fa-eye"></i>
+        @if (products.Any())
+        {
+            <div class="ip-table-wrap">
+                <table class="ip-table" id="departmentProductsTable">
+                    <thead>
+                        <tr>
+                            <th>@L["Code"]</th>
+                            <th>@L["Product"]</th>
+                            <th>@L["Category"]</th>
+                            <th>@L["Assigned To"]</th>
+                            <th>@L["State"]</th>
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in products.OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode))
+                        {
+                            <tr data-href="@Url.Action("Details", "Products", new { id = product.Id })">
+                                <td class="ip-mono" data-order="@product.InventoryCode">@product.InventoryCode</td>
+                                <td>
+                                    <div class="cell-text">
+                                        <span class="cell-title">@(product.Model ?? L["N/A"].Value)</span>
+                                        <span class="cell-sub">@(product.Vendor ?? L["N/A"].Value)</span>
+                                    </div>
+                                </td>
+                                <td>@(product.CategoryName ?? L["Uncategorized"].Value)</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(product.Worker))
+                                    {
+                                        @product.Worker
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-faint">@L["Not assigned"]</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (product.IsWorking)
+                                    {
+                                        <span class="ip-badge ip-badge-success">@L["Working"]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-badge ip-badge-danger">@L["Not working"]</span>
+                                    }
+                                </td>
+                                <td data-no-row-link>
+                                    <div class="actions">
+                                        <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
+                                            <i class="fa-regular fa-eye"></i>
                                         </a>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <i class="fas fa-box-open"></i>
-                    <h5>@L["No Products Yet"]</h5>
-                    <p class="text-muted mb-0">@L["This department doesn't have any products assigned."]</p>
-                </div>
-            }
-        </div>
-    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="ip-empty">
+                <span class="icon"><i class="fa-solid fa-box-open"></i></span>
+                <div class="title">@L["No Products Yet"]</div>
+                <div class="text">@L["This department doesn't have any products assigned."]</div>
+            </div>
+        }
+    </section>
 </div>
 
 @section Scripts {
@@ -168,10 +153,10 @@
 
         // Runs on load and again after live-updates.js swaps in a fresh table.
         function initProductsTable() {
-            // Initialize DataTable with modern styling
             $('#departmentProductsTable').DataTable({
                 pageLength: 25,
-                order: [[1, 'asc'], [0, 'asc']], // Sort by category, then code
+                order: [[2, 'asc'], [0, 'asc']], // Sort by category, then code
+                columnDefs: [{ targets: -1, orderable: false, searchable: false }],
                 language: {
                     search: "_INPUT_",
                     searchPlaceholder: t('Search products...'),

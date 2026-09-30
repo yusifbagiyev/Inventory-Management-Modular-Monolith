@@ -5,37 +5,22 @@
 }
 
 <div class="container-fluid px-4">
-    <div class="row justify-content-center mt-4">
-        <div class="col-lg-6">
-            <div class="card">
-                <div class="card-body">
-                    <span class="state state-crit state-flat mono">@(Model?.StatusCode ?? 500)</span>
-                    <h1 class="mt-2 mb-2">@L["Something went wrong."]</h1>
-                    <p class="mb-0">
-                        @L[Model?.Message ?? "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable."]
-                    </p>
-
-                    @if (Model?.ShowRequestId ?? false)
-                    {
-                        <div class="detail-grid mt-3">
-                            <div class="detail-row">
-                                <span class="d-label">@L["Request ID"]</span>
-                                <span class="d-value mono">@Model.RequestId</span>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div class="page-actions">
-                    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> @L["Go Back"]
-                    </a>
-                    <div class="actions-right">
-                        <a href="/Home/Dashboard" class="btn btn-sm btn-primary">
-                            <i class="fas fa-home me-1"></i> @L["Go to Dashboard"]
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="ip-empty">
+        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <h1 class="title">@L["Something went wrong."]</h1>
+        <p class="text mb-0">@L[Model?.Message ?? "An error occurred while processing your request."]</p>
+        @if (Model?.ShowRequestId ?? false)
+        {
+            <p class="ip-faint mb-0">
+                @if (Model.StatusCode > 0)
+                {
+                    <span class="ip-num">@Model.StatusCode</span><span> · </span>
+                }
+                @L["Request ID"]: <span class="ip-mono">@Model.RequestId</span>
+            </p>
+        }
+        <a href="/Home/Dashboard" class="ip-btn ip-btn-secondary">
+            <span>@L["Go to Dashboard"]</span><i class="fa-solid fa-arrow-right"></i>
+        </a>
     </div>
 </div>

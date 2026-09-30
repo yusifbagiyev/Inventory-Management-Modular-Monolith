@@ -1181,5 +1181,19 @@
   "Request #{0}": "Sorğu #{0}",
   "vs the previous 90 days": "əvvəlki 90 günə nisbətən",
   "90 days": "90 gün",
-  "The product is already in this department. To change only the worker, edit the product.": "Məhsul artıq bu şöbədədir. Yalnız işçini dəyişmək üçün məhsulu redaktə edin."
+  "The product is already in this department. To change only the worker, edit the product.": "Məhsul artıq bu şöbədədir. Yalnız işçini dəyişmək üçün məhsulu redaktə edin.",
+  "No matching permissions.": "Uyğun icazə tapılmadı.",
+  "You do not have permission to open this page. Ask your administrator if you need access.": "Bu səhifəni açmaq üçün icazəniz yoxdur. Girişə ehtiyacınız varsa, administratorunuza müraciət edin.",
+  "{0} requests, {1} pending": "{0} sorğu, {1} gözləmədə",
+  "No requests with this status": "Bu statusda sorğu yoxdur",
+  "{0} categories": "{0} kateqoriya",
+  "{0} departments": "{0} şöbə",
+  "{0} inactive": "{0} deaktiv",
+  "{0} with products": "{0} məhsullu",
+  "{0} workers": "{0} işçi",
+  "Departments you create will be listed here.": "Yaratdığınız şöbələr burada göstəriləcək.",
+  "{0} users": "{0} istifadəçi",
+  "{0} of {1} users": "{0} / {1} istifadəçi",
+  "From role": "Rol vasitəsilə",
+  "Permission changes apply immediately.": "İcazə dəyişiklikləri dərhal tətbiq olunur."
 }

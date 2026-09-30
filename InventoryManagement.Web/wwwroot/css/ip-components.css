@@ -455,3 +455,20 @@ tr.ip-clickable { cursor: pointer; }
 /* ---------- small input (inline edits, e.g. the product code in the list) ---------- */
 .ip-input-sm { width: 8ch; min-width: 8ch; height: 32px; padding: 0 8px; }
 .inventory-code-edit .ip-input-sm { width: 9ch; }
+
+/* ---------- DataTables controls (details pages' product tables) ---------- */
+.dt-container { font-size: var(--ip-fs-sm); color: var(--ip-text-2); }
+.dt-container .dt-layout-row { margin: var(--ip-space-3) 0 !important; }
+.dt-container .dt-search input, .dt-container .dt-length select {
+  height: 34px; min-height: 34px; padding: 0 10px; border: 1px solid transparent !important; border-radius: var(--ip-radius-md) !important;
+  background-color: var(--ip-sunken) !important; color: var(--ip-text-1); font: inherit; box-shadow: none !important;
+}
+.dt-container .dt-length select { padding-right: 28px; }
+.dt-container .dt-search input:focus, .dt-container .dt-length select:focus { border-color: var(--ip-accent) !important; background-color: var(--ip-surface) !important; }
+.dt-container .dt-search label, .dt-container .dt-length label { color: var(--ip-text-2); }
+.dt-container .dt-info { color: var(--ip-text-3); padding-top: 0 !important; }
+table.dataTable thead > tr > th.dt-orderable-asc:hover, table.dataTable thead > tr > th.dt-orderable-desc:hover { outline: none; color: var(--ip-text-1); }
+table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-align: left; }
+/* its Bootstrap rows have negative gutters, which overflowed .ip-table-wrap by 12px */
+.dt-container > .row { margin-left: 0; margin-right: 0; }
+.dt-container > .row > [class*="col"] { padding-left: 0; padding-right: 0; }

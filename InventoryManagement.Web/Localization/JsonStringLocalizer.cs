@@ -129,7 +129,10 @@ namespace InventoryManagement.Web.Localization
             foreach (var (key, value) in Azerbaijani.Value)
             {
                 // A pattern needs real words around its placeholders, or it would match unrelated text.
-                if (!Placeholder().IsMatch(key) || Placeholder().Replace(key, "").Count(char.IsLetter) < 8)
+                // The "Field: old → new" change lines are specific through the arrow, so short
+                // field names ("Worker", "Model") still count.
+                var literal = Placeholder().Replace(key, "");
+                if (!Placeholder().IsMatch(key) || (literal.Count(char.IsLetter) < 8 && !literal.Contains('→')))
                     continue;
                 // Placeholders in the key become capture groups, in index order ({0} first).
                 var order = Placeholder().Matches(key).Select(m => int.Parse(m.Groups[1].Value)).ToList();

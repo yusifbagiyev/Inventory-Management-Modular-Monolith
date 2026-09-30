@@ -2,222 +2,193 @@
 @{
     ViewData["Title"] = "Departments";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
+    var hasSearch = !string.IsNullOrEmpty(currentSearch);
+    object activeCount = Model.ActiveItems ?? ViewBag.ActiveDepartments ?? 0;
+    object inactiveCount = Model.InActiveItems ?? ViewBag.InActiveDepartments ?? 0;
+    object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.DepartmentsInWithProducts ?? 0;
 }
 
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
             <h1>@L["Departments"]</h1>
+            <div class="ip-sub ip-num" id="departmentsSummary">
+                @L["{0} departments", Model.TotalCount] · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
+            </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary btn-sm" onclick="exportDepartmentsToPDF()">
-                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
+        <div class="ip-page-actions">
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportDepartmentsToPDF()">
+                <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
             @if (User.IsInRole("Admin"))
             {
-                <a asp-action="Create" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> @L["New Department"]
+                <a asp-action="Create" class="ip-btn ip-btn-primary">
+                    <span>@L["New Department"]</span><i class="fa-solid fa-plus"></i>
                 </a>
             }
         </div>
     </div>
 
     @* Status and sort narrow the rows already on screen, so they take effect the
-       moment they change. Free-text search goes back to the server. *@
-    <div class="filter-panel mt-3">
-        <div class="filter-top">
-            <div class="filter-search">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control" value="@currentSearch"
-                           placeholder="@L["Search departments..."]">
-                </div>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm" onclick="applyFilters()">
-                <i class="fas fa-filter"></i> @L["Apply"]
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
-                <i class="fas fa-redo"></i> @L["Reset"]
-            </button>
-        </div>
-
-        <div class="filter-grid">
-            <div class="filter-field">
-                <label for="statusFilter">@L["Status"]</label>
-                <select id="statusFilter" class="form-select form-select-sm">
-                    <option value="">@L["All Status"]</option>
-                    <option value="active">@L["Active"]</option>
-                    <option value="inactive">@L["Inactive"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="sortBy">@L["Sort by"]</label>
-                <select id="sortBy" class="form-select form-select-sm">
-                    <option value="name">@L["Sort by Name"]</option>
-                    <option value="products">@L["Sort by Products"]</option>
-                    <option value="workers">@L["Sort by Workers"]</option>
-                    <option value="created">@L["Sort by Date"]</option>
-                </select>
-            </div>
-        </div>
-
-        @if (!string.IsNullOrEmpty(currentSearch))
-        {
-            <div class="filter-applied">
-                <span class="achip">
-                    @L["Search:"] <b>@currentSearch</b>
-                    <button type="button" class="achip-x" onclick="resetFilters()">&times;</button>
-                </span>
-                <button type="button" class="filter-clear" onclick="resetFilters()">@L["Clear all"]</button>
-            </div>
-        }
+       moment they change. Free-text search (Enter) goes back to the server. *@
+    <div class="ip-filterbar">
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="searchInput" value="@currentSearch" autocomplete="off"
+                   placeholder="@L["Search departments..."]" aria-label="@L["Search"]" />
+        </label>
+        <label class="ip-filter">
+            <span>@L["Status"]</span>
+            <select id="statusFilter">
+                <option value="">@L["All"]</option>
+                <option value="active">@L["Active"]</option>
+                <option value="inactive">@L["Inactive"]</option>
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Sort"]</span>
+            <select id="sortBy">
+                <option value="name">@L["Sort by Name"]</option>
+                <option value="products">@L["Sort by Products"]</option>
+                <option value="workers">@L["Sort by Workers"]</option>
+                <option value="created">@L["Sort by Date"]</option>
+            </select>
+        </label>
+        <button type="button" class="ip-btn ip-btn-ghost @(hasSearch ? "" : "d-none")" id="resetFiltersBtn" onclick="resetFilters()">
+            <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
+        </button>
     </div>
 
-    <div class="result-bar" id="departmentsSummary">
-        <span>
-            <b>@Model.TotalCount</b> @L[Model.TotalCount == 1 ? "department" : "departments"]@(string.IsNullOrEmpty(currentSearch) ? "" : " " + L["matched"].Value)
-        </span>
-        <span class="text-muted">
-            @L["Active"] <b>@(Model.ActiveItems ?? ViewBag.ActiveDepartments)</b>
-            &middot; @L["Inactive"] <b>@(Model.InActiveItems ?? ViewBag.InActiveDepartments)</b>
-            &middot; @L["Products"] <b>@(Model.ItemsInWithProducts ?? ViewBag.DepartmentsInWithProducts)</b>
-        </span>
-    </div>
-
-    <div class="card mb-4" id="departmentsRegion">
-        <div class="card-body p-0">
+    <div id="departmentsRegion" data-list-region>
+        <div class="ip-table-wrap">
             @if (Model.Items.Any())
             {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="departmentsTable">
-                        <thead>
-                            <tr>
-                                <th>@L["Department"]</th>
-                                <th>@L["Department Head"]</th>
-                                <th>@L["Description"]</th>
-                                <th class="text-center" style="width: 92px;">@L["Products"]</th>
-                                <th class="text-center" style="width: 92px;">@L["Workers"]</th>
-                                <th style="width: 112px;">@L["Status"]</th>
-                                <th style="width: 118px;">@L["Created"]</th>
-                                <th class="text-center" style="width: 104px;">@L["Actions"]</th>
+                <table class="ip-table" id="departmentsTable">
+                    <thead>
+                        <tr>
+                            <th>@L["Department"]</th>
+                            <th>@L["Department Head"]</th>
+                            <th>@L["Description"]</th>
+                            <th>@L["Products"]</th>
+                            <th>@L["Workers"]</th>
+                            <th>@L["Status"]</th>
+                            <th>@L["Created"]</th>
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var department in Model.Items)
+                        {
+                            <tr data-href="@Url.Action("Details", new { id = department.Id })"
+                                data-name="@department.Name"
+                                data-status="@(department.IsActive ? "active" : "inactive")"
+                                data-products="@department.ProductCount"
+                                data-workers="@department.WorkerCount"
+                                data-created="@department.CreatedAt.Ticks">
+                                <td>
+                                    <div class="cell-text">
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = department.Id })">@department.Name</a>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(department.DepartmentHead))
+                                    {
+                                        @department.DepartmentHead
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-faint pdf-omit">@L["Not assigned"]</span>
+                                    }
+                                </td>
+                                <td>
+                                    @* max-width is what makes the ellipsis work in an auto-layout table *@
+                                    <div class="cell-sub text-truncate" style="max-width: 300px;" title="@department.Description">
+                                        @if (!string.IsNullOrEmpty(department.Description))
+                                        {
+                                            @department.Description
+                                        }
+                                        else
+                                        {
+                                            <span class="pdf-omit">@L["No description provided"]</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="ip-num">@department.ProductCount</td>
+                                <td class="ip-num">@department.WorkerCount</td>
+                                <td>
+                                    @if (department.IsActive)
+                                    {
+                                        <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                                    }
+                                </td>
+                                <td class="ip-num text-nowrap">@department.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                <td data-no-row-link>
+                                    <div class="actions">
+                                        <a asp-action="Details" asp-route-id="@department.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@department.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" title="@L["Delete"]" aria-label="@L["Delete"]"
+                                                data-id="@department.Id" data-name="@department.Name" onclick="deleteDepartment(this.dataset.id, this.dataset.name)">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var department in Model.Items)
-                            {
-                                <tr>
-                                    <td>
-                                        <div class="cell-text">
-                                            <span class="cell-title fw-semibold">@department.Name</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(department.DepartmentHead))
-                                        {
-                                            @department.DepartmentHead
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted fst-italic pdf-omit">@L["Not assigned"]</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @* max-width is what makes the ellipsis work in an auto-layout table - kept from the original markup *@
-                                        <div class="cell-sub text-truncate" style="max-width: 300px;" title="@department.Description">
-                                            @if (!string.IsNullOrEmpty(department.Description))
-                                            {
-                                                @department.Description
-                                            }
-                                            else
-                                            {
-                                                <span class="d-empty pdf-omit">@L["No description provided"]</span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">@department.ProductCount</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-info">@department.WorkerCount</span>
-                                    </td>
-                                    <td>
-                                        @if (department.IsActive)
-                                        {
-                                            <span class="state state-ok">@L["Active"]</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="state state-idle">@L["Inactive"]</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="num text-muted">@department.CreatedAt.ToString("dd.MM.yyyy")</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            <a asp-action="Details" asp-route-id="@department.Id"
-                                               class="btn btn-sm btn-outline-secondary" title="@L["View"]">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a asp-action="Edit" asp-route-id="@department.Id"
-                                               class="btn btn-sm btn-outline-secondary" title="@L["Edit"]">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" title="@L["Delete"]"
-                                                    data-name="@department.Name" onclick="deleteDepartment(@department.Id, this.dataset.name)">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                </table>
             }
             else
             {
-                <div class="empty-state">
-                    <i class="fas fa-building"></i>
-                    <h5>@L["No departments found"]</h5>
-                    <p class="text-muted mb-3">@L["Clear the search to see every department, or add a new one."]</p>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="resetFilters()">@L["Clear filters"]</button>
-                    @if (User.IsInRole("Admin"))
+                <div class="ip-empty">
+                    <span class="icon"><i class="fa-solid fa-building"></i></span>
+                    <div class="title">@L["No departments found"]</div>
+                    @if (hasSearch)
                     {
-                        <a asp-action="Create" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-plus"></i> @L["New Department"]
-                        </a>
+                        <div class="text">@L["Clear the search to see every department, or add a new one."]</div>
+                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
+                            <span>@L["Clear search"]</span><i class="fa-solid fa-xmark"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="text">@L["Departments you create will be listed here."]</div>
                     }
                 </div>
             }
         </div>
-        <div class="card-footer">
-            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
-        </div>
+        <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
 </div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="deleteModalTitle">@L["Confirm Delete"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
             <div class="modal-body">
                 <p>@L["Are you sure you want to delete"] <strong id="departmentName"></strong>?</p>
-                <div class="alert alert-warning mb-0">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    @L["This will permanently delete the department and affect associated products."]
+                <div class="ip-banner ip-banner-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>@L["This will permanently delete the department and affect associated products."]</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form id="deleteForm" method="post" style="display: inline;">
+                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                <form id="deleteForm" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-1"></i>@L["Delete"]
+                    <button type="submit" class="ip-btn ip-btn-danger">
+                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
                     </button>
                 </form>
             </div>
@@ -231,9 +202,10 @@
         // Snapshot of every rendered row, so narrowing by status can be undone
         // without a round-trip to the server.
         let allDepartmentRows = [];
+        const serverSearchActive = @(hasSearch ? "true" : "false");
 
         $(document).ready(function() {
-            allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr'));
+            allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr[data-status]'));
 
             $('#statusFilter, #sortBy').on('change', function() {
                 filterDepartments();
@@ -246,13 +218,16 @@
             const statusFilter = $('#statusFilter').val();
             const sortBy = $('#sortBy').val();
 
+            $('#resetFiltersBtn').toggleClass('d-none', !serverSearchActive && !statusFilter);
+
             const tbody = document.querySelector('#departmentsTable tbody');
             if (!tbody) {
                 return;
             }
 
+            // Each row carries its values in data-* attributes (status, counts, created ticks).
             let visibleRows = allDepartmentRows.filter(row => {
-                const isActive = row.querySelector('.state-ok') !== null;
+                const isActive = row.dataset.status === 'active';
                 return !statusFilter ||
                     (statusFilter === 'active' && isActive) ||
                     (statusFilter === 'inactive' && !isActive);
@@ -261,21 +236,13 @@
             visibleRows.sort((a, b) => {
                 switch(sortBy) {
                     case 'name':
-                        const nameA = a.querySelector('.fw-semibold')?.textContent || '';
-                        const nameB = b.querySelector('.fw-semibold')?.textContent || '';
-                        return nameA.localeCompare(nameB);
+                        return (a.dataset.name || '').localeCompare(b.dataset.name || '');
                     case 'products':
-                        const productsA = parseInt(a.querySelector('.badge.bg-primary')?.textContent) || 0;
-                        const productsB = parseInt(b.querySelector('.badge.bg-primary')?.textContent) || 0;
-                        return productsB - productsA;
+                        return (Number(b.dataset.products) || 0) - (Number(a.dataset.products) || 0);
                     case 'workers':
-                        const workersA = parseInt(a.querySelector('.badge.bg-info')?.textContent) || 0;
-                        const workersB = parseInt(b.querySelector('.badge.bg-info')?.textContent) || 0;
-                        return workersB - workersA;
+                        return (Number(b.dataset.workers) || 0) - (Number(a.dataset.workers) || 0);
                     case 'created':
-                        const dateA = a.querySelector('td:nth-child(7) .text-muted')?.textContent || '';
-                        const dateB = b.querySelector('td:nth-child(7) .text-muted')?.textContent || '';
-                        return new Date(dateB) - new Date(dateA);
+                        return (Number(b.dataset.created) || 0) - (Number(a.dataset.created) || 0);
                     default:
                         return 0;
                 }
@@ -288,10 +255,10 @@
                 tbody.innerHTML = `
                     <tr id="noResults">
                         <td colspan="8">
-                            <div class="empty-state">
-                                <i class="fas fa-search"></i>
-                                <h5>${t('No departments match these filters')}</h5>
-                                <p class="text-muted mb-0">${t('Pick a different status or clear the filters.')}</p>
+                            <div class="ip-empty">
+                                <span class="icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <div class="title">${t('No departments match these filters')}</div>
+                                <div class="text">${t('Pick a different status or clear the filters.')}</div>
                             </div>
                         </td>
                     </tr>
@@ -326,6 +293,7 @@
             window.location.href = window.location.pathname;
         }
 
+        // Search on Enter
         $('#searchInput').on('keypress', function(e) {
             if (e.which === 13) {
                 applyFilters();
@@ -343,7 +311,7 @@
             entities: ['department', 'product'],
             regions: ['#departmentsSummary', '#departmentsRegion'],
             afterRefresh() {
-                allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr'));
+                allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr[data-status]'));
                 filterDepartments();
             }
         });

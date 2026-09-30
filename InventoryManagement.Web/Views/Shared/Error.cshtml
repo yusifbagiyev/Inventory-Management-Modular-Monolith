@@ -4,44 +4,16 @@
 }
 
 <div class="container-fluid px-4">
-    <div class="row justify-content-center mt-4">
-        <div class="col-lg-7">
-            <div class="card">
-                <div class="card-body">
-                    <h1 class="mb-2">@L["Error."]</h1>
-                    <p class="mb-0">@L["An error occurred while processing your request."]</p>
-
-                    @if (Model.ShowRequestId)
-                    {
-                        <div class="detail-grid mt-3">
-                            <div class="detail-row">
-                                <span class="d-label">@L["Request ID"]</span>
-                                <span class="d-value mono">@Model.RequestId</span>
-                            </div>
-                        </div>
-                    }
-
-                    <div class="section-title mt-4">@L["Development Mode"]</div>
-                    <p class="mb-2">
-                        @L["Swapping to the Development environment will display more detailed information about the error that occurred."]
-                    </p>
-                    <p class="form-text mb-0">
-                        <strong>@L["The Development environment shouldn't be enabled for deployed applications."]</strong>
-                        @L["It can result in displaying sensitive information from exceptions to end users."]
-                        @L["For local debugging, enable the Development environment by setting the ASPNETCORE_ENVIRONMENT environment variable to Development and restarting the app."]
-                    </p>
-                </div>
-                <div class="page-actions">
-                    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> @L["Go Back"]
-                    </a>
-                    <div class="actions-right">
-                        <a href="/Home/Dashboard" class="btn btn-sm btn-primary">
-                            <i class="fas fa-home me-1"></i> @L["Go to Dashboard"]
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="ip-empty">
+        <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <h1 class="title">@L["Something went wrong."]</h1>
+        <p class="text mb-0">@L["An error occurred while processing your request."]</p>
+        @if (Model?.ShowRequestId ?? false)
+        {
+            <p class="ip-faint mb-0">@L["Request ID"]: <span class="ip-mono">@Model.RequestId</span></p>
+        }
+        <a href="/Home/Dashboard" class="ip-btn ip-btn-secondary">
+            <span>@L["Go to Dashboard"]</span><i class="fa-solid fa-arrow-right"></i>
+        </a>
     </div>
 </div>
