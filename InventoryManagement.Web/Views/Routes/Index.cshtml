@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <nav class="ip-tabs ink" aria-label="@L["Status"]" id="routesTabs">
+    <nav class="ip-tabs ink" aria-label="@L["Status"]" id="routesTabs" data-list-tabs>
         <a href="@TabUrl(null)" class="ip-tab @(curCompleted == null ? "active" : "")">@L["All"] <span class="count">@(pendingCount + completedCount)</span></a>
         <a href="@TabUrl(false)" class="ip-tab @(curCompleted == false ? "active" : "")">@L["Pending"] <span class="count warning">@pendingCount</span></a>
         <a href="@TabUrl(true)" class="ip-tab @(curCompleted == true ? "active" : "")">@L["Completed"] <span class="count">@completedCount</span></a>
@@ -119,7 +119,7 @@
         }
     </div>
 
-    <div id="routesRegion">
+    <div id="routesRegion" data-list-region>
         <div class="ip-table-wrap">
             @if (Model.Items.Any())
             {
@@ -158,7 +158,7 @@
                                             }
                                         </span>
                                         <div class="cell-text">
-                                            <span class="cell-title">@route.Model</span>
+                                            <a class="cell-title text-reset" href="@Url.Action("Details", new { id = route.Id })">@route.Model</a>
                                             <span class="cell-sub ip-mono">@route.InventoryCode</span>
                                         </div>
                                     </div>

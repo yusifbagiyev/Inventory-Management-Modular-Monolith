@@ -295,7 +295,28 @@ function setupSessionMonitor() {
 
 
 /** Pager buttons (_Pagination): same page with the current filters, a different pageNumber. */
+/**
+ * While a list page loads its next state (filter, page, tab), the rows are replaced by skeleton
+ * rows (design: .ip-skeleton). The list is the element marked [data-list-region].
+ */
+function showListSkeleton() {
+    const region = document.querySelector('[data-list-region]');
+    if (!region) return;
+    const bar = width => `<span class="ip-skeleton" style="width: ${width}; height: 12px"></span>`;
+    const rows = Array.from({ length: 6 }, () =>
+        `<div class="ip-skeleton-row"><span class="ip-skeleton" style="width: 44px; height: 44px; border-radius: 10px; flex: none"></span>${bar('10%')}${bar('26%')}${bar('20%')}${bar('12%')}</div>`).join('');
+    region.setAttribute('aria-busy', 'true');
+    region.innerHTML = `<div role="status"><span class="visually-hidden">${escapeHtml(t('Loading...'))}</span>${rows}</div>`;
+}
+
+// Page numbers and status tabs of a list are plain links: show the skeleton while they load.
+document.addEventListener('click', function (e) {
+    const link = e.target.closest('.ip-table-foot a[href], [data-list-tabs] a[href]');
+    if (link && e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) showListSkeleton();
+});
+
 function changePage(page) {
+    showListSkeleton();
     const params = new URLSearchParams(window.location.search);
     params.set('pageNumber', page);
     window.location.href = window.location.pathname + '?' + params.toString();
@@ -303,6 +324,7 @@ function changePage(page) {
 
 /** Rows per page (the select in _Pagination): back to the first page with the new size. */
 function changePageSize(size) {
+    showListSkeleton();
     const params = new URLSearchParams(window.location.search);
     params.set('pageSize', size);
     params.set('pageNumber', '1');

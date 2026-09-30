@@ -443,3 +443,11 @@ tr.ip-clickable { cursor: pointer; }
 .ip-finder-empty { padding: 10px 12px; color: var(--ip-text-3); font-size: var(--ip-fs-sm); }
 .ip-finder-all { display: block; padding: 8px 12px; border-top: 1px solid var(--ip-border); font-size: var(--ip-fs-sm); color: var(--ip-accent-text); }
 .ip-finder-all:hover, .ip-finder-all.active { background: var(--ip-surface-hover); text-decoration: none; }
+
+/* ---------- contrast (WCAG AA) ----------
+   --ip-text-3 is 5.1:1 on the surface but 4.4:1 on --ip-sunken and --ip-surface-hover (light), so
+   text on those grounds uses --ip-text-2. */
+.ip-filter, .ip-toolbar-search, .ip-filter input::placeholder, .ip-toolbar-search input::placeholder { color: var(--ip-text-2); }
+.ip-table tbody tr:hover .sub, .ip-table tbody tr:hover .cell-sub, .ip-table tbody tr:hover .ip-faint { color: var(--ip-text-2); }
+.ip-rail-link:hover .ip-rail-count { color: var(--ip-text-2); }
+.ip-empty .icon, .ip-notif-icon, .ip-thumb { color: var(--ip-text-2); }

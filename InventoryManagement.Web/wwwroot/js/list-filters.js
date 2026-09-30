@@ -43,6 +43,7 @@ window.ListFilters = (function () {
         }
 
         function navigate(params) {
+            if (window.showListSkeleton) showListSkeleton();
             window.location.href = config.basePath + '?' + params.toString();
         }
 

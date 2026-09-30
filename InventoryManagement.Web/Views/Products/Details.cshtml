@@ -62,7 +62,7 @@
         <div class="ip-banner ip-banner-warning mb-4">
             <i class="fa-regular fa-clock"></i>
             <span class="flex-grow-1">@L["This product has a request awaiting approval. The details below stay as they are until it is approved."]</span>
-            <a href="@(User.IsInRole("Admin") ? "/Approvals" : "/MyRequests")">@L["View request"]</a>
+            <a href="@(User.IsInRole("Admin") ? "/Approvals" : "/MyRequests")?open=@Model.PendingRequestId">@L["Request #{0}", Model.PendingRequestId!]</a>
         </div>
     }
 

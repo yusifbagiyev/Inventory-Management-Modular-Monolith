@@ -11,6 +11,7 @@
     var comparedWith = currentPeriod switch
     {
         "last30days" => L["vs the previous 30 days"].Value,
+        "last90days" => L["vs the previous 90 days"].Value,
         "last6months" => L["vs the previous 6 months"].Value,
         _ => L["vs the previous 7 days"].Value
     };
@@ -47,7 +48,7 @@
         <nav class="ip-tabs ink border-0" aria-label="@L["Period"]">
             <a class="ip-tab @(currentPeriod == "last7days" ? "active" : "")" href="/Home/Dashboard?period=last7days">@L["7 days"]</a>
             <a class="ip-tab @(currentPeriod == "last30days" ? "active" : "")" href="/Home/Dashboard?period=last30days">@L["30 days"]</a>
-            <a class="ip-tab @(currentPeriod == "last6months" ? "active" : "")" href="/Home/Dashboard?period=last6months">@L["6 months"]</a>
+            <a class="ip-tab @(currentPeriod == "last90days" ? "active" : "")" href="/Home/Dashboard?period=last90days">@L["90 days"]</a>
             <a class="ip-tab @(allTime ? "active" : "")" href="/Home/Dashboard?period=all">@L["All"]</a>
         </nav>
     </div>

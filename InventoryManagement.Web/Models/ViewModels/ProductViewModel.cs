@@ -69,7 +69,9 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? DepartmentName { get; set; }
 
         [Display(Name = "Has Pending Approval")]
-        public bool HasPendingApproval { get; set; }
+        public bool HasPendingApproval => PendingRequestId.HasValue;
+        /// <summary>The request waiting for approval that changes this product (update, delete, transfer).</summary>
+        public int? PendingRequestId { get; set; }
 
         //For Dropdowns
         public List<SelectListItem>? Categories { get; set; }

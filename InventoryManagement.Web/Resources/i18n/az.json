@@ -1177,5 +1177,9 @@
   "Remember me": "Məni xatırla",
   "Please sign in": "Daxil olun",
   "No product matches this code or name": "Bu kod və ya adla məhsul yoxdur",
-  "Search all products for \"{0}\"": "Bütün məhsullarda axtar: \"{0}\""
+  "Search all products for \"{0}\"": "Bütün məhsullarda axtar: \"{0}\"",
+  "Request #{0}": "Sorğu #{0}",
+  "vs the previous 90 days": "əvvəlki 90 günə nisbətən",
+  "90 days": "90 gün",
+  "The product is already in this department. To change only the worker, edit the product.": "Məhsul artıq bu şöbədədir. Yalnız işçini dəyişmək üçün məhsulu redaktə edin."
 }

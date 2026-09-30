@@ -163,10 +163,12 @@ h5, .h5 { font-size: 14px; font-weight: 600; }
 }
 .btn-check:checked + .btn-outline-secondary, .btn-check:checked + .btn-outline-primary { background: var(--ip-surface-active) !important; font-weight: 600; }
 
-.btn-success { background: var(--ip-success-solid); border-color: var(--ip-success-solid); color: #fff; }
+/* Success/warning solids cannot carry white text at AA (dark theme 3.5:1 / 2.7:1), and a page has
+   one primary action anyway: they read as secondary buttons. Danger keeps its solid (5.2:1+). */
+.btn-success, .btn-warning { background: var(--surface); border-color: var(--line-2); color: var(--ink); font-weight: 500; }
+.btn-success:hover, .btn-warning:hover { background: var(--ip-surface-hover); border-color: var(--line-2); color: var(--ink); }
 .btn-danger { background: var(--ip-danger-solid); border-color: var(--ip-danger-solid); color: var(--ip-on-danger); }
-.btn-warning { background: var(--ip-warning-solid); border-color: var(--ip-warning-solid); color: #fff; }
-.btn-success:hover, .btn-danger:hover, .btn-warning:hover { filter: brightness(.92); color: #fff; }
+.btn-danger:hover { filter: brightness(.92); color: var(--ip-on-danger); }
 /* danger outline = the design's quiet danger button */
 .btn-outline-danger { background: transparent; border-color: transparent; color: var(--ip-danger-text); font-weight: 500; }
 .btn-outline-danger:hover, .btn-outline-danger:active { background: var(--ip-danger-soft) !important; border-color: transparent !important; color: var(--ip-danger-text) !important; }

@@ -45,6 +45,7 @@ namespace InventoryManagement.Web.Controllers
             var startDate = period switch
             {
                 "last30days" => now.Date.AddDays(-29),
+                "last90days" => now.Date.AddDays(-89),
                 // The current month and the five before it, so the monthly bars are whole months.
                 "last6months" => new DateTime(now.Year, now.Month, 1).AddMonths(-5),
                 "all" => DateTime.MinValue,
@@ -54,11 +55,12 @@ namespace InventoryManagement.Web.Controllers
             DateTime? previousStart = period switch
             {
                 "last30days" => startDate.AddDays(-30),
+                "last90days" => startDate.AddDays(-90),
                 "last6months" => startDate.AddMonths(-6),
                 "all" => null,
                 _ => startDate.AddDays(-7)
             };
-            if (period is not ("last30days" or "last6months" or "all"))
+            if (period is not ("last30days" or "last90days" or "last6months" or "all"))
                 period = "last7days";
 
             var transfers = await _mediator.Send(new GetTransferActivityQuery(startDate, endDate));
@@ -191,6 +193,12 @@ namespace InventoryManagement.Web.Controllers
                     var week = 1;
                     for (var from = startDate; from <= endDate && week <= 10; from = from.AddDays(7), week++)
                         AddBucket(Tr("Week {0}").Replace("{0}", week.ToString()), from.Date, from.AddDays(7).Date);
+                    break;
+
+                case "last90days":
+                    // Weeks, labelled by their first day.
+                    for (var from = startDate; from <= endDate; from = from.AddDays(7))
+                        AddBucket(from.ToString("dd.MM"), from.Date, from.AddDays(7).Date);
                     break;
 
                 case "last6months":

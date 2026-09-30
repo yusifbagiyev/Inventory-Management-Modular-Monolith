@@ -49,6 +49,9 @@ namespace InventoryManagement.Web.Controllers
                 pageNumber, pageSize, search, startDate, endDate,
                 status, availability, categoryId, departmentId, hasImage, assigned));
             var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result);
+            var pending = await _mediator.Send(new ApprovalService.Application.Features.Queries.GetPendingProductRequests.Query());
+            foreach (var p in products.Items)
+                p.PendingRequestId = pending.TryGetValue(p.Id, out var requestId) ? requestId : null;
 
             ViewBag.ShowingStart = ((products.PageNumber - 1) * products.PageSize) + 1;
             ViewBag.ShowingEnd = Math.Min(products.PageNumber * products.PageSize, products.TotalCount);
@@ -132,7 +135,10 @@ namespace InventoryManagement.Web.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(10)
                 .ToList();
-            return View(ModelMapper.Map<ProductViewModel>(product));
+            var model = ModelMapper.Map<ProductViewModel>(product);
+            var pending = await _mediator.Send(new ApprovalService.Application.Features.Queries.GetPendingProductRequests.Query());
+            model.PendingRequestId = pending.TryGetValue(id, out var requestId) ? requestId : null;
+            return View(model);
         }
 
 

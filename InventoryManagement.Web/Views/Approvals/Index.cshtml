@@ -228,6 +228,10 @@
                 });
         });
 
+        // Opened from a product or a notification (?open=5): show that request straight away.
+        const openId = parseInt(new URLSearchParams(location.search).get('open'), 10);
+        if (openId > 0) viewDetails(openId);
+
         // New, approved and rejected requests from other admins update the figures, tabs and list.
         LiveUpdates.watch({
             entities: ['approval'],
