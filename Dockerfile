@@ -3,9 +3,10 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 # libgssapi: Npgsql probes for Kerberos at startup and logs an error without it.
+# curl: the compose healthcheck calls /health.
 # keys/images: written by the non-root app user (bind-mounted in compose; see deploy/MIGRATION.md).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 curl \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /app/keys /app/wwwroot/images/products /app/wwwroot/images/routes \
     && chown -R $APP_UID:$APP_UID /app/keys /app/wwwroot/images

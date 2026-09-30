@@ -4,15 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Stack
 
-.NET 10 modular monolith: ASP.NET Core MVC + Razor UI and a JSON `/api` in **one host** (`InventoryManagement.Web`), MediatR + FluentValidation, EF Core on PostgreSQL 15 (Npgsql), SignalR, Serilog → Seq, xUnit + Testcontainers. The system used to be five microservices behind Ocelot with RabbitMQ; the project names (`ProductService.*` etc.) are the old service names, now modules.
+.NET 10 modular monolith: ASP.NET Core MVC + Razor UI and a JSON `/api` in **one host** (`InventoryManagement.Web`), MediatR + FluentValidation, EF Core on PostgreSQL 15 (Npgsql), SignalR, Serilog → Seq. The system used to be five microservices behind Ocelot with RabbitMQ; the project names (`ProductService.*` etc.) are the old service names, now modules.
 
 ## Commands
 
 ```bash
 dotnet build InventoryManagement.sln
-dotnet test InventoryManagement.sln          # integration tests; needs Docker (Testcontainers starts PostgreSQL)
-dotnet test InventoryManagement.Tests --filter "FullyQualifiedName~RouteFlowTests.A_product_cannot_have_two_pending_transfers"
-dotnet run --project InventoryManagement.Web  # http://localhost:5051
+dotnet run --project InventoryManagement.Web  # http://localhost:5051 (GET /health checks the DB)
 ```
 
 Local run needs a PostgreSQL and two secrets. `appsettings.Development.json` holds a password-less `ConnectionStrings:DefaultConnection`; set the full string and the JWT key with user-secrets (or `ConnectionStrings__DefaultConnection` / `Jwt__Key` env vars):
@@ -27,7 +25,11 @@ Add a migration (each Infrastructure project has an `IDesignTimeDbContextFactory
 dotnet ef migrations add <Name> --project ProductService.Infrastructure --startup-project ProductService.Infrastructure
 ```
 
-Docker: `docker compose up -d --build` (root `Dockerfile`, `docker-compose.yml`, `deploy/nginx/nginx.conf`; secrets from `.env`, see `.env.example`). CI: `.github/workflows/ci.yml` (build, tests, vulnerable-package check, image build).
+There are no test projects; `dotnet build` plus exercising the running app is the verification.
+
+Docker: `docker compose up -d --build` (root `Dockerfile`, `docker-compose.yml`, `deploy/nginx/nginx.conf`; secrets from `.env`, see `.env.example`). The `app` image is `${APP_IMAGE:-inventory-app:local}` and has a `/health` healthcheck.
+
+CI/CD: `.github/workflows/ci.yml` (build, vulnerable-package check, image build) on every PR and master push. `cd.yml` runs after CI passes on master: it pushes `ghcr.io/<owner>/inventory-app:sha-<commit>`, then a self-hosted runner (label `inventory-prod`) on the production server runs `deploy/deploy.sh` (pg_dump backup → recreate `app` → wait for health → auto-rollback on failure → pin `APP_IMAGE` in the server's `.env`). Gated by the repo variable `CD_ENABLED`; setup and rollback in `deploy/CD.md`. Deploys copy `docker-compose.yml` and `deploy/` over the server's copies, so server-only changes belong in `docker-compose.override.yml`.
 
 ## Layout
 
@@ -84,6 +86,7 @@ Every write permission has `x` and `x.direct` (`product.create` / `product.creat
 
 ## Deployment / data
 
+- `deploy/CD.md` (Azerbaijani): runner setup, rollback, restoring a pre-deploy backup.
 - `deploy/MIGRATION.md` (Azerbaijani) is the cut-over runbook from the old per-service databases; `deploy/migrate-data.sh` copies them into the module schemas (single transaction, row-count check, sequence realignment). `deploy/sql/fix-operator-permissions.sql` optionally fixes the Operator role's off-by-one seed.
 - Data-protection keys persist to `DataProtection:KeysPath` (`./storage/keys` in compose) — without it every redeploy signs everyone out.
 - The container runs as uid 1654; bind-mounted `storage/keys` and `storage/images` must be writable by it.
