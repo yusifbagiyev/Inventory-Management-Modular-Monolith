@@ -71,6 +71,18 @@ body {
 }
 .layout-wrapper.toggled .main-content { margin-left: 68px; }
 
+/* Collapsed sidebar on desktop: an icon rail. Below 992px the sidebar is a drawer instead. */
+@media (min-width: 993px) {
+    .layout-wrapper.toggled .modern-sidebar { width: 68px; }
+    .layout-wrapper.toggled .modern-sidebar .brand-text,
+    .layout-wrapper.toggled .modern-sidebar .nav-text,
+    .layout-wrapper.toggled .modern-sidebar .nav-section,
+    .layout-wrapper.toggled .modern-sidebar .nav-link .badge { display: none; }
+    .layout-wrapper.toggled .modern-sidebar .sidebar-header,
+    .layout-wrapper.toggled .modern-sidebar .nav-link { justify-content: center; }
+    .modern-sidebar { transition: transform .25s ease, width .25s ease; }
+}
+
 /* Navigation is chrome, not content: it gets its own deep brand surface so the eye
    separates "where am I" from "what am I looking at" without a single dark page. */
 .modern-sidebar {
