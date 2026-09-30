@@ -37,9 +37,6 @@ namespace InventoryManagement.Web.Services
                 mainPart.Document = new Document();
                 var body = mainPart.Document.AppendChild(new Body());
 
-                // Set reduced page margins for more content space
-                SetPageMargins(mainPart);
-
                 // 1. Add header with larger logo and colored title
                 AddHeaderWithLogoAndTitle(body, mainPart);
 
@@ -70,6 +67,10 @@ namespace InventoryManagement.Web.Services
                 // 6. Add signature section with full-width golden highlighting
                 // This section is marked to keep together (won't split across pages)
                 AddSignatureSection(body, department, exportedByFullName);
+
+                // Page setup goes last: the schema requires the body's sectPr to be its final child
+                // (placed first, as it was, Word ignored the reduced margins).
+                SetPageMargins(mainPart);
             }
 
             return memoryStream.ToArray();
@@ -115,16 +116,17 @@ namespace InventoryManagement.Web.Services
             // No borders on the header table
             var tblBorders = new TableBorders(
                 new TopBorder { Val = BorderValues.None },
-                new BottomBorder { Val = BorderValues.None },
                 new LeftBorder { Val = BorderValues.None },
+                new BottomBorder { Val = BorderValues.None },
                 new RightBorder { Val = BorderValues.None },
                 new InsideHorizontalBorder { Val = BorderValues.None },
                 new InsideVerticalBorder { Val = BorderValues.None }
             );
-            tblProp.Append(tblBorders);
             tblProp.Append(new TableCellSpacing { Width = "0", Type = TableWidthUnitValues.Dxa });
+            tblProp.Append(tblBorders);
 
             headerTable.Append(tblProp);
+            headerTable.Append(new TableGrid(new GridColumn { Width = "2500" }, new GridColumn { Width = "3000" }));
 
             var headerRow = new TableRow();
 
@@ -132,12 +134,12 @@ namespace InventoryManagement.Web.Services
             var logoCell = new TableCell();
             var logoCellProp = new TableCellProperties();
             logoCellProp.Append(new TableCellWidth { Width = "2500", Type = TableWidthUnitValues.Dxa });
-            logoCellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
 
             var cellMargin = new TableCellMargin();
             cellMargin.Append(new TopMargin { Width = "0", Type = TableWidthUnitValues.Dxa });
             cellMargin.Append(new BottomMargin { Width = "0", Type = TableWidthUnitValues.Dxa });
             logoCellProp.Append(cellMargin);
+            logoCellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
 
             logoCell.Append(logoCellProp);
 
@@ -167,20 +169,20 @@ namespace InventoryManagement.Web.Services
             var titleCell = new TableCell();
             var titleCellProp = new TableCellProperties();
             titleCellProp.Append(new TableCellWidth { Width = "3000", Type = TableWidthUnitValues.Dxa });
-            titleCellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
 
             var titleCellMargin = new TableCellMargin();
             titleCellMargin.Append(new TopMargin { Width = "0", Type = TableWidthUnitValues.Dxa });
             titleCellMargin.Append(new BottomMargin { Width = "0", Type = TableWidthUnitValues.Dxa });
             titleCellProp.Append(titleCellMargin);
+            titleCellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
 
             titleCell.Append(titleCellProp);
 
             // First line with golden text color
             var titlePara1 = new Paragraph();
             var titleParaProp1 = new ParagraphProperties();
-            titleParaProp1.Append(new Justification { Val = JustificationValues.Right });
             titleParaProp1.Append(new SpacingBetweenLines { Before = "0", After = "0", Line = "240" });
+            titleParaProp1.Append(new Justification { Val = JustificationValues.Right });
             titlePara1.Append(titleParaProp1);
 
             var titleRun1 = CreateColoredTextRun("IT AVADANLIQLARININ", 36, true, true, BRAND_COLOR);
@@ -190,8 +192,8 @@ namespace InventoryManagement.Web.Services
             // Second line with golden text color
             var titlePara2 = new Paragraph();
             var titleParaProp2 = new ParagraphProperties();
-            titleParaProp2.Append(new Justification { Val = JustificationValues.Right });
             titleParaProp2.Append(new SpacingBetweenLines { Before = "0", After = "0", Line = "240" });
+            titleParaProp2.Append(new Justification { Val = JustificationValues.Right });
             titlePara2.Append(titleParaProp2);
 
             var titleRun2 = CreateColoredTextRun("İNVENTARİZASİYASI", 36, true, true, BRAND_COLOR);
@@ -270,8 +272,8 @@ namespace InventoryManagement.Web.Services
             // Header paragraph with regular text (no highlight)
             var headerPara = new Paragraph();
             var headerParaProp = new ParagraphProperties();
-            headerParaProp.Append(new Justification { Val = JustificationValues.Center });
             headerParaProp.Append(new SpacingBetweenLines { Before = "120", After = "60" });
+            headerParaProp.Append(new Justification { Val = JustificationValues.Center });
             headerPara.Append(headerParaProp);
 
             var headerRun = CreateTextRun("Təhvil-təslim Heyəti:", 32, true, true);
@@ -281,8 +283,8 @@ namespace InventoryManagement.Web.Services
             // Name paragraph with regular text (no highlight)
             var namePara = new Paragraph();
             var nameParaProp = new ParagraphProperties();
-            nameParaProp.Append(new Justification { Val = JustificationValues.Center });
             nameParaProp.Append(new SpacingBetweenLines { Before = "60", After = "120" });
+            nameParaProp.Append(new Justification { Val = JustificationValues.Center });
             namePara.Append(nameParaProp);
 
             var nameRun = CreateTextRun("Kənan Əhədzadə", 28, false, true);
@@ -314,6 +316,8 @@ namespace InventoryManagement.Web.Services
         /// Creates the inventory table with golden column headers and BLACK borders.
         /// All data is centered, table borders are now black (not golden).
         /// </summary>
+        private static readonly int[] ColumnWidths = [1800, 1600, 1900, 2200, 1300];
+
         private void AddInventoryTable(Body body, List<ProductViewModel> products)
         {
             var table = new Table();
@@ -323,9 +327,10 @@ namespace InventoryManagement.Web.Services
 
             // ALL borders are BLACK (000000) as requested
             var tblBorders = new TableBorders(
+                // Schema order: top, left, bottom, right, insideH, insideV.
                 new TopBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
-                new BottomBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new LeftBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
+                new BottomBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new RightBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new InsideHorizontalBorder { Val = BorderValues.Single, Size = 6, Color = "000000" },
                 new InsideVerticalBorder { Val = BorderValues.Single, Size = 6, Color = "000000" }
@@ -334,14 +339,15 @@ namespace InventoryManagement.Web.Services
             tblProp.Append(new TableLayout { Type = TableLayoutValues.Fixed });
 
             table.Append(tblProp);
+            table.Append(new TableGrid(ColumnWidths.Select(w => new GridColumn { Width = w.ToString() })));
 
             // Header row - only the header row has golden background
             var headerRow = new TableRow();
-            headerRow.Append(CreateHeaderCell("Avadanlıq", 1800));
-            headerRow.Append(CreateHeaderCell("Vendor", 1600));
-            headerRow.Append(CreateHeaderCell("Model", 1900));
-            headerRow.Append(CreateHeaderCell("İstifadəçi", 2200));
-            headerRow.Append(CreateHeaderCell("İnventar kodu", 1300));
+            headerRow.Append(CreateHeaderCell("Avadanlıq", ColumnWidths[0]));
+            headerRow.Append(CreateHeaderCell("Vendor", ColumnWidths[1]));
+            headerRow.Append(CreateHeaderCell("Model", ColumnWidths[2]));
+            headerRow.Append(CreateHeaderCell("İstifadəçi", ColumnWidths[3]));
+            headerRow.Append(CreateHeaderCell("İnventar kodu", ColumnWidths[4]));
             table.Append(headerRow);
 
             // Sort products by category, then inventory code
@@ -373,8 +379,8 @@ namespace InventoryManagement.Web.Services
             var totalLabelCell = new TableCell();
             var totalLabelCellProp = new TableCellProperties();
             // Spans every column except "İnventar kodu", so the count stays under that header.
-            totalLabelCellProp.Append(new GridSpan { Val = 4 });
             totalLabelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
+            totalLabelCellProp.Append(new GridSpan { Val = 4 });
             totalLabelCell.Append(totalLabelCellProp);
 
             var totalLabelPara = new Paragraph();
@@ -417,8 +423,8 @@ namespace InventoryManagement.Web.Services
         {
             var deptPara = new Paragraph();
             var deptParaProp = new ParagraphProperties();
-            deptParaProp.Append(new Justification { Val = JustificationValues.Left });
             deptParaProp.Append(new SpacingBetweenLines { Before = "240", After = "240" });
+            deptParaProp.Append(new Justification { Val = JustificationValues.Left });
             deptPara.Append(deptParaProp);
 
             // Black color (no special color), just bold and underlined
@@ -443,34 +449,11 @@ namespace InventoryManagement.Web.Services
         /// </summary>
         private void AddSignatureSection(Body body, DepartmentViewModel department, string? exportedByFullName)
         {
-            // Create a table with full-width cells for complete background highlighting
-            var signatureTable = new Table();
-
-            var tblProp = new TableProperties();
-            tblProp.Append(new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
-
-            // No borders for cleaner look
-            var tblBorders = new TableBorders(
-                new TopBorder { Val = BorderValues.None },
-                new BottomBorder { Val = BorderValues.None },
-                new LeftBorder { Val = BorderValues.None },
-                new RightBorder { Val = BorderValues.None },
-                new InsideHorizontalBorder { Val = BorderValues.None }
-            );
-            tblProp.Append(tblBorders);
-
-            // IMPORTANT: Keep this content together (don't split across pages)
-            // If there's not enough space, move the entire signature section to next page
-            tblProp.Append(new TableStyle { Val = "TableGrid" });
-
-            signatureTable.Append(tblProp);
-
-
             var transferredPara = new Paragraph();
             var transferredParaProp = new ParagraphProperties();
-            transferredParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             // Keep with next paragraph to prevent page break
             transferredParaProp.Append(new KeepNext());
+            transferredParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             transferredPara.Append(transferredParaProp);
 
             var transferredByName = !string.IsNullOrWhiteSpace(exportedByFullName)
@@ -487,10 +470,10 @@ namespace InventoryManagement.Web.Services
 
             var receivedPara = new Paragraph();
             var receivedParaProp = new ParagraphProperties();
-            receivedParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             // Keep lines together to prevent page breaks
             receivedParaProp.Append(new KeepNext());
             receivedParaProp.Append(new KeepLines());
+            receivedParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             receivedPara.Append(receivedParaProp);
 
             var departmentHeadName = !string.IsNullOrEmpty(department.DepartmentHead)
@@ -518,20 +501,21 @@ namespace InventoryManagement.Web.Services
             var run = new Run();
             var runProp = new RunProperties();
 
+            // Schema order inside rPr: rFonts, b, color, sz.
             if (timesNewRoman)
             {
-                runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman" });
+                runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman", ComplexScript = "Times New Roman" });
             }
-
-            runProp.Append(new FontSize { Val = fontSize.ToString() });
 
             if (bold)
             {
                 runProp.Append(new Bold());
             }
 
+            runProp.Append(new FontSize { Val = fontSize.ToString() });
+
             run.Append(runProp);
-            run.Append(new Text(text));
+            run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
 
             return run;
         }
@@ -549,18 +533,17 @@ namespace InventoryManagement.Web.Services
 
             if (timesNewRoman)
             {
-                runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman" });
+                runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman", ComplexScript = "Times New Roman" });
             }
-
-            runProp.Append(new FontSize { Val = fontSize.ToString() });
 
             if (bold)
             {
                 runProp.Append(new Bold());
             }
 
-            // Apply color to the text itself
+            // Apply color to the text itself (color precedes sz in the schema)
             runProp.Append(new Color { Val = color });
+            runProp.Append(new FontSize { Val = fontSize.ToString() });
 
             run.Append(runProp);
             run.Append(new Text(text));
