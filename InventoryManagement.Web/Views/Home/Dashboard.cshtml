@@ -278,18 +278,41 @@
         let transferChart, categoryChart;
         const currentPeriod = '@currentPeriod';
 
-        // Chart palette - mirrors the design tokens in modern-ui.css
-        const chartColors = {
-            accent: '#0E9BC4',
-            ok: '#17924E',
-            warn: '#C2740A',
-            crit: '#CE3B33',
-            neutral: '#7C8F9B',
-            ink: 'rgba(20, 35, 43, 0.92)',
-            grid: 'rgba(20, 35, 43, 0.06)',
-            okFill: 'rgba(23, 146, 78, 0.12)',
-            warnFill: 'rgba(194, 116, 10, 0.12)'
-        };
+        // Chart palette, read from the design tokens (modern-ui.css) so it follows the theme.
+        let chartColors = readChartColors();
+
+        function readChartColors() {
+            const css = getComputedStyle(document.documentElement);
+            const token = name => css.getPropertyValue(name).trim();
+            const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+            return {
+                accent: token('--accent'),
+                ok: token('--ok'),
+                warn: token('--warn'),
+                crit: token('--crit'),
+                neutral: token('--ink-3'),
+                surface: token('--surface'),
+                ink: dark ? 'rgba(8, 16, 21, 0.94)' : 'rgba(20, 35, 43, 0.92)',   // tooltip background
+                grid: dark ? 'rgba(227, 237, 242, 0.08)' : 'rgba(20, 35, 43, 0.06)',
+                okFill: withAlpha(token('--ok'), 0.14),
+                warnFill: withAlpha(token('--warn'), 0.14)
+            };
+        }
+
+        // '#RRGGBB' -> 'rgba(r, g, b, a)' (a canvas fill cannot rely on CSS color-mix()).
+        function withAlpha(hex, alpha) {
+            const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+            return m ? `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})` : hex;
+        }
+
+        // Toggling the theme redraws the charts in the new palette.
+        window.addEventListener('themechange', function () {
+            transferChart?.destroy();
+            categoryChart?.destroy();
+            transferChart = categoryChart = undefined;
+            chartColors = readChartColors();
+            initializeCharts();
+        });
 
         $(document).ready(function() {
             initializeCharts();
@@ -326,7 +349,7 @@
         function showLoadingOverlay() {
             const overlay = `
                 <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-                     style="background: rgba(255,255,255,0.95); z-index: 9999;">
+                     style="background: color-mix(in srgb, var(--surface) 95%, transparent); z-index: 9999;">
                     <div class="text-center">
                         <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -360,7 +383,7 @@
                         data: categoryData.map(c => c.count),
                         backgroundColor: categoryData.map(c => c.color),
                         borderWidth: 3,
-                        borderColor: '#fff',
+                        borderColor: chartColors.surface,
                         hoverOffset: 10
                     }]
                 },

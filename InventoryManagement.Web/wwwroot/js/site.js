@@ -271,3 +271,53 @@ function skeletonHtml(lines) {
     }
     return html + '</div>';
 }
+
+/**
+ * Light/dark theme. The <head> script in _Layout already applied the saved choice (or the OS
+ * setting) before first paint; this owns the toggle button and tells pages about a change
+ * ('themechange' on window, e.g. the dashboard redraws its charts).
+ */
+window.Theme = (function () {
+    const KEY = 'theme';
+    const root = document.documentElement;
+
+    function saved() {
+        try { return localStorage.getItem(KEY); } catch (e) { return null; }
+    }
+
+    function current() {
+        return root.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
+    }
+
+    function syncButtons() {
+        const dark = current() === 'dark';
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+            const icon = button.querySelector('i');
+            if (icon) icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
+            button.title = dark ? 'Light mode' : 'Dark mode';
+        });
+    }
+
+    function apply(theme, remember) {
+        root.setAttribute('data-bs-theme', theme);
+        if (remember) {
+            try { localStorage.setItem(KEY, theme); } catch (e) { /* private mode: this page only */ }
+        }
+        syncButtons();
+        window.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-theme-toggle]')) apply(current() === 'dark' ? 'light' : 'dark', true);
+    });
+
+    // Follow the OS while the user has not picked a theme here.
+    if (window.matchMedia) {
+        matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!saved()) apply(e.matches ? 'dark' : 'light', false);
+        });
+    }
+
+    syncButtons();
+    return { current: current, apply: apply };
+})();

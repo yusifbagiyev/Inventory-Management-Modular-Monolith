@@ -805,3 +805,83 @@ textarea.form-control { min-height: 84px; }
 .skeleton-title { height: 1rem; width: 42% !important; margin-bottom: .9rem; }
 @keyframes skeleton-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+/* ============================================================================
+   Dark theme. <html data-bs-theme="dark"> is set before first paint (_Layout <head>) from the
+   saved choice or the OS; the toggle is Theme in site.js. Everything above reads these tokens,
+   so the palette swap is the theme. Bootstrap's own variables follow the same palette.
+   ========================================================================== */
+[data-bs-theme="dark"] {
+    --ground: #0F1A21;
+    --surface: #16232C;
+    --surface-2: #1E2F3A;
+    --surface-3: #1A2932;
+    --ink: #E3EDF2;
+    --ink-2: #A9BCC7;
+    --ink-3: #7F95A2;
+    --line: #26394A;
+    --line-2: #33495A;
+    --accent: #22B0D8;
+    --accent-2: #4CC6EA;
+    --accent-weak: rgba(34, 176, 216, .14);
+    --ok: #3CC47A;
+    --ok-weak: rgba(60, 196, 122, .14);
+    --warn: #E9A23B;
+    --warn-weak: rgba(233, 162, 59, .15);
+    --crit: #F0655C;
+    --crit-weak: rgba(240, 101, 92, .15);
+    --violet: #9C87F0;
+    --violet-weak: rgba(156, 135, 240, .16);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+    --light-color: #1A2932;
+    --dark-color: #0B141A;
+    color-scheme: dark;
+
+    --bs-body-bg: var(--surface);
+    --bs-body-color: var(--ink);
+    --bs-emphasis-color: #FFFFFF;
+    --bs-secondary-color: var(--ink-3);
+    --bs-secondary-bg: var(--surface-2);
+    --bs-tertiary-bg: var(--surface-3);
+    --bs-border-color: var(--line-2);
+    --bs-heading-color: var(--ink);
+    --bs-link-color: var(--accent-2);
+    --bs-link-hover-color: var(--accent);
+}
+
+/* On a dark page the navigation needs an edge, or it melts into the ground. */
+[data-bs-theme="dark"] .modern-sidebar { --nav-bg: #0B2230; --nav-bg-2: #081A24; border-right: 1px solid var(--line); }
+
+/* Status chips: the light theme uses pastel borders; on dark they come from the status colour. */
+[data-bs-theme="dark"] .state-ok { border-color: color-mix(in srgb, var(--ok) 38%, transparent); }
+[data-bs-theme="dark"] .state-warn { border-color: color-mix(in srgb, var(--warn) 38%, transparent); }
+[data-bs-theme="dark"] .state-crit { border-color: color-mix(in srgb, var(--crit) 38%, transparent); }
+[data-bs-theme="dark"] .state-new { border-color: color-mix(in srgb, var(--violet) 38%, transparent); }
+[data-bs-theme="dark"] .state-info { border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
+
+/* Theme toggle in the top bar: same look as the bell / account triggers. */
+.top-navbar .theme-toggle { background: none; border: 0; color: var(--ink-2); }
+
+/* Air Datepicker (date-range.js) in the app palette, both themes. */
+.air-datepicker {
+    --adp-background-color: var(--surface);
+    --adp-border-color: var(--line-2);
+    --adp-border-color-inner: var(--line);
+    --adp-color: var(--ink);
+    --adp-color-secondary: var(--ink-3);
+    --adp-color-other-month: var(--ink-3);
+    --adp-color-current-date: var(--accent-2);
+    --adp-accent-color: var(--accent);
+    --adp-day-name-color: var(--accent-2);
+    --adp-nav-arrow-color: var(--ink-3);
+    --adp-background-color-hover: var(--surface-2);
+    --adp-cell-background-color-hover: var(--surface-2);
+    --adp-cell-background-color-selected: var(--accent);
+    --adp-cell-background-color-selected-hover: var(--accent-2);
+    --adp-cell-background-color-in-range: var(--accent-weak);
+    --adp-cell-background-color-in-range-hover: var(--accent-weak);
+    --adp-background-color-in-range: var(--accent-weak);
+    --adp-btn-color: var(--accent-2);
+    --adp-btn-background-color-hover: var(--surface-2);
+    --adp-font-family: inherit;
+}

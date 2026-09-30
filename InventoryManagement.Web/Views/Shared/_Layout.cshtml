@@ -4,14 +4,22 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] ?? "Inventory Pro")</title>
+    @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
+       site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
+    <script>
+        (function () {
+            var t = null;
+            try { t = localStorage.getItem('theme'); } catch (e) { }
+            if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
 
     <!-- Modern Font -->
     <!-- Bootstrap 5 -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
-    @* Bootstrap Icons: cleaner stroke-style glyphs used for the navigation chrome.
-       Font Awesome stays for the in-page action buttons across the existing views. *@
     <!-- DataTables -->
     <link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" asp-append-version="true">
     <!-- Custom CSS -->
@@ -53,6 +61,12 @@
                     <div class="navbar-nav ms-auto d-flex align-items-center">
                         @if (User.Identity?.IsAuthenticated ?? false)
                         {
+                            <div class="nav-item me-1">
+                                <button type="button" class="nav-link notification-toggle theme-toggle" data-theme-toggle
+                                        title="Dark mode" aria-label="Toggle dark mode">
+                                    <i class="fas fa-moon"></i>
+                                </button>
+                            </div>
                             <div class="nav-item dropdown me-3">
                                 <a class="nav-link notification-toggle" href="#" id="notificationIcon"
                                    data-bs-toggle="dropdown">

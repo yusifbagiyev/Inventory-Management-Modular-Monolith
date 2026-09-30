@@ -12,6 +12,16 @@
 
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
 
+    @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
+       site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
+    <script>
+        (function () {
+            var t = null;
+            try { t = localStorage.getItem('theme'); } catch (e) { }
+            if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-bs-theme', t);
+        })();
+    </script>
     <style>
         :root {
             --ground: #F6F9FC;
@@ -28,6 +38,23 @@
             --crit: #CE3B33;
             --crit-weak: #FDECEA;
             --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+        }
+
+        [data-bs-theme="dark"] {
+            --ground: #0F1A21;
+            --surface: #16232C;
+            --surface-2: #1E2F3A;
+            --ink: #E3EDF2;
+            --ink-2: #A9BCC7;
+            --ink-3: #7F95A2;
+            --line: #26394A;
+            --line-2: #33495A;
+            --accent: #22B0D8;
+            --accent-2: #4CC6EA;
+            --accent-weak: rgba(34, 176, 216, .14);
+            --crit: #F0655C;
+            --crit-weak: rgba(240, 101, 92, .15);
+            color-scheme: dark;
         }
 
         * { box-sizing: border-box; }
