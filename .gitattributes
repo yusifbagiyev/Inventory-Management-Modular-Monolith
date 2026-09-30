@@ -64,3 +64,6 @@
 
 # Shell scripts run on the Linux server; keep LF regardless of core.autocrlf.
 *.sh text eol=lf
+
+# Vendored frontend libraries (libman.json): keep them byte-for-byte as published.
+InventoryManagement.Web/wwwroot/lib/** -text

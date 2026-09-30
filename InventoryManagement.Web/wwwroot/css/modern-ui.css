@@ -563,6 +563,9 @@ tr.row-crit > td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .form-grid .full { grid-column: 1 / -1; }
 .form-text, .form-help { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
 .form-control:disabled, .form-control[readonly] { background: var(--surface-2); color: var(--ink-2); }
+/* Date-range inputs are read-only only so the calendar is the way in (date-range.js); they are
+   not disabled, so they keep the normal input look. */
+.form-control.date-range-input[readonly] { background: var(--surface); color: inherit; cursor: pointer; }
 textarea.form-control { min-height: 84px; }
 .form-check-label { font-size: 14px; color: var(--ink-2); }
 

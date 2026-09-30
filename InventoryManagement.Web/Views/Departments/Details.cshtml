@@ -180,8 +180,9 @@
                     info: "Showing _START_ to _END_ of _TOTAL_ products",
                     infoEmpty: "No products to show",
                     infoFiltered: "(filtered from _MAX_ total)"
-                },
-                dom: '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
+                }
+                // No `dom`/`layout`: DataTables' default (length + search above, info + paging below)
+                // is what the old `dom` string spelled out, and DataTables 3 dropped `dom`.
             });
         }
 

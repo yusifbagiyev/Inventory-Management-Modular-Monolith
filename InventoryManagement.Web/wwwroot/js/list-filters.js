@@ -14,12 +14,10 @@
 //       urlFlags: ['hasImage', 'assigned']        // URL-only flags kept across changes when 'false'
 //   });
 //
-// Requires jQuery, moment and daterangepicker on the page.
+// Requires jQuery, air-datepicker.js and date-range.js on the page.
 
 window.ListFilters = (function () {
     'use strict';
-
-    const DATE_FORMAT = 'MM/DD/YYYY';
 
     function init(options) {
         const config = Object.assign({ categoryKey: 'id', fields: {}, urlFlags: [] }, options);
@@ -59,13 +57,10 @@ window.ListFilters = (function () {
             const search = ($('#searchInput').val() || '').trim();
             if (search) params.append('search', search);
 
-            const range = $('#dateRange').val();
+            const range = DateRange.parse($('#dateRange').val());
             if (range) {
-                const dates = range.split(' - ');
-                if (dates.length === 2) {
-                    params.append('startDate', moment(dates[0], DATE_FORMAT).format('YYYY-MM-DD'));
-                    params.append('endDate', moment(dates[1], DATE_FORMAT).format('YYYY-MM-DD'));
-                }
+                params.append('startDate', DateRange.iso(range.start));
+                params.append('endDate', DateRange.iso(range.end));
             }
 
             Object.keys(config.fields).forEach(function (param) {
@@ -92,10 +87,7 @@ window.ListFilters = (function () {
             const search = params.get('search');
             if (search) $('#searchInput').val(search);
 
-            const start = params.get('startDate'), end = params.get('endDate');
-            if (start && end) {
-                $('#dateRange').val(moment(start).format(DATE_FORMAT) + ' - ' + moment(end).format(DATE_FORMAT));
-            }
+            DateRange.set('#dateRange', DateRange.fromIso(params.get('startDate')), DateRange.fromIso(params.get('endDate')));
 
             Object.keys(config.fields).forEach(function (param) {
                 const value = params.get(param);
@@ -178,21 +170,14 @@ window.ListFilters = (function () {
         }
 
         $(function () {
-            $('#dateRange').daterangepicker({
-                autoUpdateInput: false,
-                locale: { cancelLabel: 'Clear', format: DATE_FORMAT },
-                opens: 'left'
-            });
-            // Picking a range applies it immediately, like the other filters.
-            $('#dateRange').on('apply.daterangepicker', function (ev, picker) {
-                $(this).val(picker.startDate.format(DATE_FORMAT) + ' - ' + picker.endDate.format(DATE_FORMAT));
-                apply();
-            });
-            // "Clear" drops the date filter (reloads only if one was set).
-            $('#dateRange').on('cancel.daterangepicker', function () {
-                const hadValue = $(this).val() !== '';
-                $(this).val('');
-                if (hadValue) remove('dates');
+            DateRange.attach('#dateRange', {
+                position: 'bottom right',
+                // Picking a range applies it immediately, like the other filters.
+                onApply: apply,
+                // "Clear" drops the date filter (reloads only if one was set).
+                onClear: function () {
+                    if (currentParams().has('startDate')) remove('dates');
+                }
             });
 
             $('#searchInput').on('keypress', function (e) {

@@ -1,0 +1,57 @@
+{
+  "version": "3.0",
+  "defaultProvider": "jsdelivr",
+  "libraries": [
+    {
+      "library": "bootstrap@5.3.8",
+      "destination": "wwwroot/lib/bootstrap/",
+      "files": [ "dist/css/bootstrap.min.css", "dist/js/bootstrap.bundle.min.js" ]
+    },
+    {
+      "library": "bootstrap-icons@1.13.1",
+      "destination": "wwwroot/lib/bootstrap-icons/",
+      "files": [ "font/bootstrap-icons.min.css", "font/fonts/bootstrap-icons.woff2", "font/fonts/bootstrap-icons.woff" ]
+    },
+    {
+      "library": "@fortawesome/fontawesome-free@7.3.1",
+      "destination": "wwwroot/lib/fontawesome/",
+      "files": [
+        "css/all.min.css",
+        "webfonts/fa-solid-900.woff2",
+        "webfonts/fa-regular-400.woff2",
+        "webfonts/fa-brands-400.woff2",
+        "webfonts/fa-v4compatibility.woff2"
+      ]
+    },
+    {
+      "library": "jquery@4.0.0",
+      "destination": "wwwroot/lib/jquery/",
+      "files": [ "dist/jquery.min.js" ]
+    },
+    {
+      "library": "datatables.net@3.1.2",
+      "destination": "wwwroot/lib/datatables/",
+      "files": [ "js/dataTables.min.js" ]
+    },
+    {
+      "library": "datatables.net-bs5@3.1.2",
+      "destination": "wwwroot/lib/datatables/",
+      "files": [ "js/dataTables.bootstrap5.min.js", "css/dataTables.bootstrap5.min.css" ]
+    },
+    {
+      "library": "chart.js@4.5.1",
+      "destination": "wwwroot/lib/chart.js/",
+      "files": [ "dist/chart.umd.min.js" ]
+    },
+    {
+      "library": "@microsoft/signalr@10.0.11",
+      "destination": "wwwroot/lib/signalr/",
+      "files": [ "dist/browser/signalr.min.js" ]
+    },
+    {
+      "library": "air-datepicker@3.6.0",
+      "destination": "wwwroot/lib/air-datepicker/",
+      "files": [ "air-datepicker.js", "air-datepicker.css" ]
+    }
+  ]
+}

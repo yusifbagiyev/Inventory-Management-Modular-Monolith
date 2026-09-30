@@ -133,9 +133,9 @@
 </div>
 
 @section Scripts {
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
-    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
 
     <script>
         let currentPage = 1;
@@ -145,24 +145,8 @@
         let filteredNotifications = [];
 
         $(document).ready(function() {
-            // Initialize date range picker
-            $('#dateRangeFilter').daterangepicker({
-                autoUpdateInput: false,
-                locale: {
-                    cancelLabel: 'Clear',
-                    format: 'MM/DD/YYYY'
-                }
-            });
-
-            $('#dateRangeFilter').on('apply.daterangepicker', function(ev, picker) {
-                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-                applyFilters();
-            });
-
-            $('#dateRangeFilter').on('cancel.daterangepicker', function(ev, picker) {
-                $(this).val('');
-                applyFilters();
-            });
+            // Date range filter (client-side, like the others)
+            DateRange.attach('#dateRangeFilter', { onApply: applyFilters, onClear: applyFilters });
 
             // Store all notifications for client-side filtering
             allNotifications = $('.notification-item').toArray();
@@ -202,13 +186,11 @@
                 }
 
                 // Date range filter
-                if (dateRange && dateRange.includes(' - ')) {
-                    const dates = dateRange.split(' - ');
-                    const itemDate = moment($item.data('date'));
-                    const startDate = moment(dates[0], 'MM/DD/YYYY');
-                    const endDate = moment(dates[1], 'MM/DD/YYYY');
-
-                    if (!itemDate.isBetween(startDate, endDate, 'day', '[]')) {
+                // data-date is yyyy-MM-dd; both ends of the range are inclusive.
+                const range = DateRange.parse(dateRange);
+                if (range) {
+                    const itemDate = DateRange.fromIso(String($item.data('date')));
+                    if (!itemDate || itemDate < range.start || itemDate > range.end) {
                         show = false;
                     }
                 }
@@ -320,7 +302,7 @@
         function clearFilters() {
             $('#statusFilter').val('');
             $('#typeFilter').val('');
-            $('#dateRangeFilter').val('');
+            DateRange.clear('#dateRangeFilter');
             $('#searchFilter').val('');
             filteredNotifications = [];
             displayFilteredNotifications();
