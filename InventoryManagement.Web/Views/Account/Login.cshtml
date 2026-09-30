@@ -11,6 +11,7 @@
     <title>@L["Sign in"] - Inventory Pro</title>
 
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
 
     @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
        site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
@@ -23,39 +24,25 @@
         })();
     </script>
     <style>
+        /* Palette from tokens.css (light + dark). */
         :root {
-            --ground: #F6F9FC;
-            --surface: #FFFFFF;
-            --surface-2: #F0F5F9;
-            --ink: #16262E;
-            --ink-2: #4C616D;
-            --ink-3: #7C8F9B;
-            --line: #E3EDF3;
-            --line-2: #CFDEE8;
-            --accent: #0E9BC4;
-            --accent-2: #0B7FA3;
-            --accent-weak: #E4F5FB;
-            --crit: #CE3B33;
-            --crit-weak: #FDECEA;
-            --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+            --ground: var(--ip-bg);
+            --surface: var(--ip-surface);
+            --surface-2: var(--ip-sunken);
+            --ink: var(--ip-text-1);
+            --ink-2: var(--ip-text-2);
+            --ink-3: var(--ip-text-3);
+            --line: var(--ip-border);
+            --line-2: var(--ip-border-strong);
+            --accent: var(--ip-accent);
+            --accent-2: var(--ip-accent-text);
+            --accent-weak: var(--ip-accent-soft);
+            --crit: var(--ip-danger-text);
+            --crit-weak: var(--ip-danger-soft);
+            --font-mono: var(--ip-font-mono);
         }
 
-        [data-bs-theme="dark"] {
-            --ground: #0F1A21;
-            --surface: #16232C;
-            --surface-2: #1E2F3A;
-            --ink: #E3EDF2;
-            --ink-2: #A9BCC7;
-            --ink-3: #7F95A2;
-            --line: #26394A;
-            --line-2: #33495A;
-            --accent: #22B0D8;
-            --accent-2: #4CC6EA;
-            --accent-weak: rgba(34, 176, 216, .14);
-            --crit: #F0655C;
-            --crit-weak: rgba(240, 101, 92, .15);
-            color-scheme: dark;
-        }
+        [data-bs-theme="dark"] { color-scheme: dark; }
 
         * { box-sizing: border-box; }
 
@@ -67,7 +54,7 @@
             padding: 24px;
             background: var(--ground);
             color: var(--ink);
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: var(--ip-font-sans);
             font-size: 14.5px;
             -webkit-font-smoothing: antialiased;
         }
@@ -78,7 +65,7 @@
             background: var(--surface);
             border: 1px solid var(--line);
             border-radius: 10px;
-            box-shadow: 0 1px 3px rgba(22, 38, 46, .06);
+            box-shadow: var(--ip-shadow-sm);
             padding: 30px 28px 26px;
         }
 
@@ -92,9 +79,9 @@
         .brand-mark {
             width: 34px;
             height: 34px;
-            border-radius: 7px;
-            background: var(--accent);
-            color: #fff;
+            border-radius: var(--ip-radius-lg);
+            background: var(--ip-brand);
+            color: var(--ip-on-brand);
             display: grid;
             place-items: center;
             font-size: 15px;
@@ -198,7 +185,7 @@
             border: 0;
             border-radius: 6px;
             background: var(--accent);
-            color: #fff;
+            color: var(--ip-on-accent);
             font: inherit;
             font-size: 14px;
             font-weight: 600;
@@ -206,7 +193,7 @@
             transition: background .15s ease;
         }
 
-        .login-btn:hover { background: var(--accent-2); }
+        .login-btn:hover { background: var(--ip-accent-hover); }
 
         .login-btn:focus-visible {
             outline: 2px solid var(--accent);

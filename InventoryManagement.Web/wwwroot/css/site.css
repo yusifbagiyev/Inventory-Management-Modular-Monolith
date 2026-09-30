@@ -1,19 +1,8 @@
-/* Custom styles for modern UI */
-:root {
-    --primary-color: #3B82F6;
-    --secondary-color: #10B981;
-    --danger-color: #EF4444;
-    --warning-color: #F59E0B;
-    --dark-color: #1F2937;
-    --light-color: #F3F4F6;
-}
-
+/* Custom styles. Colours come from tokens.css (--ip-*) through the short names in modern-ui.css. */
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    background-color: #f8f9fa;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .list-group-item {
@@ -26,30 +15,17 @@ body {
 .card {
     border: none;
     border-radius: 10px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-    }
-
 .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
     font-weight: 600;
 }
 
 /* Button Styles */
 .btn {
     border-radius: 5px;
-    transition: all 0.3s ease;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
-
-    .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
 
 /* Table Enhancements */
 .table {
@@ -57,7 +33,7 @@ body {
 }
 
     .table thead th {
-        border-bottom: 2px solid #dee2e6;
+        border-bottom: 2px solid var(--line-2);
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.8rem;
@@ -67,8 +43,8 @@ body {
 /* Form Controls */
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--ip-focus-ring);
 }
 
 /* Animations */
@@ -95,7 +71,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--ip-backdrop);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -112,12 +88,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #888;
+    background: var(--line-2);
     border-radius: 4px;
 }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        background: var(--ink-3);
     }
 
 /* Badge styles */
@@ -142,7 +118,7 @@ body {
     max-width: 90vw;
     background: var(--surface);
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    box-shadow: var(--ip-shadow-lg);
     border: 1px solid var(--line);
     z-index: 1050;
 }
@@ -331,7 +307,7 @@ body {
 }
 
 .section-header {
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--line-2);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
 }
@@ -340,24 +316,22 @@ body {
     background: var(--surface);
     padding: 1rem;
     border-radius: 0.375rem;
-    border: 1px solid #dee2e6;
-    transition: all 0.2s ease;
+    border: 1px solid var(--line);
+    transition: border-color .15s ease;
     height: 100%;
 }
 
 .current-permission {
-    border-left: 4px solid #28a745;
+    border-left: 4px solid var(--ip-success-solid);
 }
 
 .role-permission {
-    border-left: 4px solid #17a2b8;
+    border-left: 4px solid var(--line-2);
     background: var(--surface-2);
 }
 
 .available-permission:hover {
-    border-color: #0d6efd;
-    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.15);
-    transform: translateY(-1px);
+    border-color: var(--accent);
 }
 
 .permission-name {
@@ -369,43 +343,33 @@ body {
     background: var(--surface);
     padding: 1rem;
     border-radius: 0.375rem;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--line);
 }
 
 .category-title {
-    color: #495057;
+    color: var(--ink-2);
     font-size: 0.9rem;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--line);
 }
 
 /* Enhanced Toast Styling */
 .toast {
     min-width: 350px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: var(--ip-shadow-lg);
     border: none;
     overflow: hidden;
-    border-radius: 8px;
-}
-
-.toast-warning {
-    background-color: #f59e0b;
-    color: white;
-}
-
-.toast-info {
-    background-color: #3b82f6;
-    color: white;
+    border-radius: var(--ip-radius-lg);
 }
 
 .toast-header {
     font-weight: 600;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid var(--line);
 }
 
 .toast.bg-danger {
-    background-color: #dc3545 !important;
+    background-color: var(--ip-danger-solid) !important;
 }
 
     .toast.bg-danger .toast-body {
@@ -417,16 +381,21 @@ body {
     }
 
 .toast.bg-success {
-    background-color: #198754 !important;
+    background-color: var(--ip-success-solid) !important;
 }
 
 .toast.bg-warning {
-    background-color: #ffc107 !important;
+    background-color: var(--ip-warning-soft) !important;
 }
 
-.toast.bg-info {
-    background-color: #0dcaf0 !important;
+.toast.bg-info, .toast.bg-secondary {
+    background-color: var(--surface) !important;
+    border: 1px solid var(--line) !important;
 }
+
+    .toast.bg-warning .toast-body, .toast.bg-info .toast-body, .toast.bg-secondary .toast-body {
+        color: var(--ink) !important;
+    }
 
 .toast-body {
     padding: 1rem;
@@ -453,8 +422,8 @@ body {
 
 /* Inventory code error styling */
 .inventory-code-edit .invalid-feedback {
-    color: #dc3545 !important;
-    background-color: #f8d7da;
+    color: var(--ip-danger-text) !important;
+    background-color: var(--ip-danger-soft);
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     margin-top: 0.25rem;
@@ -514,7 +483,7 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--line);
 }
 
 #routesTable {
@@ -540,8 +509,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* live-updates.js: a region just refreshed because another user changed something */
 @keyframes live-refreshed {
-    from { box-shadow: 0 0 0 2px rgba(14, 155, 196, .45); }
-    to { box-shadow: 0 0 0 2px rgba(14, 155, 196, 0); }
+    from { box-shadow: 0 0 0 2px var(--ip-focus-ring); }
+    to { box-shadow: 0 0 0 2px transparent; }
 }
 .live-refreshed { animation: live-refreshed 1.6s ease-out; }
 @media (prefers-reduced-motion: reduce) { .live-refreshed { animation: none; } }

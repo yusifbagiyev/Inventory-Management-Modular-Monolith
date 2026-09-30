@@ -1,56 +1,51 @@
 /* ============================================================================
-   Inventory Pro - design layer (2026-07)
-   Light palette. Loaded AFTER site.css, so it intentionally overrides the
-   Bootstrap component styling defined there. Class names are kept identical to
-   the existing markup so every view picks this up without being rewritten.
+   Inventory Pro - design layer. Loaded AFTER tokens.css and site.css.
+   The palette lives in tokens.css (--ip-*, light and dark, from design/). The short names
+   below are what this file and the views were written against; they only point at the
+   tokens, so there is exactly one place where a colour is defined.
    ========================================================================== */
 
+/* Re-declared on every [data-bs-theme] element, not only :root: a custom property inherits
+   its computed value, so without this a dark island (the sidebar) would keep the light values. */
+:root, [data-bs-theme] {
+    --ground: var(--ip-surface);
+    --surface: var(--ip-surface);
+    --surface-2: var(--ip-sunken);
+    --surface-3: var(--ip-surface-2);
+    --ink: var(--ip-text-1);
+    --ink-2: var(--ip-text-2);
+    --ink-3: var(--ip-text-3);
+    --line: var(--ip-border);
+    --line-2: var(--ip-border-strong);
+    --accent: var(--ip-accent);
+    --accent-2: var(--ip-accent-text);
+    --accent-ink: var(--ip-on-accent);
+    --accent-weak: var(--ip-accent-soft);
+    --ok: var(--ip-success-text);
+    --ok-weak: var(--ip-success-soft);
+    --warn: var(--ip-warning-text);
+    --warn-weak: var(--ip-warning-soft);
+    --crit: var(--ip-danger-text);
+    --crit-weak: var(--ip-danger-soft);
+    /* "new" is plain information, not a status: neutral */
+    --violet: var(--ip-neutral-text);
+    --violet-weak: var(--ip-neutral-soft);
+    --shadow: var(--ip-shadow-sm);
+    --r: var(--ip-radius-md);
+    --font-mono: var(--ip-font-mono);
+}
+
 :root {
-    /* Ground is deliberately a few shades deeper than the cards so white surfaces read as
-       raised panels instead of the whole screen looking like one blank sheet. */
-    --ground: #EBF1F6;
-    --surface: #FFFFFF;
-    --surface-2: #E7EFF5;
-    --surface-3: #F4F8FB;
-    --ink: #14232B;
-    --ink-2: #445966;
-    --ink-3: #6F8593;
-    --line: #DCE7EF;
-    --line-2: #C2D4E0;
-    --accent: #0E9BC4;
-    --accent-2: #0B7FA3;
-    --accent-ink: #FFFFFF;
-    --accent-weak: #E4F5FB;
-    --ok: #17924E;
-    --ok-weak: #E6F6EC;
-    --warn: #C2740A;
-    --warn-weak: #FDF2DF;
-    --crit: #CE3B33;
-    --crit-weak: #FDECEA;
-    --violet: #6B54C4;
-    --violet-weak: #EFEBFB;
-    --shadow: 0 1px 2px rgba(22, 38, 46, .05);
-    --r: 6px;
-    --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
-    /* kept: existing markup reads these */
-    --primary-color: #0E9BC4;
-    --secondary-color: #0B7FA3;
-    --success-color: #17924E;
-    --danger-color: #CE3B33;
-    --warning-color: #C2740A;
-    --info-color: #0E9BC4;
-    --dark-color: #16262E;
-    --light-color: #F6F9FC;
-    --sidebar-width: 240px;
+    --sidebar-width: 232px;
     --navbar-height: 58px;
 }
 
 body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--ip-font-sans);
     background-color: var(--ground);
     color: var(--ink);
-    font-size: 15.5px;
-    line-height: 1.5;
+    font-size: var(--ip-fs-base);
+    line-height: var(--ip-lh-base);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -86,11 +81,12 @@ body {
 /* Navigation is chrome, not content: it gets its own deep brand surface so the eye
    separates "where am I" from "what am I looking at" without a single dark page. */
 .modern-sidebar {
-    --nav-bg: #0D3346;
-    --nav-bg-2: #0A2938;
-    --nav-ink: #A9C6D6;
-    --nav-ink-strong: #FFFFFF;
-    --nav-line: rgba(255, 255, 255, .09);
+    --nav-bg: var(--ip-sunken);
+    --nav-bg-2: var(--ip-sunken);
+    --nav-ink: var(--ip-text-2);
+    --nav-ink-strong: var(--ip-text-1);
+    --nav-line: var(--ip-border);
+    color: var(--nav-ink);
     width: var(--sidebar-width);
     height: 100vh;
     background: var(--nav-bg);
@@ -102,10 +98,10 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,.22) transparent;
+    scrollbar-color: var(--ip-border-strong) transparent;
 }
 .modern-sidebar::-webkit-scrollbar { width: 8px; }
-.modern-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 8px; }
+.modern-sidebar::-webkit-scrollbar-thumb { background: var(--ip-border-strong); border-radius: 8px; }
 
 .sidebar-header {
     padding: 0 16px;
@@ -130,7 +126,7 @@ body {
     font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: .1em;
-    color: rgba(255, 255, 255, .42);
+    color: var(--ip-text-3);
     font-weight: 700;
 }
 
@@ -149,14 +145,12 @@ body {
     transition: background .15s ease, color .15s ease;
     position: relative;
 }
-.modern-sidebar .nav-link:hover { color: var(--nav-ink-strong); background: rgba(255, 255, 255, .08); }
+.modern-sidebar .nav-link:hover { color: var(--nav-ink-strong); background: var(--ip-surface-hover); }
 
-/* Active item is a solid accent block - unmistakable at a glance. */
 .modern-sidebar .nav-link.active {
-    color: #fff;
-    background: var(--accent);
-    font-weight: 620;
-    box-shadow: 0 1px 6px rgba(14, 155, 196, .35);
+    color: var(--nav-ink-strong);
+    background: var(--ip-surface-active);
+    font-weight: 600;
 }
 .modern-sidebar .nav-link.active::before { content: none; }
 .modern-sidebar .nav-link.active .nav-icon { opacity: 1; }
@@ -189,11 +183,11 @@ body {
     border-radius: 20px;
     margin-left: auto;
 }
-.modern-sidebar .nav-link .badge.bg-primary { background: rgba(255,255,255,.16) !important; color: #fff !important; }
-.modern-sidebar .nav-link.active .badge.bg-primary { background: rgba(255,255,255,.26) !important; }
-.modern-sidebar .nav-link .badge.bg-warning { background: var(--warn) !important; color: #fff !important; }
-.modern-sidebar .nav-link .badge.bg-danger { background: var(--crit) !important; color: #fff !important; }
-.modern-sidebar .nav-link .badge.bg-info { background: var(--accent) !important; color: #fff !important; }
+/* A total is plain text; a count that asks for action (pending, unread) is a soft accent pill. */
+.modern-sidebar .nav-link .badge.bg-primary { background: transparent !important; color: var(--ip-text-3) !important; font-weight: 500; }
+.modern-sidebar .nav-link .badge.bg-warning,
+.modern-sidebar .nav-link .badge.bg-danger,
+.modern-sidebar .nav-link .badge.bg-info { background: var(--ip-accent-soft) !important; color: var(--ip-accent-text) !important; border-radius: var(--ip-radius-sm); }
 /* An empty count badge must not linger as a coloured dot. The notification badge hides itself
    via inline display:none + JS; this covers the rest (Products total, pending-routes/approvals)
    when there is no number to show. A real count re-shows it (it is no longer :empty). */
@@ -204,8 +198,7 @@ body {
     background: var(--surface);
     height: var(--navbar-height);
     min-height: var(--navbar-height);
-    border-bottom: 1px solid var(--line-2);
-    box-shadow: 0 1px 2px rgba(20, 35, 43, .04);
+    border-bottom: 1px solid var(--line);
     position: sticky;
     top: 0;
     z-index: 999;
@@ -235,8 +228,8 @@ body {
 .user-avatar {
     width: 34px;
     height: 34px;
-    background: var(--accent);
-    color: #fff;
+    background: var(--ip-surface-active);
+    color: var(--ip-text-1);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -256,9 +249,9 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--accent-weak);
-    color: var(--accent-2);
-    border: 1px solid var(--line);
+    background: var(--ip-surface-active);
+    color: var(--ip-text-1);
+    border: 0;
     font-weight: 600;
     font-size: .9rem;
     line-height: 1;
@@ -275,7 +268,7 @@ body {
 .modern-dropdown {
     border: 1px solid var(--line-2);
     border-radius: var(--r);
-    box-shadow: 0 6px 20px rgba(22, 38, 46, .10);
+    box-shadow: var(--ip-shadow-lg);
     padding: .35rem 0;
 }
 .modern-dropdown .dropdown-item { padding: .45rem 1rem; font-size: 13.5px; color: var(--ink-2); }
@@ -283,7 +276,7 @@ body {
 
 .icon-badge { position: relative; display: inline-block; }
 .icon-badge .badge { min-width: 17px; height: 17px; line-height: 1; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
-.badge-dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; background: var(--crit); border-radius: 50%; border: 2px solid var(--surface); }
+.badge-dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; background: var(--accent); border-radius: 50%; border: 2px solid var(--surface); }
 
 .page-content { padding: 20px; flex: 1; min-width: 0; }
 
@@ -342,17 +335,19 @@ h5, .h5 { font-size: 14px; font-weight: 620; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
 
 .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.btn-primary:hover, .btn-primary:focus { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+.btn-primary:hover, .btn-primary:focus { background: var(--ip-accent-hover); border-color: var(--ip-accent-hover); color: var(--accent-ink); }
+.btn-primary:active { background: var(--ip-accent-active) !important; border-color: var(--ip-accent-active) !important; color: var(--accent-ink) !important; }
 
 .btn-secondary, .btn-outline-secondary {
     background: var(--surface); border-color: var(--line-2); color: var(--ink-2);
 }
 .btn-secondary:hover, .btn-outline-secondary:hover { background: var(--surface-2); border-color: var(--line-2); color: var(--ink); }
 
-.btn-success { background: var(--ok); border-color: var(--ok); }
-.btn-danger { background: var(--crit); border-color: var(--crit); }
-.btn-warning { background: var(--warn); border-color: var(--warn); color: #fff; }
-.btn-info { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-success { background: var(--ip-success-solid); border-color: var(--ip-success-solid); color: #fff; }
+.btn-danger { background: var(--ip-danger-solid); border-color: var(--ip-danger-solid); color: var(--ip-on-danger); }
+.btn-warning { background: var(--ip-warning-solid); border-color: var(--ip-warning-solid); color: #fff; }
+.btn-success:hover, .btn-danger:hover, .btn-warning:hover { filter: brightness(.92); color: #fff; }
+.btn-info { background: var(--surface); border-color: var(--line-2); color: var(--ink); }
 
 .btn-outline-primary { color: var(--accent-2); border-color: var(--line-2); background: var(--surface); }
 .btn-outline-primary:hover { background: var(--accent-weak); border-color: var(--accent); color: var(--accent-2); }
@@ -374,13 +369,13 @@ h5, .h5 { font-size: 14px; font-weight: 620; }
 .form-select.form-select-sm { padding-right: 1.75rem; background-position: right .55rem center; }
 .form-control:focus, .form-select:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-weak);
+    box-shadow: 0 0 0 3px var(--ip-focus-ring);
 }
 .form-control::placeholder { color: var(--ink-3); }
 .form-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: .25rem; }
 .input-group-text { background: var(--surface-2); border: 1px solid var(--line-2); color: var(--ink-3); font-size: 13px; }
 .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
-.form-check-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.form-check-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ip-focus-ring); }
 
 /* ── tables ──────────────────────────────────────────────────────────────── */
 .table {
@@ -422,14 +417,15 @@ h5, .h5 { font-size: 14px; font-weight: 620; }
     padding: .22em .6em;
     border-radius: 20px;
 }
-.badge.bg-primary { background: var(--accent-weak) !important; color: var(--accent-2) !important; }
+.badge.bg-primary { background: var(--ip-neutral-soft) !important; color: var(--ip-neutral-text) !important; }
 .badge.bg-success { background: var(--ok-weak) !important; color: var(--ok) !important; }
 .badge.bg-danger { background: var(--crit-weak) !important; color: var(--crit) !important; }
 .badge.bg-warning { background: var(--warn-weak) !important; color: var(--warn) !important; }
-.badge.bg-info { background: var(--accent-weak) !important; color: var(--accent-2) !important; }
+.badge.bg-info { background: var(--ip-neutral-soft) !important; color: var(--ip-neutral-text) !important; }
 .badge.bg-secondary { background: var(--surface-2) !important; color: var(--ink-3) !important; }
 .badge.bg-light { background: var(--surface-2) !important; color: var(--ink-2) !important; }
-.badge.bg-dark { background: var(--ink) !important; color: #fff !important; }
+.badge.bg-dark { background: var(--ink) !important; color: var(--surface) !important; }
+.badge.bg-accent { background: var(--accent) !important; color: var(--accent-ink) !important; }
 
 /* dot-prefixed state chip used by the new list screens */
 .state {
@@ -438,12 +434,12 @@ h5, .h5 { font-size: 14px; font-weight: 620; }
     border: 1px solid transparent;
 }
 .state::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
-.state-ok { background: var(--ok-weak); color: var(--ok); border-color: #BCE3CB; }
-.state-warn { background: var(--warn-weak); color: var(--warn); border-color: #EFD5A6; }
-.state-crit { background: var(--crit-weak); color: var(--crit); border-color: #F1C2BD; }
-.state-idle { background: var(--surface-2); color: var(--ink-2); border-color: var(--line-2); }
-.state-new { background: var(--violet-weak); color: var(--violet); border-color: #D3C9F2; }
-.state-info { background: var(--accent-weak); color: var(--accent-2); border-color: #B7E2F0; }
+.state-ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
+.state-warn { background: var(--ip-warning-soft); color: var(--ip-warning-text); }
+.state-crit { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
+.state-idle { background: var(--ip-neutral-soft); color: var(--ip-neutral-text); }
+.state-new { background: var(--ip-neutral-soft); color: var(--ip-neutral-text); }
+.state-info { background: var(--ip-info-soft); color: var(--ip-info-text); }
 .state-flat::before { display: none; }
 
 /* row severity marker */
@@ -455,7 +451,7 @@ tr.row-crit > td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .alert-success { background: var(--ok-weak); border-color: var(--ok-weak); color: var(--ok); }
 .alert-danger { background: var(--crit-weak); border-color: var(--crit-weak); color: var(--crit); }
 .alert-warning { background: var(--warn-weak); border-color: var(--warn-weak); color: var(--warn); }
-.alert-info { background: var(--accent-weak); border-color: var(--accent-weak); color: var(--accent-2); }
+.alert-info { background: var(--ip-info-soft); border-color: var(--ip-info-soft); color: var(--ip-info-text); }
 
 /* ── filter panel (list screens) ─────────────────────────────────────────── */
 .filter-panel { border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); overflow: hidden; margin-bottom: 14px; box-shadow: var(--shadow); }
@@ -512,17 +508,17 @@ tr.row-crit > td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 /* ── pagination ──────────────────────────────────────────────────────────── */
 .page-link { color: var(--ink-2); border-color: var(--line-2); font-size: 13px; font-family: var(--font-mono); }
 .page-link:hover { background: var(--surface-2); color: var(--ink); border-color: var(--line-2); }
-.page-item.active .page-link { background: var(--accent); border-color: var(--accent); color: #fff; }
+.page-item.active .page-link { background: var(--ink); border-color: var(--ink); color: var(--surface); }
 .page-item.disabled .page-link { color: var(--ink-3); background: var(--surface); border-color: var(--line); }
 
 /* ── modal ───────────────────────────────────────────────────────────────── */
-.modal-content { border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: 0 12px 40px rgba(22, 38, 46, .16); }
+.modal-content { border: 1px solid var(--line-2); border-radius: var(--ip-radius-xl); box-shadow: var(--ip-shadow-lg); }
 .modal-header { border-bottom: 1px solid var(--line); background: var(--surface-3); padding: .8rem .9rem; }
 .modal-footer { border-top: 1px solid var(--line); background: var(--surface-3); padding: .7rem .9rem; }
 .modal-title { font-size: 15px; font-weight: 640; }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(22, 38, 46, .4); z-index: 999; }
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: var(--ip-backdrop); z-index: 999; }
 .fade-in { animation: fadeUp .25s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
@@ -617,7 +613,7 @@ textarea.form-control { min-height: 84px; }
 .inventory-code-edit {
     position: absolute; top: 50%; left: 6px; transform: translateY(-50%); z-index: 6;
     background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r);
-    padding: 4px; box-shadow: 0 6px 18px rgba(20, 35, 43, .16);
+    padding: 4px; box-shadow: var(--ip-shadow-md);
 }
 .inventory-code-edit .input-group { flex-wrap: nowrap; width: 176px; }
 .inventory-code-edit .form-control { min-width: 74px; }
@@ -627,8 +623,8 @@ textarea.form-control { min-height: 84px; }
    child keeps it off icons inside buttons/links, where display:block + 26px pushed the glyph onto
    its own line and made the button twice as tall. */
 .empty-state > i {
-    font-size: 22px; color: var(--accent-2); display: grid; place-items: center;
-    width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 50%; background: var(--surface-3);
+    font-size: 18px; color: var(--ink-3); display: grid; place-items: center;
+    width: 48px; height: 48px; margin: 0 auto 12px; border-radius: var(--ip-radius-lg); background: var(--surface-2);
 }
 .empty-state .btn i { font-size: inherit; color: inherit; display: inline; margin: 0; }
 .empty-state h5 { color: var(--ink-2); font-weight: 620; margin-bottom: 4px; }
@@ -737,28 +733,7 @@ textarea.form-control { min-height: 84px; }
    Everything is scoped under .transfer-page, so no other view is touched.
    ========================================================================== */
 
-/* Lift the cards off the ground with a real (still soft) elevation. */
-.transfer-page .card {
-    box-shadow: 0 1px 2px rgba(22, 38, 46, .06), 0 10px 26px -14px rgba(22, 38, 46, .22);
-}
-
-/* The main working card gets an accent-washed header so the eye lands on it first;
-   the two side cards keep the neutral header, so the hierarchy is obvious. */
-.transfer-page .col-lg-8 > .card > .card-header {
-    background: var(--accent-weak);
-    color: var(--accent-2);
-    border-bottom-color: #C7E7F2;
-}
-.transfer-page .card-header i { color: var(--accent-2); }
-
-/* Section headings: a small accent tick beats the faint grey underline-label. */
-.transfer-page .section-title {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12.5px; color: var(--ink-2);
-}
-.transfer-page .section-title::before {
-    content: ""; flex: 0 0 auto; width: 3px; height: 13px; border-radius: 2px; background: var(--accent);
-}
+.transfer-page .section-title { font-size: 12.5px; color: var(--ink-2); }
 
 /* Search is the primary action - highlight its frame on focus. */
 .transfer-page #inventoryCodeInput { font-weight: 600; }
@@ -774,15 +749,14 @@ textarea.form-control { min-height: 84px; }
 }
 .transfer-page #searchFeedback .text-success { background: var(--ok-weak); color: var(--ok) !important; }
 .transfer-page #searchFeedback .text-danger { background: var(--crit-weak); color: var(--crit) !important; }
-.transfer-page #searchFeedback .text-info { background: var(--accent-weak); color: var(--accent-2) !important; }
+.transfer-page #searchFeedback .text-info { background: var(--surface-2); color: var(--ink-2) !important; }
 
 /* The found product sits in its own tinted, accent-edged panel so it clearly
    stands apart from the empty form below it. */
 .transfer-page #productInfoContainer {
     margin: 6px 16px 16px; padding: 12px 16px 4px;
     background: var(--surface-3);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
+    border: 0;
     border-radius: var(--r);
 }
 .transfer-page #productInfoContainer .detail-row { border-bottom-color: var(--line-2); }
@@ -808,56 +782,23 @@ textarea.form-control { min-height: 84px; }
 
 /* ============================================================================
    Dark theme. <html data-bs-theme="dark"> is set before first paint (_Layout <head>) from the
-   saved choice or the OS; the toggle is Theme in site.js. Everything above reads these tokens,
-   so the palette swap is the theme. Bootstrap's own variables follow the same palette.
+   saved choice or the OS; the toggle is Theme in site.js. The palette itself swaps in
+   tokens.css; this only points the Bootstrap variables tokens.css leaves out at it, on every
+   dark element (the sidebar is dark in both themes).
    ========================================================================== */
 [data-bs-theme="dark"] {
-    --ground: #0F1A21;
-    --surface: #16232C;
-    --surface-2: #1E2F3A;
-    --surface-3: #1A2932;
-    --ink: #E3EDF2;
-    --ink-2: #A9BCC7;
-    --ink-3: #7F95A2;
-    --line: #26394A;
-    --line-2: #33495A;
-    --accent: #22B0D8;
-    --accent-2: #4CC6EA;
-    --accent-weak: rgba(34, 176, 216, .14);
-    --ok: #3CC47A;
-    --ok-weak: rgba(60, 196, 122, .14);
-    --warn: #E9A23B;
-    --warn-weak: rgba(233, 162, 59, .15);
-    --crit: #F0655C;
-    --crit-weak: rgba(240, 101, 92, .15);
-    --violet: #9C87F0;
-    --violet-weak: rgba(156, 135, 240, .16);
-    --shadow: 0 1px 2px rgba(0, 0, 0, .45);
-    --light-color: #1A2932;
-    --dark-color: #0B141A;
     color-scheme: dark;
-
-    --bs-body-bg: var(--surface);
-    --bs-body-color: var(--ink);
-    --bs-emphasis-color: #FFFFFF;
-    --bs-secondary-color: var(--ink-3);
-    --bs-secondary-bg: var(--surface-2);
-    --bs-tertiary-bg: var(--surface-3);
-    --bs-border-color: var(--line-2);
-    --bs-heading-color: var(--ink);
-    --bs-link-color: var(--accent-2);
-    --bs-link-hover-color: var(--accent);
+    --bs-body-bg: var(--ip-surface);
+    --bs-body-color: var(--ip-text-1);
+    --bs-emphasis-color: var(--ip-text-1);
+    --bs-secondary-color: var(--ip-text-3);
+    --bs-secondary-bg: var(--ip-surface-2);
+    --bs-tertiary-bg: var(--ip-sunken);
+    --bs-border-color: var(--ip-border-strong);
+    --bs-heading-color: var(--ip-text-1);
+    --bs-link-color: var(--ip-accent-text);
+    --bs-link-hover-color: var(--ip-accent-hover);
 }
-
-/* On a dark page the navigation needs an edge, or it melts into the ground. */
-[data-bs-theme="dark"] .modern-sidebar { --nav-bg: #0B2230; --nav-bg-2: #081A24; border-right: 1px solid var(--line); }
-
-/* Status chips: the light theme uses pastel borders; on dark they come from the status colour. */
-[data-bs-theme="dark"] .state-ok { border-color: color-mix(in srgb, var(--ok) 38%, transparent); }
-[data-bs-theme="dark"] .state-warn { border-color: color-mix(in srgb, var(--warn) 38%, transparent); }
-[data-bs-theme="dark"] .state-crit { border-color: color-mix(in srgb, var(--crit) 38%, transparent); }
-[data-bs-theme="dark"] .state-new { border-color: color-mix(in srgb, var(--violet) 38%, transparent); }
-[data-bs-theme="dark"] .state-info { border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
 
 /* Theme toggle in the top bar: same look as the bell / account triggers. */
 .top-navbar .theme-toggle { background: none; border: 0; color: var(--ink-2); }
@@ -896,19 +837,19 @@ textarea.form-control { min-height: 84px; }
 .im-tile.is-cover { outline: 2px solid var(--accent); outline-offset: -2px; }
 .im-cover-badge, .im-new-badge {
     position: absolute; left: 6px; top: 6px; font-size: 10.5px; font-weight: 600; line-height: 1;
-    padding: 4px 6px; border-radius: 5px; color: #fff; background: var(--accent); display: none;
+    padding: 4px 6px; border-radius: 5px; color: var(--ink); background: var(--surface); display: none;
 }
 .im-tile.is-cover .im-cover-badge { display: inline-block; }
-.im-new-badge { display: inline-block; left: auto; right: 6px; top: auto; bottom: 6px; background: rgba(22, 38, 46, .72); }
+.im-new-badge { display: inline-block; left: auto; right: 6px; top: auto; bottom: 6px; background: rgba(27, 28, 30, .72); color: #fff; }
 /* Always visible: choosing the cover must be discoverable (it becomes the product's main image). */
 .im-actions { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; }
 .im-tile.is-cover [data-im-cover] { display: none; }
 .im-btn {
     width: 26px; height: 26px; border: 0; border-radius: 6px; display: grid; place-items: center;
-    font-size: 12px; color: #fff; background: rgba(22, 38, 46, .72); cursor: pointer;
+    font-size: 12px; color: #fff; background: rgba(27, 28, 30, .72); cursor: pointer;
 }
-.im-btn:hover { background: var(--accent-2); }
-.im-btn-danger:hover { background: var(--crit, #CE3B33); }
+.im-btn:hover { background: rgba(27, 28, 30, .92); }
+.im-btn-danger:hover { background: var(--ip-danger-solid); }
 .im-add {
     border: 1px dashed var(--line-2); display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 6px; color: var(--ink-3); font-size: 12.5px; cursor: pointer; background: var(--surface); margin: 0;
@@ -922,7 +863,7 @@ textarea.form-control { min-height: 84px; }
 .image-gallery .ig-main img { width: 100%; max-height: 360px; object-fit: contain; display: block; cursor: zoom-in; }
 .image-gallery .ig-count {
     position: absolute; right: 8px; bottom: 8px; font: 600 11px/1 var(--font-mono, monospace);
-    padding: 4px 7px; border-radius: 6px; color: #fff; background: rgba(22, 38, 46, .72);
+    padding: 4px 7px; border-radius: 6px; color: #fff; background: rgba(27, 28, 30, .72);
 }
 .image-gallery .ig-thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 2px; }
 .image-gallery .ig-thumb {
@@ -936,7 +877,7 @@ textarea.form-control { min-height: 84px; }
 .thumb-wrap { position: relative; display: inline-block; }
 .thumb-more {
     position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px;
-    font: 600 10px/18px var(--font-mono, monospace); text-align: center; color: #fff; background: var(--accent-2);
+    font: 600 10px/18px var(--font-mono, monospace); text-align: center; color: var(--surface); background: var(--ink);
     border: 2px solid var(--surface);
 }
 

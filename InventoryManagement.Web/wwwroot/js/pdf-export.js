@@ -88,24 +88,24 @@ function renderPrintDocument({ title, headers, rows, filters }) {
 <style>
   @page { size: A4 landscape; margin: 10mm 8mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #14232B; margin: 0; font-size: 9pt; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #1B1C1E; margin: 0; font-size: 9pt; }
   header { display: flex; justify-content: space-between; align-items: flex-end;
-           border-bottom: 2px solid #0E9BC4; padding-bottom: 6px; margin-bottom: 4px; }
+           border-bottom: 2px solid #1B1C1E; padding-bottom: 6px; margin-bottom: 4px; }
   h1 { font-size: 15pt; margin: 0; font-weight: 650; letter-spacing: -.2px; }
-  .meta { text-align: right; font-size: 8pt; color: #5A6E7A; line-height: 1.5; }
-  .filters { font-size: 8pt; color: #445966; background: #EEF5F9; border-radius: 3px;
+  .meta { text-align: right; font-size: 8pt; color: #4F5358; line-height: 1.5; }
+  .filters { font-size: 8pt; color: #4F5358; background: #EFEFEC; border-radius: 3px;
              padding: 4px 7px; margin-bottom: 8px; }
   table { width: 100%; border-collapse: collapse; table-layout: auto; }
   thead { display: table-header-group; }
-  th { background: #E7EFF5; text-align: left; font-size: 7.5pt; text-transform: uppercase;
-       letter-spacing: .04em; color: #445966; padding: 5px 6px; border-bottom: 1.2px solid #C2D4E0;
+  th { background: #EFEFEC; text-align: left; font-size: 7.5pt; text-transform: uppercase;
+       letter-spacing: .04em; color: #4F5358; padding: 5px 6px; border-bottom: 1.2px solid #CFCFCB;
        white-space: nowrap; }
-  td { padding: 4px 6px; border-bottom: .8px solid #E1EAF1; vertical-align: top;
+  td { padding: 4px 6px; border-bottom: .8px solid #E4E4E1; vertical-align: top;
        word-break: break-word; }
   tbody tr { page-break-inside: avoid; }
-  tbody tr:nth-child(even) td { background: #F6F9FB; }
-  .empty { color: #9AACB8; }
-  footer { margin-top: 8px; font-size: 7.5pt; color: #7C8F9B; text-align: right; }
+  tbody tr:nth-child(even) td { background: #FAFAF9; }
+  .empty { color: #6B6F75; }
+  footer { margin-top: 8px; font-size: 7.5pt; color: #6B6F75; text-align: right; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
 <header>
@@ -251,7 +251,7 @@ function exportTimelineToPDF() {
     // Generate HTML for PDF
     const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <h1 style="text-align: center; color: #14232B; margin-bottom: 4px;">
+            <h1 style="text-align: center; color: #1B1C1E; margin-bottom: 4px;">
                 ${escapePdfText(t('Transfer Timeline Report'))}
             </h1>
             ${timeline.dataset.product ? `<div style="text-align: center; font-size: 12pt; font-weight: 600; margin-bottom: 10px;">${escapePdfText(timeline.dataset.product)}</div>` : ''}
@@ -292,8 +292,8 @@ function exportTimelineToPDF() {
                     justify-content: center;
                     margin-top: 5px;
                 }
-                .fa-check-circle { color: #28a745; }
-                .fa-clock { color: #ffc107; }
+                .fa-check-circle { color: #1E6B45; }
+                .fa-clock { color: #7F5200; }
                 .timeline-content {
                     background: #f8f9fa;
                     padding: 10px;
@@ -313,8 +313,8 @@ function exportTimelineToPDF() {
                     font-weight: 600;
                     margin: 2px 0;
                 }
-                .bg-success { background-color: #28a745; color: white; }
-                .bg-warning { background-color: #ffc107; color: black; }
+                .bg-success { background-color: #E7F3EC; color: #1E6B45; }
+                .bg-warning { background-color: #FBF0D9; color: #7F5200; }
             </style>
         </head>
         <body>

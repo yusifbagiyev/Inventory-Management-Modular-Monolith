@@ -15,9 +15,9 @@
         })();
     </script>
 
-    <!-- Modern Font -->
-    <!-- Bootstrap 5 -->
+    <!-- Bootstrap 5, then the design tokens (design/tokens.css, light + dark) that everything below reads -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
     <!-- DataTables -->
@@ -82,7 +82,7 @@
                                    data-bs-toggle="dropdown">
                                     <div class="icon-badge">
                                         <i class="far fa-bell"></i>
-                                        <span id="notificationBadge" class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle"
+                                        <span id="notificationBadge" class="badge rounded-pill bg-accent position-absolute top-0 start-100 translate-middle"
                                               style="display:none; font-size: 0.65rem; padding: 0.25em 0.5em;">
                                         </span>
                                     </div>

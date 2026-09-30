@@ -2,7 +2,8 @@
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
 }
-<aside class="modern-sidebar" id="sidebar-wrapper">
+@* Dark in both themes: data-bs-theme switches the tokens for everything inside. *@
+<aside class="modern-sidebar" id="sidebar-wrapper" data-bs-theme="dark">
     <div class="sidebar-header">
         <img src="/inventory.png" alt="" height="30">
         <span class="brand-text">Inventory Pro</span>

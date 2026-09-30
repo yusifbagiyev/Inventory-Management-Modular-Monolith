@@ -1,0 +1,147 @@
+/* Inventory Pro — design tokens. Bootstrap 5.3: put data-bs-theme="light|dark" on <html>. No external fonts. */
+:root, [data-bs-theme="light"] {
+  --ip-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --ip-font-mono: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
+
+  /* type scale (px / line-height) */
+  --ip-fs-xs: 12px;  --ip-lh-xs: 16px;
+  --ip-fs-sm: 13px;  --ip-lh-sm: 18px;
+  --ip-fs-base: 14px; --ip-lh-base: 20px;
+  --ip-fs-md: 16px;  --ip-lh-md: 24px;
+  --ip-fs-lg: 18px;  --ip-lh-lg: 26px;
+  --ip-fs-xl: 22px;  --ip-lh-xl: 28px;
+  --ip-fs-2xl: 28px; --ip-lh-2xl: 34px;
+  --ip-fw-regular: 400; --ip-fw-medium: 500; --ip-fw-semibold: 600;
+
+  /* spacing — 4px base */
+  --ip-space-1: 4px; --ip-space-2: 8px; --ip-space-3: 12px; --ip-space-4: 16px;
+  --ip-space-5: 20px; --ip-space-6: 24px; --ip-space-8: 32px; --ip-space-10: 40px; --ip-space-12: 48px;
+
+  /* radius */
+  --ip-radius-sm: 6px; --ip-radius-md: 10px; --ip-radius-lg: 12px; --ip-radius-xl: 16px; --ip-radius-pill: 999px;
+
+  /* control heights */
+  --ip-control-sm: 30px; --ip-control-md: 36px; --ip-control-lg: 44px;
+
+  /* surfaces & text */
+  --ip-bg: #F5F5F3;
+  --ip-surface: #FFFFFF;
+  --ip-surface-2: #FAFAF9;
+  --ip-surface-hover: #F1F1EF;
+  --ip-surface-active: #E8E8E5;
+  --ip-sunken: #EFEFEC;
+  --ip-text-1: #1B1C1E;   /* 16.9:1 on surface */
+  --ip-text-2: #4F5358;   /* 7.9:1 */
+  --ip-text-3: #6B6F75;   /* 5.1:1 */
+  --ip-border: #E4E4E1;
+  --ip-border-strong: #CFCFCB;
+
+  /* accent — one, restrained */
+  --ip-accent: #1D6A85;         /* 6.0:1 with white — calm, deep version of #0E9BC4 */
+  --ip-accent-hover: #175A71;
+  --ip-accent-active: #124A5D;
+  --ip-accent-soft: #E6F1F5;
+  --ip-accent-text: #175E77;
+  --ip-on-accent: #FFFFFF;
+  --ip-focus-ring: rgba(29, 106, 133, .30);
+
+  /* Modernist structure: strong 2px rules between major sections */
+  --ip-rule-width: 2px;
+  --ip-rule: #1B1C1E;
+  --ip-rule-soft: #CFCFCB;
+
+  /* brand yellow — logo mark and cover-image star only */
+  --ip-brand: #FFC000;
+  --ip-on-brand: #1B1C1E;
+
+  /* status — only where it carries meaning */
+  --ip-success-text: #1E6B45; --ip-success-soft: #E7F3EC; --ip-success-solid: #2F7D55;
+  --ip-warning-text: #7F5200; --ip-warning-soft: #FBF0D9; --ip-warning-solid: #B7791F;
+  --ip-danger-text:  #A12A1F; --ip-danger-soft:  #FBEAE7; --ip-danger-solid:  #B42318;
+  --ip-info-text:    #2F5876; --ip-info-soft:    #E9F0F5;
+  --ip-neutral-text: #4F5358; --ip-neutral-soft: #EFEFEC;
+  --ip-on-danger: #FFFFFF;
+
+  /* elevation */
+  --ip-shadow-sm: 0 1px 2px rgba(20, 20, 20, .06);
+  --ip-shadow-md: 0 1px 3px rgba(20, 20, 20, .06), 0 6px 16px rgba(20, 20, 20, .08);
+  --ip-shadow-lg: 0 2px 6px rgba(20, 20, 20, .08), 0 20px 48px rgba(20, 20, 20, .16);
+  --ip-backdrop: rgba(27, 28, 30, .40);
+
+  /* charts */
+  --ip-chart-1: #1D6A85; --ip-chart-2: #79A9BA; --ip-chart-3: #A7A9A4; --ip-chart-4: #C9CBC6; --ip-chart-5: #5E6873;
+  --ip-chart-pending: #D2A652;
+
+  /* Bootstrap 5.3 mapping */
+  --bs-body-font-family: var(--ip-font-sans);
+  --bs-font-monospace: var(--ip-font-mono);
+  --bs-body-font-size: .875rem;
+  --bs-body-line-height: 1.43;
+  --bs-body-bg: var(--ip-bg);
+  --bs-body-color: var(--ip-text-1);
+  --bs-secondary-color: var(--ip-text-2);
+  --bs-tertiary-color: var(--ip-text-3);
+  --bs-secondary-bg: var(--ip-surface-2);
+  --bs-tertiary-bg: var(--ip-sunken);
+  --bs-border-color: var(--ip-border);
+  --bs-border-radius-sm: var(--ip-radius-sm);
+  --bs-border-radius: var(--ip-radius-md);
+  --bs-border-radius-lg: var(--ip-radius-lg);
+  --bs-primary: #1D6A85; --bs-primary-rgb: 29, 106, 133;
+  --bs-success: #2F7D55; --bs-success-rgb: 47, 125, 85;
+  --bs-warning: #B7791F; --bs-warning-rgb: 183, 121, 31;
+  --bs-danger: #B42318;  --bs-danger-rgb: 180, 35, 24;
+  --bs-info: #2F5876;    --bs-info-rgb: 47, 88, 118;
+  --bs-link-color: var(--ip-accent-text); --bs-link-color-rgb: 23, 94, 119;
+  --bs-link-hover-color: var(--ip-accent-active);
+  --bs-focus-ring-color: var(--ip-focus-ring);
+  --bs-box-shadow-sm: var(--ip-shadow-sm);
+  --bs-box-shadow: var(--ip-shadow-md);
+  --bs-box-shadow-lg: var(--ip-shadow-lg);
+}
+
+[data-bs-theme="dark"] {
+  --ip-bg: #121314;
+  --ip-surface: #1A1B1D;
+  --ip-surface-2: #1F2023;
+  --ip-surface-hover: #25272A;
+  --ip-surface-active: #2E3034;
+  --ip-sunken: #0F1011;
+  --ip-text-1: #ECECE9;   /* 14.6:1 on surface */
+  --ip-text-2: #B0B2B5;   /* 8.4:1 */
+  --ip-text-3: #8C8F94;   /* 5.4:1 */
+  --ip-border: #2A2C2F;
+  --ip-border-strong: #3B3D41;
+
+  --ip-accent: #6FB3CB;          /* 8.1:1 with on-accent */
+  --ip-accent-hover: #86C1D6;
+  --ip-accent-active: #5AA0B9;
+  --ip-accent-soft: rgba(111, 179, 203, .14);
+  --ip-accent-text: #86C1D6;
+  --ip-on-accent: #0B1A20;
+  --ip-focus-ring: rgba(111, 179, 203, .38);
+
+  --ip-rule: #ECECE9;
+  --ip-rule-soft: #3B3D41;
+
+  --ip-success-text: #6CC795; --ip-success-soft: rgba(108, 199, 149, .13); --ip-success-solid: #3E9A69;
+  --ip-warning-text: #E2B45C; --ip-warning-soft: rgba(226, 180, 92, .13);  --ip-warning-solid: #C8962F;
+  --ip-danger-text:  #F08A7E; --ip-danger-soft:  rgba(240, 138, 126, .13); --ip-danger-solid:  #C43D31;
+  --ip-info-text:    #93B4D1; --ip-info-soft:    rgba(147, 180, 209, .13);
+  --ip-neutral-text: #B0B2B5; --ip-neutral-soft: rgba(255, 255, 255, .07);
+
+  --ip-shadow-sm: 0 1px 2px rgba(0, 0, 0, .40);
+  --ip-shadow-md: 0 1px 3px rgba(0, 0, 0, .40), 0 8px 20px rgba(0, 0, 0, .35);
+  --ip-shadow-lg: 0 2px 6px rgba(0, 0, 0, .45), 0 24px 56px rgba(0, 0, 0, .55);
+  --ip-backdrop: rgba(0, 0, 0, .60);
+
+  --ip-chart-1: #6FB3CB; --ip-chart-2: #3F6E7F; --ip-chart-3: #7E8186; --ip-chart-4: #505357; --ip-chart-5: #A9B6C3;
+  --ip-chart-pending: #C8962F;
+
+  --bs-primary: #6FB3CB; --bs-primary-rgb: 111, 179, 203;
+  --bs-success: #3E9A69; --bs-success-rgb: 62, 154, 105;
+  --bs-warning: #C8962F; --bs-warning-rgb: 200, 150, 47;
+  --bs-danger: #C43D31;  --bs-danger-rgb: 196, 61, 49;
+  --bs-info: #93B4D1;    --bs-info-rgb: 147, 180, 209;
+  --bs-link-color-rgb: 134, 193, 214;
+}
