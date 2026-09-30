@@ -2,7 +2,8 @@ name: CD
 
 # After CI passes on master: build the image once on GitHub, push it to ghcr.io, then deploy it on
 # the production server through the self-hosted runner there (deploy/deploy.sh).
-# Off until the repository variable CD_ENABLED is 'true' - see deploy/CD.md.
+# The image is always built and pushed (harmless, and the cut-over needs it on the server first);
+# the deploy step stays off until the repository variable CD_ENABLED is 'true' - see deploy/CD.md.
 #
 # Rollback: Actions -> CD -> Run workflow, with image_tag set to an earlier tag (sha-<commit>).
 
@@ -29,7 +30,7 @@ env:
 jobs:
   image:
     if: >-
-      vars.CD_ENABLED == 'true' && !inputs.image_tag &&
+      !inputs.image_tag &&
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' ||
        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
