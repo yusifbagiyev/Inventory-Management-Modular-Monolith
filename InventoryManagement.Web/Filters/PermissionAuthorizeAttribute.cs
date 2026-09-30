@@ -8,12 +8,11 @@ namespace InventoryManagement.Web.Filters
     public class PermissionAuthorizeAttribute:Attribute,IAuthorizationFilter
     {
         private readonly string _permission;
-        private readonly string _alternatePermission;
+        private readonly string? _alternatePermission;
 
         public PermissionAuthorizeAttribute(string permission)
         {
             _permission= permission;
-            _alternatePermission = null;
         }
 
         public PermissionAuthorizeAttribute(string permission,string alternatePermission)

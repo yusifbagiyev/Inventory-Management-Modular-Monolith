@@ -46,7 +46,7 @@ namespace ProductService.Infrastructure.Repositories
         public async Task<PagedResult<Department>> GetPagedAsync(
             int pageNumber, 
             int pageSize, 
-            string search, 
+            string? search, 
             CancellationToken cancellationToken = default)
         {
             var query = _context.Departments.AsNoTracking().AsQueryable();
