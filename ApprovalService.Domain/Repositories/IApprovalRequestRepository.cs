@@ -8,6 +8,8 @@ namespace ApprovalService.Domain.Repositories
         Task<ApprovalRequest?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<ApprovalRequest>> GetPendingAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
         Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default);
+        /// <summary>The latest requests in these states, newest decision first.</summary>
+        Task<IReadOnlyList<ApprovalRequest>> GetDecidedAsync(IReadOnlyCollection<ApprovalStatus> statuses, int take, CancellationToken cancellationToken = default);
         Task<IEnumerable<ApprovalRequest>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default);
         /// <summary>Requests in <paramref name="status"/>, optionally only those processed since <paramref name="processedSince"/>.</summary>
         Task<int> CountAsync(ApprovalStatus status, DateTime? processedSince = null, CancellationToken cancellationToken = default);

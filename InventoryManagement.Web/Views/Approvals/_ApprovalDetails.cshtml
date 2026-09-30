@@ -1,505 +1,167 @@
 @model ApprovalRequestDto
+@* The decision dialog's content (design: 08 Approvals), used by Approvals and My Requests.
+   [data-approval-head] is moved into the modal header by loadApprovalDetails() (site.js); the
+   rest is the body: what changes as a Field / Current / -> / Proposed table. *@
+@{
+    var view = ApprovalView.From(Model.RequestType, Model.ActionData);
+    var images = view.ImageData;
+    var (addedImages, removedImages) = view.ImageCounts();
 
-<div class="approval-details">
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="section-title">@L["Request Information"]</div>
-            <div class="detail-grid">
-                <div class="detail-row">
-                    <span class="d-label">@L["Type"]</span>
-                    <span class="d-value">
-                        <span class="badge bg-info">@L[GetReadableRequestType(Model.RequestType)]</span>
-                    </span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Entity"]</span>
-                    <span class="d-value">
-                        @L[Model.EntityType]
-                        @if (Model.EntityId.HasValue)
+    string Value(string? value, bool localize) => string.IsNullOrWhiteSpace(value) ? "" : localize ? L[value].Value : value;
+
+    var newImageNames = new List<string>();
+    if (images != null)
+    {
+        foreach (var key in new[] { "images", "replaceImages" })
+        {
+            if (images.GetValue(key, StringComparison.OrdinalIgnoreCase) is Newtonsoft.Json.Linq.JArray list)
+                newImageNames.AddRange(list.Select(i => i.Value<string>("imageFileName") ?? L["Image"].Value));
+        }
+    }
+    var removedUrls = (images?.GetValue("removeImageUrls", StringComparison.OrdinalIgnoreCase) as Newtonsoft.Json.Linq.JArray)?
+        .Select(u => u.ToString()).Where(u => u.StartsWith("/images/")).ToList() ?? new List<string>();
+    var cover = images?.GetValue("coverImageUrl", StringComparison.OrdinalIgnoreCase)?.ToString();
+    string? newCoverName = cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < newImageNames.Count
+        ? newImageNames[coverIndex] : null;
+}
+
+<div data-approval-head data-status="@Model.Status" data-request-id="@Model.Id">
+    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+        <span class="ip-mono ip-faint">@L["Request"] #@Model.Id</span>
+        @switch (Model.Status)
+        {
+            case "Pending":
+                <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                break;
+            case "Executed":
+            case "Approved":
+                <span class="ip-badge ip-badge-success">@L["Approved"]</span>
+                break;
+            case "Rejected":
+                <span class="ip-badge ip-badge-danger">@L["Rejected"]</span>
+                break;
+            default:
+                <span class="ip-badge ip-badge-danger">@L[Model.Status]</span>
+                break;
+        }
+    </div>
+    <div class="modal-title" id="detailsTitle">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</div>
+    <div class="ip-faint">@Model.RequestedByName · <span class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span></div>
+</div>
+
+@if (Model.Status == "Rejected" && !string.IsNullOrWhiteSpace(Model.RejectionReason))
+{
+    <div class="ip-banner ip-banner-danger mb-3">
+        <i class="fa-solid fa-circle-xmark"></i>
+        <span><b>@L["Rejection Reason"]:</b> @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
+    </div>
+}
+else if (Model.Status == "Failed")
+{
+    <div class="ip-banner ip-banner-danger mb-3">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>@L["Approved, but the change could not be carried out."] @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
+    </div>
+}
+@if (Model.Status != "Pending" && !string.IsNullOrEmpty(Model.ApprovedByName))
+{
+    <p class="ip-faint mb-3">@L["Decided by {0}", Model.ApprovedByName]@(Model.ProcessedAt.HasValue ? " · " + Model.ProcessedAt.Value.ToString("dd.MM.yyyy HH:mm") : "")</p>
+}
+
+@if (view.IsDeletion)
+{
+    <div class="ip-banner ip-banner-warning mb-3">
+        <i class="fa-solid fa-trash-can"></i>
+        <span>@L["Approving this deletes the record below."]</span>
+    </div>
+    <dl class="ip-dl">
+        @foreach (var change in view.Changes)
+        {
+            <div><dt>@L[change.Field]</dt><dd>@Value(change.Current, change.Localize)</dd></div>
+        }
+    </dl>
+}
+else if (view.Changes.Count > 0)
+{
+    <div class="ip-faint mb-1">@L["Changed fields"] · @view.Changes.Count</div>
+    <div class="ip-table-wrap">
+        <table class="ip-table ip-diff">
+            <thead>
+                <tr>
+                    <th>@L["Field"]</th>
+                    <th>@L["Current value"]</th>
+                    <th style="width: 24px"></th>
+                    <th>@L["Proposed"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var change in view.Changes)
+                {
+                    <tr>
+                        <td class="text-nowrap">@L[change.Field]</td>
+                        @if (change.Field == "Images")
                         {
-                            <span class="mono text-muted">#@Model.EntityId</span>
-                        }
-                    </span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Requested By"]</span>
-                    <span class="d-value">@Model.RequestedByName</span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Date"]</span>
-                    <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
-                </div>
-                <div class="detail-row">
-                    <span class="d-label">@L["Status"]</span>
-                    <span class="d-value">
-                        @if (Model.Status == "Pending")
-                        {
-                            <span class="state state-warn">@L["Pending"]</span>
-                        }
-                        else if (Model.Status == "Executed" || Model.Status == "Approved")
-                        {
-                            <span class="state state-ok">@L["Approved"]</span>
-                        }
-                        else if (Model.Status == "Rejected")
-                        {
-                            <span class="state state-crit">@L["Rejected"]</span>
+                            <td class="old">@(view.Kind == "Product update" ? L["Current images"].Value : "—")</td>
+                            <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                            <td>
+                                <span class="new">
+                                    @L["{0} new", addedImages]@(removedImages > 0 ? ", " + L["{0} removed", removedImages].Value : "")
+                                </span>
+                            </td>
                         }
                         else
                         {
-                            <span class="state state-idle">@L[Model.Status]</span>
+                            <td class="old">@(string.IsNullOrWhiteSpace(change.Current) ? "—" : Value(change.Current, change.Localize))</td>
+                            <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                            <td>
+                                @if (string.IsNullOrWhiteSpace(change.Proposed))
+                                {
+                                    <span class="ip-muted">—</span>
+                                }
+                                else
+                                {
+                                    <span class="new">@Value(change.Proposed, change.Localize)</span>
+                                }
+                            </td>
                         }
-                    </span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="section-title">@L["Request Details"]</div>
-            @{
-                var details = ParseActionData(Model.RequestType, Model.ActionData);
-            }
-            @Html.Raw(details)
-        </div>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
-</div>
+}
+else
+{
+    <p class="ip-muted mb-0">@L["View details for more information"]</p>
+}
 
-@functions {
-    // XSS guard: ActionData is user-supplied, so every dynamic value must be HTML-encoded
-    // before it is concatenated into markup that is emitted with @Html.Raw above.
-    string E(dynamic value) => System.Net.WebUtility.HtmlEncode(value?.ToString() ?? "");
-
-    // A dynamic JSON value as text (null when missing). A null check on the dynamic value itself
-    // is invisible to nullable analysis; on the returned string it is not.
-    string? Text(object? value) => value?.ToString();
-
-    // One label/value pair in the design-system detail-row shape. The value always goes
-    // through E(); when it is missing the placeholder is rendered muted instead.
-    // Callers cast the dynamic JSON value to object so this stays a compile-time bound call.
-    string Row(string label, object? value, string placeholder, bool mono)
-    {
-        var text = value?.ToString();
-        var body = string.IsNullOrWhiteSpace(text)
-            ? $"<span class='d-empty'>{E(placeholder)}</span>"
-            : E(text);
-        var valueClass = mono ? "d-value mono" : "d-value";
-        return $"<div class='detail-row'><span class='d-label'>{E(label)}</span><span class='{valueClass}'>{body}</span></div>";
-    }
-
-    // Image changes carried by a request: new files ("images", legacy single "imageData",
-    // "replaceImages"), current images to remove and a new cover. Shape: SharedServices ApprovalActionData.
-    string ImagesHtml(dynamic d)
-    {
-        if (d == null) return "";
-        var names = new List<string>();
-        foreach (var key in new[] { "images", "replaceImages" })
+@if (newImageNames.Count > 0 || removedUrls.Count > 0 || cover != null)
+{
+    <div class="ip-section mt-3">
+        @if (newImageNames.Count > 0)
         {
-            var list = d[key] as Newtonsoft.Json.Linq.JArray;
-            if (list == null) continue;
-            foreach (var item in list)
-                names.Add(item.Value<string>("imageFileName") ?? L["Image"].Value);
+            <div class="mb-2"><span class="ip-faint">@L["New images"]:</span> @string.Join(", ", newImageNames)</div>
         }
-        var legacyName = Text((object?)(d.imageFileName ?? d.ImageFileName));
-        if (legacyName != null || d.imageData != null)
-            names.Add(legacyName ?? L["Image"].Value);
-
-        var removed = (d.removeImageUrls as Newtonsoft.Json.Linq.JArray)?.Select(u => u.ToString())
-            .Where(u => u.StartsWith("/images/")).ToList() ?? new List<string>();
-        var cover = Text((object?)d.coverImageUrl);
-
-        if (names.Count == 0 && removed.Count == 0 && cover == null) return "";
-
-        var html = new System.Text.StringBuilder("<div class='alert alert-info mt-2 mb-0'>");
-        if (names.Count > 0)
-            html.Append($"<div><i class='fas fa-image me-1'></i> {E(L["{0} new image(s)", names.Count].Value)}: {E(string.Join(", ", names))}</div>");
-        if (removed.Count > 0)
+        @if (newCoverName != null)
         {
-            html.Append($"<div class='mt-2'><i class='fas fa-trash me-1'></i> {E(L["Images to remove"].Value)}:</div><div class='d-flex gap-2 mt-1 flex-wrap'>");
-            foreach (var url in removed)
-                html.Append($"<img src='{E(url)}' alt='' style='width:56px;height:56px;object-fit:cover;border-radius:6px;opacity:.7'>");
-            html.Append("</div>");
+            <div class="mb-2"><i class="fa-solid fa-star" style="color: var(--ip-brand)"></i> <span class="ip-faint">@L["New cover image"]:</span> @newCoverName</div>
         }
-        if (cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < names.Count)
-            html.Append($"<div class='mt-2'><i class='fas fa-star me-1'></i> {E(L["New cover image"].Value)}: {E(names[coverIndex])}</div>");
-        if (cover != null && cover.StartsWith("/images/"))
-            html.Append($"<div class='mt-2 d-flex align-items-center gap-2'><i class='fas fa-star'></i> {E(L["New cover image"].Value)}: <img src='{E(cover)}' alt='' style='width:56px;height:56px;object-fit:cover;border-radius:6px'></div>");
-        return html.Append("</div>").ToString();
-    }
-
-    // Same row shape for values that are markup we build ourselves (state chips, badges).
-    // Anything user-supplied inside valueHtml must already have been passed through E().
-    string RowHtml(string label, string valueHtml)
-        => $"<div class='detail-row'><span class='d-label'>{E(label)}</span><span class='d-value'>{valueHtml}</span></div>";
-
-    string Section(string title) => $"<div class='section-title'>{E(title)}</div>";
-
-    // department + worker stacked inside a single value cell
-    string Place(object department, object worker)
-    {
-        var dept = department?.ToString();
-        var who = worker?.ToString();
-        var deptHtml = string.IsNullOrWhiteSpace(dept) ? $"<span class='d-empty'>{E(L["Unknown"].Value)}</span>" : E(dept);
-        var workerHtml = string.IsNullOrWhiteSpace(who) ? E(L["Not assigned"].Value) : E(who);
-        return $"{deptHtml}<br/><small class='text-muted'>{E(L["Worker"].Value)}: {workerHtml}</small>";
-    }
-
-    string GetReadableRequestType(string requestType)
-    {
-        return requestType switch
+        @if (cover != null && cover.StartsWith("/images/"))
         {
-            "product.create" => "Creating Product",
-            "product.update" => "Updating Product",
-            "product.delete" => "Deleting Product",
-            "product.transfer" => "Transferring Product",
-            "route.update" => "Updating Route",
-            "route.delete" => "Deleting Route",
-            _ => requestType
-        };
-    }
-
-    string ParseActionData(string requestType, string actionData)
-    {
-        try
-        {
-            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(actionData);
-
-            switch (requestType)
-            {
-                case "product.create":
-                    return ParseProductCreateData(data);
-
-                case "product.update":
-                    return ParseProductUpdateData(data);
-
-                case "product.delete":
-                    return ParseProductDeleteData(data);
-
-                case "product.transfer":
-                    return ParseProductTransferData(data);
-
-                case "route.update":
-                    return ParseRouteUpdateData(data);
-
-                case "route.delete":
-                    return ParseRouteDeleteData(data);
-
-                default:
-                    // For unknown types, format the JSON nicely
-                    return $"<pre class='mb-0' style='max-height: 340px; overflow: auto;'>{E(FormatJson(data))}</pre>";
-            }
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="fa-solid fa-star" style="color: var(--ip-brand)"></i><span class="ip-faint">@L["New cover image"]:</span>
+                <span class="ip-thumb"><img src="@cover" alt="" /></span>
+            </div>
         }
-        catch (Exception ex)
+        @if (removedUrls.Count > 0)
         {
-            // If parsing fails, try to format the raw JSON
-            try
-            {
-                var parsed = Newtonsoft.Json.Linq.JToken.Parse(actionData);
-                return $"<pre class='mb-0' style='max-height: 340px; overflow: auto;'>{E(parsed.ToString(Newtonsoft.Json.Formatting.Indented))}</pre>";
-            }
-            catch
-            {
-                return $"<div class='alert alert-danger mb-0'>{E(L["Error parsing data"].Value)}: {E(ex.Message)}</div>";
-            }
+            <div class="ip-faint mb-1">@L["Images to remove"]:</div>
+            <div class="d-flex gap-2 flex-wrap">
+                @foreach (var url in removedUrls)
+                {
+                    <span class="ip-thumb" style="opacity: .6"><img src="@url" alt="" /></span>
+                }
+            </div>
         }
-    }
-
-    string ParseProductCreateData(dynamic data)
-    {
-        var productData = data.ProductData ?? data;
-        var html = new System.Text.StringBuilder();
-
-        // Basic Information
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Product Information"].Value));
-        html.AppendLine(Row(L["Inventory Code"].Value, (object)(productData.inventoryCode ?? productData.InventoryCode), L["N/A"].Value, true));
-        html.AppendLine(Row(L["Model"].Value, (object)(productData.model ?? productData.Model), L["N/A"].Value, false));
-        html.AppendLine(Row(L["Vendor"].Value, (object)(productData.vendor ?? productData.Vendor), L["N/A"].Value, false));
-        html.AppendLine(Row(L["Worker"].Value, (object)(productData.worker ?? productData.Worker), L["Not assigned"].Value, false));
-        html.AppendLine("</div>");
-
-        // Category & Department
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Location"].Value));
-        var categoryName = productData.categoryName ?? productData.CategoryName ?? L["Category #{0}", (object)(productData.categoryId ?? productData.CategoryId)].Value;
-        var departmentName = productData.departmentName ?? productData.DepartmentName ?? L["Department #{0}", (object)(productData.departmentId ?? productData.DepartmentId)].Value;
-        html.AppendLine(Row(L["Category"].Value, (object)categoryName, L["N/A"].Value, false));
-        html.AppendLine(Row(L["Department"].Value, (object)departmentName, L["N/A"].Value, false));
-        html.AppendLine("</div>");
-
-        // Status Information
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Status"].Value));
-        bool isWorking = GetBoolValue(productData, "isWorking", "IsWorking", true);
-        bool isActive = GetBoolValue(productData, "isActive", "IsActive", true);
-        bool isNewItem = GetBoolValue(productData, "isNewItem", "IsNewItem", true);
-
-        html.AppendLine(RowHtml(L["Working Status"].Value, isWorking
-            ? $"<span class='state state-ok'>{E(L["Working"].Value)}</span>"
-            : $"<span class='state state-crit'>{E(L["Not Working"].Value)}</span>"));
-        html.AppendLine(RowHtml(L["Active"].Value, isActive
-            ? $"<span class='state state-ok'>{E(L["Active"].Value)}</span>"
-            : $"<span class='state state-flat state-idle'>{E(L["Inactive"].Value)}</span>"));
-        html.AppendLine(RowHtml(L["Item Condition"].Value, isNewItem
-            ? $"<span class='state state-flat state-new'>{E(L["New"].Value)}</span>"
-            : $"<span class='state state-warn'>{E(L["Used"].Value)}</span>"));
-        html.AppendLine("</div>");
-
-        // Description & Notes
-        var description = productData.description ?? productData.Description;
-        if (!string.IsNullOrEmpty(description?.ToString()))
-        {
-            html.AppendLine("<div class='mb-3'>");
-            html.AppendLine(Section(L["Description"].Value));
-            html.AppendLine($"<p class='mb-0'>{E(description)}</p>");
-            html.AppendLine("</div>");
-        }
-
-        html.AppendLine(ImagesHtml(productData));
-
-        return html.ToString();
-    }
-
-    string ParseProductUpdateData(dynamic data)
-    {
-        var html = new System.Text.StringBuilder();
-        var inventoryCode = data.InventoryCode ?? data.inventoryCode;
-
-        html.AppendLine(Section(L["Product"].Value));
-        html.AppendLine(Row(L["Inventory Code"].Value, (object)inventoryCode, L["N/A"].Value, true));
-
-        // Show changes summary if available
-        var changes = data.Changes;
-        if (changes != null)
-        {
-            html.AppendLine("<div class='mt-3'>");
-            html.AppendLine(Section(L["Summary of Changes"].Value));
-            html.AppendLine("<ul class='mb-0'>");
-            foreach (var change in changes)
-            {
-                html.AppendLine($"<li>{E(JsonStringLocalizer.TranslateMessage(Text((object?)change)))}</li>");
-            }
-            html.AppendLine("</ul>");
-            html.AppendLine("</div>");
-        }
-
-        html.AppendLine(ImagesHtml(data.UpdateData ?? data.updateData));
-
-        return html.ToString();
-    }
-
-    string ParseProductDeleteData(dynamic data)
-    {
-        var html = new System.Text.StringBuilder();
-        html.AppendLine("<div class='alert alert-warning'>");
-        html.AppendLine($"<i class='fas fa-exclamation-triangle'></i> <strong>{E(L["Product to be Deleted"].Value)}</strong>");
-        html.AppendLine("</div>");
-
-        html.AppendLine(Row(L["Inventory Code"].Value, (object)(data.InventoryCode ?? data.inventoryCode), L["N/A"].Value, true));
-        html.AppendLine(Row(L["Model"].Value, (object)(data.Model ?? data.model), L["N/A"].Value, false));
-        html.AppendLine(Row(L["Vendor"].Value, (object)(data.Vendor ?? data.vendor), L["N/A"].Value, false));
-        html.AppendLine(Row(L["Department"].Value, (object)(data.DepartmentName ?? data.departmentName), L["N/A"].Value, false));
-
-        if (data.DeleteReason != null)
-        {
-            html.AppendLine(Row(L["Reason"].Value, (object)data.DeleteReason, L["N/A"].Value, false));
-        }
-
-        return html.ToString();
-    }
-
-    string ParseProductTransferData(dynamic data)
-    {
-        var html = new System.Text.StringBuilder();
-
-        // Product Information
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Product Information"].Value));
-        html.AppendLine(Row(L["Inventory Code"].Value, (object)(data.inventoryCode ?? data.InventoryCode), L["N/A"].Value, true));
-        html.AppendLine(Row(L["Model"].Value, (object)(data.productModel ?? data.ProductModel), L["N/A"].Value, false));
-        html.AppendLine(Row(L["Vendor"].Value, (object)(data.productVendor ?? data.ProductVendor), L["N/A"].Value, false));
-        html.AppendLine("</div>");
-
-        // Transfer Details
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Transfer Details"].Value));
-        html.AppendLine(RowHtml(L["From"].Value, Place(
-            (object)(data.fromDepartmentName ?? data.FromDepartmentName),
-            (object)(data.fromWorker ?? data.FromWorker))));
-        html.AppendLine(RowHtml(L["To"].Value, Place(
-            (object)(data.toDepartmentName ?? data.ToDepartmentName),
-            (object)(data.toWorker ?? data.ToWorker))));
-        html.AppendLine("</div>");
-
-        // Notes
-        var notes = Text((object?)(data.notes ?? data.Notes));
-        if (notes != null && notes != "{}" && !string.IsNullOrWhiteSpace(notes))
-        {
-            html.AppendLine("<div class='mb-3'>");
-            html.AppendLine(Section(L["Notes"].Value));
-            html.AppendLine($"<p class='mb-0'>{E(notes)}</p>");
-            html.AppendLine("</div>");
-        }
-
-        html.AppendLine(ImagesHtml(data));
-
-        return html.ToString();
-    }
-
-    bool GetBoolValue(dynamic obj, string camelCase, string pascalCase, bool defaultValue)
-    {
-        try
-        {
-            // Try camelCase first
-            if (obj[camelCase] != null)
-            {
-                return (bool)obj[camelCase];
-            }
-        }
-        catch { }
-
-        try
-        {
-            // Try PascalCase
-            if (obj[pascalCase] != null)
-            {
-                return (bool)obj[pascalCase];
-            }
-        }
-        catch { }
-
-        return defaultValue;
-    }
-
-    string FormatJson(dynamic data)
-    {
-        return Newtonsoft.Json.JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented);
-    }
-
-    string ParseRouteUpdateData(dynamic data)
-    {
-        var html = new System.Text.StringBuilder();
-
-        // Route Information
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Route Information"].Value));
-
-        string? routeId = (data.RouteId ?? data.routeId)?.ToString();
-        var inventoryCode = data.InventoryCode ?? data.inventoryCode ?? L["N/A"].Value;
-        var model = data.Model ?? data.model ?? L["N/A"].Value;
-
-        html.AppendLine(Row(L["Route ID"].Value, string.IsNullOrWhiteSpace(routeId) ? null : "#" + routeId, L["Unknown"].Value, true));
-        html.AppendLine(Row(L["Product"].Value, (object)$"{inventoryCode} - {model}", L["N/A"].Value, false));
-
-        // Show transfer route if available
-        var fromDept = data.FromDepartmentName ?? data.fromDepartmentName;
-        var toDept = data.ToDepartmentName ?? data.toDepartmentName;
-        if (fromDept != null && toDept != null)
-        {
-            html.AppendLine(RowHtml(L["Route"].Value, $"{E(fromDept)} &rarr; {E(toDept)}"));
-        }
-
-        html.AppendLine("</div>");
-
-        // Update Details
-        var updateData = data.UpdateData ?? data.updateData;
-        if (updateData != null)
-        {
-            html.AppendLine("<div class='mb-3'>");
-            html.AppendLine(Section(L["Updates to Apply"].Value));
-
-            // Check for notes update
-            var notes = Text((object?)(updateData.notes ?? updateData.Notes));
-            if (notes != null && notes != "{}")
-            {
-                html.AppendLine(Row(L["Notes"].Value, notes, L["N/A"].Value, false));
-            }
-
-            html.AppendLine(ImagesHtml(updateData));
-
-            // Show changes summary if available
-            var changesSummary = Text((object?)(updateData.changesSummary ?? updateData.ChangesSummary));
-            if (!string.IsNullOrEmpty(changesSummary))
-            {
-                html.AppendLine(Row(L["Summary"].Value, JsonStringLocalizer.TranslateMessage(changesSummary), L["N/A"].Value, false));
-            }
-
-            html.AppendLine("</div>");
-        }
-
-        // Show the Changes field if it exists (from the approval request)
-        var changes = Text((object?)(data.Changes ?? data.changes));
-        if (!string.IsNullOrEmpty(changes))
-        {
-            html.AppendLine("<div class='alert alert-warning mb-0'>");
-            html.AppendLine($"<strong>{E(L["Changes"].Value)}:</strong> {E(JsonStringLocalizer.TranslateMessage(changes))}");
-            html.AppendLine("</div>");
-        }
-
-        return html.ToString();
-    }
-
-    string ParseRouteDeleteData(dynamic data)
-    {
-        var html = new System.Text.StringBuilder();
-
-        // Warning message
-        html.AppendLine("<div class='alert alert-danger'>");
-        html.AppendLine($"<i class='fas fa-exclamation-triangle'></i> <strong>{E(L["Route to be Deleted"].Value)}</strong>");
-        html.AppendLine("</div>");
-
-        // Route details
-        html.AppendLine("<div class='mb-3'>");
-        html.AppendLine(Section(L["Route Information"].Value));
-
-        string? routeId = (data.RouteId ?? data.routeId)?.ToString();
-        // Route type is one of the RouteType enum names (New, Existing, Transfer, Removal, Update) - shown translated.
-        string routeType = Text((object?)(data.RouteType ?? data.routeType)) ?? "Transfer";
-        var productInfo = data.ProductInfo ?? data.productInfo;
-        var fromLocation = data.FromLocation ?? data.fromLocation;
-        var toLocation = data.ToLocation ?? data.toLocation;
-        var createdDate = data.CreatedDate ?? data.createdDate;
-        bool isCompleted = GetBoolValue(data, "isCompleted", "IsCompleted", false);
-
-        html.AppendLine(Row(L["Route ID"].Value, string.IsNullOrWhiteSpace(routeId) ? null : "#" + routeId, L["Unknown"].Value, true));
-        html.AppendLine(RowHtml(L["Type"].Value, $"<span class='badge bg-info'>{E(L[routeType].Value)}</span>"));
-        html.AppendLine(Row(L["Product"].Value, (object)productInfo, L["Unknown Product"].Value, false));
-        html.AppendLine(Row(L["From"].Value, (object)fromLocation, L["N/A"].Value, false));
-        html.AppendLine(Row(L["To"].Value, (object)toLocation, L["N/A"].Value, false));
-
-        if (createdDate != null)
-        {
-            try
-            {
-                DateTime date = DateTime.Parse(createdDate.ToString());
-                html.AppendLine(Row(L["Created"].Value, date.ToString("dd.MM.yyyy HH:mm"), L["N/A"].Value, true));
-            }
-            catch
-            {
-                html.AppendLine(Row(L["Created"].Value, (object)createdDate, L["N/A"].Value, true));
-            }
-        }
-
-        html.AppendLine(RowHtml(L["Status"].Value, isCompleted
-            ? $"<span class='state state-ok'>{E(L["Completed"].Value)}</span>"
-            : $"<span class='state state-warn'>{E(L["Pending"].Value)}</span>"));
-        html.AppendLine("</div>");
-
-        // Deletion reason if provided
-        var deleteReason = Text((object?)(data.DeleteReason ?? data.deleteReason ?? data.Reason ?? data.reason));
-        if (!string.IsNullOrEmpty(deleteReason))
-        {
-            html.AppendLine("<div class='mb-3'>");
-            html.AppendLine(Section(L["Deletion Reason"].Value));
-            html.AppendLine($"<p class='mb-0'>{E(deleteReason)}</p>");
-            html.AppendLine("</div>");
-        }
-
-        // Warning for completed routes
-        if (isCompleted)
-        {
-            html.AppendLine("<div class='alert alert-warning mb-0'>");
-            html.AppendLine($"<i class='fas fa-info-circle'></i> <strong>{E(L["Note:"].Value)}</strong> {E(L["This is a completed route. Deleting completed routes is generally not recommended as they form part of the audit trail."].Value)}");
-            html.AppendLine("</div>");
-        }
-
-        return html.ToString();
-    }
+    </div>
 }

@@ -1,177 +1,150 @@
 @model ApprovalDashboardViewModel
 @{
     ViewData["Title"] = "Approvals";
+    var pendingTab = Model.Tab == "pending";
 }
 
 <div class="container-fluid px-4">
-    <div class="ip-page-head">
+    @* Header figures, tabs and the list are refreshed in place by live-updates.js (see Scripts). *@
+    <div class="ip-page-head" id="approvalsStats">
         <div>
-            <h1>@L["Approval Requests"]</h1>
+            <h1>@L["Approvals"]</h1>
         </div>
-    </div>
-
-    @* Statistics and the table below are refreshed in place by live-updates.js (see Scripts). *@
-    <div class="row g-3 mb-4 mt-1" id="approvalsStats">
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                    <div>
-                        <span class="state state-warn">@L["Pending"]</span>
-                        <div class="h2 mb-0 mt-2">@Model.TotalPending</div>
-                    </div>
-                    <i class="fas fa-hourglass-half fs-4 text-muted"></i>
-                </div>
+        <div class="ip-stats">
+            <div>
+                <div class="ip-faint">@L["Pending"]</div>
+                <div class="ip-stat-value ip-status-text warning">@Model.TotalPending</div>
             </div>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                    <div>
-                        <span class="state state-ok">@L["Approved today"]</span>
-                        <div class="h2 mb-0 mt-2">@Model.TotalApproved</div>
-                    </div>
-                    <i class="fas fa-circle-check fs-4 text-muted"></i>
-                </div>
+            <div>
+                <div class="ip-faint">@L["Approved today"]</div>
+                <div class="ip-stat-value">@Model.TotalApproved</div>
             </div>
-        </div>
-        <div class="col-12 col-sm-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                    <div>
-                        <span class="state state-crit">@L["Rejected today"]</span>
-                        <div class="h2 mb-0 mt-2">@Model.TotalRejected</div>
-                    </div>
-                    <i class="fas fa-circle-xmark fs-4 text-muted"></i>
-                </div>
+            <div>
+                <div class="ip-faint">@L["Rejected today"]</div>
+                <div class="ip-stat-value">@Model.TotalRejected</div>
             </div>
         </div>
     </div>
 
-    <div class="card mb-4" id="approvalsRegion">
-        <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="fas fa-hourglass-half me-1"></i> @L["Pending Approval Requests"]</span>
-            <span class="text-muted mono">@Model.PendingRequests.Count</span>
-        </div>
-        <div class="card-body">
-            @if (Model.PendingRequests.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover" id="approvalsTable">
-                        <thead>
-                            <tr>
-                                <th>@L["Date"]</th>
-                                <th>@L["Type"]</th>
-                                <th>@L["Entity"]</th>
-                                <th>@L["Requested By"]</th>
-                                <th style="width: 20%;">@L["Summary"]</th>
-                                <th>@L["Actions"]</th>
+    <nav class="ip-tabs strong" aria-label="@L["Status"]" id="approvalsTabs">
+        <a asp-action="Index" class="ip-tab @(pendingTab ? "active" : "")">@L["Pending"] <span class="count warning">@Model.TotalPending</span></a>
+        <a asp-action="Index" asp-route-status="approved" class="ip-tab @(Model.Tab == "approved" ? "active" : "")">@L["Approved"] <span class="count">@Model.ApprovedCount</span></a>
+        <a asp-action="Index" asp-route-status="rejected" class="ip-tab @(Model.Tab == "rejected" ? "active" : "")">@L["Rejected"] <span class="count">@Model.RejectedCount</span></a>
+    </nav>
+
+    <div id="approvalsRegion">
+        @if (Model.Requests.Any())
+        {
+            <div class="ip-table-wrap">
+                <table class="ip-table" id="approvalsTable">
+                    <thead>
+                        <tr>
+                            <th>@L["Request"]</th>
+                            <th>@L["What changes"]</th>
+                            <th>@L["Requested By"]</th>
+                            <th>@L["Date"]</th>
+                            <th>@L["Status"]</th>
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var request in Model.Requests)
+                        {
+                            var view = ApprovalView.From(request.RequestType, request.ActionData);
+                            var fields = view.FieldNames.Select(f => L[f].Value).ToList();
+                            <tr data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
+                                <td class="ip-mono ip-muted">#@request.Id</td>
+                                <td>
+                                    <div class="cell-text">
+                                        <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
+                                        @if (fields.Count > 0)
+                                        {
+                                            <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>@request.RequestedByName</td>
+                                <td class="ip-num text-nowrap">
+                                    @request.CreatedAt.ToString("dd.MM.yyyy")
+                                    <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
+                                </td>
+                                <td>
+                                    @switch (request.Status)
+                                    {
+                                        case "Pending":
+                                            <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                                            break;
+                                        case "Rejected":
+                                            <span class="ip-badge ip-badge-danger">@L["Rejected"]</span>
+                                            break;
+                                        case "Failed":
+                                            <span class="ip-badge ip-badge-danger">@L["Failed"]</span>
+                                            break;
+                                        default:
+                                            <span class="ip-badge ip-badge-success">@L["Approved"]</span>
+                                            break;
+                                    }
+                                    @if (!pendingTab && !string.IsNullOrEmpty(request.ApprovedByName))
+                                    {
+                                        <div class="sub">@request.ApprovedByName</div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" onclick="event.stopPropagation(); viewDetails(@request.Id)">
+                                        @(pendingTab ? L["Review and decide"] : L["View"])
+                                    </button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var request in Model.PendingRequests)
-                            {
-                                <tr data-request-id="@request.Id">
-                                    <td class="num text-muted" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">
-                                        @request.CreatedAt.ToString("dd.MM.yyyy HH:mm")
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            @L[GetRequestTypeDisplay(request.RequestType)]
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="cell-text">
-                                            <span class="cell-title">@L[request.EntityType]</span>
-                                            @if (request.EntityId.HasValue)
-                                            {
-                                                <span class="cell-sub mono">#@request.EntityId</span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>@request.RequestedByName</td>
-                                    @* The summary parser switches on data-request-type (the raw type, not the translated badge). *@
-                                    <td class="request-summary" data-action-data="@request.ActionData" data-request-type="@request.RequestType">
-                                        <span class="text-muted">@L["Loading..."]</span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="@L["View details"]">
-                                                <i class="fas fa-eye"></i> @L["Details"]
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="quickApprove(@request.Id)" title="@L["Approve request"]">
-                                                <i class="fas fa-check"></i> @L["Approve"]
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="showRejectModal(@request.Id)" title="@L["Reject request"]">
-                                                <i class="fas fa-times"></i> @L["Reject"]
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <h5>@L["Nothing waiting for approval"]</h5>
-                    <p class="text-muted mb-0">@L["New requests appear here as soon as a user submits one."]</p>
-                </div>
-            }
-        </div>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="ip-empty">
+                <span class="icon"><i class="fa-solid fa-inbox"></i></span>
+                <div class="title">@(pendingTab ? L["Nothing waiting for approval"] : L["Nothing here yet"])</div>
+                <div class="text">@(pendingTab ? L["New requests appear here as soon as a user submits one."] : L["Decided requests are listed here, newest first."])</div>
+            </div>
+        }
+        @if (!pendingTab && Model.Requests.Count >= 50)
+        {
+            <p class="ip-faint mt-3">@L["The latest {0} are shown.", Model.Requests.Count]</p>
+        }
     </div>
 </div>
 
-<!-- Details Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+@* Decision dialog (design: 08 Approvals). The header and body come from _ApprovalDetails. *@
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Request Details"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="flex-grow-1" style="min-width: 0" data-dialog-head></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
-            <div class="modal-body" id="detailsContent">
-                <partial name="_Skeleton" model="5" />
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Close"]</button>
-                <button type="button" class="btn btn-outline-danger" id="modalRejectBtn" style="display:none;">
-                    <i class="fas fa-times"></i> @L["Reject"]
-                </button>
-                <button type="button" class="btn btn-primary" id="modalApproveBtn" style="display:none;">
-                    <i class="fas fa-check"></i> @L["Approve"]
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Reject Modal -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@L["Reject Request"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-1">
-                    <label for="rejectionReason" class="form-label">@L["Rejection Reason"] <span class="text-danger">*</span></label>
-                    <textarea id="rejectionReason" class="form-control" rows="3" required
-                              placeholder="@L["Please provide a reason for rejection..."]"></textarea>
-                    <div class="invalid-feedback">
-                        @L["Rejection reason is required."]
-                    </div>
-                    <div class="form-text">@L["The requester sees this reason on their My Requests page."]</div>
+            <div class="modal-body" data-dialog-body></div>
+            <div class="modal-footer flex-column align-items-stretch">
+                <div id="rejectBox" class="ip-field w-100 mb-2 d-none">
+                    <label for="rejectionReason" class="ip-label"><span>@L["Rejection Reason"]</span> <span class="req">*</span></label>
+                    <textarea id="rejectionReason" class="ip-textarea" rows="3"
+                              placeholder="@L["The requester sees this reason on their My Requests page."]"></textarea>
+                    <span class="ip-error d-none" id="rejectionError">@L["Rejection reason is required."]</span>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <button type="button" class="btn btn-danger" onclick="confirmReject()">
-                    <i class="fas fa-times"></i> @L["Reject"]
-                </button>
+                <div class="d-flex justify-content-end gap-2 flex-wrap d-none" id="decisionButtons">
+                    <button type="button" class="ip-btn ip-btn-danger-ghost" id="modalRejectBtn">
+                        <i class="fa-solid fa-xmark"></i><span>@L["Reject"]</span>
+                    </button>
+                    <button type="button" class="ip-btn ip-btn-primary" id="modalApproveBtn">
+                        <span>@L["Approve"]</span><i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+                <div class="d-flex justify-content-end gap-2 flex-wrap d-none" id="rejectButtons">
+                    <button type="button" class="ip-btn ip-btn-secondary" id="rejectBackBtn">@L["Back"]</button>
+                    <button type="button" class="ip-btn ip-btn-danger" id="confirmRejectBtn">
+                        <span>@L["Confirm rejection"]</span><i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -180,185 +153,85 @@
 @section Scripts {
     <script>
         let currentRequestId = null;
+        const modalEl = document.getElementById('detailsModal');
 
-        $(document).ready(initApprovalsTable);
-
-        // Runs on load and again after live-updates.js swaps in a fresh table.
-        function initApprovalsTable() {
-            // the table is only rendered when there is at least one pending request
-            if ($('#approvalsTable').length) {
-                $('#approvalsTable').DataTable({
-                    order: [[0, 'desc']],
-                    pageLength: 25
-                });
-            }
-
-            // Parse and display summaries
-            $('.request-summary').each(function() {
-                const $this = $(this);
-                const actionData = $this.data('action-data');
-                const requestType = String($this.data('request-type') || '');
-
-                try {
-                    const summary = getRequestSummary(requestType, actionData);
-                    // .text() not .html(): the summary embeds user-supplied ActionData fields
-                    $this.text(summary);
-                } catch (e) {
-                    $this.html(`<span class="text-danger">${escapeHtml(t('Error parsing data'))}</span>`);
-                }
-            });
+        function setMode(mode) {   // 'view' (decided), 'decide' (pending) or 'reject'
+            // d-none, not [hidden]: these are flex containers, and display:flex beats [hidden].
+            $('#decisionButtons').toggleClass('d-none', mode !== 'decide');
+            $('#rejectButtons').toggleClass('d-none', mode !== 'reject');
+            $('#rejectBox').toggleClass('d-none', mode !== 'reject');
+            if (mode === 'reject') setTimeout(() => $('#rejectionReason').trigger('focus'), 50);
         }
 
-        // New, approved and rejected requests from other admins update the counts and the list.
-        LiveUpdates.watch({
-            entities: ['approval'],
-            regions: ['#approvalsStats', '#approvalsRegion'],
-            beforeRefresh() {
-                if ($.fn.DataTable.isDataTable('#approvalsTable')) $('#approvalsTable').DataTable().destroy();
-            },
-            afterRefresh: initApprovalsTable
-        });
-
-        function getRequestSummary(requestType, actionData) {
-            try {
-                const data = typeof actionData === 'string' ? JSON.parse(actionData) : actionData;
-
-                switch(requestType) {
-                    case 'product.create':
-                        const productData = data.ProductData || data;
-                        const code = productData.inventoryCode || productData.InventoryCode || t('N/A');
-                        const model = productData.model || productData.Model || t('N/A');
-                        const vendor = productData.vendor || productData.Vendor || t('N/A');
-                        const category = productData.categoryName || productData.CategoryName || t('Category #{0}', productData.categoryId || productData.CategoryId || t('N/A'));
-                        return t('New product: {0} by {1} (Code: {2}, Category: {3})', model, vendor, code, category);
-
-                    case 'product.update':
-                        return t('Update product #{0}', data.ProductId || data.productId || t('N/A'));
-
-                    case 'product.delete':
-                        return t('Delete product #{0}', data.ProductId || data.productId || t('N/A'));
-
-                    case 'product.transfer':
-                        const inventoryCode = data.inventoryCode || data.InventoryCode || t('N/A');
-                        const toDeptName = data.toDepartmentName || data.ToDepartmentName || t('Unknown Department');
-                        const toWorker = data.toWorker || data.ToWorker || '';
-                        return t('Transfer product ({0}) to {1}', inventoryCode, toDeptName) + (toWorker ? ' - ' + toWorker : '');
-
-                    default:
-                        return t('View details for more information');
-                }
-            } catch (e) {
-                console.error('Error parsing action data:', e);
-                return t('Error parsing request data');
-            }
-        }
-
-                function viewDetails(requestId) {
-            currentRequestId = requestId;
-            $('#detailsContent').html(skeletonHtml(5));
-            $('#modalApproveBtn, #modalRejectBtn').hide();
-            $('#detailsModal').modal('show');
-
-            $.get(`/Approvals/Details/${requestId}`, function(data) {
-                $('#detailsContent').html(data);
-                $('#modalApproveBtn, #modalRejectBtn').show()
-                    .off('click')
-                    .on('click', function() {
-                        if ($(this).attr('id') === 'modalApproveBtn') {
-                            quickApprove(requestId);
-                        } else {
-                            showRejectModal(requestId);
-                        }
-                        $('#detailsModal').modal('hide');
-                    });
-            }).fail(function(xhr, status, error) {
-                console.error('Failed to load details:', error);
-                $('#detailsContent').html(`<div class="alert alert-danger">${escapeHtml(t('Failed to load details. Please try again.'))}</div>`);
-            });
-        }
-
-        function quickApprove(requestId) {
-            confirmAction({
-                title: t('Approve request'),
-                message: t('Approve this request? The change will be applied immediately.'),
-                okText: t('Approve')
-            }, function () {
-                showLoader();
-
-                $.ajax({ url: `/Approvals/Approve/${requestId}`, type: 'POST', headers: AppConfig.antiforgeryHeaders() })
-                    .done(function(response) {
-                        hideLoader();
-                        if (response.success) {
-                            showToast(t('Request approved successfully'), 'success');
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showToast(t('Failed to approve request: {0}', response.message), 'error');
-                        }
-                    })
-                    .fail(function(xhr) {
-                        hideLoader();
-                        const errorMsg = xhr.responseJSON?.message || xhr.responseText || t('Unknown error');
-                        showToast(t('Failed to approve request: {0}', errorMsg), 'error');
-                    });
-            });
-        }
-
-        function showRejectModal(requestId) {
+        function viewDetails(requestId) {
             currentRequestId = requestId;
             $('#rejectionReason').val('').removeClass('is-invalid');
-            $('#rejectModal').modal('show');
+            $('#rejectionError').addClass('d-none');
+            setMode('view');
+            loadApprovalDetails(`/Approvals/Details/${requestId}`, modalEl).then(function (head) {
+                setMode(head && head.dataset.status === 'Pending' ? 'decide' : 'view');
+            });
         }
 
-        function confirmReject() {
-            const reason = $('#rejectionReason').val().trim();
+        $('#modalRejectBtn').on('click', () => setMode('reject'));
+        $('#rejectBackBtn').on('click', () => setMode('decide'));
+        $('#rejectionReason').on('input', function () {
+            if (this.value.trim()) { $(this).removeClass('is-invalid'); $('#rejectionError').addClass('d-none'); }
+        });
 
+        function busy($button, on) {
+            if (on) {
+                $button.data('html', $button.html()).prop('disabled', true)
+                    .html(`<span class="spinner-border spinner-border-sm"></span><span>${escapeHtml(t('Processing...'))}</span>`);
+            } else {
+                $button.prop('disabled', false).html($button.data('html'));
+            }
+        }
+
+        function decided(message, type) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+            showToast(message, type);
+            setTimeout(() => location.reload(), 900);
+        }
+
+        $('#modalApproveBtn').on('click', function () {
+            const $button = $(this);
+            busy($button, true);
+            $.ajax({ url: `/Approvals/Approve/${currentRequestId}`, type: 'POST', headers: AppConfig.antiforgeryHeaders() })
+                .done(function (response) {
+                    if (response.success) decided(t('Request approved successfully'), 'success');
+                    else { busy($button, false); showToast(t('Failed to approve request: {0}', response.message), 'error'); }
+                })
+                .fail(function (xhr) {
+                    busy($button, false);
+                    showToast(t('Failed to approve request: {0}', xhr.responseJSON?.message || t('Unknown error')), 'error');
+                });
+        });
+
+        $('#confirmRejectBtn').on('click', function () {
+            const reason = $('#rejectionReason').val().trim();
             if (!reason) {
-                $('#rejectionReason').addClass('is-invalid');
+                $('#rejectionReason').addClass('is-invalid').trigger('focus');
+                $('#rejectionError').removeClass('d-none');
                 return;
             }
-
-            showLoader();
-
+            const $button = $(this);
+            busy($button, true);
             $.ajax({ url: `/Approvals/Reject/${currentRequestId}`, type: 'POST', data: { reason: reason }, headers: AppConfig.antiforgeryHeaders() })
-                .done(function(response) {
-                    hideLoader();
-                    $('#rejectModal').modal('hide');
-                    if (response.success) {
-                        showToast(t('Request rejected'), 'info');
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        showToast(t('Failed to reject request: {0}', response.message), 'error');
-                    }
+                .done(function (response) {
+                    if (response.success) decided(t('Request rejected'), 'info');
+                    else { busy($button, false); showToast(t('Failed to reject request: {0}', response.message), 'error'); }
                 })
-                .fail(function(xhr) {
-                    hideLoader();
-                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || t('Unknown error');
-                    showToast(t('Failed to reject request: {0}', errorMsg), 'error');
+                .fail(function (xhr) {
+                    busy($button, false);
+                    showToast(t('Failed to reject request: {0}', xhr.responseJSON?.message || t('Unknown error')), 'error');
                 });
-        }
+        });
 
-        function showLoader() {
-            $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
-        }
-
-        function hideLoader() {
-            $('.loader-overlay').remove();
-        }
+        // New, approved and rejected requests from other admins update the figures, tabs and list.
+        LiveUpdates.watch({
+            entities: ['approval'],
+            regions: ['#approvalsStats', '#approvalsTabs', '#approvalsRegion']
+        });
     </script>
-}
-
-@functions {
-    string GetRequestTypeDisplay(string requestType)
-    {
-        return requestType switch
-        {
-            "product.create" => "Create Product",
-            "product.update" => "Update Product",
-            "product.delete" => "Delete Product",
-            "product.transfer" => "Transfer Product",
-            "route.update" => "Update Route",
-            "route.delete" => "Delete Route",
-            _ => requestType
-        };
-    }
 }

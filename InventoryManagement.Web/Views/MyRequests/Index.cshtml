@@ -151,15 +151,16 @@
 </div>
 
 <!-- Details Modal -->
-<div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@L["Request Details"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="flex-grow-1" style="min-width: 0" data-dialog-head></div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
             </div>
-            <div class="modal-body" id="detailsContent">
-                <partial name="_Skeleton" model="5" />
+            <div class="modal-body" data-dialog-body></div>
+            <div class="modal-footer">
+                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Close"]</button>
             </div>
         </div>
     </div>
@@ -215,14 +216,7 @@
         });
 
         function viewDetails(requestId) {
-            $('#detailsContent').html(skeletonHtml(5));
-            $('#detailsModal').modal('show');
-
-            $.get(`/MyRequests/Details/${requestId}`, function(data) {
-                $('#detailsContent').html(data);
-            }).fail(function() {
-                $('#detailsContent').html(`<div class="alert alert-danger">${escapeHtml(t('Failed to load details'))}</div>`);
-            });
+            loadApprovalDetails(`/MyRequests/Details/${requestId}`, document.getElementById('detailsModal'));
         }
 
          function cancelRequest(requestId) {

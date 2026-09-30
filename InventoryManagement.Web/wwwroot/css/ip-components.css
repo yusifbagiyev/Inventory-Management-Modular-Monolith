@@ -407,3 +407,18 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-found-where { min-width: 180px; }
 .ip-transfer-summary { color: var(--ip-text-3); font-size: var(--ip-fs-base) !important; }
 .ip-transfer-summary i { color: var(--ip-text-3); }
+
+/* ---------- approvals (design: 08) ---------- */
+.ip-stats { display: flex; gap: var(--ip-space-8); flex-wrap: wrap; }
+.ip-stat-value { font-size: var(--ip-fs-xl); line-height: var(--ip-lh-xl); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ip-stat-value.ip-status-text { font-size: var(--ip-fs-xl); }
+tr.ip-clickable { cursor: pointer; }
+.modal-header [data-approval-head] .modal-title { margin-top: 2px; }
+.ip-diff .new { white-space: pre-wrap; }
+.ip-diff td { vertical-align: top; }
+
+/* ---------- notifications page (design: 09) ---------- */
+.ip-notif-day .ip-notif-item { border-radius: 0; }
+.ip-notif-day .ip-notif-item:focus-visible { outline-offset: -2px; }
+.ip-notif-link { display: inline-block; margin-top: 4px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-accent-text); }
+.ip-tabs > .ip-filter { margin-bottom: 4px; }

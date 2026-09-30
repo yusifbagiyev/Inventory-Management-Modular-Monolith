@@ -1,369 +1,210 @@
 @model NotificationListViewModel
 @{
     ViewData["Title"] = "Notifications";
+    const int Shown = 200;
+    var items = Model.Notifications.OrderByDescending(n => n.CreatedAt).Take(Shown).ToList();
+    var unread = items.Count(n => !n.IsRead);
+    var types = items.Select(n => n.Type).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().OrderBy(t => t).ToList();
 }
 
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
             <h1>@L["Notifications"]</h1>
+            <div class="ip-sub ip-num" id="unreadSummary">@L["{0} unread", unread]</div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary btn-sm" onclick="markAllAsRead()">
-                <i class="fas fa-check-double"></i> @L["Mark All Read"]
+        <div class="ip-page-actions">
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="markAllAsRead()">
+                <i class="fa-solid fa-check-double"></i><span>@L["Mark all as read"]</span>
             </button>
         </div>
     </div>
 
-    <div class="filter-panel mt-3">
-        <div class="filter-top">
-            <div class="filter-search">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="searchFilter" placeholder="@L["Search in notifications..."]">
-                </div>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm" onclick="applyFilters()">
-                <i class="fas fa-filter"></i> @L["Apply Filters"]
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
-                <i class="fas fa-redo"></i> @L["Reset Filters"]
-            </button>
-        </div>
-
-        <div class="filter-grid">
-            <div class="filter-field">
-                <label for="statusFilter">@L["Status"]</label>
-                <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
-                    <option value="">@L["All Notifications"]</option>
-                    <option value="unread">@L["Unread Only"]</option>
-                    <option value="read">@L["Read Only"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="typeFilter">@L["Type"]</label>
-                <select class="form-select form-select-sm" id="typeFilter" onchange="applyFilters()">
-                    <option value="">@L["All Types"]</option>
-                    <option value="ApprovalRequest">@L["Approval Requests"]</option>
-                    <option value="ApprovalResponse">@L["Approval Responses"]</option>
-                    <option value="ProductUpdate">@L["Product Updates"]</option>
-                    <option value="RouteUpdate">@L["Route Updates"]</option>
-                    <option value="System">@L["System Messages"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="dateRangeFilter">@L["Date Range"]</label>
-                <input type="text" class="form-control form-control-sm" id="dateRangeFilter" placeholder="@L["Select date range"]">
-            </div>
-        </div>
-    </div>
-
-    <div class="result-bar">
-        <span>@L["Notifications shown"]: <b><span id="visibleCount">0</span></b> / <b><span id="totalCount">@Model.Notifications.Count</span></b></span>
-        @if (Model.Notifications.Any())
+    <nav class="ip-tabs strong align-items-center" aria-label="@L["Notifications"]">
+        <button type="button" class="ip-tab active" data-filter="all">@L["All"] <span class="count">@items.Count</span></button>
+        <button type="button" class="ip-tab" data-filter="unread">@L["Unread"] <span class="count" id="unreadCount">@unread</span></button>
+        @if (types.Count > 1)
         {
-            <span class="text-muted">@L["Scroll the list to load more"]</span>
+            <label class="ip-filter ms-auto">
+                <span>@L["Type"]</span>
+                <select id="typeFilter">
+                    <option value="">@L["All"]</option>
+                    @foreach (var type in types)
+                    {
+                        <option value="@type">@L[TypeLabel(type)]</option>
+                    }
+                </select>
+            </label>
         }
-    </div>
+    </nav>
 
-    <div class="card mb-4">
-        <div class="card-body p-0">
-            @if (Model.Notifications.Any())
+    <div id="notificationsList">
+        @if (items.Count == 0)
+        {
+            <div class="ip-empty">
+                <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
+                <div class="title">@L["No notifications found"]</div>
+                <div class="text">@L["Approval requests, product and route updates will show up here."]</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var day in items.GroupBy(n => n.CreatedAt.Date))
             {
-                @* Fixed-height scroller: the infinite-scroll handler binds to this element's scroll event. *@
-                <div id="notificationsList" style="height: 600px; overflow-y: auto;">
-                    <div id="notificationsContent">
-                        @foreach (var notification in Model.Notifications.Take(50)) // Initial load of 50 items
-                        {
-                            <div class="notification-item @(notification.IsRead ? "" : "unread")"
-                                 data-id="@notification.Id"
-                                 data-type="@notification.Type"
-                                 data-date="@notification.CreatedAt.ToString("yyyy-MM-dd")"
-                                 data-read="@(notification.IsRead ? "read" : "unread")">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                                            <span class="state state-flat @TypeState(notification.Type)">
-                                                <i class="fas @TypeIcon(notification.Type)"></i> @L[TypeLabel(notification.Type)]
-                                            </span>
-                                            @if (!notification.IsRead)
-                                            {
-                                                <span class="badge bg-primary">@L["New"]</span>
-                                            }
-                                        </div>
-                                        <div class="fw-semibold">@notification.Title</div>
-                                        <div class="text-muted">@notification.Message</div>
-                                        <small class="mono text-muted">
-                                            <i class="fas fa-clock me-1"></i>@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")
-                                        </small>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        @if (!notification.IsRead)
-                                        {
-                                            <button class="btn btn-sm btn-outline-primary" onclick="markAsRead(@notification.Id)">
-                                                <i class="fas fa-check"></i> @L["Mark Read"]
-                                            </button>
-                                        }
-                                    </div>
+                <section class="ip-notif-day" data-day>
+                    <div class="ip-day-head">@DayLabel(day.Key)</div>
+                    @foreach (var notification in day)
+                    {
+                        var link = Link(notification);
+                        <div class="ip-notif-item @(notification.IsRead ? "" : "unread")" role="button" tabindex="0"
+                             data-id="@notification.Id" data-type="@notification.Type" data-read="@(notification.IsRead ? "read" : "unread")">
+                            <span class="unread-dot" aria-hidden="true"></span>
+                            <span class="ip-notif-icon" aria-hidden="true"><i class="fa-solid @TypeIcon(notification.Type)"></i></span>
+                            <div class="flex-grow-1" style="min-width: 0">
+                                <div class="d-flex justify-content-between align-items-baseline gap-3">
+                                    <span class="title">@notification.Title</span>
+                                    <span class="time ip-num" title="@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")">@notification.CreatedAt.ToString("HH:mm")</span>
                                 </div>
+                                <div class="text">@notification.Message</div>
+                                @if (link != null)
+                                {
+                                    <a class="ip-notif-link" href="@link.Value.Url">@link.Value.Label</a>
+                                }
                             </div>
-                        }
-                    </div>
-                    <div id="loadMoreTrigger" class="text-center py-3 d-none">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                            <span class="visually-hidden">@L["Loading more..."]</span>
                         </div>
-                    </div>
-                </div>
+                    }
+                </section>
             }
-            else
+            <div class="ip-empty d-none" id="noMatch">
+                <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
+                <div class="title">@L["Nothing found"]</div>
+                <div class="text">@L["No notifications match this filter."]</div>
+            </div>
+            @if (Model.Notifications.Count > Shown)
             {
-                <div class="empty-state">
-                    <i class="fas fa-bell-slash"></i>
-                    <h5>@L["No notifications found"]</h5>
-                    <p class="text-muted mb-0">@L["Approval requests, product and route updates will show up here."]</p>
-                </div>
+                <p class="ip-faint mt-3">@L["The latest {0} are shown.", Shown]</p>
             }
-        </div>
+        }
     </div>
 </div>
 
 @section Scripts {
-    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
-    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
-    <script src="~/js/date-range.js" asp-append-version="true"></script>
-
     <script>
-        let currentPage = 1;
-        let itemsPerPage = 50;
-        let isLoading = false;
-        let allNotifications = [];
-        // null = no filter active. An empty array is a filter that matched nothing - the old code
-        // used [] for both, so a no-match filter fell back to "everything" and Clear emptied the list.
-        let filteredNotifications = null;
+        // Tabs (All / Unread) and the type select filter the list in place; a day heading hides
+        // when none of its notifications is left. Clicking a notification marks it read (_Layout).
+        let filter = 'all';
 
-        // Only this page's list: the header bell's dropdown uses the same .notification-item class.
-        const PAGE_ITEMS = '#notificationsContent .notification-item';
-
-        function currentItems() {
-            return filteredNotifications === null ? allNotifications : filteredNotifications;
+        function applyFilter() {
+            const type = $('#typeFilter').val() || '';
+            let shown = 0;
+            document.querySelectorAll('#notificationsList [data-day]').forEach(function (day) {
+                let any = false;
+                day.querySelectorAll('.ip-notif-item').forEach(function (item) {
+                    const visible = (filter !== 'unread' || item.classList.contains('unread'))
+                        && (!type || item.dataset.type === type);
+                    item.classList.toggle('d-none', !visible);
+                    any = any || visible;
+                    if (visible) shown++;
+                });
+                day.classList.toggle('d-none', !any);
+            });
+            $('#noMatch').toggleClass('d-none', shown > 0 || !document.querySelector('#notificationsList [data-day]'));
         }
 
-        $(document).ready(function() {
-            // Date range filter (client-side, like the others)
-            DateRange.attach('#dateRangeFilter', { onApply: applyFilters, onClear: applyFilters });
+        function updateUnread() {
+            const count = document.querySelectorAll('#notificationsList .ip-notif-item.unread').length;
+            $('#unreadCount').text(count);
+            $('#unreadSummary').text(t('{0} unread', count));
+        }
 
-            // Store all notifications for client-side filtering
-            allNotifications = $(PAGE_ITEMS).toArray();
-            updateCounts();
+        $('.ip-tabs [data-filter]').on('click', function () {
+            $('.ip-tabs [data-filter]').removeClass('active');
+            $(this).addClass('active');
+            filter = this.dataset.filter;
+            applyFilter();
+        });
+        $('#typeFilter').on('change', applyFilter);
 
-            // Implement infinite scrolling
-            $('#notificationsList').on('scroll', function() {
-                if ($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 100) {
-                    loadMoreNotifications();
-                }
-            });
+        // The layout's handler marks a clicked item read (removes .unread): keep the counts in step.
+        new MutationObserver(updateUnread).observe(document.getElementById('notificationsList'),
+            { subtree: true, attributes: true, attributeFilter: ['class'] });
 
-            // Real-time search
-            $('#searchFilter').on('input', function() {
-                applyFilters();
-            });
+        // Keyboard: Enter on a focused notification works like a click.
+        $(document).on('keydown', '#notificationsList .ip-notif-item', function (e) {
+            if (e.key === 'Enter' && e.target === this) this.click();
         });
 
-        function applyFilters() {
-            const status = $('#statusFilter').val();
-            const type = $('#typeFilter').val();
-            const dateRange = $('#dateRangeFilter').val();
-            const searchTerm = $('#searchFilter').val().toLowerCase();
-
-            if (!status && !type && !DateRange.parse(dateRange) && !searchTerm) {
-                filteredNotifications = null;
-                displayFilteredNotifications();
-                return;
-            }
-
-            filteredNotifications = allNotifications.filter(function(item) {
-                const $item = $(item);
-                let show = true;
-
-                // Status filter
-                if (status && $item.data('read') !== status) {
-                    show = false;
-                }
-
-                // Type filter
-                if (type && $item.data('type') !== type) {
-                    show = false;
-                }
-
-                // Date range filter
-                // data-date is yyyy-MM-dd; both ends of the range are inclusive.
-                const range = DateRange.parse(dateRange);
-                if (range) {
-                    const itemDate = DateRange.fromIso(String($item.data('date')));
-                    if (!itemDate || itemDate < range.start || itemDate > range.end) {
-                        show = false;
-                    }
-                }
-
-                // Search filter
-                if (searchTerm && !$item.text().toLowerCase().includes(searchTerm)) {
-                    show = false;
-                }
-
-                return show;
-            });
-
-            displayFilteredNotifications();
-        }
-
-        function displayFilteredNotifications() {
-            $('#notificationsContent').empty();
-
-            const itemsToShow = currentItems().slice(0, itemsPerPage);
-            itemsToShow.forEach(item => {
-                $('#notificationsContent').append(item);
-            });
-
-            updateCounts();
-            currentPage = 1;
-        }
-
-        function loadMoreNotifications() {
-            if (isLoading) return;
-
-            const totalItems = currentItems().length;
-            const startIndex = currentPage * itemsPerPage;
-
-            if (startIndex >= totalItems) return;
-
-            isLoading = true;
-            $('#loadMoreTrigger').removeClass('d-none');
-
-            setTimeout(() => {
-                const items = currentItems();
-                const endIndex = Math.min(startIndex + itemsPerPage, items.length);
-
-                for (let i = startIndex; i < endIndex; i++) {
-                    $('#notificationsContent').append(items[i]);
-                }
-
-                currentPage++;
-                isLoading = false;
-                $('#loadMoreTrigger').addClass('d-none');
-                updateCounts();
-            }, 500);
-        }
-
-        function updateCounts() {
-            const visibleCount = $(PAGE_ITEMS).length;
-            const totalCount = currentItems().length;
-
-            $('#visibleCount').text(visibleCount);
-            $('#totalCount').text(totalCount);
-        }
-
-        function markAsRead(notificationId) {
-            $.ajax({
-                url: '/Notifications/MarkAsRead',
-                type: 'POST',
-                data: JSON.stringify(notificationId),
-                contentType: 'application/json',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
-                },
-                success: function() {
-                    const $item = $(`.notification-item[data-id="${notificationId}"]`);
-                    $item.removeClass('unread').attr('data-read', 'read');
-                    $item.find('.btn-outline-primary').remove();
-                    $item.find('.badge.bg-primary').remove();
-                    showToast(t('Notification marked as read'), 'success');
-                },
-                error: function() {
-                    showToast(t('Failed to mark notification as read'), 'error');
-                }
-            });
-        }
-
         function markAllAsRead() {
-            confirmAction({
-                title: t('Mark all as read'),
-                message: t('Mark every notification as read?'),
-                okText: t('Mark all read')
-            }, function () {
-                $.ajax({
-                    url: '/Notifications/MarkAllAsRead',
-                    type: 'POST',
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
-                    },
-                    success: function() {
-                        $('.notification-item').removeClass('unread').attr('data-read', 'read');
-                        $('.notification-item .btn-outline-primary').remove();
-                        $('.notification-item .badge.bg-primary').remove();
-                        showToast(t('All notifications marked as read'), 'success');
-                    },
-                    error: function() {
-                        showToast(t('Failed to mark all as read'), 'error');
-                    }
-                });
+            $.ajax({
+                url: '/Notifications/MarkAllAsRead',
+                type: 'POST',
+                headers: AppConfig.antiforgeryHeaders(),
+                success: function () {
+                    $('#notificationsList .ip-notif-item').removeClass('unread').attr('data-read', 'read');
+                    if (window.loadNotificationCount) loadNotificationCount();
+                    applyFilter();
+                    showToast(t('All notifications marked as read'), 'success');
+                },
+                error: function () {
+                    showToast(t('Failed to mark all as read'), 'error');
+                }
             });
-        }
-
-        function clearFilters() {
-            $('#statusFilter').val('');
-            $('#typeFilter').val('');
-            DateRange.clear('#dateRangeFilter');
-            $('#searchFilter').val('');
-            filteredNotifications = null;
-            displayFilteredNotifications();
         }
     </script>
 }
 
 @functions {
-    string TypeState(string type)
+    string DayLabel(DateTime day)
     {
-        return type switch
-        {
-            "ApprovalRequest" => "state-warn",
-            "ApprovalResponse" => "state-ok",
-            "RouteCompleted" => "state-ok",
-            "TransferCompleted" => "state-ok",
-            "ProductUpdate" => "state-info",
-            "RouteUpdate" => "state-new",
-            "System" => "state-idle",
-            _ => "state-idle"
-        };
+        var today = DateTime.Today;
+        if (day == today) return L["Today"].Value;
+        if (day == today.AddDays(-1)) return L["Yesterday"].Value;
+        return day.ToString("dd.MM.yyyy");
     }
 
-    string TypeIcon(string type)
+    // Where the notification points (its stored Data: approvalRequestId, routeId, productId).
+    (string Url, string Label)? Link(NotificationDto notification)
     {
-        return type switch
+        if (string.IsNullOrWhiteSpace(notification.Data)) return null;
+        try
         {
-            "ApprovalRequest" => "fa-clock",
-            "ApprovalResponse" => "fa-check-circle",
-            "RouteCompleted" => "fa-check-double",
-            "TransferCompleted" => "fa-exchange-alt",
-            "ProductUpdate" => "fa-box",
-            "RouteUpdate" => "fa-route",
-            "System" => "fa-info-circle",
-            _ => "fa-bell"
-        };
+            var data = Newtonsoft.Json.Linq.JObject.Parse(notification.Data);
+            int? Id(string name) => data.GetValue(name, StringComparison.OrdinalIgnoreCase)
+                is Newtonsoft.Json.Linq.JValue { Type: Newtonsoft.Json.Linq.JTokenType.Integer } value ? (int)value : null;
+
+            if (Id("approvalRequestId") is int requestId)
+                return (User.IsInRole("Admin") && notification.Type == "ApprovalRequest" ? "/Approvals" : "/MyRequests",
+                        L["View request #{0}", requestId].Value);
+            if (Id("routeId") is int routeId)
+                return ($"/Routes/Details/{routeId}", L["View route"].Value);
+            if (Id("productId") is int productId)
+                return ($"/Products/Details/{productId}", L["View product"].Value);
+        }
+        catch (Newtonsoft.Json.JsonException) { }
+        return null;
     }
 
-    string TypeLabel(string type)
+    string TypeIcon(string type) => type switch
     {
-        return type switch
-        {
-            "ApprovalRequest" => "Approval Request",
-            "ApprovalResponse" => "Approval Response",
-            "RouteCompleted" => "Route Completed",
-            "TransferCompleted" => "Transfer Completed",
-            "ProductUpdate" => "Product Update",
-            "RouteUpdate" => "Route Update",
-            "System" => "System",
-            _ => string.IsNullOrWhiteSpace(type) ? "Notification" : type
-        };
-    }
+        "ApprovalRequest" => "fa-clipboard-check",
+        "ApprovalResponse" => "fa-circle-check",
+        "RouteCompleted" => "fa-check-double",
+        "TransferCompleted" => "fa-arrow-right-arrow-left",
+        "ProductUpdate" => "fa-box",
+        "RouteUpdate" => "fa-route",
+        "System" => "fa-circle-info",
+        _ => "fa-bell"
+    };
+
+    string TypeLabel(string type) => type switch
+    {
+        "ApprovalRequest" => "Approval Request",
+        "ApprovalResponse" => "Approval Response",
+        "RouteCompleted" => "Route Completed",
+        "TransferCompleted" => "Transfer Completed",
+        "ProductUpdate" => "Product Update",
+        "RouteUpdate" => "Route Update",
+        "System" => "System",
+        _ => string.IsNullOrWhiteSpace(type) ? "Notification" : type
+    };
 }

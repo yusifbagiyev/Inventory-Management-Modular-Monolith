@@ -39,6 +39,16 @@ namespace ApprovalService.Infrastructure.Repositories
         }
 
 
+        public async Task<IReadOnlyList<ApprovalRequest>> GetDecidedAsync(IReadOnlyCollection<ApprovalStatus> statuses, int take, CancellationToken cancellationToken = default)
+        {
+            return await _context.ApprovalRequests
+                .Where(r => statuses.Contains(r.Status))
+                .OrderByDescending(r => r.ProcessedAt ?? r.CreatedAt)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+        }
+
+
         public async Task<IEnumerable<ApprovalRequest>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await _context.ApprovalRequests

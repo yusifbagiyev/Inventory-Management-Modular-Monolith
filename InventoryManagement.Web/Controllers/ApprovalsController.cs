@@ -17,17 +17,25 @@ namespace InventoryManagement.Web.Controllers
             _approvalService = approvalService;
         }
 
-        public async Task<IActionResult> Index()
+        private const int DecidedPageSize = 50;
+
+        /// <param name="status">The tab: pending (default), approved or rejected.</param>
+        public async Task<IActionResult> Index(string? status = null)
         {
-            var pendingRequests = await _approvalService.GetPendingRequestsAsync();
+            var tab = status is "approved" or "rejected" ? status : "pending";
             var statistics = await _approvalService.GetStatisticsAsync();
+            var decided = await _approvalService.GetDecidedRequestsAsync(
+                tab == "pending" ? null : tab == "approved", DecidedPageSize);
 
             return View(new ApprovalDashboardViewModel
             {
-                PendingRequests = pendingRequests,
+                Tab = tab,
+                Requests = tab == "pending" ? await _approvalService.GetPendingRequestsAsync() : decided.Items,
                 TotalPending = statistics.TotalPending,
                 TotalApproved = statistics.TotalApprovedToday,
-                TotalRejected = statistics.TotalRejectedToday
+                TotalRejected = statistics.TotalRejectedToday,
+                ApprovedCount = decided.ApprovedCount,
+                RejectedCount = decided.RejectedCount
             });
         }
 

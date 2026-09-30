@@ -458,3 +458,31 @@ window.Rail = (function () {
 
     return { toggle: toggle };
 })();
+
+/**
+ * Opens an approval request in a dialog (Approvals, My Requests). The partial's
+ * [data-approval-head] goes into the modal's [data-dialog-head], the rest into [data-dialog-body].
+ * Resolves with the head element (its data-status says whether a decision is still open).
+ */
+function loadApprovalDetails(url, modalEl) {
+    const head = modalEl.querySelector('[data-dialog-head]');
+    const body = modalEl.querySelector('[data-dialog-body]');
+    head.innerHTML = skeletonHtml(1);
+    body.innerHTML = skeletonHtml(5);
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+    return $.get(url).then(function (html) {
+        const holder = document.createElement('div');
+        holder.innerHTML = html;
+        const partHead = holder.querySelector('[data-approval-head]');
+        head.innerHTML = '';
+        if (partHead) head.appendChild(partHead);
+        body.innerHTML = '';
+        body.append(...holder.childNodes);
+        return partHead;
+    }, function () {
+        head.innerHTML = '';
+        body.innerHTML = `<div class="ip-banner ip-banner-danger">${escapeHtml(t('Failed to load details. Please try again.'))}</div>`;
+        return null;
+    });
+}

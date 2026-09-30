@@ -60,6 +60,12 @@ namespace InventoryManagement.Web.Services
             };
         }
 
+        public async Task<(List<ApprovalRequestDto> Items, int ApprovedCount, int RejectedCount)> GetDecidedRequestsAsync(bool? approved, int take)
+        {
+            var result = await _mediator.Send(new GetDecidedRequests.Query(approved, take));
+            return (ModelMapper.MapList<ApprovalRequestDto>(result.Items), result.ApprovedCount, result.RejectedCount);
+        }
+
         public async Task<List<ApprovalRequestDto>> GetMyRequestsAsync()
             => ModelMapper.MapList<ApprovalRequestDto>(await _mediator.Send(new GetUserRequests.Query(UserId)));
 
