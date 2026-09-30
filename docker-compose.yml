@@ -74,7 +74,8 @@ services:
     restart: always
 
   seq:
-    image: datalust/seq:latest
+    # Pinned: Seq keeps state in seq_data, so upgrade deliberately (change this tag).
+    image: datalust/seq:2025.2.14476
     container_name: inventory_seq
     environment:
       - TZ=${TZ:-UTC}
@@ -91,7 +92,7 @@ services:
     restart: always
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.29-alpine
     container_name: inventory_nginx
     ports:
       - "80:80"
@@ -101,7 +102,6 @@ services:
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
-      - ./logs:/var/log/nginx
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro
     depends_on:
