@@ -25,7 +25,7 @@ function collectTableData(table, excludeHeaders = []) {
             && !skip.includes(col.name.toLowerCase()));
 
     const rows = Array.from(table.querySelectorAll('tbody tr'))
-        .filter(tr => tr.offsetParent !== null || tr.style.display !== 'none')
+        .filter(tr => tr.style.display !== 'none')
         .map(tr => {
             const cells = Array.from(tr.children);
             return keep.map(col => readCellText(cells[col.index]));
@@ -84,7 +84,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
 
     const printWindow = frame.contentWindow;
     printWindow.document.open();
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapePdfText(title)}</title>
+    printWindow.document.write(`<!DOCTYPE html><html lang="${document.documentElement.lang || 'en'}"><head><meta charset="utf-8"><title>${escapePdfText(title)}</title>
 <style>
   @page { size: A4 landscape; margin: 10mm 8mm; }
   * { box-sizing: border-box; }
@@ -168,14 +168,38 @@ function currentFilterSummary() {
     return chips.length ? t('Filters:') + ' ' + chips.join('   |   ') : '';
 }
 
+/**
+ * The same list with every row that matches the current filters: the page on screen holds one
+ * page (20-30 rows), so the list is re-read from the server as a single page. Falls back to the
+ * rows on screen if that fails.
+ */
+async function loadWholeList(table) {
+    const key = table.id || table.querySelector('tbody[id]')?.id;
+    if (!key) return table;
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('pageNumber', '1');
+        url.searchParams.set('pageSize', '100000');
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) return table;
+        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const found = doc.getElementById(key);
+        return (found && (found.tagName === 'TABLE' ? found : found.closest('table'))) || table;
+    } catch (e) {
+        console.error('Could not load the whole list for export', e);
+        return table;
+    }
+}
+
 /** Exports one list table, columns picked by header name; `title` also names the toast target. */
-function exportListTable(table, title) {
+async function exportListTable(table, title) {
     title = t(title);
     if (!table) {
         showToast(t('{0} table not found', title), 'error');
         return;
     }
 
+    table = await loadWholeList(table);
     const { headers, rows } = collectTableData(table, ['Actions']);
     if (!rows.length) {
         showToast(t('Nothing to export'), 'warning');
@@ -227,9 +251,10 @@ function exportTimelineToPDF() {
     // Generate HTML for PDF
     const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <h1 style="text-align: center; color: #1e40af; margin-bottom: 10px;">
+            <h1 style="text-align: center; color: #14232B; margin-bottom: 4px;">
                 ${escapePdfText(t('Transfer Timeline Report'))}
             </h1>
+            ${timeline.dataset.product ? `<div style="text-align: center; font-size: 12pt; font-weight: 600; margin-bottom: 10px;">${escapePdfText(timeline.dataset.product)}</div>` : ''}
             <div style="text-align: center; color: #6b7280; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
                 <div>${escapePdfText(t('Generated on: {0}', formatDate(new Date(), true)))}</div>
                 <div>${escapePdfText(t('Total Transfers: {0}', timelineClone.querySelectorAll('.timeline-item').length))}</div>
@@ -240,7 +265,7 @@ function exportTimelineToPDF() {
 
     openPrintFrame(`
         <!DOCTYPE html>
-        <html>
+        <html lang="${document.documentElement.lang || 'en'}">
         <head>
             <meta charset="UTF-8">
             <title>${escapePdfText(t('Transfer Timeline Report'))}</title>

@@ -58,6 +58,17 @@ namespace InventoryManagement.Web.Services
                 }
             }
 
+            // The users page reads through the identity module's service, not MediatR.
+            try
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<IdentityService.Application.Services.IAuthService>().GetAllUsersAsync();
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Warm-up of the user list failed");
+            }
+
             _logger.LogInformation("Warm-up finished in {Elapsed} ms", watch.ElapsedMilliseconds);
         }
     }

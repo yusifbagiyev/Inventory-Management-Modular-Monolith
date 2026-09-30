@@ -35,7 +35,8 @@
                 <div class="card-body">
                     @if (ordered.Any())
                     {
-                        <div class="timeline">
+                        var product = ordered[0];
+                        <div class="timeline" data-product="@($"{product.InventoryCode} · {product.Model} ({product.Vendor})")">
                             @for (var i = 0; i < ordered.Count; i++)
                             {
                                 var route = ordered[i];
