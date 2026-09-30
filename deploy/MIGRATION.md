@@ -20,9 +20,11 @@ köçür, hər modul üçün ayrıca schema ilə:
 ## 0. Hazırlıq (dayanma yoxdur, istənilən vaxt)
 
 1. **`.env`** (`/opt/inventory166/.env`):
-   - `SERVICEDESK_API_KEY=` — ServiceDesk inteqrasiyasının açarı (`X-Api-Key`).
-     **Boş qalarsa, ServiceDesk inteqrasiyası keçiddən sonra işləməyəcək.** Köhnə açar git tarixçəsində
-     olduğu üçün yeni açar yaradıb ServiceDesk tərəfində də dəyişmək tövsiyə olunur.
+   - `SERVICEDESK_API_KEY` — ServiceDesk-in açarı (`X-Api-Key`). Köhnə açar `.env`-ə yazılıb (2026-09-30).
+     Açarda `$` işarəsi var, ona görə dəyər **tək dırnaqda** olmalıdır: `SERVICEDESK_API_KEY='...'`.
+     ServiceDesk köhnə product-service-ə birbaşa `http://10.0.1.60:5001` ünvanı ilə müraciət edir.
+     Yeni sistemdə həmin port nginx-dədir və yalnız product API-ni (`/api/products`, `/api/categories`,
+     `/api/departments`, `/images/products`) ötürür. ServiceDesk tərəfində heç nə dəyişmir.
    - `WHATSAPP_API_TOKEN`, `WHATSAPP_GROUP_ID` artıq var. Köhnə token git tarixçəsindədir, ona görə onu
      WaSender panelində yeniləmək tövsiyə olunur.
    - `RABBITMQ_USER` və `RABBITMQ_PASSWORD` artıq istifadə olunmur. Qalsalar, zərəri yoxdur.
@@ -75,7 +77,14 @@ Köhnə konteynerlər silinmir, yalnız dayandırılır. Onlar *Təmizlik* addı
 - Məhsul və route şəkilləri görünür.
 - Bildiriş zəngi real vaxtda yenilənir: ikinci brauzerdə bir əməliyyat edib yoxlayın.
 - Gözləyən approval sorğusu varsa, birini təsdiqləyin və nəticəni yoxlayın.
-- ServiceDesk inteqrasiyası (açar qoyulubsa) məhsulları oxuya bilir.
+- ServiceDesk inteqrasiyası işləyir. Serverdə yoxlayın: açarla 200, açarsız 401 gözlənilir.
+  ```bash
+  K=$(grep ^SERVICEDESK_API_KEY= .env | cut -d= -f2- | tr -d "'")
+  curl -s -o /dev/null -w '%{http_code}
+' -H "X-Api-Key: $K" http://localhost:5001/api/products?pageSize=1
+  curl -s -o /dev/null -w '%{http_code}
+' http://localhost:5001/api/products?pageSize=1
+  ```
 - Seq (`http://<server>:5342`) `ApplicationName = InventoryManagement` qeydlərini göstərir.
 
 ## 3. CD-ni aktiv edin

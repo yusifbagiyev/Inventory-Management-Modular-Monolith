@@ -64,7 +64,7 @@ Every write permission has `x` and `x.direct` (`product.create` / `product.creat
 ## Auth
 
 - **UI**: cookie auth only (`AuthenticationExtensions`). Login validates in-process (`IAuthService.ValidateCredentialsAsync`), rate-limited per IP. Claims come from `UserPrincipalFactory` and are **re-read from the DB every 5 minutes** (`OnValidatePrincipal`), so role/permission changes and deactivation apply without a re-login.
-- **/api**: a policy scheme picks `X-Api-Key` (ServiceDesk; keys in `ApiKeys:[{Key,ServiceName,ServiceId,Permissions}]`, env only), `Bearer` JWT (issued by `/api/auth/login` for external clients), else the cookie. Unauthenticated /api and AJAX calls get 401/403, not a login redirect.
+- **/api**: a policy scheme picks `X-Api-Key` (ServiceDesk; keys in `ApiKeys:[{Key,ServiceName,ServiceId,Permissions}]`, env only — in `.env` the key is single-quoted because it contains `$`; ServiceDesk calls `http://<server>:5001`, which nginx serves with the product API only, as the old product-service port did), `Bearer` JWT (issued by `/api/auth/login` for external clients), else the cookie. Unauthenticated /api and AJAX calls get 401/403, not a login redirect.
 - **CSRF**: cookie-authenticated unsafe `/api` calls must send the `RequestVerificationToken` header (JS: `AppConfig.antiforgeryHeaders()`); MVC POSTs use `[ValidateAntiForgeryToken]`.
 - Permissions: `[Permission("x")]` (API) and `[PermissionAuthorize]` / `User.HasPermission` (UI). Policies are resolved dynamically by `PermissionPolicyProvider`. **Admin role bypasses every permission check** on both sides.
 - Behind nginx: forwarded headers trust exactly one hop; client IP = `RemoteIpAddress`, never the raw `X-Forwarded-For`.

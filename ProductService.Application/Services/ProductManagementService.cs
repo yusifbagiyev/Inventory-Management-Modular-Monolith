@@ -343,7 +343,9 @@ namespace ProductService.Application.Services
 
         public int GetUserId(ClaimsPrincipal User)
         {
-            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            // API-key clients (ServiceDesk) carry a service id such as "servicedesk-001", not a
+            // user id; they get 0 and the permission check answers them with 403, not a 500.
+            return int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
         }
 
 
