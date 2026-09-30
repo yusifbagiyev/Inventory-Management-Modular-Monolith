@@ -170,7 +170,7 @@
                 {
                     @foreach (var dept in Model.DepartmentStats)
                     {
-                        <a class="ip-list-link" href="@(transfersUrl)&departmentId=@dept.DepartmentId">
+                        <a class="ip-list-link" href="@(transfersUrl)&departmentName=@Uri.EscapeDataString(dept.DepartmentName)">
                             <span class="text-truncate" style="width: 30%">@dept.DepartmentName</span>
                             <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
                             <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">

@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Design;
 using ProductService.Domain.Entities;
 using SharedServices.Persistence;
@@ -26,6 +28,18 @@ namespace ProductService.Infrastructure.Data
                 entity.HasIndex(e => e.CreatedAt);
                 entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
+                entity.Property(e => e.Color).HasMaxLength(30);
+                // Specifications live with the product as a jsonb array of {Name, Value}.
+                entity.Property(e => e.Specifications)
+                      .HasColumnType("jsonb")
+                      .HasDefaultValueSql("'[]'::jsonb")
+                      .HasConversion(
+                          v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                          v => JsonSerializer.Deserialize<List<ProductSpecification>>(v, (JsonSerializerOptions?)null) ?? new List<ProductSpecification>(),
+                          new ValueComparer<List<ProductSpecification>>(
+                              (a, b) => a!.SequenceEqual(b!),
+                              c => c.Aggregate(0, (hash, s) => HashCode.Combine(hash, s.GetHashCode())),
+                              c => c.ToList()));
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");
                 entity.Property(e => e.UpdatedAt)

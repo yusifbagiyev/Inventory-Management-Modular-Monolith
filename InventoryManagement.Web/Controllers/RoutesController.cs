@@ -41,7 +41,8 @@ namespace InventoryManagement.Web.Controllers
             DateTime? endDate = null,
             int? departmentId = null,
             string? categoryName = null,
-            string? routeType = null)
+            string? routeType = null,
+            string? departmentName = null)
         {
             var type = ParseRouteType(routeType);
 
@@ -49,7 +50,7 @@ namespace InventoryManagement.Web.Controllers
             // only the category name).
             var result = await _mediator.Send(new GetAllRoutesQuery(
                 pageNumber, pageSize, search, isCompleted, startDate, endDate,
-                departmentId, categoryName, type));
+                departmentId, categoryName, type, departmentName));
             var routes = ModelMapper.Map<PagedResultDto<RouteViewModel>>(result);
             foreach (var r in routes.Items)
                 TranslateNotes(r);
@@ -66,6 +67,7 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.PageNumber = pageNumber ?? 1;
             ViewBag.PageSize = pageSize ?? 30;
             ViewBag.CurrentDepartmentId = departmentId;
+            ViewBag.CurrentDepartmentName = departmentName;
             ViewBag.CurrentCategoryName = categoryName;
             ViewBag.CurrentRouteType = routeType;
 
@@ -74,9 +76,9 @@ namespace InventoryManagement.Web.Controllers
 
             // Tab counts (All / Pending / Completed): the same filters with each completion state.
             ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type))).TotalCount;
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
             ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, categoryName, type))).TotalCount;
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
 
             return View(routes);
         }
@@ -127,7 +129,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToNotFound();
 
             // Needed for the destination dropdown.
-            ViewBag.Departments = await GetDepartmentOptions();
+            ViewBag.Departments = await GetDepartmentOptions(route.ToDepartmentId);
             return View(ModelMapper.Map<RouteViewModel>(route));
         }
 
@@ -139,7 +141,7 @@ namespace InventoryManagement.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Departments = await GetDepartmentOptions();
+                ViewBag.Departments = await GetDepartmentOptions(model.ToDepartmentId);
                 return HandleValidationErrors(model);
             }
 
@@ -213,28 +215,32 @@ namespace InventoryManagement.Web.Controllers
         private static RouteType? ParseRouteType(string? routeType)
             => Enum.TryParse<RouteType>(routeType, ignoreCase: true, out var parsed) ? parsed : null;
 
-        private async Task<List<SelectListItem>> GetDepartmentOptions()
-            => (await _mediator.Send(new GetLookupsQuery())).Departments.ToSelectList();
+        /// <summary>Active departments (plus <paramref name="currentId"/> when a route already points at an inactive one).</summary>
+        private async Task<List<SelectListItem>> GetDepartmentOptions(int? currentId = null)
+            => (await _mediator.Send(new GetLookupsQuery())).Departments.ToChoiceList(currentId);
 
         private async Task LoadDepartments(TransferViewModel model)
             => model.Departments = await GetDepartmentOptions();
 
         /// <summary>
-        /// Department/category options + cascading data for the route list's filter panel. The
-        /// category dropdown uses the category NAME as its value, because routes store only the
-        /// name; the department dropdown uses the id. Pairs are emitted as [[deptId, "name"], ...].
+        /// Department/category options + cascading data for the route list's filter panel. A route
+        /// keeps the department and category NAMES of the moment it was written, so both dropdowns
+        /// offer the names found on routes (renamed and deleted departments included) and filter by
+        /// them. Pairs are emitted as [["department", "category"], ...].
         /// </summary>
         private async Task LoadFilterLists(bool? isCompleted, RouteType? routeType)
         {
-            var lookups = await _mediator.Send(new GetLookupsQuery());
-            ViewBag.FilterCategories = lookups.Categories
-                .Select(c => new SelectListItem { Value = c.Name, Text = c.Name })
-                .ToList();
-            ViewBag.FilterDepartments = lookups.Departments.ToSelectList();
-
             var facets = await _mediator.Send(new GetRouteFilterFacetsQuery(isCompleted, routeType));
+            static List<SelectListItem> Options(IEnumerable<string> names) => names
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+                .Select(n => new SelectListItem { Value = n, Text = n })
+                .ToList();
+
+            ViewBag.FilterCategories = Options(facets.Pairs.Select(p => p.CategoryName));
+            ViewBag.FilterDepartments = Options(facets.Pairs.Select(p => p.DepartmentName));
             ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(
-                facets.Pairs.Select(p => new object[] { p.DepartmentId, p.CategoryName }));
+                facets.Pairs.Select(p => new object[] { p.DepartmentName, p.CategoryName }));
         }
     }
 }

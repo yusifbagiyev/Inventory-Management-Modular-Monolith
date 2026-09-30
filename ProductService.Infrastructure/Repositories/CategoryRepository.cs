@@ -33,7 +33,7 @@ namespace ProductService.Infrastructure.Repositories
             => await _context.Categories
                 .AsNoTracking()
                 .OrderBy(x => x.Name)
-                .Select(x => new LookupItem(x.Id, x.Name))
+                .Select(x => new LookupItem(x.Id, x.Name, x.IsActive))
                 .ToListAsync(cancellationToken);
 
         public async Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default)

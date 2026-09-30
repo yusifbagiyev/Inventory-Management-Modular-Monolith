@@ -34,7 +34,7 @@ namespace RouteService.Infrastructure.Repositories
         }
 
 
-        public async Task<IReadOnlyList<(int DepartmentId, string CategoryName)>> GetDepartmentCategoryPairsAsync(
+        public async Task<IReadOnlyList<(string DepartmentName, string CategoryName)>> GetDepartmentCategoryPairsAsync(
             bool? isCompleted = null,
             RouteType? routeType = null,
             CancellationToken cancellationToken = default)
@@ -49,28 +49,31 @@ namespace RouteService.Infrastructure.Repositories
             if (routeType.HasValue)
                 scoped = scoped.Where(r => r.RouteType == routeType.Value);
 
-            // Pull the distinct (from, to, category) triples, then fan each out to one pair per real
-            // department end. Done in memory because a route has two department columns and dept 0
-            // ("Removed") must be dropped - awkward to express as a single translatable query.
+            // A route keeps the department and category names as they were when it was written;
+            // departments renamed or deleted since then are still listed under those names. Distinct
+            // (from, to, category) rows are fanned out in memory to one pair per real department end
+            // (dept 0 is the "Removed" placeholder of a removal).
             var rows = await scoped
                 .Select(r => new
                 {
                     r.FromDepartmentId,
+                    r.FromDepartmentName,
                     r.ToDepartmentId,
+                    r.ToDepartmentName,
                     r.ProductSnapshot.CategoryName
                 })
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
-            var pairs = new HashSet<(int, string)>();
+            var pairs = new HashSet<(string, string)>();
             foreach (var row in rows)
             {
                 if (string.IsNullOrEmpty(row.CategoryName))
                     continue;
-                if (row.ToDepartmentId != 0)
-                    pairs.Add((row.ToDepartmentId, row.CategoryName));
-                if (row.FromDepartmentId.HasValue && row.FromDepartmentId.Value != 0)
-                    pairs.Add((row.FromDepartmentId.Value, row.CategoryName));
+                if (row.ToDepartmentId != 0 && !string.IsNullOrEmpty(row.ToDepartmentName))
+                    pairs.Add((row.ToDepartmentName, row.CategoryName));
+                if (row.FromDepartmentId is > 0 && !string.IsNullOrEmpty(row.FromDepartmentName))
+                    pairs.Add((row.FromDepartmentName, row.CategoryName));
             }
 
             return pairs.ToList();
@@ -102,7 +105,8 @@ namespace RouteService.Infrastructure.Repositories
             int? departmentId = null,
             string? categoryName = null,
             RouteType? routeType = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string? departmentName = null)
         {
             var query = _context.InventoryRoutes.AsNoTracking().AsQueryable();
 
@@ -116,6 +120,10 @@ namespace RouteService.Infrastructure.Repositories
             // as GetByDepartmentIdAsync.
             if (departmentId.HasValue)
                 query = query.Where(r => r.FromDepartmentId == departmentId.Value || r.ToDepartmentId == departmentId.Value);
+
+            // By the name written on the route: what the list shows, even for renamed/deleted departments.
+            if (!string.IsNullOrEmpty(departmentName))
+                query = query.Where(r => r.FromDepartmentName == departmentName || r.ToDepartmentName == departmentName);
 
             // Category lives on the product snapshot as a name (there is no id to match on).
             if (!string.IsNullOrEmpty(categoryName))

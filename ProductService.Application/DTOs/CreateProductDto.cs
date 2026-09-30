@@ -16,6 +16,8 @@ namespace ProductService.Application.DTOs
         public bool IsWorking { get; set; } = true;
         public bool IsActive { get; set; } = true;
         public bool IsNewItem { get; set; } = true;
+        public string? Color { get; set; }
+        public List<ProductSpecificationDto>? Specifications { get; set; }
         public int CategoryId { get; set; }
         public int DepartmentId { get; set; }
     }

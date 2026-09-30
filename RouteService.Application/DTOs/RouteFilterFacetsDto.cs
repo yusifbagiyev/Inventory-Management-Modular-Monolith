@@ -12,7 +12,8 @@ namespace RouteService.Application.DTOs
 
     public class DepartmentCategoryNameFacetDto
     {
-        public int DepartmentId { get; set; }
+        /// <summary>The department name as written on the routes (not the department's current name).</summary>
+        public string DepartmentName { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
     }
 }

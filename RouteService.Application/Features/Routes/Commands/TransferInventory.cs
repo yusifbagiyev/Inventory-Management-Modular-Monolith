@@ -61,6 +61,8 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 var toDepartment = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId, cancellationToken)
                     ?? throw new NotFoundException($"Department {dto.ToDepartmentId} not found");
+                if (!toDepartment.IsActive)
+                    throw new RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
 
                 // Two open transfers for one product could be completed in either order, leaving the
                 // product wherever the last one pointed.

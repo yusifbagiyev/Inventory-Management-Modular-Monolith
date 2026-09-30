@@ -487,3 +487,10 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-tabs { flex-wrap: wrap; }
   .ip-tabs > .ip-filter { margin-left: 0 !important; flex: 1 1 100%; order: 10; }
 }
+
+/* ---------- product specifications (name/value rows) ---------- */
+.ip-spec-list { display: flex; flex-direction: column; gap: var(--ip-space-2); max-width: 760px; }
+.ip-spec-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto; gap: var(--ip-space-2); align-items: center; }
+.ip-spec-list:empty { display: none; }
+.ip-dl-wide > div { grid-template-columns: 220px minmax(0, 1fr); }
+@media (max-width: 575.98px) { .ip-spec-row { grid-template-columns: 1fr auto; } .ip-spec-row input:nth-child(2) { grid-column: 1; } .ip-spec-row button { grid-row: 1 / span 2; grid-column: 2; } }

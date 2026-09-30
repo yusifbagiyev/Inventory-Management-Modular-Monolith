@@ -117,15 +117,19 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
-        /// <summary>Top 5 departments by transfers sent or received in the period.</summary>
+        /// <summary>
+        /// Top 5 departments by transfers sent or received in the period, by the department name
+        /// written on each transfer (what it was called then, even if renamed or deleted since).
+        /// </summary>
         private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers)
         {
-            var byDepartment = new Dictionary<int, (int Id, string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>();
+            var byDepartment = new Dictionary<string, (int Id, string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
 
             void Add(int id, string? name, TransferActivity transfer, string? worker)
             {
-                if (!byDepartment.TryGetValue(id, out var entry))
-                    byDepartment[id] = entry = (id, name ?? $"#{id}", new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                var key = string.IsNullOrWhiteSpace(name) ? $"#{id}" : name;
+                if (!byDepartment.TryGetValue(key, out var entry))
+                    byDepartment[key] = entry = (id, key, new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 if (!entry.Transfers.Contains(transfer))
                     entry.Transfers.Add(transfer);
                 if (!string.IsNullOrWhiteSpace(worker))

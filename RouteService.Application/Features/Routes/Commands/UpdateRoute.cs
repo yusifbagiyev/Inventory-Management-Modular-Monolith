@@ -71,6 +71,8 @@ namespace RouteService.Application.Features.Routes.Commands
                 {
                     var department = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId.Value, cancellationToken)
                         ?? throw new NotFoundException($"Department with ID {dto.ToDepartmentId.Value} not found");
+                    if (!department.IsActive)
+                        throw new RouteException($"The department {department.Name} is inactive. Choose an active department.");
 
                     route.UpdateDestination(department.Id, department.Name);
                 }

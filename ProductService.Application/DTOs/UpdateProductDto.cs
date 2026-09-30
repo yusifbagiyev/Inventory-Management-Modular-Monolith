@@ -21,5 +21,13 @@ namespace ProductService.Application.DTOs
         public bool IsWorking { get; set; }
         public bool IsActive { get; set; }
         public bool IsNewItem { get; set; }
+        /// <summary>
+        /// True when <see cref="Color"/> and <see cref="Specifications"/> were sent and replace the
+        /// current ones. Callers that do not know these fields (older clients, approval requests made
+        /// before they existed) leave it false and the product keeps its colour and specifications.
+        /// </summary>
+        public bool ReplaceDetails { get; set; }
+        public string? Color { get; set; }
+        public List<ProductSpecificationDto>? Specifications { get; set; }
     }
 }

@@ -6,6 +6,7 @@
     var filterCategories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
     var filterDepartments = ViewBag.FilterDepartments as List<SelectListItem> ?? new List<SelectListItem>();
     var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
+    var curDepartmentName = ViewBag.CurrentDepartmentName as string;
     var curCategoryName = ViewBag.CurrentCategoryName as string;
 
 }
@@ -16,7 +17,7 @@
         var curEnd = ViewBag.EndDate as DateTime?;
         var curRouteType = ViewBag.CurrentRouteType as string;
         var hasFilters = !string.IsNullOrEmpty(currentSearch) || curStart.HasValue || curEnd.HasValue
-            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curCategoryName) || !string.IsNullOrEmpty(curRouteType);
+            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curDepartmentName) || !string.IsNullOrEmpty(curCategoryName) || !string.IsNullOrEmpty(curRouteType);
         var pendingCount = (int)(ViewBag.PendingCount ?? 0);
         var completedCount = (int)(ViewBag.CompletedCount ?? 0);
         var canComplete = User.HasPermission("route.complete");
@@ -83,7 +84,7 @@
                 <option value="">@L["All"]</option>
                 @foreach (var d in filterDepartments)
                 {
-                    <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
+                    <option value="@d.Value" selected="@(d.Value == curDepartmentName)">@d.Text</option>
                 }
             </select>
         </label>
@@ -253,12 +254,14 @@
         const routeFilters = ListFilters.init({
             basePath: '/Routes',
             pageSize: @Model.PageSize,
-            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [[departmentId, "categoryName"], ...]
+            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [["departmentName", "categoryName"], ...]
             // Routes store the category by name, so the category options carry names.
             categoryKey: 'name',
+            // ...and the department by the name written on the route, too.
+            departmentKey: 'name',
             fields: {
                 isCompleted: '#statusFilter',
-                departmentId: '#departmentFilter',
+                departmentName: '#departmentFilter',
                 categoryName: '#categoryFilter',
                 routeType: '#typeFilter'
             }

@@ -174,6 +174,8 @@ namespace InventoryManagement.Web.Controllers
                 IsNewItem = productModel.IsNewItem,
                 CategoryId = productModel.CategoryId,
                 DepartmentId = productModel.DepartmentId,
+                Color = productModel.Color,
+                Specifications = ToSpecificationDtos(productModel.Specifications),
                 ImageFiles = productModel.ImageFiles
             };
 
@@ -221,7 +223,11 @@ namespace InventoryManagement.Web.Controllers
                 IsNewItem = productModel.IsNewItem,
                 ImageFiles = productModel.ImageFiles,
                 RemoveImageUrls = productModel.RemoveImageUrls,
-                CoverImageUrl = productModel.CoverImageUrl
+                CoverImageUrl = productModel.CoverImageUrl,
+                // The form always sends colour and specifications (an empty list clears them).
+                ReplaceDetails = true,
+                Color = productModel.Color,
+                Specifications = ToSpecificationDtos(productModel.Specifications)
             };
 
             var response = await RunAsync(
@@ -271,11 +277,18 @@ namespace InventoryManagement.Web.Controllers
                 facets.Pairs.Select(p => new[] { p.DepartmentId, p.CategoryId }));
         }
 
+        private static List<ModuleDtos.ProductSpecificationDto> ToSpecificationDtos(IEnumerable<ProductSpecificationViewModel>? lines)
+            => (lines ?? [])
+                .Where(l => !string.IsNullOrWhiteSpace(l.Name))
+                .Select(l => new ModuleDtos.ProductSpecificationDto { Name = l.Name, Value = l.Value })
+                .ToList();
+
         private async Task LoadDropdowns(ProductViewModel model)
         {
             var lookups = await _mediator.Send(new GetLookupsQuery());
             model.Categories = lookups.Categories.ToSelectList();
-            model.Departments = lookups.Departments.ToSelectList();
+            // Inactive departments are not offered, except the one the product is already in.
+            model.Departments = lookups.Departments.ToChoiceList(model.DepartmentId);
         }
     }
 }

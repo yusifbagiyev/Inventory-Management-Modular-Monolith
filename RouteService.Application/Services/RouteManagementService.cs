@@ -205,6 +205,11 @@ namespace RouteService.Application.Services
             {
                 throw new NotFoundException($"Target department {dto.ToDepartmentId} not found");
             }
+            // Refused before it reaches the approval queue, too.
+            if (!toDepartment.IsActive)
+            {
+                throw new RouteService.Domain.Exceptions.RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
+            }
 
             
             var actionData = new Dictionary<string, object>

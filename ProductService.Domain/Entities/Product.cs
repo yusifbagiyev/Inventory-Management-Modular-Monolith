@@ -17,6 +17,10 @@
         public int CategoryId { get; private set; }
         public int DepartmentId { get; private set; }
         public bool IsNewItem { get; private set; }
+        /// <summary>Free text ("Black", "Silver"); null when not set.</summary>
+        public string? Color { get; private set; }
+        /// <summary>Name/value lines in the order they were entered.</summary>
+        public List<ProductSpecification> Specifications { get; private set; } = [];
         public Category? Category { get; private set; }
         public Department? Department { get; private set; }
         public DateTime CreatedAt { get; private set; }
@@ -67,6 +71,20 @@
             IsNewItem=isNewItem ?? IsNewItem;
             UpdatedAt = DateTime.Now;
         }
+        /// <summary>
+        /// Sets the colour and the specifications. Blank colours become null, lines without a name
+        /// are dropped and the rest are trimmed. These belong to the product only: transfers and
+        /// routes never change them.
+        /// </summary>
+        public void SetDetails(string? color, IEnumerable<ProductSpecification>? specifications)
+        {
+            Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
+            Specifications = (specifications ?? [])
+                .Where(s => !string.IsNullOrWhiteSpace(s.Name))
+                .Select(s => new ProductSpecification(s.Name.Trim(), (s.Value ?? "").Trim()))
+                .ToList();
+        }
+
         public void UpdateAfterRouting(int departmentId, string? worker)
         {
             if (departmentId <= 0)

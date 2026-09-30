@@ -13,7 +13,7 @@ namespace SharedServices.Contracts
         string? Worker,
         string? ImageUrl);
 
-    public record DepartmentSummary(int Id, string Name);
+    public record DepartmentSummary(int Id, string Name, bool IsActive = true);
 
     /// <summary>Read access to the products module for other modules.</summary>
     public interface IProductCatalog

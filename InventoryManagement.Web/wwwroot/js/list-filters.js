@@ -10,6 +10,7 @@
 //       pageSize: 30,
 //       pairs: [[deptId, categoryKey], ...],      // facet pairs from the server
 //       categoryKey: 'id' | 'name',               // what #categoryFilter option values hold
+//       departmentKey: 'id' | 'name',             // what #departmentFilter option values hold
 //       fields: { status: '#statusFilter', categoryId: '#categoryFilter', ... },  // param -> select
 //       urlFlags: ['hasImage', 'assigned']        // URL-only flags kept across changes when 'false'
 //   });
@@ -20,8 +21,11 @@ window.ListFilters = (function () {
     'use strict';
 
     function init(options) {
-        const config = Object.assign({ categoryKey: 'id', fields: {}, urlFlags: [] }, options);
+        const config = Object.assign({ categoryKey: 'id', departmentKey: 'id', fields: {}, urlFlags: [] }, options);
         const toCategoryKey = config.categoryKey === 'id'
+            ? function (v) { return parseInt(v, 10); }
+            : function (v) { return v; };
+        const toDepartmentKey = config.departmentKey === 'id'
             ? function (v) { return parseInt(v, 10); }
             : function (v) { return v; };
 
@@ -36,7 +40,11 @@ window.ListFilters = (function () {
             catToDepts.get(cat).add(dep);
         });
 
-        function selectedDepartment() { return parseInt($('#departmentFilter').val(), 10); }
+        // null when no department is chosen.
+        function selectedDepartment() {
+            const value = $('#departmentFilter').val();
+            return value ? toDepartmentKey(value) : null;
+        }
         function selectedCategory() {
             const value = $('#categoryFilter').val();
             return value ? toCategoryKey(value) : null;
@@ -99,7 +107,7 @@ window.ListFilters = (function () {
         // Show only the categories present in the selected department (all when none).
         function cascadeCategoryOptions() {
             const dep = selectedDepartment();
-            const allowed = Number.isNaN(dep) ? null : (deptToCats.get(dep) || new Set());
+            const allowed = dep === null ? null : (deptToCats.get(dep) || new Set());
             document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
                 opt.hidden = opt.value !== '' && allowed !== null && !allowed.has(toCategoryKey(opt.value));
             });
@@ -110,14 +118,14 @@ window.ListFilters = (function () {
             const cat = selectedCategory();
             const allowed = cat === null ? null : (catToDepts.get(cat) || new Set());
             document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
-                opt.hidden = opt.value !== '' && allowed !== null && !allowed.has(parseInt(opt.value, 10));
+                opt.hidden = opt.value !== '' && allowed !== null && !allowed.has(toDepartmentKey(opt.value));
             });
         }
 
         // An incompatible pairing is dropped so the reload cannot land on an empty result.
         function onDepartmentChange() {
             const dep = selectedDepartment(), cat = selectedCategory();
-            if (!Number.isNaN(dep) && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) {
+            if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) {
                 $('#categoryFilter').val('');
             }
             cascadeCategoryOptions();
@@ -126,7 +134,7 @@ window.ListFilters = (function () {
 
         function onCategoryChange() {
             const cat = selectedCategory(), dep = selectedDepartment();
-            if (cat !== null && !Number.isNaN(dep) && !(catToDepts.get(cat) || new Set()).has(dep)) {
+            if (cat !== null && dep !== null && !(catToDepts.get(cat) || new Set()).has(dep)) {
                 $('#departmentFilter').val('');
             }
             cascadeDepartmentOptions();

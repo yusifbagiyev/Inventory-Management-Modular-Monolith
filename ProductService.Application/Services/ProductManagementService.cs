@@ -224,7 +224,9 @@ namespace ProductService.Application.Services
                 ["isActive"] = dto.IsActive,
                 ["isNewItem"] = dto.IsNewItem,
                 ["categoryId"] = dto.CategoryId,
-                ["departmentId"] = dto.DepartmentId
+                ["departmentId"] = dto.DepartmentId,
+                ["color"] = dto.Color ?? "",
+                ["specifications"] = SpecificationData(dto.Specifications)
             };
 
             // Enrich with category and department names for better approval context
@@ -264,6 +266,12 @@ namespace ProductService.Application.Services
                 ["isActive"] = dto.IsActive,
                 ["isNewItem"] = dto.IsNewItem,
             };
+            if (dto.ReplaceDetails)
+            {
+                updateData["replaceDetails"] = true;
+                updateData["color"] = dto.Color ?? "";
+                updateData["specifications"] = SpecificationData(dto.Specifications);
+            }
 
             // A single legacy ImageFile keeps its "replace the images" meaning.
             if (dto.ImageFile is { Length: > 0 })
@@ -279,6 +287,12 @@ namespace ProductService.Application.Services
         }
 
 
+
+        private static List<Dictionary<string, string>> SpecificationData(IEnumerable<ProductSpecificationDto>? lines)
+            => (lines ?? [])
+                .Where(l => !string.IsNullOrWhiteSpace(l.Name))
+                .Select(l => new Dictionary<string, string> { ["name"] = l.Name!.Trim(), ["value"] = (l.Value ?? "").Trim() })
+                .ToList();
 
         public async Task<List<string>> TrackWhatChanges(ProductDto existingProduct, UpdateProductDto updatedProduct)
         {
@@ -304,6 +318,15 @@ namespace ProductService.Application.Services
                 changes.Add(updatedProduct.IsActive == true ? "Product is active now" : "Product is not available");
             if (existingProduct.IsWorking != updatedProduct.IsWorking)
                 changes.Add(updatedProduct.IsWorking == true ? "Product is working now" : "Product is not working ");
+            if (updatedProduct.ReplaceDetails)
+            {
+                if (TextDiffers(existingProduct.Color, updatedProduct.Color))
+                    changes.Add($"Color: {(string.IsNullOrWhiteSpace(existingProduct.Color) ? "None" : existingProduct.Color)} → {(string.IsNullOrWhiteSpace(updatedProduct.Color) ? "None" : updatedProduct.Color!.Trim())}");
+                var current = existingProduct.Specifications.Select(s => (s.Name ?? "", s.Value ?? ""));
+                var proposed = SpecificationData(updatedProduct.Specifications).Select(s => (s["name"], s["value"]));
+                if (!current.SequenceEqual(proposed))
+                    changes.Add("Specifications were updated");
+            }
             if (ImageSet.Changes(existingProduct.ImageUrls, updatedProduct.RemoveImageUrls,
                     ImageSet.Files(updatedProduct.ImageFile, updatedProduct.ImageFiles).Count, updatedProduct.CoverImageUrl))
                 changes.Add("Product images were updated");

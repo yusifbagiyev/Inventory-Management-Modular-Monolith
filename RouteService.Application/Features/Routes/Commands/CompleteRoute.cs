@@ -18,14 +18,17 @@ namespace RouteService.Application.Features.Routes.Commands
             private readonly IInventoryRouteRepository _repository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IProductTransfers _productTransfers;
+            private readonly IProductCatalog _productCatalog;
             private readonly IPublisher _publisher;
 
             public Handler(
                 IInventoryRouteRepository repository,
                 IUnitOfWork unitOfWork,
                 IProductTransfers productTransfers,
+                IProductCatalog productCatalog,
                 IPublisher publisher)
             {
+                _productCatalog = productCatalog;
                 _repository = repository;
                 _unitOfWork = unitOfWork;
                 _productTransfers = productTransfers;
@@ -39,6 +42,14 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 if (route.IsCompleted)
                     throw new RouteException("Route is already completed");
+
+                // The destination may have been deactivated or deleted since the transfer was made.
+                if (route.RouteType == RouteType.Transfer)
+                {
+                    var destination = await _productCatalog.GetDepartmentAsync(route.ToDepartmentId, cancellationToken);
+                    if (destination is not { IsActive: true })
+                        throw new RouteException($"The department {route.ToDepartmentName} is no longer available. Change the transfer's destination before completing it.");
+                }
 
                 route.Complete();
                 await _repository.UpdateAsync(route, cancellationToken);

@@ -14,6 +14,8 @@
         public bool IsWorking { get; set; }
         public bool IsActive { get; set; }
         public bool IsNewItem { get; set; }
+        public string? Color { get; set; }
+        public List<ProductSpecificationDto> Specifications { get; set; } = [];
         public int CategoryId { get; set; }
         public string? CategoryName { get; set; } = string.Empty;
         public int DepartmentId { get; set; }

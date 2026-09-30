@@ -21,7 +21,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         /// <summary>Set for deletions: the dialog warns instead of showing a diff.</summary>
         public bool IsDeletion { get; private init; }
 
-        private static readonly Regex FieldChange = new(@"^(Vendor|Model|Category|Department|Worker|Description|Destination): (.*?) (?:→|->) (.*)$", RegexOptions.Singleline);
+        private static readonly Regex FieldChange = new(@"^(Vendor|Model|Category|Department|Worker|Description|Color|Destination): (.*?) (?:→|->) (.*)$", RegexOptions.Singleline);
 
         private static readonly Dictionary<string, Change> Sentences = new()
         {
@@ -69,6 +69,8 @@ namespace InventoryManagement.Web.Models.ViewModels
             Add(view, "Department", null, Str(d, "departmentName"));
             Add(view, "Worker", null, Str(d, "worker"));
             Add(view, "Description", null, Str(d, "description"));
+            Add(view, "Color", null, Str(d, "color"));
+            Add(view, "Specifications", null, SpecificationText(d));
             view.Changes.Add(new("Working state", null, Bool(d, "isWorking", true) ? "Working" : "Not working", true));
             view.Changes.Add(new("Availability", null, Bool(d, "isActive", true) ? "Active" : "Inactive", true));
             if (Bool(d, "isNewItem", false))
@@ -90,6 +92,8 @@ namespace InventoryManagement.Web.Models.ViewModels
                 var m = FieldChange.Match(line);
                 if (m.Success)
                     view.Changes.Add(new(m.Groups[1].Value, NoneToNull(m.Groups[2].Value), NoneToNull(m.Groups[3].Value)));
+                else if (line.Trim() == "Specifications were updated")
+                    view.Changes.Add(new("Specifications", null, update is null ? null : SpecificationText(update)));
                 else if (Sentences.TryGetValue(line.Trim(), out var change))
                     view.Changes.Add(change);
                 // "Product images were updated": shown by the images block.
@@ -181,6 +185,14 @@ namespace InventoryManagement.Web.Models.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(current) || !string.IsNullOrWhiteSpace(proposed))
                 view.Changes.Add(new(field, current, proposed));
+        }
+
+        /// <summary>"RAM: 16 GB; Colour: ..." from a stored specifications array (null when empty).</summary>
+        private static string? SpecificationText(JObject d)
+        {
+            if (Get(d, "specifications") is not JArray lines || lines.Count == 0) return null;
+            return string.Join("; ", lines.OfType<JObject>()
+                .Select(l => $"{Str(l, "name")}: {Str(l, "value")}".TrimEnd(' ', ':')));
         }
 
         private static string SubjectOf(string? model, string? code)

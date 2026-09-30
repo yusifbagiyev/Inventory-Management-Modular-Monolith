@@ -42,7 +42,7 @@ namespace ProductService.Infrastructure.Services
             _context.Departments
                 .AsNoTracking()
                 .Where(d => d.Id == departmentId)
-                .Select(d => new DepartmentSummary(d.Id, d.Name))
+                .Select(d => new DepartmentSummary(d.Id, d.Name, d.IsActive))
                 .FirstOrDefaultAsync(cancellationToken);
 
         public async Task ApplyTransferAsync(

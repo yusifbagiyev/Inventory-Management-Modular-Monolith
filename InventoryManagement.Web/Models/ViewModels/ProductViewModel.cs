@@ -3,6 +3,15 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
+    public class ProductSpecificationViewModel
+    {
+        [StringLength(50)]
+        public string? Name { get; set; }
+
+        [StringLength(200)]
+        public string? Value { get; set; }
+    }
+
     public class ProductViewModel
     {
         public int Id { get; set; }
@@ -41,6 +50,15 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         [Display(Name = "Is New Item")]
         public bool IsNewItem { get; set; } = true;
+
+
+        [Display(Name = "Color")]
+        [StringLength(30)]
+        public string? Color { get; set; }
+
+
+        /// <summary>Name/value lines; rows without a name are dropped on save.</summary>
+        public List<ProductSpecificationViewModel> Specifications { get; set; } = [];
 
 
         [Required]

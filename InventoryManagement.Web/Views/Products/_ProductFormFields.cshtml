@@ -34,6 +34,17 @@
             <span asp-validation-for="Model" class="ip-error"></span>
         </div>
         <div class="ip-field">
+            <label asp-for="Color" class="ip-label">@L["Color"]</label>
+            <input asp-for="Color" class="ip-input" list="colorSuggestions" maxlength="30" autocomplete="off" />
+            <datalist id="colorSuggestions">
+                @foreach (var color in new[] { "Black", "White", "Silver", "Grey", "Gold", "Blue", "Red", "Green" })
+                {
+                    <option value="@L[color]"></option>
+                }
+            </datalist>
+            <span asp-validation-for="Color" class="ip-error"></span>
+        </div>
+        <div class="ip-field">
             <label asp-for="CategoryId" class="ip-label"><span>@L["Category"]</span> <span class="req">*</span></label>
             <select asp-for="CategoryId" asp-items="Model.Categories" class="ip-select">
                 <option value="">@L["-- Select Category --"]</option>
@@ -60,6 +71,40 @@
             <span asp-validation-for="Worker" class="ip-error"></span>
         </div>
     </div>
+</section>
+
+@* Specifications: name/value rows (product-form.js adds, removes and renumbers them). *@
+<section class="ip-form-section">
+    <div class="d-flex justify-content-between align-items-baseline gap-3 flex-wrap mb-3">
+        <h2 class="mb-0">@L["Specifications"]</h2>
+        <span class="ip-hint">@L["For example: Processor - Intel Core i5, RAM - 16 GB."]</span>
+    </div>
+    <div class="ip-spec-list" data-spec-list data-max="30">
+        @for (var i = 0; i < Model.Specifications.Count; i++)
+        {
+            <div class="ip-spec-row" data-spec-row>
+                <input name="Specifications[@i].Name" value="@Model.Specifications[i].Name" class="ip-input" maxlength="50"
+                       placeholder="@L["Name"]" aria-label="@L["Specification name"]" />
+                <input name="Specifications[@i].Value" value="@Model.Specifications[i].Value" class="ip-input" maxlength="200"
+                       placeholder="@L["Value"]" aria-label="@L["Specification value"]" />
+                <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-spec-remove title="@L["Remove"]" aria-label="@L["Remove"]">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        }
+    </div>
+    <template data-spec-template>
+        <div class="ip-spec-row" data-spec-row>
+            <input data-field="Name" class="ip-input" maxlength="50" placeholder="@L["Name"]" aria-label="@L["Specification name"]" />
+            <input data-field="Value" class="ip-input" maxlength="200" placeholder="@L["Value"]" aria-label="@L["Specification value"]" />
+            <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-spec-remove title="@L["Remove"]" aria-label="@L["Remove"]">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </template>
+    <button type="button" class="ip-btn ip-btn-ghost ip-btn-sm mt-2" data-spec-add>
+        <i class="fa-solid fa-plus"></i><span>@L["Add specification"]</span>
+    </button>
 </section>
 
 <section class="ip-form-section">

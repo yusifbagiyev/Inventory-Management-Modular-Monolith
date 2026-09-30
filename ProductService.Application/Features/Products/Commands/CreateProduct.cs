@@ -30,6 +30,19 @@ namespace ProductService.Application.Features.Products.Commands
                 RuleFor(x => x.ProductDto.DepartmentId)
                     .GreaterThan(0).WithMessage("Valid department is required");
 
+                RuleFor(x => x.ProductDto.Color)
+                    .MaximumLength(30).WithMessage("Color cannot exceed 30 characters");
+
+                RuleFor(x => x.ProductDto.Specifications)
+                    .Must(s => s == null || s.Count <= ProductDetails.MaxSpecifications)
+                    .WithMessage($"A product can have at most {ProductDetails.MaxSpecifications} specifications");
+
+                RuleForEach(x => x.ProductDto.Specifications).ChildRules(line =>
+                {
+                    line.RuleFor(s => s.Name).MaximumLength(50).WithMessage("A specification name cannot exceed 50 characters");
+                    line.RuleFor(s => s.Value).MaximumLength(200).WithMessage("A specification value cannot exceed 200 characters");
+                });
+
                 RuleFor(x => ImageSet.Files(x.ProductDto.ImageFile, x.ProductDto.ImageFiles).Count)
                     .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
@@ -38,6 +51,7 @@ namespace ProductService.Application.Features.Products.Commands
         public class CreateProductCommandHandler : IRequestHandler<Command, ProductDto>
         {
             private readonly IProductRepository _productRepository;
+            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IImageService _imageService;
             private readonly IPublisher _publisher;
@@ -45,12 +59,14 @@ namespace ProductService.Application.Features.Products.Commands
 
             public CreateProductCommandHandler(
                 IProductRepository productRepository,
+                IDepartmentRepository departmentRepository,
                 IUnitOfWork unitOfWork,
                 IImageService imageService,
                 IPublisher publisher,
                 DbSession session)
             {
                 _productRepository = productRepository;
+                _departmentRepository = departmentRepository;
                 _unitOfWork = unitOfWork;
                 _imageService = imageService;
                 _publisher = publisher;
@@ -63,6 +79,7 @@ namespace ProductService.Application.Features.Products.Commands
 
                 if (await _productRepository.GetByInventoryCodeAsync(dto.InventoryCode, cancellationToken) != null)
                     throw new DuplicateEntityException($"Product with inventory code {dto.InventoryCode} already exists");
+                await ProductDetails.RequireActiveDepartmentAsync(_departmentRepository, dto.DepartmentId, cancellationToken);
 
                 var imageUrls = new List<string>();
                 foreach (var file in ImageSet.Files(dto.ImageFile, dto.ImageFiles))
@@ -85,6 +102,7 @@ namespace ProductService.Application.Features.Products.Commands
                     dto.IsActive,
                     dto.IsWorking,
                     dto.IsNewItem);
+                product.SetDetails(dto.Color, ProductDetails.ToDomain(dto.Specifications));
 
                 await _productRepository.AddAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

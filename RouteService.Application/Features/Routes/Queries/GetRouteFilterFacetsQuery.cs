@@ -35,7 +35,7 @@ namespace RouteService.Application.Features.Routes.Queries
                 Pairs = pairs
                     .Select(p => new DepartmentCategoryNameFacetDto
                     {
-                        DepartmentId = p.DepartmentId,
+                        DepartmentName = p.DepartmentName,
                         CategoryName = p.CategoryName
                     })
                     .ToList()

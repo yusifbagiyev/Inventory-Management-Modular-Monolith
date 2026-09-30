@@ -48,6 +48,8 @@ namespace ProductService.Application.Services
                 IsNewItem = data.GetBool("isNewItem", true),
                 CategoryId = data.GetInt("categoryId"),
                 DepartmentId = data.GetInt("departmentId"),
+                Color = data.GetString("color"),
+                Specifications = Specifications(data),
                 ImageFile = data.GetImage(),
                 ImageFiles = data.GetImages()
             };
@@ -74,7 +76,11 @@ namespace ProductService.Application.Services
                 ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
                 ImageFiles = data.GetImages(),
                 RemoveImageUrls = data.GetStrings("removeImageUrls"),
-                CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null
+                CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null,
+                // Requests made before colour/specifications existed leave them as they are.
+                ReplaceDetails = data.GetBool("replaceDetails", false),
+                Color = data.GetString("color"),
+                Specifications = Specifications(data)
             };
 
             var existing = await _mediator.Send(new GetProductByIdQuery(productId), cancellationToken)
@@ -87,6 +93,11 @@ namespace ProductService.Application.Services
 
         private Task DeleteAsync(JsonElement root, ApprovalActor approver, CancellationToken cancellationToken)
             => _mediator.Send(new DeleteProduct.Command(RequireId(root, "productId"), approver.UserName), cancellationToken);
+
+        private static List<ProductSpecificationDto> Specifications(JsonElement data)
+            => data.GetObjects("specifications")
+                .Select(s => new ProductSpecificationDto { Name = s.GetString("name"), Value = s.GetString("value") })
+                .ToList();
 
         private static int RequireId(JsonElement element, string name)
         {

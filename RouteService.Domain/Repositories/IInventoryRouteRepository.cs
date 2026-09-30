@@ -24,7 +24,8 @@ namespace RouteService.Domain.Repositories
             int? departmentId = null,
             string? categoryName = null,
             RouteType? routeType = null,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default,
+            string? departmentName = null);
 
         /// <summary>
         /// Distinct (departmentId, categoryName) combinations across routes, taking BOTH ends of each
@@ -32,7 +33,7 @@ namespace RouteService.Domain.Repositories
         /// product snapshot has no id), so the category side is name-based. The status/type filters
         /// are applied first, so the department and category options narrow to the current selection.
         /// </summary>
-        Task<IReadOnlyList<(int DepartmentId, string CategoryName)>> GetDepartmentCategoryPairsAsync(
+        Task<IReadOnlyList<(string DepartmentName, string CategoryName)>> GetDepartmentCategoryPairsAsync(
             bool? isCompleted = null,
             RouteType? routeType = null,
             CancellationToken cancellationToken = default);

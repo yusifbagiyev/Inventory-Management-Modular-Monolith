@@ -101,6 +101,12 @@ namespace SharedServices.Contracts
                 ? value.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.String).Select(v => v.GetString()!).ToList()
                 : [];
 
+        /// <summary>An array of objects ("specifications"), empty when absent.</summary>
+        public static List<JsonElement> GetObjects(this JsonElement element, string name)
+            => TryGet(element, name, out var value) && value.ValueKind == JsonValueKind.Array
+                ? value.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.Object).ToList()
+                : [];
+
         /// <summary>Uploaded files as stored ActionData: [{ imageData (base64), imageFileName, imageSize }].</summary>
         public static async Task<List<Dictionary<string, object>>> EncodeImagesAsync(IEnumerable<IFormFile> files)
         {

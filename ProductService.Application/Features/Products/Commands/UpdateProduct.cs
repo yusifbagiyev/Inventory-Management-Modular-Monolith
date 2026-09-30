@@ -29,6 +29,19 @@ namespace ProductService.Application.Features.Products.Commands
                 RuleFor(x => x.ProductDto.Description)
                     .MaximumLength(500).WithMessage("Description cannot exceed 500 characters");
 
+                RuleFor(x => x.ProductDto.Color)
+                    .MaximumLength(30).WithMessage("Color cannot exceed 30 characters");
+
+                RuleFor(x => x.ProductDto.Specifications)
+                    .Must(s => s == null || s.Count <= ProductDetails.MaxSpecifications)
+                    .WithMessage($"A product can have at most {ProductDetails.MaxSpecifications} specifications");
+
+                RuleForEach(x => x.ProductDto.Specifications).ChildRules(line =>
+                {
+                    line.RuleFor(s => s.Name).MaximumLength(50).WithMessage("A specification name cannot exceed 50 characters");
+                    line.RuleFor(s => s.Value).MaximumLength(200).WithMessage("A specification value cannot exceed 200 characters");
+                });
+
                 RuleFor(x => ImageSet.Files(x.ProductDto.ImageFile, x.ProductDto.ImageFiles).Count)
                     .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
@@ -37,6 +50,7 @@ namespace ProductService.Application.Features.Products.Commands
         public class UpdateProductCommandHandler : IRequestHandler<Command>
         {
             private readonly IProductRepository _productRepository;
+            private readonly IDepartmentRepository _departmentRepository;
             private readonly IUnitOfWork _unitOfWork;
             private readonly IImageService _imageService;
             private readonly IPublisher _publisher;
@@ -44,12 +58,14 @@ namespace ProductService.Application.Features.Products.Commands
 
             public UpdateProductCommandHandler(
                 IProductRepository productRepository,
+                IDepartmentRepository departmentRepository,
                 IUnitOfWork unitOfWork,
                 IImageService imageService,
                 IPublisher publisher,
                 DbSession session)
             {
                 _productRepository = productRepository;
+                _departmentRepository = departmentRepository;
                 _unitOfWork = unitOfWork;
                 _imageService = imageService;
                 _publisher = publisher;
@@ -62,6 +78,9 @@ namespace ProductService.Application.Features.Products.Commands
                     ?? throw new NotFoundException($"Product with ID {request.Id} not found");
 
                 var dto = request.ProductDto;
+                // Moving a product into an inactive department is refused; staying in one is fine.
+                if (dto.DepartmentId != product.DepartmentId)
+                    await ProductDetails.RequireActiveDepartmentAsync(_departmentRepository, dto.DepartmentId, cancellationToken);
                 var before = product.ToState();
                 var oldCover = product.ImageUrl;
 
@@ -91,6 +110,8 @@ namespace ProductService.Application.Features.Products.Commands
                     dto.IsActive,
                     dto.IsNewItem,
                     dto.IsWorking);
+                if (dto.ReplaceDetails)
+                    product.SetDetails(dto.Color, ProductDetails.ToDomain(dto.Specifications));
 
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

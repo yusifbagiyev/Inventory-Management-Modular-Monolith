@@ -24,6 +24,10 @@ namespace ProductService.Application.Mappings
             CategoryName = product.Category?.Name,
             DepartmentId = product.DepartmentId,
             DepartmentName = product.Department?.Name,
+            Color = product.Color,
+            Specifications = product.Specifications
+                .Select(s => new ProductSpecificationDto { Name = s.Name, Value = s.Value })
+                .ToList(),
             CreatedAt = product.CreatedAt,
             UpdatedAt = product.UpdatedAt
         };
