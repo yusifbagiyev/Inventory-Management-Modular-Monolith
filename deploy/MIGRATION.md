@@ -80,10 +80,8 @@ Köhnə konteynerlər silinmir, yalnız dayandırılır. Onlar *Təmizlik* addı
 - ServiceDesk inteqrasiyası işləyir. Serverdə yoxlayın: açarla 200, açarsız 401 gözlənilir.
   ```bash
   K=$(grep ^SERVICEDESK_API_KEY= .env | cut -d= -f2- | tr -d "'")
-  curl -s -o /dev/null -w '%{http_code}
-' -H "X-Api-Key: $K" http://localhost:5001/api/products?pageSize=1
-  curl -s -o /dev/null -w '%{http_code}
-' http://localhost:5001/api/products?pageSize=1
+  curl -s -o /dev/null -w '%{http_code}\n' -H "X-Api-Key: $K" 'http://localhost:5001/api/products?pageSize=1'
+  curl -s -o /dev/null -w '%{http_code}\n' 'http://localhost:5001/api/products?pageSize=1'
   ```
 - Seq (`http://<server>:5342`) `ApplicationName = InventoryManagement` qeydlərini göstərir.
 
