@@ -1022,11 +1022,7 @@
   "At most {0} images": "Ən çox {0} şəkil",
   "{0}: only JPG and PNG images are allowed": "{0}: yalnız JPG və PNG şəkillərə icazə verilir",
   "{0}: larger than 5 MB": "{0}: 5 MB-dan böyükdür",
-  "JPG or PNG, up to 5 MB each. The first image is the cover.": "JPG və ya PNG, hər biri 5 MB-a qədər. Birinci şəkil əsas şəkildir.",
-  "Optional. Photos make the item easier to identify during transfers. The first image is the cover.": "İstəyə bağlı. Şəkillər transfer zamanı əşyanı tanımağı asanlaşdırır. Birinci şəkil əsas şəkildir.",
   "Transfer images (optional)": "Transfer şəkilləri (istəyə bağlı)",
-  "Photos of the item as handed over. When the transfer is completed they become the product images.": "Əşyanın təhvil verildiyi vəziyyətdəki şəkilləri. Transfer tamamlandıqda bunlar məhsulun şəkilləri olur.",
-  "When the transfer is completed these become the product images. The first image is the cover.": "Transfer tamamlandıqda bunlar məhsulun şəkilləri olur. Birinci şəkil əsas şəkildir.",
   "Product images were updated": "Məhsulun şəkilləri yeniləndi",
   "Images updated": "Şəkillər yeniləndi",
   "Week {0}": "Həftə {0}",
@@ -1054,5 +1050,9 @@
   "Worker cleared": "İşçi silindi",
   "Worker changed to {0}": "İşçi dəyişdi: {0}",
   "Destination department changed": "Təyinat şöbəsi dəyişdi",
-  "None": "Yoxdur"
+  "None": "Yoxdur",
+  "JPG or PNG, up to 5 MB each. The star (★) chooses the cover image.": "JPG və ya PNG, hər biri 5 MB-a qədər. Əsas şəkli ulduz (★) ilə seçin.",
+  "Photos of the item as handed over. When the transfer is completed they become the product images, and the cover (★) becomes its main image.": "Əşyanın təhvil verildiyi vəziyyətdəki şəkilləri. Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
+  "When the transfer is completed these become the product images, and the cover (★) becomes its main image.": "Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
+  "Optional. Photos make the item easier to identify during transfers. The star (★) chooses the cover image.": "İstəyə bağlı. Şəkillər transfer zamanı əşyanı tanımağı asanlaşdırır. Əsas şəkli ulduz (★) ilə seçin."
 }

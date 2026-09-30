@@ -36,6 +36,15 @@ namespace SharedServices.Storage
             return (images, removed);
         }
 
+        /// <summary>
+        /// The cover as a url: a current image's url as sent, or "new:{i}" for the i-th file uploaded
+        /// with this edit (the picker can make a new photo the cover before it has a url).
+        /// </summary>
+        public static string? ResolveCover(string? cover, IReadOnlyList<string> added)
+            => cover is not null && cover.StartsWith("new:", StringComparison.Ordinal)
+                ? int.TryParse(cover.AsSpan(4), out var i) && i >= 0 && i < added.Count ? added[i] : null
+                : cover;
+
         /// <summary>All non-empty files of a request: the legacy single file first, then the list.</summary>
         public static List<IFormFile> Files(IFormFile? single, IEnumerable<IFormFile>? many)
             => new[] { single }.Concat(many ?? []).OfType<IFormFile>().Where(f => f.Length > 0).ToList();

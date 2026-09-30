@@ -117,6 +117,8 @@
                 html.Append($"<img src='{E(url)}' alt='' style='width:56px;height:56px;object-fit:cover;border-radius:6px;opacity:.7'>");
             html.Append("</div>");
         }
+        if (cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < names.Count)
+            html.Append($"<div class='mt-2'><i class='fas fa-star me-1'></i> {E(L["New cover image"].Value)}: {E(names[coverIndex])}</div>");
         if (cover != null && cover.StartsWith("/images/"))
             html.Append($"<div class='mt-2 d-flex align-items-center gap-2'><i class='fas fa-star'></i> {E(L["New cover image"].Value)}: <img src='{E(cover)}' alt='' style='width:56px;height:56px;object-fit:cover;border-radius:6px'></div>");
         return html.Append("</div>").ToString();

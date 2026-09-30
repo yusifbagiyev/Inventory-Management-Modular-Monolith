@@ -31,7 +31,8 @@ window.ImageManager = (function () {
             max: parseInt(root.dataset.max, 10) || 10,
             files: [],          // { file, url } in order
             removed: [],        // current image urls to delete
-            cover: null         // current image url chosen as cover
+            cover: null,        // current image url chosen as cover
+            coverNew: false     // the first new file was chosen as cover over the current images
         };
         states.set(root, state);
 
@@ -105,6 +106,7 @@ window.ImageManager = (function () {
             const index = parseInt(tile.dataset.imNew, 10);
             const item = state.files.splice(index, 1)[0];
             if (item) URL.revokeObjectURL(item.url);
+            if (index === 0) state.coverNew = false;
         }
         state.error.textContent = '';
         render(state);
@@ -113,11 +115,14 @@ window.ImageManager = (function () {
     function makeCover(state, tile) {
         if (tile.dataset.imExisting !== undefined) {
             state.cover = tile.dataset.imExisting;
+            state.coverNew = false;
             state.grid.insertBefore(tile, state.grid.firstChild);
         } else {
-            // A new file can only lead while no current image is left (they stay ahead of new ones).
+            // The chosen file goes first among the new ones; with current images present it is
+            // posted as CoverImageUrl "new:0" (the server resolves it after the upload).
             const index = parseInt(tile.dataset.imNew, 10);
             state.files.unshift(state.files.splice(index, 1)[0]);
+            state.coverNew = existingTiles(state).length > 0;
         }
         render(state);
     }
@@ -125,7 +130,7 @@ window.ImageManager = (function () {
     function render(state) {
         // New-file tiles are rebuilt; current-image tiles stay in the DOM (their order = cover choice).
         state.grid.querySelectorAll('[data-im-new]').forEach(el => el.remove());
-        const hasExisting = existingTiles(state).length > 0;
+        if (existingTiles(state).length === 0) state.coverNew = false;
 
         state.files.forEach(function (item, index) {
             const tile = document.createElement('div');
@@ -136,10 +141,11 @@ window.ImageManager = (function () {
                 `<span class="im-cover-badge">${escapeHtml(t('Cover'))}</span>` +
                 `<span class="im-new-badge">${escapeHtml(t('New'))}</span>` +
                 '<div class="im-actions">' +
-                (hasExisting ? '' : `<button type="button" class="im-btn" data-im-cover title="${escapeHtml(t('Make cover'))}"><i class="fas fa-star"></i></button>`) +
+                `<button type="button" class="im-btn" data-im-cover title="${escapeHtml(t('Make cover'))}"><i class="fas fa-star"></i></button>` +
                 `<button type="button" class="im-btn im-btn-danger" data-im-remove title="${escapeHtml(t('Remove'))}"><i class="fas fa-xmark"></i></button>` +
                 '</div>';
-            state.grid.insertBefore(tile, state.addTile);
+            // A new cover leads the whole grid; other new files follow the current images.
+            state.grid.insertBefore(tile, index === 0 && state.coverNew ? state.grid.firstChild : state.addTile);
         });
 
         // The first tile is the cover.
@@ -154,7 +160,9 @@ window.ImageManager = (function () {
 
         // Hidden fields for the current images.
         let hidden = state.removed.map(url => `<input type="hidden" name="RemoveImageUrls" value="${escapeHtml(url)}" />`).join('');
-        if (state.cover && !state.removed.includes(state.cover)) {
+        if (state.coverNew && state.files.length > 0) {
+            hidden += '<input type="hidden" name="CoverImageUrl" value="new:0" />';
+        } else if (state.cover && !state.removed.includes(state.cover)) {
             hidden += `<input type="hidden" name="CoverImageUrl" value="${escapeHtml(state.cover)}" />`;
         }
         state.hidden.innerHTML = hidden;
@@ -176,6 +184,7 @@ window.ImageManager = (function () {
             state.files = [];
             state.removed = [];
             state.cover = null;
+            state.coverNew = false;
             state.error.textContent = '';
             render(state);
         });

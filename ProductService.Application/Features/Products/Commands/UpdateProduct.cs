@@ -76,7 +76,7 @@ namespace ProductService.Application.Features.Products.Commands
 
                 // A single ImageFile (older clients) replaces the images, as it always did.
                 var (images, removed) = ImageSet.Apply(
-                    product.ImageUrls, dto.RemoveImageUrls, added, dto.CoverImageUrl,
+                    product.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });
                 if (!images.SequenceEqual(product.ImageUrls))
                     product.SetImages(images);

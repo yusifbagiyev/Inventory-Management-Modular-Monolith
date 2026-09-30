@@ -86,7 +86,7 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 // A single ImageFile (older clients) replaces the images, as it always did.
                 var (images, removed) = ImageSet.Apply(
-                    route.ImageUrls, dto.RemoveImageUrls, added, dto.CoverImageUrl,
+                    route.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });
                 if (!images.SequenceEqual(route.ImageUrls))
                     route.SetImages(images);

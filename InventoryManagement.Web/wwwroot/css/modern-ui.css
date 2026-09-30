@@ -900,9 +900,8 @@ textarea.form-control { min-height: 84px; }
 }
 .im-tile.is-cover .im-cover-badge { display: inline-block; }
 .im-new-badge { display: inline-block; left: auto; right: 6px; top: auto; bottom: 6px; background: rgba(22, 38, 46, .72); }
-.im-actions { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
-.im-tile:hover .im-actions, .im-tile:focus-within .im-actions { opacity: 1; }
-@media (hover: none) { .im-actions { opacity: 1; } }
+/* Always visible: choosing the cover must be discoverable (it becomes the product's main image). */
+.im-actions { position: absolute; right: 6px; top: 6px; display: flex; gap: 4px; }
 .im-tile.is-cover [data-im-cover] { display: none; }
 .im-btn {
     width: 26px; height: 26px; border: 0; border-radius: 6px; display: grid; place-items: center;
