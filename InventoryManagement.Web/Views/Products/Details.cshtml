@@ -1,172 +1,149 @@
 @model ProductViewModel
 @{
     ViewData["Title"] = "Product Details";
+    var transfers = ViewBag.Transfers as List<RouteViewModel> ?? new List<RouteViewModel>();
+    var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
+    var canDelete = User.HasPermission("product.delete") || User.HasPermission("product.delete.direct");
+    var canTransfer = User.HasPermission("route.create") || User.HasPermission("route.create.direct");
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
 <div class="container-fluid px-4" id="detailsRegion">
-    <div class="ip-page-head">
+    <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index">@L["Products"]</a></li>
-                <li class="breadcrumb-item active">@L["Details"]</li>
+                <li class="breadcrumb-item active ip-mono">@Model.InventoryCode</li>
             </ol>
-            <h1>@L["Product Details"]</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            @if (User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
-            {
-                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-edit"></i> @L["Edit"]
-                </a>
-            }
-            @if(User.HasPermission("route.create")|| User.HasPermission("route.create.direct"))
-            {
-                <a asp-controller="Routes" asp-action="Transfer" class="btn btn-primary btn-sm">
-                    <i class="fas fa-exchange-alt"></i> @L["Transfer"]
-                </a>
-            }
-        </div>
-    </div>
-
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-circle-info me-1"></i>
-                    @L["Product Information"]
-                </div>
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-md-5">
-                            <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = Model.Model ?? "", EmptyText = "No image available" }' />
-                        </div>
-
-                        <div class="col-md-7">
-                            <div class="detail-grid">
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Inventory Code"]</span>
-                                    <span class="d-value mono">@Model.InventoryCode</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Model"]</span>
-                                    <span class="d-value @(string.IsNullOrWhiteSpace(Model.Model) ? "d-empty" : "")">@(string.IsNullOrWhiteSpace(Model.Model) ? L["N/A"].Value : Model.Model)</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Vendor"]</span>
-                                    <span class="d-value @(string.IsNullOrWhiteSpace(Model.Vendor) ? "d-empty" : "")">@(string.IsNullOrWhiteSpace(Model.Vendor) ? L["N/A"].Value : Model.Vendor)</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Category"]</span>
-                                    <span class="d-value @(string.IsNullOrWhiteSpace(Model.CategoryName) ? "d-empty" : "")">@(string.IsNullOrWhiteSpace(Model.CategoryName) ? L["N/A"].Value : Model.CategoryName)</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Department"]</span>
-                                    <span class="d-value @(string.IsNullOrWhiteSpace(Model.DepartmentName) ? "d-empty" : "")">@(string.IsNullOrWhiteSpace(Model.DepartmentName) ? L["N/A"].Value : Model.DepartmentName)</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Assigned Worker"]</span>
-                                    <span class="d-value @(string.IsNullOrWhiteSpace(Model.Worker) ? "d-empty" : "")">@(string.IsNullOrWhiteSpace(Model.Worker) ? L["Not Assigned"].Value : Model.Worker)</span>
-                                </div>
-                                <div class="detail-row">
-                                    <span class="d-label">@L["Status"]</span>
-                                    <span class="d-value">
-                                        <span class="state-stack">
-                                            @if (Model.IsWorking)
-                                            {
-                                                <span class="state state-ok">@L["Working"]</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="state state-crit">@L["Not Working"]</span>
-                                            }
-                                            @if (Model.IsActive)
-                                            {
-                                                <span class="state state-info">@L["Active"]</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="state state-idle">@L["Inactive"]</span>
-                                            }
-                                            @if (Model.IsNewItem)
-                                            {
-                                                <span class="state state-new">@L["New Item"]</span>
-                                            }
-                                        </span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(Model.Description))
-                    {
-                        <div class="mt-4">
-                            <div class="section-title">@L["Description"]</div>
-                            <p class="mb-0">@Model.Description</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4 side-panel">
-                <div class="card-header">
-                    <i class="fas fa-bolt me-1"></i>
-                    @L["Quick Actions"]
-                </div>
-                <div class="list-group list-group-flush">
-                    <a asp-controller="Routes" asp-action="Timeline" asp-route-productId="@Model.Id" class="list-group-item list-group-item-action">
-                        <i class="fas fa-route me-2"></i> @L["View Transfer History"]
-                    </a>
-                    @if (User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
-                    {
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="list-group-item list-group-item-action">
-                            <i class="fas fa-edit me-2"></i> @L["Edit Product"]
-                        </a>
-                    }
-                    @if(User.HasPermission("product.delete") || User.HasPermission("product.delete.direct"))
-                    {
-                        <button type="button" class="list-group-item list-group-item-action text-start" onclick="confirmDelete(@Model.Id)">
-                            <i class="fas fa-trash me-2"></i> @L["Delete Product"]
-                        </button>
-                    }
-                </div>
+            <h1>@Or(Model.Model, L["N/A"].Value)</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span>@Or(Model.Vendor, "-") · @Or(Model.CategoryName, "-")</span>
+                <span class="ip-mono text-body">#@Model.InventoryCode</span>
+                @if (Model.IsWorking)
+                {
+                    <span class="ip-badge ip-badge-success">@L["Working"]</span>
+                }
+                else
+                {
+                    <span class="ip-badge ip-badge-danger">@L["Not working"]</span>
+                }
+                <span class="ip-tag-plain">@(Model.IsActive ? L["Active"] : L["Inactive"])</span>
+                @if (Model.IsNewItem)
+                {
+                    <span class="ip-tag-plain">@L["New"]</span>
+                }
             </div>
         </div>
     </div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                @L["Are you sure you want to delete this product?"]
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger btn-sm">@L["Delete"]</button>
-                </form>
-            </div>
+    <div class="ip-page-actions mb-4">
+        @if (canDelete)
+        {
+            <button type="button" class="ip-btn ip-btn-danger-ghost" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">
+                <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
+            </button>
+        }
+        @if (canUpdate)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
+                <i class="fa-solid fa-pen"></i><span>@L["Edit"]</span>
+            </a>
+        }
+        @if (canTransfer && Model.IsActive)
+        {
+            <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary">
+                <span>@L["Transfer"]</span><i class="fa-solid fa-arrow-right"></i>
+            </a>
+        }
+    </div>
+
+    @if (Model.HasPendingApproval)
+    {
+        <div class="ip-banner ip-banner-warning mb-4">
+            <i class="fa-regular fa-clock"></i>
+            <span class="flex-grow-1">@L["This product has a request awaiting approval. The details below stay as they are until it is approved."]</span>
+            <a href="@(User.IsInRole("Admin") ? "/Approvals" : "/MyRequests")">@L["View request"]</a>
+        </div>
+    }
+
+    <hr class="ip-rule" />
+
+    <div class="row g-5 pt-4">
+        <div class="col-lg-6">
+            <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = Model.Model ?? "", EmptyText = "No image available" }' />
+        </div>
+        <div class="col-lg-6">
+            <dl class="ip-dl">
+                <div><dt>@L["Inventory Code"]</dt><dd class="ip-mono">@Model.InventoryCode</dd></div>
+                <div><dt>@L["Model"]</dt><dd>@Or(Model.Model, "-")</dd></div>
+                <div><dt>@L["Vendor"]</dt><dd>@Or(Model.Vendor, "-")</dd></div>
+                <div><dt>@L["Category"]</dt><dd>@Or(Model.CategoryName, "-")</dd></div>
+                <div><dt>@L["Department"]</dt><dd>@Or(Model.DepartmentName, "-")</dd></div>
+                <div><dt>@L["Assigned Worker"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.Worker) ? "ip-muted" : "")">@Or(Model.Worker, L["Not Assigned"].Value)</dd></div>
+                <div><dt>@L["Created"]</dt><dd class="ip-num">@(Model.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
+                <div><dt>@L["Updated"]</dt><dd class="ip-num">@(Model.UpdatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
+                }
+            </dl>
         </div>
     </div>
+
+    <section class="ip-section mt-5">
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2">
+            <h2>@L["Transfers"]</h2>
+            <a asp-controller="Routes" asp-action="Timeline" asp-route-productId="@Model.Id" class="ip-btn ip-btn-ghost ip-btn-sm">
+                <span>@L["Full history"]</span><i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+        @if (transfers.Count == 0)
+        {
+            <p class="ip-muted py-3 mb-0">@L["This product has not been transferred yet."]</p>
+        }
+        else
+        {
+            <div class="ip-table-wrap">
+                <table class="ip-table">
+                    <thead>
+                        <tr>
+                            <th>@L["Date"]</th>
+                            <th>@L["From"]</th>
+                            <th></th>
+                            <th>@L["To"]</th>
+                            <th>@L["Status"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var route in transfers)
+                        {
+                            <tr data-href="@Url.Action("Details", "Routes", new { id = route.Id })">
+                                <td class="ip-num text-nowrap">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
+                                <td>@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
+                                <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                                <td>@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
+                                <td>
+                                    @if (route.IsCompleted)
+                                    {
+                                        <span class="ip-badge ip-badge-success">@L["Completed"]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
 </div>
 
 @section Scripts {
     <script>
         function confirmDelete(productId) {
-            if (!productId) {
-                showToast(t('Invalid product ID'), 'error');
-                return;
-            }
-
             confirmAction({
                 title: t('Delete product'),
                 message: t('Delete this product? This cannot be undone.'),
@@ -178,8 +155,7 @@
         }
 
         function deleteProduct(productId) {
-            // Show loading state
-            const $deleteBtn = $('button[onclick*="confirmDelete"]');
+            const $deleteBtn = $('#deleteProductBtn');
             const originalHtml = $deleteBtn.html();
             $deleteBtn.prop('disabled', true)
                 .html('<span class="spinner-border spinner-border-sm"></span> ' + t('Deleting...'));
@@ -191,7 +167,6 @@
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
                 success: function(response) {
-                    // Check if it's an approval request
                     if (response && response.approvalRequestId) {
                         showToast(t('Delete request submitted for approval'), 'info');
                         setTimeout(() => window.location.href = '/Products', 2000);
@@ -201,7 +176,6 @@
                     }
                 },
                 error: function(xhr) {
-                    // Reset button
                     $deleteBtn.prop('disabled', false).html(originalHtml);
 
                     let errorMsg = t('Failed to delete product');
@@ -217,7 +191,6 @@
                 }
             });
         }
-
 
         // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
         LiveUpdates.watch({

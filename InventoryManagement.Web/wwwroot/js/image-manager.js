@@ -137,19 +137,23 @@ window.ImageManager = (function () {
             tile.className = 'im-tile im-tile-new';
             tile.dataset.imNew = String(index);
             tile.innerHTML =
+                '<div class="ip-image-tile">' +
                 `<img src="${item.url}" alt="${escapeHtml(item.file.name)}" />` +
-                `<span class="im-cover-badge">${escapeHtml(t('Cover'))}</span>` +
-                `<span class="im-new-badge">${escapeHtml(t('New'))}</span>` +
-                '<div class="im-actions">' +
-                `<button type="button" class="im-btn" data-im-cover title="${escapeHtml(t('Make cover'))}"><i class="fas fa-star"></i></button>` +
-                `<button type="button" class="im-btn im-btn-danger" data-im-remove title="${escapeHtml(t('Remove'))}"><i class="fas fa-xmark"></i></button>` +
-                '</div>';
+                `<button type="button" class="ctl star" data-im-cover title="${escapeHtml(t('Make cover'))}" aria-label="${escapeHtml(t('Make cover'))}"><i class="fa-solid fa-star"></i></button>` +
+                `<button type="button" class="ctl remove" data-im-remove title="${escapeHtml(t('Remove'))}" aria-label="${escapeHtml(t('Remove'))}"><i class="fa-solid fa-xmark"></i></button>` +
+                '</div>' +
+                `<div class="ip-image-caption"><span class="text-truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>` +
+                `<span class="cover-label">${escapeHtml(t('Cover image'))}</span></div>`;
             // A new cover leads the whole grid; other new files follow the current images.
             state.grid.insertBefore(tile, index === 0 && state.coverNew ? state.grid.firstChild : state.addTile);
         });
 
         // The first tile is the cover.
-        state.grid.querySelectorAll('.im-tile').forEach((el, i) => el.classList.toggle('is-cover', i === 0));
+        state.grid.querySelectorAll('.im-tile').forEach(function (el, i) {
+            el.classList.toggle('is-cover', i === 0);
+            const star = el.querySelector('[data-im-cover]');
+            if (star) star.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+        });
 
         // Files back into the input, in order.
         try {
@@ -169,7 +173,7 @@ window.ImageManager = (function () {
 
         const n = total(state);
         state.addTile.classList.toggle('d-none', n >= state.max);
-        if (state.count) state.count.textContent = t('{0} of {1}', n, state.max);
+        if (state.count) state.count.textContent = `${n} / ${state.max}`;
     }
 
     /** Clears new files and pending removals (e.g. after an AJAX submit that keeps the page). */
@@ -194,17 +198,29 @@ window.ImageManager = (function () {
         (scope || document).querySelectorAll('[data-image-manager]').forEach(init);
     }
 
-    // Gallery: a thumbnail becomes the large image (delegated, so live-refreshed regions keep working).
+    // Gallery (_ImageGallery): a thumbnail or prev/next shows that image large; the "cover" chip only
+    // on the first. Delegated, so live-refreshed regions keep working.
+    function showGalleryImage(gallery, index) {
+        const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
+        const main = gallery.querySelector('[data-ig-main]');
+        if (!main || !thumbs.length) return;
+        index = (index + thumbs.length) % thumbs.length;
+        main.setAttribute('src', thumbs[index].dataset.igThumb);
+        thumbs.forEach((b, i) => b.classList.toggle('active', i === index));
+        const counter = gallery.querySelector('[data-ig-counter]');
+        if (counter) counter.textContent = `${index + 1} / ${thumbs.length}`;
+        const cover = gallery.querySelector('[data-ig-cover]');
+        if (cover) cover.hidden = index !== 0;
+    }
+
     document.addEventListener('click', function (e) {
         const thumb = e.target.closest('[data-ig-thumb]');
-        if (!thumb) return;
-        const gallery = thumb.closest('[data-image-gallery]');
-        const main = gallery && gallery.querySelector('[data-ig-main]');
-        if (!main) return;
-        main.setAttribute('src', thumb.dataset.igThumb);
-        gallery.querySelectorAll('[data-ig-thumb]').forEach(b => b.classList.toggle('active', b === thumb));
-        const counter = gallery.querySelector('[data-ig-counter]');
-        if (counter) counter.textContent = `${thumb.dataset.igIndex} / ${gallery.querySelectorAll('[data-ig-thumb]').length}`;
+        const step = e.target.closest('[data-ig-step]');
+        const gallery = (thumb || step) && (thumb || step).closest('[data-image-gallery]');
+        if (!gallery) return;
+        const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
+        const current = Math.max(0, thumbs.findIndex(b => b.classList.contains('active')));
+        showGalleryImage(gallery, thumb ? thumbs.indexOf(thumb) : current + parseInt(step.dataset.igStep, 10));
     });
 
     document.addEventListener('DOMContentLoaded', function () { initAll(); });

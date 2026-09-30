@@ -301,6 +301,26 @@ function changePage(page) {
     window.location.href = window.location.pathname + '?' + params.toString();
 }
 
+/** Rows per page (the select in _Pagination): back to the first page with the new size. */
+function changePageSize(size) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('pageSize', size);
+    params.set('pageNumber', '1');
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+// A table row with data-href opens that page (design: the whole row is clickable). Links,
+// buttons, form controls and cells marked data-no-row-link keep their own behaviour; selecting
+// text does not navigate; Ctrl/Cmd-click opens a new tab.
+document.addEventListener('click', function (e) {
+    const row = e.target.closest('tr[data-href]');
+    if (!row || e.button !== 0) return;
+    if (e.target.closest('a, button, input, select, textarea, label, [data-no-row-link]')) return;
+    if (String(window.getSelection ? window.getSelection() : '').length) return;
+    if (e.ctrlKey || e.metaKey) window.open(row.dataset.href, '_blank');
+    else window.location.href = row.dataset.href;
+});
+
 /** Opens an image in the layout's shared preview modal. */
 function showImageModal(imageUrl, title) {
     $('#globalModalImage').attr('src', imageUrl);

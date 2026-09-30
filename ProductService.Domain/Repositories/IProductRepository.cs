@@ -42,7 +42,7 @@ namespace ProductService.Domain.Repositories
         Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountAsync(CancellationToken cancellationToken = default);
         /// <summary>Total and active products, optionally only those created in [createdFrom, createdTo].</summary>
-        Task<(int Total, int Active)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);
+        Task<(int Total, int Active, int NotWorking)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);
         Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
     }

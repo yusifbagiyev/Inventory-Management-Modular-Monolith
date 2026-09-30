@@ -102,15 +102,6 @@
                 <label for="dateRange">@L["Created between"]</label>
                 <input type="text" id="dateRange" class="form-control form-control-sm" placeholder="@L["Any date"]" />
             </div>
-            <div class="filter-field">
-                <label for="pageSizeFilter">@L["Rows per page"]</label>
-                <select id="pageSizeFilter" class="form-select form-select-sm" onchange="applyRouteFilters()">
-                    @foreach (var size in new[] { 15, 30, 50, 100 })
-                    {
-                        <option value="@size" selected="@(Model.PageSize == size)">@size</option>
-                    }
-                </select>
-            </div>
         </div>
 
         <div class="filter-quick">

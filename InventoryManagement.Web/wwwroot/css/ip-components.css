@@ -359,3 +359,36 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-toast .toast-body .text { color: var(--ip-text-1); font-size: var(--ip-fs-base); }
 .ip-toast .btn-close { flex: none; background-size: 10px; opacity: .6; }
 .ip-toast .btn-close:hover { opacity: 1; background-color: var(--ip-surface-hover); }
+
+/* ---------- list pages ---------- */
+.ip-filterbar { margin-bottom: 0; }
+.ip-filter > span { white-space: nowrap; }
+.ip-filter select { appearance: auto; }
+.ip-filter input.date-range-input { cursor: pointer; font-weight: 500; width: 13ch; }
+.ip-filter input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
+.ip-btn.is-on { background: var(--ip-surface-active); color: var(--ip-text-1); font-weight: 600; }
+.ip-table a.cell-title:hover { color: var(--ip-accent-text) !important; text-decoration: none; }
+.ip-table td[data-no-row-link] { cursor: default; }
+.ip-table .actions { flex-wrap: nowrap; }
+.ip-table .inventory-code-display { cursor: text; font-weight: 600; }
+.ip-table-wrap + .ip-table-foot { margin-top: 0; }
+.ip-sub.ip-num { color: var(--ip-text-3); margin-top: var(--ip-space-1); }
+.ip-pagination li { display: block; }
+.ip-table-foot .ip-filter { height: 34px; }
+.ip-table-foot .ip-filter select { height: 32px; }
+
+/* ---------- forms (design: 05 Edit) ---------- */
+.ip-form { max-width: 1040px; }
+.ip-form-section { padding: var(--ip-space-6) 0; border-top: var(--ip-rule-width) solid var(--ip-rule-soft); }
+.ip-form-section:first-of-type { border-top-color: var(--ip-rule); }
+.ip-form-section > h2 { margin-bottom: var(--ip-space-4); }
+.ip-switch-list .ip-switch-row { cursor: pointer; }
+.ip-switch-list .ip-switch-row:last-child { border-bottom: 0; }
+.ip-error:empty, .ip-error.field-validation-valid { display: none; }
+.ip-label { display: flex; gap: 4px; align-items: baseline; margin: 0; }
+.ip-form-foot { z-index: 10; }
+.ip-form-foot .note:empty { visibility: hidden; }
+@media (max-width: 767.98px) {
+  .ip-form-foot { margin: 0 calc(-1 * var(--ip-space-4)); padding-left: var(--ip-space-4); padding-right: var(--ip-space-4); }
+}
+.ip-gallery .nav { display: grid; place-items: center; padding: 0; }

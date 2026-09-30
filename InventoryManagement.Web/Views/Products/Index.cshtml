@@ -14,341 +14,238 @@
     var curStart = ViewBag.StartDate as DateTime?;
     var curEnd = ViewBag.EndDate as DateTime?;
 
-    string CategoryName(int? id) => filterCategories.FirstOrDefault(c => c.Value == id.ToString())?.Text ?? id?.ToString() ?? "";
-    string DepartmentName(int? id) => filterDepartments.FirstOrDefault(d => d.Value == id.ToString())?.Text ?? id?.ToString() ?? "";
 }
 
 <div class="container-fluid px-4">
+    @{
+        var counts = ViewBag.Counts as ProductService.Application.Features.Products.Queries.ProductCountsDto;
+        var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCategoryId.HasValue || curDepartmentId.HasValue
+            || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue
+            || curHasImage.HasValue || curAssigned.HasValue;
+        var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
+        var canTransfer = User.HasPermission("route.create") || User.HasPermission("route.create.direct");
+    }
     <div class="ip-page-head">
         <div>
             <h1>@L["Products"]</h1>
+            @if (counts != null)
+            {
+                <div class="ip-sub ip-num" id="productsCounts">
+                    @L["{0} products", counts.Total] · @L["{0} active", counts.Active] · @L["{0} not working", counts.NotWorking]
+                </div>
+            }
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary btn-sm" onclick="exportProductsToPDF()">
+        <div class="ip-page-actions">
+            <button type="button" class="btn btn-outline-secondary" onclick="exportProductsToPDF()">
                 <i class="fas fa-file-pdf"></i> @L["Export PDF"]
             </button>
             @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
             {
-                <a asp-action="Create" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> @L["New Product"]
+                <a asp-action="Create" class="ip-btn ip-btn-primary">
+                    <span>@L["New Product"]</span><i class="fa-solid fa-plus"></i>
                 </a>
             }
         </div>
     </div>
 
-    <div class="filter-panel mt-3">
-        <div class="filter-top">
-            <div class="filter-search">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control" value="@currentSearch" name="search"
-                           placeholder="@L["Search code, model, vendor, worker..."]" />
-                </div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="applyProductFilters()">
-                <i class="fas fa-filter"></i> @L["Apply"]
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="resetProductFilters()">
-                <i class="fas fa-redo"></i> @L["Reset"]
-            </button>
-        </div>
-
-        <div class="filter-grid">
-            <div class="filter-field">
-                <label for="categoryFilter">@L["Category"]</label>
-                <select id="categoryFilter" class="form-select form-select-sm" onchange="onCategoryChange()">
-                    <option value="">@L["All categories"]</option>
-                    @foreach (var c in filterCategories)
-                    {
-                        <option value="@c.Value" selected="@(c.Value == curCategoryId?.ToString())">@c.Text</option>
-                    }
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="departmentFilter">@L["Department"]</label>
-                <select id="departmentFilter" class="form-select form-select-sm" onchange="onDepartmentChange()">
-                    <option value="">@L["All departments"]</option>
-                    @foreach (var d in filterDepartments)
-                    {
-                        <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
-                    }
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="statusFilter">@L["Working state"]</label>
-                <select id="statusFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
-                    <option value="">@L["All"]</option>
-                    <option value="true" selected="@(curStatus == true)">@L["Working"]</option>
-                    <option value="false" selected="@(curStatus == false)">@L["Not working"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="availabilityFilter">@L["Availability"]</label>
-                <select id="availabilityFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
-                    <option value="">@L["All"]</option>
-                    <option value="true" selected="@(curAvailability == true)">@L["Active"]</option>
-                    <option value="false" selected="@(curAvailability == false)">@L["Inactive"]</option>
-                </select>
-            </div>
-            <div class="filter-field">
-                <label for="dateRange">@L["Created between"]</label>
-                <input type="text" id="dateRange" class="form-control form-control-sm" placeholder="@L["Any date"]" />
-            </div>
-            <div class="filter-field">
-                <label for="pageSizeFilter">@L["Rows per page"]</label>
-                <select id="pageSizeFilter" class="form-select form-select-sm" onchange="applyProductFilters()">
-                    @foreach (var size in new[] { 15, 30, 50, 100 })
-                    {
-                        <option value="@size" selected="@(Model.PageSize == size)">@size</option>
-                    }
-                </select>
-            </div>
-        </div>
-
-        <div class="filter-quick">
-            <span class="qlabel">@L["Quick"]</span>
-            <span class="qchip @(curStatus == false ? "active" : "")" onclick="quickFilter('notWorking')">@L["Not working"]</span>
-            <span class="qchip @(curAvailability == false ? "active" : "")" onclick="quickFilter('inactive')">@L["Inactive"]</span>
-            <span class="qchip @(curAssigned == false ? "active" : "")" onclick="quickFilter('unassigned')">@L["Unassigned"]</span>
-            <span class="qchip @(curHasImage == false ? "active" : "")" onclick="quickFilter('noImage')">@L["No image"]</span>
-        </div>
-
-        @{
-            var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCategoryId.HasValue || curDepartmentId.HasValue
-                || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue
-                || curHasImage.HasValue || curAssigned.HasValue;
-        }
+    @* Filter bar (design: 03 Products): search and the main filters, labels inside the controls. *@
+    <div class="ip-filterbar">
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="searchInput" value="@currentSearch" name="search" autocomplete="off"
+                   placeholder="@L["Search code, model, vendor, worker..."]" aria-label="@L["Search"]" />
+        </label>
+        <label class="ip-filter">
+            <span>@L["Category"]</span>
+            <select id="categoryFilter" onchange="onCategoryChange()">
+                <option value="">@L["All"]</option>
+                @foreach (var c in filterCategories)
+                {
+                    <option value="@c.Value" selected="@(c.Value == curCategoryId?.ToString())">@c.Text</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Department"]</span>
+            <select id="departmentFilter" onchange="onDepartmentChange()">
+                <option value="">@L["All"]</option>
+                @foreach (var d in filterDepartments)
+                {
+                    <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["State"]</span>
+            <select id="statusFilter" onchange="applyProductFilters()">
+                <option value="">@L["All"]</option>
+                <option value="true" selected="@(curStatus == true)">@L["Working"]</option>
+                <option value="false" selected="@(curStatus == false)">@L["Not working"]</option>
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Availability"]</span>
+            <select id="availabilityFilter" onchange="applyProductFilters()">
+                <option value="">@L["All"]</option>
+                <option value="true" selected="@(curAvailability == true)">@L["Active"]</option>
+                <option value="false" selected="@(curAvailability == false)">@L["Inactive"]</option>
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Created"]</span>
+            <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" />
+        </label>
+        <button type="button" class="ip-btn ip-btn-ghost @(curAssigned == false ? "is-on" : "")" aria-pressed="@(curAssigned == false ? "true" : "false")" onclick="quickFilter('unassigned')">@L["Unassigned"]</button>
+        <button type="button" class="ip-btn ip-btn-ghost @(curHasImage == false ? "is-on" : "")" aria-pressed="@(curHasImage == false ? "true" : "false")" onclick="quickFilter('noImage')">@L["No image"]</button>
         @if (hasFilters)
         {
-            <div class="filter-applied">
-                @if (!string.IsNullOrEmpty(currentSearch))
-                {
-                    @* One chip per search word; each × removes just that word (data-word is Razor-encoded). *@
-                    foreach (var word in currentSearch.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        <span class="achip">@L["Search:"] <b>@word</b><button type="button" class="achip-x achip-word" data-word="@word">&times;</button></span>
-                    }
-                }
-                @if (curCategoryId.HasValue)
-                {
-                    <span class="achip">@L["Category"]: <b>@CategoryName(curCategoryId)</b><button type="button" class="achip-x" onclick="removeFilter('categoryId')">&times;</button></span>
-                }
-                @if (curDepartmentId.HasValue)
-                {
-                    <span class="achip">@L["Department"]: <b>@DepartmentName(curDepartmentId)</b><button type="button" class="achip-x" onclick="removeFilter('departmentId')">&times;</button></span>
-                }
-                @if (curStatus.HasValue)
-                {
-                    <span class="achip">@L["Working"]: <b>@(curStatus.Value ? L["Yes"] : L["No"])</b><button type="button" class="achip-x" onclick="removeFilter('status')">&times;</button></span>
-                }
-                @if (curAvailability.HasValue)
-                {
-                    <span class="achip">@L["Active"]: <b>@(curAvailability.Value ? L["Yes"] : L["No"])</b><button type="button" class="achip-x" onclick="removeFilter('availability')">&times;</button></span>
-                }
-                @if (curStart.HasValue || curEnd.HasValue)
-                {
-                    <span class="achip">@L["Created"]: <b>@(curStart?.ToString("dd.MM.yyyy")) - @(curEnd?.ToString("dd.MM.yyyy"))</b><button type="button" class="achip-x" onclick="removeFilter('dates')">&times;</button></span>
-                }
-                @if (curAssigned == false)
-                {
-                    <span class="achip"><b>@L["Unassigned"]</b><button type="button" class="achip-x" onclick="removeFilter('assigned')">&times;</button></span>
-                }
-                @if (curHasImage == false)
-                {
-                    <span class="achip"><b>@L["No image"]</b><button type="button" class="achip-x" onclick="removeFilter('hasImage')">&times;</button></span>
-                }
-                <button type="button" class="filter-clear" onclick="resetProductFilters()">@L["Clear all"]</button>
-            </div>
+            <button type="button" class="ip-btn ip-btn-ghost" onclick="resetProductFilters()">
+                <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
+            </button>
         }
     </div>
 
-    <div class="result-bar" id="productsSummary">
-        <span><b>@Model.TotalCount</b> @(hasFilters ? (Model.TotalCount == 1 ? L["product matched"] : L["products matched"]) : (Model.TotalCount == 1 ? L["product"] : L["products"]))</span>
-        <span class="text-muted">@L["Page {0}", Model.PageNumber]</span>
-    </div>
-
-    <div class="card mb-4" id="productsRegion">
-        <div class="card-body p-0">
+    <div id="productsRegion">
+        <div class="ip-table-wrap">
             @if (Model.Items.Any())
             {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle" id="productsTable">
-                        <thead>
-                            <tr>
-                                <th style="width: 96px;">@L["Code"]</th>
-                                <th>@L["Product"]</th>
-                                <th>@L["Category"]</th>
-                                <th>@L["Description"]</th>
-                                <th>@L["Department"]</th>
-                                <th>@L["Assigned"]</th>
-                                <th>@L["State"]</th>
-                                <th style="width: 96px;">@L["Created"]</th>
-                                <th style="width: 104px;">@L["Actions"]</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var product in Model.Items)
-                            {
-                                <tr class="@(product.HasPendingApproval ? "row-crit" : (!product.IsWorking ? "row-warn" : ""))">
-                                    <td>
-                                        <span class="badge bg-primary fs-6 inventory-code-display" data-id="@product.Id">
-                                            @product.InventoryCode
-                                        </span>
+                <table class="ip-table" id="productsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px"><span class="visually-hidden">@L["Image"]</span></th>
+                            <th>@L["Code"]</th>
+                            <th>@L["Product"]</th>
+                            <th>@L["Department and worker"]</th>
+                            <th class="d-none">@L["Description"]</th>
+                            <th>@L["Updated"]</th>
+                            <th>@L["State"]</th>
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model.Items)
+                        {
+                            <tr data-href="@Url.Action("Details", new { id = product.Id })">
+                                <td>
+                                    <span class="ip-thumb">
+                                        @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                        {
+                                            <img src="@product.FullImageUrl" alt="" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-box" aria-hidden="true"></i>
+                                        }
+                                    </span>
+                                </td>
+                                <td data-no-row-link>
+                                    @if (canUpdate)
+                                    {
+                                        <span class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Double-click to change the code"]">@product.InventoryCode</span>
                                         <div class="inventory-code-edit d-none" data-id="@product.Id">
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control form-control-sm inventory-code-input"
-                                                       value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id">
-                                                <button class="btn btn-success btn-sm save-inventory-code" data-id="@product.Id">
+                                                       value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id" aria-label="@L["Inventory Code"]">
+                                                <button type="button" class="btn btn-primary btn-sm save-inventory-code" data-id="@product.Id" title="@L["Save"]">
                                                     <i class="fas fa-check"></i>
                                                 </button>
-                                                <button class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id">
+                                                <button type="button" class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id" title="@L["Cancel"]">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td>
-                                        <div class="cell-item">
-                                            @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-mono">@product.InventoryCode</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="cell-text">
+                                        <span><a class="cell-title text-reset" href="@Url.Action("Details", new { id = product.Id })">@product.Model</a>@if (product.IsNewItem)
                                             {
-                                                <span class="thumb-wrap">
-                                                    <img src="@product.FullImageUrl" class="cell-thumb"
-                                                         style="cursor: pointer;"
-                                                         data-src="@product.FullImageUrl" data-title="@product.Model" onclick="showImageModal(this.dataset.src, this.dataset.title)"
-                                                         alt="@product.Model">
-                                                    @if (product.ImageUrls.Count > 1)
-                                                    {
-                                                        <span class="thumb-more" title="@L["{0} images", product.ImageUrls.Count]">+@(product.ImageUrls.Count - 1)</span>
-                                                    }
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <div class="cell-thumb cell-thumb-empty"><i class="fas fa-image"></i></div>
-                                            }
-                                            <div class="cell-text">
-                                                <span class="cell-title" title="@product.Description">@product.Model</span>
-                                                <span class="cell-sub">@product.Vendor</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>@product.CategoryName</td>
-                                    <td class="desc-cell">
-                                        @if (!string.IsNullOrEmpty(product.Description))
-                                        {
-                                            <span class="desc-text" title="@product.Description">@product.Description</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted pdf-omit">-</span>
-                                        }
-                                    </td>
-                                    <td>@product.DepartmentName</td>
-                                    <td>
+                                                <span class="ip-tag-plain ms-2">@L["New"]</span>
+                                            }</span>
+                                        <span class="cell-sub">@product.Vendor · @product.CategoryName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="cell-text">
+                                        <span class="cell-title fw-normal">@product.DepartmentName</span>
                                         @if (!string.IsNullOrEmpty(product.Worker))
                                         {
-                                            @product.Worker
+                                            <span class="cell-sub">@product.Worker</span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted pdf-omit">@L["Unassigned"]</span>
+                                            <span class="cell-sub pdf-omit">@L["Unassigned"]</span>
                                         }
-                                    </td>
-                                    <td>
-                                        <div class="state-stack">
-                                            @if (product.HasPendingApproval)
-                                            {
-                                                <span class="state state-crit">@L["Pending"]</span>
-                                            }
-                                            @if (!product.IsWorking)
-                                            {
-                                                <span class="state state-warn">@L["Not working"]</span>
-                                            }
-                                            else if (!product.HasPendingApproval)
-                                            {
-                                                <span class="state state-ok">@L["Working"]</span>
-                                            }
-                                            @if (!product.IsActive)
-                                            {
-                                                <span class="state state-flat state-idle">@L["Inactive"]</span>
-                                            }
-                                            @if (product.IsNewItem)
-                                            {
-                                                <span class="state state-flat state-new">@L["New"]</span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td class="num text-muted">@(product.CreatedAt?.ToString("dd.MM.yyyy") ?? "-")</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-secondary" title="@L["View"]">
-                                                <i class="fas fa-eye"></i>
+                                    </div>
+                                </td>
+                                <td class="d-none">@product.Description</td>
+                                <td class="ip-num text-nowrap">@((product.UpdatedAt ?? product.CreatedAt)?.ToString("dd.MM.yyyy") ?? "-")</td>
+                                <td>
+                                    <div class="state-stack flex-column align-items-start">
+                                        @if (product.IsWorking)
+                                        {
+                                            <span class="ip-badge ip-badge-success">@L["Working"]</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="ip-badge ip-badge-danger">@L["Not working"]</span>
+                                        }
+                                        @if (product.HasPendingApproval)
+                                        {
+                                            <span class="ip-status-text warning">@L["Awaiting approval"]</span>
+                                        }
+                                        @if (!product.IsActive)
+                                        {
+                                            <span class="ip-tag-plain">@L["Inactive"]</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td data-no-row-link>
+                                    <div class="actions">
+                                        <a asp-action="Details" asp-route-id="@product.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </a>
+                                        @if (canUpdate)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@product.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
+                                                <i class="fa-solid fa-pen"></i>
                                             </a>
-                                            @if(User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
-                                            {
-                                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-secondary" title="@L["Edit"]">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            }
-                                            @if(User.HasPermission("product.delete") || User.HasPermission("product.delete.direct"))
-                                            {
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteProduct(@product.Id)" title="@L["Delete"]">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                        }
+                                        @if (canTransfer && product.IsActive)
+                                        {
+                                            <a href="@Url.Action("Transfer", "Routes", new { code = product.InventoryCode })" class="ip-btn-icon" title="@L["Transfer"]" aria-label="@L["Transfer"]">
+                                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
             else
             {
-                <div class="empty-state">
-                    <i class="fas fa-box-open"></i>
-                    <h5>@L["No products match these filters"]</h5>
-                    <p class="text-muted mb-3">@L["Clear the filters to see the full inventory, or add a new product."]</p>
-                    <button type="button" class="btn btn-outline-secondary btn-sm me-1" onclick="resetProductFilters()">@L["Clear filters"]</button>
-                    @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
+                <div class="ip-empty">
+                    <span class="icon"><i class="fa-solid fa-box-open"></i></span>
+                    <div class="title">@L["Nothing found"]</div>
+                    <div class="text">@(hasFilters ? L["No products match these filters"] : L["There are no products yet."])</div>
+                    @if (hasFilters)
                     {
-                        <a asp-action="Create" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> @L["New Product"]
-                        </a>
+                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetProductFilters()">
+                            <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
+                        </button>
                     }
                 </div>
             }
         </div>
-        <div class="card-footer">
-            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
-        </div>
+        <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
-
-    <!-- Delete Modal -->
-    <div class="modal fade" id="deleteModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@L["Confirm Delete"]</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>@L["Are you sure you want to delete this product?"]</p>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>@L["Note:"]</strong> @L["This action may require approval from an administrator."]
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                    <button type="button" id="confirmDeleteBtn" class="btn btn-danger">
-                        <i class="fas fa-trash me-2"></i>@L["Delete Product"]
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    @Html.AntiForgeryToken()
 </div>
 
 @section Scripts {
@@ -358,7 +255,6 @@
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script src="~/js/list-filters.js" asp-append-version="true"></script>
     <script>
-        let currentDeleteProductId = null;
         const productFilters = ListFilters.init({
             basePath: '/Products',
             pageSize: @Model.PageSize,
@@ -381,170 +277,14 @@
         function removeFilter(key) { productFilters.remove(key); }
         function resetProductFilters() { productFilters.reset(); }
 
-        // One-click presets: "Not working"/"Inactive" drive their dropdowns, "Unassigned"/"No image"
-        // are URL-only flags.
+        // One-click presets with no control of their own: URL-only flags.
         function quickFilter(kind) {
-            if (kind === 'notWorking') {
-                $('#statusFilter').val($('#statusFilter').val() === 'false' ? '' : 'false');
-                applyProductFilters();
-            } else if (kind === 'inactive') {
-                $('#availabilityFilter').val($('#availabilityFilter').val() === 'false' ? '' : 'false');
-                applyProductFilters();
-            } else if (kind === 'unassigned') {
+            if (kind === 'unassigned') {
                 productFilters.toggleFlag('assigned');
             } else if (kind === 'noImage') {
                 productFilters.toggleFlag('hasImage');
             }
         }
-
-        // Delete product confirmation
-        function deleteProduct(id) {
-            currentDeleteProductId = id;
-            $('#deleteModal').modal('show');
-        }
-
-                // Handle the delete confirmation
-        $('#confirmDeleteBtn').on('click', function() {
-            const $btn = $(this);
-            const originalHtml = $btn.html();
-
-            // Show loading state
-            $btn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Deleting...'));
-
-            // Perform AJAX delete request
-            $.ajax({
-                url: `/Products/Delete/${currentDeleteProductId}`,
-                type: 'POST',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function(response) {
-                    // First, check if this went to approval
-                    if (response.isApprovalRequest) {
-                        // Product deletion requires approval
-                        $('#deleteModal').modal('hide');
-
-                        // Show detailed approval notification
-                        showToast(
-                            response.message || t('Product deletion has been submitted for approval. An administrator will review your request.'),
-                            'info',
-                            8000
-                        );
-
-                        // Add a visual indicator to the product row
-                        const $productRow = $(`tr:has(button[onclick="deleteProduct(${currentDeleteProductId})"])`);
-                        if ($productRow.length) {
-                            // Add pending badge to the status column
-                            const $statusCell = $productRow.find('td:nth-child(5)'); // Adjust based on your table structure
-                            $statusCell.append('<span class="badge bg-warning ms-1"><i class="fas fa-clock"></i> ' + t('Deletion Pending') + '</span>');
-
-                            // Disable the action buttons
-                            $productRow.find('.btn-group button').prop('disabled', true).addClass('opacity-50');
-                        }
-
-                        // Optionally show a more prominent notification
-                        if (response.approvalRequestId) {
-                            showApprovalRequestInfo(response.approvalRequestId);
-                        }
-
-                    } 
-                    else if (response.isSuccess !== false) {
-                        // Product was deleted successfully (direct deletion)
-                        $('#deleteModal').modal('hide');
-
-                        showToast(t('Product deleted successfully'), 'success');
-
-                        // Remove the product row with animation
-                        const $productRow = $(`tr:has(button[onclick="deleteProduct(${currentDeleteProductId})"])`);
-                        $productRow.fadeOut(500, function() {
-                            $(this).remove();
-
-                            // Check if table is now empty
-                            if ($('#productsTable tbody tr').length === 0) {
-                                location.reload(); // Reload to show empty state
-                            }
-                        });
-                    }
-                    else {
-                        // Deletion failed
-                        showToast(
-                            response.message || t('Failed to delete product. Please try again.'),
-                            'error'
-                        );
-
-                        // Keep modal open for retry
-                        $btn.prop('disabled', false).html(originalHtml);
-                    }
-                },
-                error: function(xhr) {
-                    // Handle different error scenarios
-                    let errorMessage = t('An error occurred while deleting the product');
-
-                    if (xhr.status === 401) {
-                        errorMessage = t('Your session has expired. Please log in again.');
-                        setTimeout(() => window.location.href = '/Account/Login', 2000);
-                    } else if (xhr.status === 403) {
-                        errorMessage = t('You do not have permission to delete this product.');
-                    } else if (xhr.status === 409) {
-                        errorMessage = t('This product cannot be deleted because it has associated routes or transfers.');
-                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    showToast(errorMessage, 'error', 7000);
-
-                    // Re-enable the button for retry
-                    $btn.prop('disabled', false).html(originalHtml);
-                }
-            });
-        });
-
-                // Helper function to show approval request details
-        function showApprovalRequestInfo(requestId) {
-            const infoHtml = `
-                <div class="alert alert-info alert-dismissible fade show position-fixed"
-                     style="top: 100px; right: 20px; z-index: 9999; max-width: 400px;">
-                    <h6 class="alert-heading">
-                        <i class="fas fa-info-circle me-2"></i>${t('Approval Request Created')}
-                    </h6>
-                    <p class="mb-2">${t('Your deletion request has been submitted with ID:')} <strong>#${requestId}</strong></p>
-                    <small class="text-muted">${t('You can track the status in the My Requests section.')}</small>
-                    <hr class="my-2">
-                    <div class="d-flex gap-2">
-                        <a href="/Approvals/MyRequests" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-list me-1"></i>${t('View My Requests')}
-                        </a>
-                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="alert">
-                            ${t('Close')}
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            $('body').append(infoHtml);
-
-            // Auto-hide after 10 seconds
-            setTimeout(() => {
-                $('.alert-info[style*="position: fixed"]').fadeOut(500, function() {
-                    $(this).remove();
-                });
-            }, 10000);
-        }
-
-
-        $('#deleteModal').on('keydown', function(e) {
-            if (e.key === 'Escape') {
-                $(this).modal('hide');
-            }
-        });
-
-        // Reset when modal is hidden
-        $('#deleteModal').on('hidden.bs.modal', function() {
-            currentDeleteProductId = null;
-            $('#confirmDeleteBtn').prop('disabled', false)
-                .html('<i class="fas fa-trash me-2"></i>' + t('Delete Product'));
-        });
 
         // Double-click to edit inventory code
         $(document).on('dblclick', '.inventory-code-display', function() {
@@ -615,7 +355,7 @@
         // Other users' changes refresh the count and the table in place (live-updates.js).
         LiveUpdates.watch({
             entities: ['product', 'category', 'department'],
-            regions: ['#productsSummary', '#productsRegion'],
+            regions: ['#productsCounts', '#productsRegion'],
             // An inventory code being edited in a row must not be swapped away.
             isEditing: () => $('.inventory-code-input:visible').length > 0
         });

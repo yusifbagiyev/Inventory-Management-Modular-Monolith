@@ -1,19 +1,67 @@
 @model PaginationViewModel
-@* Prev/next for any paged list; changePage (site.js) keeps the current filters in the URL. *@
+@* Table foot for any paged list (design: .ip-table-foot): range, rows per page, page numbers.
+   Links keep the current filters in the URL; #pageSizeFilter is also read by list-filters.js. *@
+@{
+    var totalPages = Math.Max(1, (int)Math.Ceiling(Model.TotalCount / (double)Math.Max(1, Model.PageSize)));
+    var current = Math.Clamp(Model.PageNumber, 1, totalPages);
 
-<div class="gmail-pagination d-flex align-items-center justify-content-between">
-    <div class="pagination-info">
-        <span class="text-muted">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
-    </div>
+    string PageUrl(int page)
+    {
+        var query = Context.Request.Query
+            .Where(q => !string.Equals(q.Key, "pageNumber", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(q => q.Value.Select(v => new KeyValuePair<string, string?>(q.Key, v)))
+            .Append(new KeyValuePair<string, string?>("pageNumber", page.ToString()));
+        return Context.Request.Path + Microsoft.AspNetCore.Http.QueryString.Create(query).ToString();
+    }
 
-    <div class="pagination-controls">
-        <button class="btn btn-sm btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")"
-                onclick="changePage(@(Model.PageNumber - 1))" @(!Model.HasPreviousPage ? "disabled" : "")>
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <button class="btn btn-sm btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")"
-                onclick="changePage(@(Model.PageNumber + 1))" @(!Model.HasNextPage ? "disabled" : "")>
-            <i class="fas fa-chevron-right"></i>
-        </button>
+    // First, last, and two either side of the current page; gaps become "…".
+    var pages = new SortedSet<int> { 1, totalPages };
+    for (var p = current - 2; p <= current + 2; p++)
+        if (p >= 1 && p <= totalPages) pages.Add(p);
+}
+<div class="ip-table-foot">
+    <span class="ip-num">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <label class="ip-filter">
+            <span>@L["Rows"]</span>
+            <select id="pageSizeFilter" onchange="changePageSize(this.value)">
+                @foreach (var size in new[] { 15, 30, 50, 100 })
+                {
+                    <option value="@size" selected="@(Model.PageSize == size)">@size</option>
+                }
+            </select>
+        </label>
+        @if (totalPages > 1)
+        {
+            <nav aria-label="@L["Pages"]">
+                <ul class="ip-pagination">
+                    <li class="@(current == 1 ? "disabled" : "")">
+                        <a href="@PageUrl(current - 1)" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left"></i></a>
+                    </li>
+                    @{ var previous = 0; }
+                    @foreach (var p in pages)
+                    {
+                        if (p - previous > 1)
+                        {
+                            <li class="disabled"><span>…</span></li>
+                        }
+                        <li class="@(p == current ? "active" : "")">
+                            @if (p == current)
+                            {
+                                <span aria-current="page">@p</span>
+                            }
+                            else
+                            {
+                                <a href="@PageUrl(p)">@p</a>
+                            }
+                        </li>
+                        previous = p;
+                    }
+                    <li class="@(current == totalPages ? "disabled" : "")">
+                        <a href="@PageUrl(current + 1)" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        }
     </div>
 </div>

@@ -3,35 +3,36 @@
    cover while no current image is left). Behaviour in wwwroot/js/image-manager.js; the form posts
    ImageFiles, RemoveImageUrls and CoverImageUrl. *@
 <div class="image-manager" data-image-manager data-max="@Model.Max">
-    <div class="d-flex align-items-baseline justify-content-between mb-2">
+    <div class="d-flex align-items-baseline justify-content-between gap-3 flex-wrap mb-3">
         @if (Model.Label != null)
         {
             <label class="form-label mb-0">@L[Model.Label]</label>
         }
-        <span class="form-text mt-0 ms-auto" data-im-count></span>
+        <span class="ip-hint">@(Model.Hint is null ? L["Choose the cover with the star. The cover is shown in the lists."] : L[Model.Hint])</span>
+        <span class="ip-hint ip-num ms-auto" data-im-count></span>
     </div>
 
-    <div class="im-grid" data-im-grid>
+    <div class="ip-images im-grid" data-im-grid>
         @foreach (var url in Model.Existing)
         {
             <div class="im-tile" data-im-existing="@url">
-                <img src="@url" alt="" loading="lazy" data-src="@url" data-title="@L["Image"]" onclick="showImageModal(this.dataset.src, this.dataset.title)" />
-                <span class="im-cover-badge">@L["Cover"]</span>
-                <div class="im-actions">
-                    <button type="button" class="im-btn" data-im-cover title="@L["Make cover"]" aria-label="@L["Make cover"]"><i class="fas fa-star"></i></button>
-                    <button type="button" class="im-btn im-btn-danger" data-im-remove title="@L["Remove"]" aria-label="@L["Remove"]"><i class="fas fa-xmark"></i></button>
+                <div class="ip-image-tile">
+                    <img src="@url" alt="" loading="lazy" data-src="@url" data-title="@L["Image"]" onclick="showImageModal(this.dataset.src, this.dataset.title)" />
+                    <button type="button" class="ctl star" data-im-cover title="@L["Make cover"]" aria-label="@L["Make cover"]"><i class="fa-solid fa-star"></i></button>
+                    <button type="button" class="ctl remove" data-im-remove title="@L["Remove"]" aria-label="@L["Remove"]"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+                <div class="ip-image-caption"><span></span><span class="cover-label">@L["Cover image"]</span></div>
             </div>
         }
 
-        <label class="im-add" data-im-add>
+        <label class="ip-image-add im-add" data-im-add>
             <input type="file" name="ImageFiles" multiple accept="image/jpeg,image/png,.jpg,.jpeg,.png" data-im-input />
-            <i class="fas fa-plus"></i>
-            <span>@L["Add images"]</span>
+            <i class="fa-solid fa-plus fa-lg"></i>
+            <span class="fw-semibold">@L["Add image"]</span>
+            <span class="ip-hint">@L["JPG, PNG · up to 5 MB"]</span>
         </label>
     </div>
 
     <div data-im-hidden></div>
-    <div class="form-text">@(Model.Hint is null ? L["JPG or PNG, up to 5 MB each. The star (★) chooses the cover image."] : L[Model.Hint])</div>
-    <div class="text-danger small mt-1" data-im-error></div>
+    <div class="ip-error mt-2" data-im-error></div>
 </div>

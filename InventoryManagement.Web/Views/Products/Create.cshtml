@@ -1,6 +1,7 @@
 @model ProductViewModel
 @{
     ViewData["Title"] = "Create Product";
+    var direct = User.HasPermission("product.create.direct");
 }
 
 <div class="container-fluid px-4">
@@ -14,222 +15,65 @@
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <form asp-action="Create" method="post" enctype="multipart/form-data">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <i class="fas fa-box me-1"></i>
-                        @L["New Product Information"]
-                    </div>
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="ip-form" id="productForm">
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+        }
 
-                    @if (!ViewData.ModelState.IsValid)
-                    {
-                        <div class="form-section">
-                            <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-0" role="alert"></div>
-                        </div>
-                    }
+        <partial name="_ProductFormFields" model="Model" view-data='new ViewDataDictionary(ViewData) { ["IsEdit"] = false }' />
 
-                    <div class="form-section">
-                        <div class="section-title">@L["Identity"]</div>
-                        <div class="form-grid">
-                            <div>
-                                <label asp-for="InventoryCode" class="form-label"></label>
-                                <input asp-for="InventoryCode" class="form-control" />
-                                <span asp-validation-for="InventoryCode" class="text-danger"></span>
-                                <div class="form-text">@L["Must be unique, between 1 and 9999."]</div>
-                            </div>
-                            <div>
-                                <label asp-for="Vendor" class="form-label"></label>
-                                <input asp-for="Vendor" class="form-control" />
-                                <span asp-validation-for="Vendor" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label asp-for="Model" class="form-label"></label>
-                                <input asp-for="Model" class="form-control" />
-                                <span asp-validation-for="Model" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="section-title">@L["Classification"]</div>
-                        <div class="form-grid">
-                            <div>
-                                <label asp-for="CategoryId" class="form-label"></label>
-                                <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                                    <option value="">@L["-- Select Category --"]</option>
-                                </select>
-                                <span asp-validation-for="CategoryId" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label asp-for="DepartmentId" class="form-label"></label>
-                                <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select">
-                                    <option value="">@L["-- Select Department --"]</option>
-                                </select>
-                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                            </div>
-                            <div>
-                                <label asp-for="Worker" class="form-label"></label>
-                                <input asp-for="Worker" class="form-control" />
-                                <span asp-validation-for="Worker" class="text-danger"></span>
-                                <div class="form-text">@L["Person responsible for this item."]</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="section-title">@L["Status"]</div>
-                        <div class="form-grid">
-                            <div class="form-check">
-                                <input asp-for="IsWorking" class="form-check-input" />
-                                <label asp-for="IsWorking" class="form-check-label"></label>
-                            </div>
-                            <div class="form-check">
-                                <input asp-for="IsActive" class="form-check-input" />
-                                <label asp-for="IsActive" class="form-check-label"></label>
-                            </div>
-                            <div class="form-check">
-                                <input asp-for="IsNewItem" class="form-check-input" />
-                                <label asp-for="IsNewItem" class="form-check-label"></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="section-title">@L["Images"]</div>
-                        <div class="form-grid">
-                            <div class="full">
-                                <partial name="_ImageManager" model='new ImageManagerModel { Hint = "Optional. Photos make the item easier to identify during transfers. The star (★) chooses the cover image." }' />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="section-title">@L["Notes"]</div>
-                        <div class="form-grid">
-                            <div class="full">
-                                <label asp-for="Description" class="form-label"></label>
-                                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-                                <span asp-validation-for="Description" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> @L["Back to List"]
-                        </a>
-                        <div class="actions-right">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> @L["Create Product"]
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </form>
+        <div class="ip-form-foot">
+            <span class="note">
+                @if (!direct)
+                {
+                    <i class="fa-solid fa-circle-info me-1"></i>@L["Operator changes are applied after an administrator approves them."]
+                }
+            </span>
+            <a asp-action="Index" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+            <button type="submit" class="ip-btn ip-btn-primary">
+                <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
+            </button>
         </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-lightbulb me-1"></i>
-                    @L["Quick Tips"]
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-muted me-1"></i>
-                            @L["Inventory codes must be unique and between 1-9999"]
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-muted me-1"></i>
-                            @L["Upload product images for better tracking"]
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-muted me-1"></i>
-                            @(L["Mark products as \"New Item\" for recent acquisitions"])
-                        </li>
-                        <li>
-                            <i class="fas fa-check text-muted me-1"></i>
-                            @L["Assign workers to track responsibility"]
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
+    <script src="~/js/product-form.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // Our submission guard flag - starts as false because nothing is submitting yet
+            // One product per click: later clicks are ignored until the request has an answer.
             let isSubmitting = false;
-
-            // Store the submit button and its original appearance
-            const $submitBtn = $('button[type="submit"]');
+            const $submitBtn = $('#productForm button[type="submit"]');
             const originalButtonHtml = $submitBtn.html();
 
-            // Initialize the form with AjaxHandler
-            AjaxHandler.handleForm('form', {
+            AjaxHandler.handleForm('#productForm', {
                 successMessage: t('Product created successfully!'),
                 successRedirect: '@Url.Action("Index")',
                 redirectDelay: 1500,
 
-                onBeforeSubmit: function(form) {
-                    // THE CRITICAL CHECKPOINT: Check if we're already creating a product
-                    // This happens before any validation, before any processing
-                    // If someone clicked the button 5 times, only the first click gets past this point
-                    if (isSubmitting) {
-                        return false; // Stop right here - don't proceed with submission
-                    }
-
-                    // LOCK THE GATE: Mark that we're now in the process of creating a product
-                    // Any subsequent clicks will be blocked by the check above
+                onBeforeSubmit: function() {
+                    if (isSubmitting || ProductForm.codeTaken()) return false;
                     isSubmitting = true;
-
-                    // Let the submission proceed normally
-                    // The AjaxHandler will handle validation and button state
                     return true;
                 },
 
                 onSuccess: function(response) {
-                    // Check if this requires approval
-                    // This can happen if a user without direct create permission tries to create
+                    // Without product.create.direct the product waits for approval.
                     if (response.isApprovalRequest || response.approvalRequestId) {
-                        showToast(
-                            response.message || t('Product creation submitted for approval'),
-                            'info',
-                            3000
-                        );
-
-                        // Still redirect - the product creation is pending approval
-                        setTimeout(() => {
-                            window.location.href = '@Url.Action("Index")';
-                        }, 2000);
-
-                        return false; // We're handling the redirect
+                        showToast(response.message || t('Product creation submitted for approval'), 'info', 3000);
+                        setTimeout(() => { window.location.href = '@Url.Action("Index")'; }, 2000);
+                        return false;
                     }
-
-                    // Normal success case - product was created directly
-                    return true; // Let AjaxHandler handle the success flow
+                    return true;
                 },
 
-                onError: function(errorMessage, response) {
-                    // CRITICAL: Reset the flag when an error occurs
-                    // This allows the user to fix their mistake and try again
+                onError: function() {
                     isSubmitting = false;
-
-                    // Restore the button so they can click it again
                     $submitBtn.prop('disabled', false).html(originalButtonHtml);
-
-                    console.error('Product creation error:', errorMessage);
-                    // The error will be shown by AjaxHandler
                 }
             });
         });
-
     </script>
 }

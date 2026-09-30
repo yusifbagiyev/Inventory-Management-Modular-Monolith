@@ -3,7 +3,7 @@ using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Products.Queries
 {
-    public record ProductCountsDto(int Total, int Active);
+    public record ProductCountsDto(int Total, int Active, int NotWorking);
 
     /// <summary>Product counts, optionally restricted to products created in a date range.</summary>
     public record GetProductCountsQuery(DateTime? CreatedFrom = null, DateTime? CreatedTo = null) : IRequest<ProductCountsDto>;
@@ -19,8 +19,8 @@ namespace ProductService.Application.Features.Products.Queries
 
         public async Task<ProductCountsDto> Handle(GetProductCountsQuery request, CancellationToken cancellationToken)
         {
-            var (total, active) = await _repository.CountCreatedAsync(request.CreatedFrom, request.CreatedTo, cancellationToken);
-            return new ProductCountsDto(total, active);
+            var (total, active, notWorking) = await _repository.CountCreatedAsync(request.CreatedFrom, request.CreatedTo, cancellationToken);
+            return new ProductCountsDto(total, active, notWorking);
         }
     }
 }

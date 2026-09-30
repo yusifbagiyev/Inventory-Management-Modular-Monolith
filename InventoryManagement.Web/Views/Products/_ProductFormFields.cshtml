@@ -1,0 +1,95 @@
+@model ProductViewModel
+@* Fields shared by Create and Edit (design: 05 Edit). Sections split by rules; the inventory code
+   is fixed once the product exists (it is changed from the list). *@
+@{
+    var isEdit = ViewData["IsEdit"] as bool? == true;
+}
+
+<section class="ip-form-section">
+    <h2>@L["Basic information"]</h2>
+    <div class="ip-form-grid">
+        <div class="ip-field">
+            <label asp-for="InventoryCode" class="ip-label"><span>@L["Inventory Code"]</span> <span class="req">*</span></label>
+            @if (isEdit)
+            {
+                <input asp-for="InventoryCode" class="ip-input mono" readonly />
+                <span class="ip-hint">@L["The code is changed from the product list (double-click it)."]</span>
+            }
+            else
+            {
+                <input asp-for="InventoryCode" class="ip-input mono" min="1" max="9999" data-code-check />
+                <span class="ip-error d-none" data-code-taken></span>
+                <span class="ip-hint">@L["Must be unique, between 1 and 9999."]</span>
+            }
+            <span asp-validation-for="InventoryCode" class="ip-error"></span>
+        </div>
+        <div class="ip-field">
+            <label asp-for="Vendor" class="ip-label"></label>
+            <input asp-for="Vendor" class="ip-input" />
+            <span asp-validation-for="Vendor" class="ip-error"></span>
+        </div>
+        <div class="ip-field">
+            <label asp-for="Model" class="ip-label"></label>
+            <input asp-for="Model" class="ip-input" />
+            <span asp-validation-for="Model" class="ip-error"></span>
+        </div>
+        <div class="ip-field">
+            <label asp-for="CategoryId" class="ip-label"><span>@L["Category"]</span> <span class="req">*</span></label>
+            <select asp-for="CategoryId" asp-items="Model.Categories" class="ip-select">
+                <option value="">@L["-- Select Category --"]</option>
+            </select>
+            <span asp-validation-for="CategoryId" class="ip-error"></span>
+        </div>
+    </div>
+</section>
+
+<section class="ip-form-section">
+    <h2>@L["Location"]</h2>
+    <div class="ip-form-grid">
+        <div class="ip-field">
+            <label asp-for="DepartmentId" class="ip-label"><span>@L["Department"]</span> <span class="req">*</span></label>
+            <select asp-for="DepartmentId" asp-items="Model.Departments" class="ip-select">
+                <option value="">@L["-- Select Department --"]</option>
+            </select>
+            <span asp-validation-for="DepartmentId" class="ip-error"></span>
+        </div>
+        <div class="ip-field">
+            <label asp-for="Worker" class="ip-label"></label>
+            <input asp-for="Worker" class="ip-input" />
+            <span class="ip-hint">@L["Person responsible for this item."]</span>
+            <span asp-validation-for="Worker" class="ip-error"></span>
+        </div>
+    </div>
+</section>
+
+<section class="ip-form-section">
+    <h2>@L["Status"]</h2>
+    <div class="ip-switch-list">
+        <label class="ip-switch-row">
+            <span><span class="d-block fw-medium">@L["Working"]</span><span class="ip-hint">@L["Turn off when the device is broken."]</span></span>
+            <input asp-for="IsWorking" type="checkbox" role="switch" class="ip-switch" />
+        </label>
+        <label class="ip-switch-row">
+            <span><span class="d-block fw-medium">@L["Active"]</span><span class="ip-hint">@L["Inactive products stay in the history but are left out of the Word export."]</span></span>
+            <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
+        </label>
+        <label class="ip-switch-row">
+            <span><span class="d-block fw-medium">@L["New"]</span><span class="ip-hint">@L["Recently acquired; marked \"New\" in the lists."]</span></span>
+            <input asp-for="IsNewItem" type="checkbox" role="switch" class="ip-switch" />
+        </label>
+    </div>
+</section>
+
+<section class="ip-form-section">
+    <div class="d-flex justify-content-between align-items-baseline gap-3">
+        <h2>@L["Description"]</h2>
+        <span class="ip-hint ip-num" data-char-count-for="Description"></span>
+    </div>
+    <textarea asp-for="Description" class="ip-textarea" rows="4" aria-label="@L["Description"]"></textarea>
+    <span asp-validation-for="Description" class="ip-error"></span>
+</section>
+
+<section class="ip-form-section">
+    <h2 class="mb-2">@L["Images"]</h2>
+    <partial name="_ImageManager" model="new ImageManagerModel { Existing = Model.ImageUrls, Label = null }" />
+</section>

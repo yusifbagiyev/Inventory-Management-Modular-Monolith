@@ -24,7 +24,8 @@ namespace ProductService.Application.Mappings
             CategoryName = product.Category?.Name,
             DepartmentId = product.DepartmentId,
             DepartmentName = product.Department?.Name,
-            CreatedAt = product.CreatedAt
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt
         };
 
         public static CategoryDto ToDto(this Category category, int productCount) => new()

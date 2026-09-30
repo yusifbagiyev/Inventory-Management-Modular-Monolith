@@ -10,6 +10,7 @@ using ProductService.Application.Features.Lookups;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
+using RouteService.Application.Features.Routes.Queries;
 using SharedServices.Identity;
 using ModuleDtos = ProductService.Application.DTOs;
 
@@ -67,6 +68,8 @@ namespace InventoryManagement.Web.Controllers
 
             // The active state/quick filters narrow the cascading facets.
             await LoadFilterLists(status, availability, hasImage, assigned);
+            // Page subtitle: the whole inventory, whatever the filters.
+            ViewBag.Counts = await _mediator.Send(new GetProductCountsQuery());
 
             return View(products);
         }
@@ -95,9 +98,17 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));
-            return product == null
-                ? RedirectToNotFound()
-                : View(ModelMapper.Map<ProductViewModel>(product));
+            if (product == null)
+                return RedirectToNotFound();
+
+            // The transfers below the details (the full history, updates included, is the timeline).
+            var routes = await _mediator.Send(new GetRoutesByProductQuery(id));
+            ViewBag.Transfers = ModelMapper.MapList<RouteViewModel>(routes)
+                .Where(r => r.RouteTypeName == "Transfer")
+                .OrderByDescending(r => r.CreatedAt)
+                .Take(10)
+                .ToList();
+            return View(ModelMapper.Map<ProductViewModel>(product));
         }
 
 

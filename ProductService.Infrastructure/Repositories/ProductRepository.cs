@@ -260,15 +260,18 @@ namespace ProductService.Infrastructure.Repositories
         }
 
 
-        public async Task<(int Total, int Active)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default)
+        public async Task<(int Total, int Active, int NotWorking)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default)
         {
             var query = _context.Products.AsNoTracking();
             if (createdFrom.HasValue) query = query.Where(p => p.CreatedAt >= createdFrom.Value);
             if (createdTo.HasValue) query = query.Where(p => p.CreatedAt <= createdTo.Value);
 
-            var total = await query.CountAsync(cancellationToken);
-            var active = await query.CountAsync(p => p.IsActive, cancellationToken);
-            return (total, active);
+            // One round trip: COUNT(*) with FILTER clauses.
+            var counts = await query
+                .GroupBy(_ => 1)
+                .Select(g => new { Total = g.Count(), Active = g.Count(p => p.IsActive), NotWorking = g.Count(p => !p.IsWorking) })
+                .FirstOrDefaultAsync(cancellationToken);
+            return counts is null ? (0, 0, 0) : (counts.Total, counts.Active, counts.NotWorking);
         }
 
         public Task<int> CountAsync(CancellationToken cancellationToken = default)

@@ -1,30 +1,35 @@
 @model ImageGalleryModel
-@* Details-page gallery: the cover large, the rest as thumbnails; a thumbnail becomes the large
-   image, the large image opens the preview modal. *@
+@* Details-page gallery (design: .ip-gallery): the cover large with prev/next and a counter, the
+   rest as thumbnails. The large image opens the preview modal; image-manager.js switches images. *@
 @if (Model.Images.Count == 0)
 {
-    <div class="empty-state py-4">
-        <i class="fas fa-image"></i>
-        <p class="mb-0">@L[Model.EmptyText]</p>
+    <div class="ip-gallery" role="img" aria-label="@L[Model.EmptyText]">
+        <div class="text-center">
+            <i class="fa-regular fa-image fa-2x d-block mb-2"></i>
+            <span class="ip-faint">@L[Model.EmptyText]</span>
+        </div>
     </div>
 }
 else
 {
-    <div class="image-gallery" data-image-gallery>
-        <div class="ig-main">
-            <img src="@Model.Images[0]" alt="@Model.Title" data-ig-main
+    <div data-image-gallery>
+        <div class="ip-gallery">
+            <img src="@Model.Images[0]" alt="@Model.Title" data-ig-main style="cursor: zoom-in"
                  onclick="showImageModal(this.getAttribute('src'), this.alt)" />
+            <span class="chip" data-ig-cover><i class="fa-solid fa-star"></i>@L["Cover image"]</span>
             @if (Model.Images.Count > 1)
             {
-                <span class="ig-count" data-ig-counter>1 / @Model.Images.Count</span>
+                <button type="button" class="nav prev" data-ig-step="-1" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left"></i></button>
+                <button type="button" class="nav next" data-ig-step="1" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right"></i></button>
+                <span class="counter" data-ig-counter>1 / @Model.Images.Count</span>
             }
         </div>
         @if (Model.Images.Count > 1)
         {
-            <div class="ig-thumbs">
+            <div class="ip-gallery-thumbs">
                 @for (var i = 0; i < Model.Images.Count; i++)
                 {
-                    <button type="button" class="ig-thumb @(i == 0 ? "active" : "")" data-ig-thumb="@Model.Images[i]" data-ig-index="@(i + 1)"
+                    <button type="button" class="@(i == 0 ? "active" : "")" data-ig-thumb="@Model.Images[i]" data-ig-index="@(i + 1)"
                             aria-label="@L["Image {0}", i + 1]">
                         <img src="@Model.Images[i]" alt="" loading="lazy" />
                     </button>
