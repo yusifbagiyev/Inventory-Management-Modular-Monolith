@@ -226,7 +226,6 @@
                 onBeforeSubmit: function(form) {
                     // FIRST: Check if we're already submitting (this prevents duplicates)
                     if (isSubmitting) {
-                        console.log('Already submitting, blocking duplicate submission');
                         return false; // Stop here, don't proceed with submission
                     }
 
@@ -256,7 +255,6 @@
                     }
 
                     // All validation passed, proceed with submission
-                    console.log('Validation passed, proceeding with transfer submission');
                     return true;
                 },
                 onSuccess: function(response) {

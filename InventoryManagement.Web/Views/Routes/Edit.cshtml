@@ -319,7 +319,6 @@
                     onBeforeSubmit: function(form) {
                         // Check if already submitting
                         if (isSubmitting) {
-                            console.log('Blocking duplicate submission attempt');
                             return false;
                         }
 
@@ -327,19 +326,15 @@
                         isSubmitting = true;
 
                         // Log for debugging
-                        console.log('Starting route update submission');
 
                         return true; // Allow submission to proceed
                     },
 
                     onSuccess: function(response) {
-                        console.log('Route update response received:', response);
-
                         // Check if this is an approval request
                         if (response.isApprovalRequest ||
                             response.status === 'PendingApproval' ||
                             response.approvalRequestId) {
-
                             showToast(
                                 response.message || 'Update submitted for approval',
                                 'info'
@@ -412,7 +407,6 @@
                 window.deleteRoute = function() {
                     // Prevent multiple delete attempts
                     if (isSubmitting) {
-                        console.log('Already processing a request');
                         return;
                     }
 

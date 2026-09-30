@@ -61,7 +61,6 @@
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
-                    console.log('Preventing duplicate submission via click handler');
                     return false;
                 }
             });
@@ -77,7 +76,6 @@
 
                 // Check if already submitting
                 if (formState.isSubmitting) {
-                    console.log('Form is already being submitted, ignoring duplicate submission');
                     return false;
                 }
 

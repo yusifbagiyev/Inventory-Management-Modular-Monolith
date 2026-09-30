@@ -188,14 +188,12 @@
                     // This happens before any validation, before any processing
                     // If someone clicked the button 5 times, only the first click gets past this point
                     if (isSubmitting) {
-                        console.log('Product creation already in progress, blocking duplicate submission');
                         return false; // Stop right here - don't proceed with submission
                     }
 
                     // LOCK THE GATE: Mark that we're now in the process of creating a product
                     // Any subsequent clicks will be blocked by the check above
                     isSubmitting = true;
-                    console.log('Product creation submission started');
 
                     // Let the submission proceed normally
                     // The AjaxHandler will handle validation and button state

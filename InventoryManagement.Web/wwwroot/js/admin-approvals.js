@@ -1,7 +1,6 @@
 let isLoadingApprovals = false;
 async function loadPendingApprovalsCount() {
     if (isLoadingApprovals) {
-        console.log('Already loading approvals, skipping duplicate call');
         return;
     }
 
@@ -17,7 +16,6 @@ async function loadPendingApprovalsCount() {
                 success: function (data) {
                     const count = data.totalCount || 0;
                     updatePendingApprovalsCount(count);
-                    console.log('✅ Loaded approval count:', count);
                 },
                 error: function (xhr, status, error) {
                     console.error('❌ Failed to load pending approvals:', {
@@ -32,7 +30,6 @@ async function loadPendingApprovalsCount() {
                         console.warn('User does not have permission to view approvals');
                     } else if (xhr.status === 0 || status === 'timeout') {
                         console.error('Network error or timeout occurred');
-                    } else {
                     }
                 },
                 complete: function () {

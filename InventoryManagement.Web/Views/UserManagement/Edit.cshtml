@@ -191,8 +191,6 @@
                     // For MVC controller actions, we don't need the Bearer token
                     // The cookie authentication handles it automatically
                     success: function(data) {
-                        console.log('Permissions loaded successfully:', data);
-
                         if (data.error) {
                             $('#permissionsContainer').html(
                                 '<p class="text-danger">Failed to load permissions</p>'

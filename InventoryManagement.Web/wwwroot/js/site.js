@@ -222,7 +222,6 @@ function setupSessionMonitor() {
         return;
     }
 
-    console.log('Session monitor started');
 
     const monitorInterval = setInterval(async function () {
         try {

@@ -278,7 +278,6 @@
                 url: '/Notifications/GetUnreadCount',
                 type: 'GET',
                 success: function(count) {
-                    console.log('Loaded notification count:', count);
                     updateNotificationBadge(count);
                 },
                 error: function(xhr, status, error) {
@@ -302,7 +301,6 @@
                 url: '/Notifications/GetRecentNotifications',
                 type: 'GET',
                 success: function(notifications) {
-                    console.log('Loaded notifications:', notifications.length);
                     renderNotifications(notifications);
 
                     // Also update the count after loading notifications
@@ -358,9 +356,8 @@
 
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log('Could not play notification sound:', error);
-                    });
+                    // Browsers block autoplay until the user has interacted with the page; not an error.
+                    playPromise.catch(() => { });
                 }
             } catch (error) {
                 console.error('Error playing notification sound:', error);
@@ -455,8 +452,6 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
-                    console.log('✅ All notifications marked as read');
-
                     // Remove unread class from all items
                     $('.notification-item').removeClass('unread');
                     $('.notification-dot').remove();
@@ -486,7 +481,6 @@
 
         function updateNotificationBadge(count) {
             count = parseInt(count) || 0;
-            console.log('Updating notification badges to:', count);
 
             // List of all possible notification badge selectors
             const badgeSelectors = [

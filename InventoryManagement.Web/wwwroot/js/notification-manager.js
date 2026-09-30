@@ -29,19 +29,16 @@ window.NotificationManager = (function () {
     // Establish SignalR connection with improved error handling
     function establishConnection() {
         if (connection && connection.state === signalR.HubConnectionState.Connected) {
-            console.log('Already connected to notification hub');
             return;
         }
 
         // Clean up any existing connection first
         if (connection) {
-            console.log('Cleaning up existing connection');
             connection.stop();
             connection = null;
         }
 
         const hubUrl = AppConfig.signalR.notificationHub;
-        console.log('Connecting to notification hub at:', hubUrl);
 
         // Create the connection with proper configuration
         connection = new signalR.HubConnectionBuilder()
@@ -83,7 +80,6 @@ window.NotificationManager = (function () {
         connection.onreconnected((connectionId) => {
             connectionState = 'connected';
             connectionRetryCount = 0;
-            console.log('SignalR reconnected successfully:', connectionId);
             showToast('Connection restored', 'success');
 
             // Reload data after reconnection, but with a delay to avoid overwhelming the server
@@ -105,7 +101,6 @@ window.NotificationManager = (function () {
             // Only try to reconnect if we haven't exceeded max retries
             if (connectionRetryCount < maxRetries) {
                 connectionRetryCount++;
-                console.log(`Attempting manual reconnection... (${connectionRetryCount}/${maxRetries})`);
                 scheduleReconnect(5000);
             } else {
                 console.error('Maximum reconnection attempts exceeded');
@@ -124,7 +119,6 @@ window.NotificationManager = (function () {
     function setupMessageHandlers() {
         // Connection established confirmation
         connection.on("ConnectionEstablished", function (data) {
-            console.log('✅ SignalR connection established:', data);
             connectionState = 'connected';
             connectionRetryCount = 0;
 
@@ -136,7 +130,6 @@ window.NotificationManager = (function () {
                 roleGroups: data.roleGroups
             };
 
-            console.log('Connected as:', data.userName, 'Groups:', [data.userGroup, ...data.roleGroups]);
 
             // Initial load of data (with slight delay to ensure UI is ready)
             setTimeout(() => {
@@ -147,11 +140,8 @@ window.NotificationManager = (function () {
 
         // Handle incoming notifications with duplicate prevention
         connection.on("ReceiveNotification", function (notification) {
-            console.log('📨 Notification received:', notification);
-
             // Check for duplicate notifications
             if (isDuplicateNotification(notification)) {
-                console.log('Duplicate notification detected, ignoring:', notification.id);
                 return;
             }
 
@@ -164,8 +154,6 @@ window.NotificationManager = (function () {
 
         // Handle pending notifications (sent when connecting)
         connection.on("ReceivePendingNotification", function (notification) {
-            console.log('📬 Pending notification received:', notification);
-
             // For pending notifications, we don't want to show individual toasts
             // Just update the badge count
             window.incrementNotificationCount();
@@ -173,8 +161,6 @@ window.NotificationManager = (function () {
 
         // Pending notifications complete
         connection.on("PendingNotificationsComplete", function (data) {
-            console.log(`📭 Received ${data.count} pending notifications`);
-
             // Reload the notification list and count after receiving all pending
             setTimeout(() => {
                 window.loadRecentNotifications();
@@ -184,8 +170,6 @@ window.NotificationManager = (function () {
 
         // Handle approval refresh (for admins) with rate limiting
         connection.on("RefreshApprovals", function (data) {
-            console.log('🔄 Refresh approvals signal received:', data);
-
             if (window.isAdmin) {
                 // Use debounced function to prevent rapid successive calls
                 if (typeof debouncedLoadPendingApprovalsCount === 'function') {
@@ -274,7 +258,6 @@ window.NotificationManager = (function () {
 
     function startConnection() {
         if (connectionState === 'connecting' || connectionState === 'connected') {
-            console.log('Connection already in progress or established');
             return;
         }
 
@@ -284,7 +267,6 @@ window.NotificationManager = (function () {
             .then(() => {
                 connectionState = 'connected';
                 connectionRetryCount = 0;
-                console.log('✅ SignalR connected successfully');
 
                 // Clear any existing reconnect timeout
                 if (reconnectTimeout) {
@@ -300,7 +282,6 @@ window.NotificationManager = (function () {
                 if (connectionRetryCount < maxRetries && !isAuthError(err)) {
                     connectionRetryCount++;
                     const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
-                    console.log(`Retrying connection in ${delay}ms... (${connectionRetryCount}/${maxRetries})`);
                     scheduleReconnect(delay);
                 } else if (isAuthError(err)) {
                     console.error('Authentication error, user may need to login');
@@ -383,8 +364,6 @@ window.NotificationManager = (function () {
     }
 
     function refreshApprovalsTable() {
-        console.log('🔄 Refreshing approvals table...');
-
         // Check if DataTable exists
         const table = $('#approvalsTable');
         if (table.length && $.fn.DataTable.isDataTable(table)) {
@@ -433,7 +412,6 @@ window.NotificationManager = (function () {
 
                         hideSubtleLoader();
 
-                        console.log('✅ Approvals table refreshed successfully');
                     } else {
                         // Fallback to full page reload if we can't find the table
                         console.warn('Could not find table in response, reloading page');
@@ -453,7 +431,6 @@ window.NotificationManager = (function () {
             });
         } else {
             // If no DataTable, just reload the page
-            console.log('No DataTable found, reloading page');
             location.reload();
         }
     }
@@ -510,15 +487,11 @@ window.NotificationManager = (function () {
         isConnected: () => connectionState === 'connected',
         reconnect: () => {
             if (connectionState !== 'connected' && connectionState !== 'connecting') {
-                console.log('Manual reconnection requested');
                 connectionRetryCount = 0; // Reset retry count for manual reconnection
                 establishConnection();
-            } else {
-                console.log('Already connected or connecting');
             }
         },
         disconnect: () => {
-            console.log('Manual disconnection requested');
             isInitialized = false;
             if (connection) {
                 connection.stop();
