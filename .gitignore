@@ -365,3 +365,8 @@ FodyWeavers.xsd
 
 # Environment Files
 .env
+
+# Written by deploy/deploy.sh when the server directory is a checkout
+backups/
+deploy-history.log
+docker-compose.override.yml

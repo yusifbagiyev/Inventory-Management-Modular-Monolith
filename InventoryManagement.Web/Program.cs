@@ -1,4 +1,5 @@
 using InventoryManagement.Web.Extensions;
+using InventoryManagement.Web.HealthChecks;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.DataProtection;
 using Serilog;
@@ -40,6 +41,9 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddCustomServices();
 
+    // Polled by the container healthcheck; the deploy waits on it and rolls back if it never passes.
+    builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+
     var app = builder.Build();
 
     app.UseForwardedHeaders();
@@ -70,6 +74,7 @@ try
 
     app.UseModules();
     app.MapControllers();
+    app.MapHealthChecks("/health").AllowAnonymous();
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
@@ -87,6 +92,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-/// <summary>Entry point type, public so integration tests can host the app.</summary>
-public partial class Program;

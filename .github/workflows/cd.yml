@@ -1,0 +1,112 @@
+name: CD
+
+# After CI passes on master: build the image once on GitHub, push it to ghcr.io, then deploy it on
+# the production server through the self-hosted runner there (deploy/deploy.sh).
+# Off until the repository variable CD_ENABLED is 'true' - see deploy/CD.md.
+#
+# Rollback: Actions -> CD -> Run workflow, with image_tag set to an earlier tag (sha-<commit>).
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Deploy this existing tag instead of building (rollback), e.g. sha-4c38823...'
+        required: false
+        default: ''
+
+# One deployment at a time, in order; never cancel one half-way.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/inventory-app
+
+jobs:
+  image:
+    if: >-
+      vars.CD_ENABLED == 'true' && !inputs.image_tag &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit CI tested, not whatever master points at by now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - id: tag
+        run: echo "tag=sha-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    # Runs after a successful build, or on its own for a rollback to an existing tag.
+    if: >-
+      always() && vars.CD_ENABLED == 'true' &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master') &&
+      (needs.image.result == 'success' || (needs.image.result == 'skipped' && inputs.image_tag))
+    runs-on: [self-hosted, inventory-prod]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+      TAG: ${{ inputs.image_tag || needs.image.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Check setup
+        run: |
+          test -n "$DEPLOY_DIR" || { echo "Set the DEPLOY_DIR repository variable (deploy/CD.md)"; exit 1; }
+          test -f "$DEPLOY_DIR/.env" || { echo "$DEPLOY_DIR/.env is missing"; exit 1; }
+          [[ "$TAG" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "Invalid image tag: $TAG"; exit 1; }
+
+      # Compose file, nginx config and scripts come from the repository; server-specific values
+      # stay in .env and docker-compose.override.yml, which are never overwritten.
+      - name: Sync deployment files
+        run: |
+          cp docker-compose.yml "$DEPLOY_DIR/docker-compose.yml"
+          mkdir -p "$DEPLOY_DIR/deploy"
+          cp -R deploy/. "$DEPLOY_DIR/deploy/"
+
+      - name: Log in to ghcr.io
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+      - name: Deploy
+        run: bash "$DEPLOY_DIR/deploy/deploy.sh" "$IMAGE:$TAG"
+
+      - name: Log out of ghcr.io
+        if: always()
+        run: docker logout ghcr.io
