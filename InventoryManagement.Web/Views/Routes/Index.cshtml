@@ -13,20 +13,20 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Routes</h1>
+            <h1 class="mb-1">@L["Routes"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">Routes</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["Routes"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-outline-secondary btn-sm" onclick="exportRoutesToPDF()">
-                <i class="fas fa-file-pdf"></i> Export PDF
+                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
             </button>
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
             {
                 <a asp-action="Transfer" class="btn btn-primary btn-sm">
-                    <i class="fas fa-exchange-alt"></i> New Transfer
+                    <i class="fas fa-exchange-alt"></i> @L["New Transfer"]
                 </a>
             }
         </div>
@@ -47,22 +47,22 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                     <input type="text" id="searchInput" class="form-control" name="search" value="@currentSearch"
-                           placeholder="Search code, model, vendor, department..." />
+                           placeholder="@L["Search code, model, vendor, department..."]" />
                 </div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="applyRouteFilters()">
-                <i class="fas fa-filter"></i> Apply
+                <i class="fas fa-filter"></i> @L["Apply"]
             </button>
             <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
-                <i class="fas fa-redo"></i> Reset
+                <i class="fas fa-redo"></i> @L["Reset"]
             </button>
         </div>
 
         <div class="filter-grid">
             <div class="filter-field">
-                <label for="departmentFilter">Department</label>
+                <label for="departmentFilter">@L["Department"]</label>
                 <select id="departmentFilter" class="form-select form-select-sm" onchange="onDepartmentChange()">
-                    <option value="">All departments</option>
+                    <option value="">@L["All departments"]</option>
                     @foreach (var d in filterDepartments)
                     {
                         <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
@@ -70,9 +70,9 @@
                 </select>
             </div>
             <div class="filter-field">
-                <label for="categoryFilter">Category</label>
+                <label for="categoryFilter">@L["Category"]</label>
                 <select id="categoryFilter" class="form-select form-select-sm" onchange="onCategoryChange()">
-                    <option value="">All categories</option>
+                    <option value="">@L["All categories"]</option>
                     @foreach (var c in filterCategories)
                     {
                         <option value="@c.Value" selected="@(c.Value == curCategoryName)">@c.Text</option>
@@ -80,34 +80,34 @@
                 </select>
             </div>
             <div class="filter-field">
-                <label for="statusFilter">Status</label>
+                <label for="statusFilter">@L["Status"]</label>
                 @* the previous markup wrote the Razor variables as bare attributes, so the
                    current selection never rendered - bound properly here *@
                 <select id="statusFilter" class="form-select form-select-sm" onchange="applyRouteFilters()">
-                    <option value="">All</option>
-                    <option value="false" selected="@(curCompleted == false)">Pending</option>
-                    <option value="true" selected="@(curCompleted == true)">Completed</option>
+                    <option value="">@L["All"]</option>
+                    <option value="false" selected="@(curCompleted == false)">@L["Pending"]</option>
+                    <option value="true" selected="@(curCompleted == true)">@L["Completed"]</option>
                 </select>
             </div>
             <div class="filter-field">
-                <label for="typeFilter">Route type</label>
+                <label for="typeFilter">@L["Route type"]</label>
                 @* Server-side now: a fixed enum list (New/Existing/Update/Transfer/Removal) so past
                    types on other pages are selectable, the count reflects it, and it survives other
                    filter changes. Was client-side, narrowing only the current page's rows. *@
                 <select id="typeFilter" class="form-select form-select-sm" onchange="applyRouteFilters()">
-                    <option value="">All types</option>
+                    <option value="">@L["All types"]</option>
                     @foreach (var t in new[] { "New", "Existing", "Update", "Transfer", "Removal" })
                     {
-                        <option value="@t" selected="@(t == curRouteType)">@t</option>
+                        <option value="@t" selected="@(t == curRouteType)">@L[t]</option>
                     }
                 </select>
             </div>
             <div class="filter-field">
-                <label for="dateRange">Created between</label>
-                <input type="text" id="dateRange" class="form-control form-control-sm" placeholder="Any date" />
+                <label for="dateRange">@L["Created between"]</label>
+                <input type="text" id="dateRange" class="form-control form-control-sm" placeholder="@L["Any date"]" />
             </div>
             <div class="filter-field">
-                <label for="pageSizeFilter">Rows per page</label>
+                <label for="pageSizeFilter">@L["Rows per page"]</label>
                 <select id="pageSizeFilter" class="form-select form-select-sm" onchange="applyRouteFilters()">
                     @foreach (var size in new[] { 15, 30, 50, 100 })
                     {
@@ -118,10 +118,10 @@
         </div>
 
         <div class="filter-quick">
-            <span class="qlabel">Quick</span>
-            <a asp-action="Index" class="qchip @(curCompleted == null ? "active" : "")">All</a>
-            <a asp-action="Index" asp-route-isCompleted="false" class="qchip @(curCompleted == false ? "active" : "")">Pending</a>
-            <a asp-action="Index" asp-route-isCompleted="true" class="qchip @(curCompleted == true ? "active" : "")">Completed</a>
+            <span class="qlabel">@L["Quick"]</span>
+            <a asp-action="Index" class="qchip @(curCompleted == null ? "active" : "")">@L["All"]</a>
+            <a asp-action="Index" asp-route-isCompleted="false" class="qchip @(curCompleted == false ? "active" : "")">@L["Pending"]</a>
+            <a asp-action="Index" asp-route-isCompleted="true" class="qchip @(curCompleted == true ? "active" : "")">@L["Completed"]</a>
         </div>
 
         @if (hasFilters)
@@ -134,37 +134,37 @@
                        cannot break out. *@
                     foreach (var word in currentSearch.Split(' ', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        <span class="achip">Search: <b>@word</b><button type="button" class="achip-x achip-word" data-word="@word">&times;</button></span>
+                        <span class="achip">@L["Search"]: <b>@word</b><button type="button" class="achip-x achip-word" data-word="@word">&times;</button></span>
                     }
                 }
                 @if (curDepartmentId.HasValue)
                 {
-                    <span class="achip">Department: <b>@DepartmentName(curDepartmentId)</b><button type="button" class="achip-x" onclick="removeRouteFilter('departmentId')">&times;</button></span>
+                    <span class="achip">@L["Department"]: <b>@DepartmentName(curDepartmentId)</b><button type="button" class="achip-x" onclick="removeRouteFilter('departmentId')">&times;</button></span>
                 }
                 @if (!string.IsNullOrEmpty(curCategoryName))
                 {
-                    <span class="achip">Category: <b>@curCategoryName</b><button type="button" class="achip-x" onclick="removeRouteFilter('categoryName')">&times;</button></span>
+                    <span class="achip">@L["Category"]: <b>@curCategoryName</b><button type="button" class="achip-x" onclick="removeRouteFilter('categoryName')">&times;</button></span>
                 }
                 @if (!string.IsNullOrEmpty(curRouteType))
                 {
-                    <span class="achip">Type: <b>@curRouteType</b><button type="button" class="achip-x" onclick="removeRouteFilter('routeType')">&times;</button></span>
+                    <span class="achip">@L["Type"]: <b>@L[curRouteType]</b><button type="button" class="achip-x" onclick="removeRouteFilter('routeType')">&times;</button></span>
                 }
                 @if (curCompleted.HasValue)
                 {
-                    <span class="achip">Status: <b>@(curCompleted.Value ? "Completed" : "Pending")</b><button type="button" class="achip-x" onclick="removeRouteFilter('isCompleted')">&times;</button></span>
+                    <span class="achip">@L["Status"]: <b>@L[curCompleted.Value ? "Completed" : "Pending"]</b><button type="button" class="achip-x" onclick="removeRouteFilter('isCompleted')">&times;</button></span>
                 }
                 @if (curStart.HasValue || curEnd.HasValue)
                 {
-                    <span class="achip">Created: <b>@(curStart?.ToString("dd.MM.yyyy")) - @(curEnd?.ToString("dd.MM.yyyy"))</b><button type="button" class="achip-x" onclick="removeRouteFilter('dates')">&times;</button></span>
+                    <span class="achip">@L["Created"]: <b>@(curStart?.ToString("dd.MM.yyyy")) - @(curEnd?.ToString("dd.MM.yyyy"))</b><button type="button" class="achip-x" onclick="removeRouteFilter('dates')">&times;</button></span>
                 }
-                <button type="button" class="filter-clear" onclick="resetFilters()">Clear all</button>
+                <button type="button" class="filter-clear" onclick="resetFilters()">@L["Clear all"]</button>
             </div>
         }
     </div>
 
     <div class="result-bar" id="routesSummary">
-        <span><b>@Model.TotalCount</b> route@(Model.TotalCount == 1 ? "" : "s")@(hasFilters ? " matched" : "")</span>
-        <span class="text-muted">Page @Model.PageNumber</span>
+        <span><b>@Model.TotalCount</b> @(L[hasFilters ? (Model.TotalCount == 1 ? "route matched" : "routes matched") : (Model.TotalCount == 1 ? "route" : "routes")])</span>
+        <span class="text-muted">@L["Page {0}", Model.PageNumber]</span>
     </div>
 
     <div class="card mb-4" id="routesRegion">
@@ -175,15 +175,15 @@
                         <table class="table table-hover mb-0" id="routesTable">
                             <thead>
                                 <tr>
-                                    <th style="width: 78px;">Code</th>
-                                    <th>Product</th>
-                                    <th style="width: 96px;">Type</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Description</th>
-                                    <th style="width: 118px;">Status</th>
-                                    <th style="width: 92px;">Created</th>
-                                    <th class="actions-column" style="width: 104px;">Actions</th>
+                                    <th style="width: 78px;">@L["Code"]</th>
+                                    <th>@L["Product"]</th>
+                                    <th style="width: 96px;">@L["Type"]</th>
+                                    <th>@L["From"]</th>
+                                    <th>@L["To"]</th>
+                                    <th>@L["Description"]</th>
+                                    <th style="width: 118px;">@L["Status"]</th>
+                                    <th style="width: 92px;">@L["Created"]</th>
+                                    <th class="actions-column" style="width: 104px;">@L["Actions"]</th>
                                 </tr>
                             </thead>
                             <tbody id="routesTableBody">
@@ -205,9 +205,16 @@
                                             <div class="cell-item">
                                                 @if (!string.IsNullOrEmpty(route.ImageUrl))
                                                 {
-                                                    <img src="@route.FullImageUrl" class="cell-thumb" style="cursor: pointer;"
-                                                         data-src="@route.FullImageUrl" onclick="showImageModal(this.dataset.src, 'Route @route.Id')"
-                                                         alt="Route image">
+                                                    <span class="thumb-wrap">
+                                                        <img src="@route.FullImageUrl" class="cell-thumb" style="cursor: pointer;"
+                                                             data-src="@route.FullImageUrl" data-title="@L["Route {0}", route.Id]"
+                                                             onclick="showImageModal(this.dataset.src, this.dataset.title)"
+                                                             alt="@L["Route image"]">
+                                                        @if (route.ImageUrls.Count > 1)
+                                                        {
+                                                            <span class="thumb-more" title="@L["{0} images", route.ImageUrls.Count]">+@(route.ImageUrls.Count - 1)</span>
+                                                        }
+                                                    </span>
                                                 }
                                                 else
                                                 {
@@ -230,7 +237,7 @@
                                                     _ => "state-idle"
                                                 };
                                             }
-                                            <span class="state state-flat @typeClass">@route.RouteTypeName</span>
+                                            <span class="state state-flat @typeClass">@L[route.RouteTypeName ?? ""]</span>
                                         </td>
                                         <td>
                                             <div class="cell-text">
@@ -264,7 +271,7 @@
                                             @if (route.IsCompleted)
                                             {
                                                 <div class="cell-text">
-                                                    <span class="state state-ok">Completed</span>
+                                                    <span class="state state-ok">@L["Completed"]</span>
                                                     @if (route.CompletedAt.HasValue)
                                                     {
                                                         <span class="cell-sub mono">@route.CompletedAt.Value.ToString("dd.MM.yyyy")</span>
@@ -273,20 +280,20 @@
                                             }
                                             else
                                             {
-                                                <span class="state state-warn">Pending</span>
+                                                <span class="state state-warn">@L["Pending"]</span>
                                             }
                                         </td>
                                         <td class="mono text-muted">@route.CreatedAt.ToString("dd.MM.yyyy")</td>
                                         <td class="actions-column">
                                             <div class="btn-group" role="group">
                                                 <a asp-action="Details" asp-route-id="@route.Id"
-                                                   class="btn btn-sm btn-outline-secondary" title="View Details">
+                                                   class="btn btn-sm btn-outline-secondary" title="@L["View Details"]">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if ((User.HasPermission("route.update") || User.HasPermission("route.update.direct")) && !route.IsCompleted)
                                                 {
                                                     <a asp-action="Edit" asp-route-id="@route.Id"
-                                                       class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                       class="btn btn-sm btn-outline-secondary" title="@L["Edit"]">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 }
@@ -294,7 +301,7 @@
                                                 @if ((User.HasPermission("route.complete") && !route.IsCompleted))
                                                 {
                                                     <button type="button" class="btn btn-sm btn-success"
-                                                            onclick="completeRoute(@route.Id)" title="Complete">
+                                                            onclick="completeRoute(@route.Id)" title="@L["Complete"]">
                                                         <i class="fas fa-check"></i>
                                                     </button>
                                                 }
@@ -302,7 +309,7 @@
                                                 @if (User.HasPermission("route.delete") && !route.IsCompleted)
                                                 {
                                                     <button type="button" class="btn btn-sm btn-outline-danger"
-                                                            onclick="deleteRoute(@route.Id)" title="Delete">
+                                                            onclick="deleteRoute(@route.Id)" title="@L["Delete"]">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 }
@@ -319,9 +326,9 @@
                 {
                     <div class="text-center py-5">
                         <i class="fas fa-route fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No routes found</p>
+                        <p class="text-muted">@L["No routes found"]</p>
                         <a asp-action="Transfer" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Create First Route
+                            <i class="fas fa-plus"></i> @L["Create First Route"]
                         </a>
                     </div>
                 }
@@ -369,9 +376,9 @@
 
         function completeRoute(id) {
             confirmAction({
-                title: 'Complete route',
-                message: 'Mark this route as completed?',
-                okText: 'Complete'
+                title: t('Complete route'),
+                message: t('Mark this route as completed?'),
+                okText: t('Complete')
             }, function () {
                 $.ajax({
                     url: '/Routes/Complete/' + id,
@@ -386,7 +393,7 @@
                         }, 1500);
                     },
                     error: function(xhr) {
-                        const errorMsg = ErrorHandler.parseErrorMessage(xhr, 'Failed to complete route');
+                        const errorMsg = ErrorHandler.parseErrorMessage(xhr, t('Failed to complete route'));
                         showToast(errorMsg, 'error');
                     }
                 });
@@ -394,9 +401,9 @@
         }
         function deleteRoute(id) {
             confirmAction({
-                title: 'Delete route',
-                message: 'Delete this route? This cannot be undone.',
-                okText: 'Delete',
+                title: t('Delete route'),
+                message: t('Delete this route? This cannot be undone.'),
+                okText: t('Delete'),
                 danger: true
             }, function () {
                 const form = document.createElement('form');

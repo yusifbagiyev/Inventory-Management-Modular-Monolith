@@ -6,15 +6,15 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Notifications</h1>
+            <h1 class="mb-1">@L["Notifications"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">Notifications</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["Notifications"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-primary btn-sm" onclick="markAllAsRead()">
-                <i class="fas fa-check-double"></i> Mark All Read
+                <i class="fas fa-check-double"></i> @L["Mark All Read"]
             </button>
         </div>
     </div>
@@ -24,49 +24,49 @@
             <div class="filter-search">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="searchFilter" placeholder="Search in notifications...">
+                    <input type="text" class="form-control" id="searchFilter" placeholder="@L["Search in notifications..."]">
                 </div>
             </div>
             <button class="btn btn-outline-secondary btn-sm" onclick="applyFilters()">
-                <i class="fas fa-filter"></i> Apply Filters
+                <i class="fas fa-filter"></i> @L["Apply Filters"]
             </button>
             <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
-                <i class="fas fa-redo"></i> Reset Filters
+                <i class="fas fa-redo"></i> @L["Reset Filters"]
             </button>
         </div>
 
         <div class="filter-grid">
             <div class="filter-field">
-                <label for="statusFilter">Status</label>
+                <label for="statusFilter">@L["Status"]</label>
                 <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
-                    <option value="">All Notifications</option>
-                    <option value="unread">Unread Only</option>
-                    <option value="read">Read Only</option>
+                    <option value="">@L["All Notifications"]</option>
+                    <option value="unread">@L["Unread Only"]</option>
+                    <option value="read">@L["Read Only"]</option>
                 </select>
             </div>
             <div class="filter-field">
-                <label for="typeFilter">Type</label>
+                <label for="typeFilter">@L["Type"]</label>
                 <select class="form-select form-select-sm" id="typeFilter" onchange="applyFilters()">
-                    <option value="">All Types</option>
-                    <option value="ApprovalRequest">Approval Requests</option>
-                    <option value="ApprovalResponse">Approval Responses</option>
-                    <option value="ProductUpdate">Product Updates</option>
-                    <option value="RouteUpdate">Route Updates</option>
-                    <option value="System">System Messages</option>
+                    <option value="">@L["All Types"]</option>
+                    <option value="ApprovalRequest">@L["Approval Requests"]</option>
+                    <option value="ApprovalResponse">@L["Approval Responses"]</option>
+                    <option value="ProductUpdate">@L["Product Updates"]</option>
+                    <option value="RouteUpdate">@L["Route Updates"]</option>
+                    <option value="System">@L["System Messages"]</option>
                 </select>
             </div>
             <div class="filter-field">
-                <label for="dateRangeFilter">Date Range</label>
-                <input type="text" class="form-control form-control-sm" id="dateRangeFilter" placeholder="Select date range">
+                <label for="dateRangeFilter">@L["Date Range"]</label>
+                <input type="text" class="form-control form-control-sm" id="dateRangeFilter" placeholder="@L["Select date range"]">
             </div>
         </div>
     </div>
 
     <div class="result-bar">
-        <span>Showing <b><span id="visibleCount">0</span></b> of <b><span id="totalCount">@Model.Notifications.Count</span></b> notifications</span>
+        <span>@L["Notifications shown"]: <b><span id="visibleCount">0</span></b> / <b><span id="totalCount">@Model.Notifications.Count</span></b></span>
         @if (Model.Notifications.Any())
         {
-            <span class="text-muted">Scroll the list to load more</span>
+            <span class="text-muted">@L["Scroll the list to load more"]</span>
         }
     </div>
 
@@ -88,24 +88,24 @@
                                     <div class="flex-grow-1">
                                         <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                                             <span class="state state-flat @TypeState(notification.Type)">
-                                                <i class="fas @TypeIcon(notification.Type)"></i> @TypeLabel(notification.Type)
+                                                <i class="fas @TypeIcon(notification.Type)"></i> @L[TypeLabel(notification.Type)]
                                             </span>
                                             @if (!notification.IsRead)
                                             {
-                                                <span class="badge bg-primary">New</span>
+                                                <span class="badge bg-primary">@L["New"]</span>
                                             }
                                         </div>
                                         <div class="fw-semibold">@notification.Title</div>
                                         <div class="text-muted">@notification.Message</div>
                                         <small class="mono text-muted">
-                                            <i class="fas fa-clock me-1"></i>@notification.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                                            <i class="fas fa-clock me-1"></i>@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")
                                         </small>
                                     </div>
                                     <div class="flex-shrink-0">
                                         @if (!notification.IsRead)
                                         {
                                             <button class="btn btn-sm btn-outline-primary" onclick="markAsRead(@notification.Id)">
-                                                <i class="fas fa-check"></i> Mark Read
+                                                <i class="fas fa-check"></i> @L["Mark Read"]
                                             </button>
                                         }
                                     </div>
@@ -115,7 +115,7 @@
                     </div>
                     <div id="loadMoreTrigger" class="text-center py-3 d-none">
                         <div class="spinner-border spinner-border-sm text-primary" role="status">
-                            <span class="visually-hidden">Loading more...</span>
+                            <span class="visually-hidden">@L["Loading more..."]</span>
                         </div>
                     </div>
                 </div>
@@ -124,8 +124,8 @@
             {
                 <div class="empty-state">
                     <i class="fas fa-bell-slash"></i>
-                    <h5>No notifications found</h5>
-                    <p class="text-muted mb-0">Approval requests, product and route updates will show up here.</p>
+                    <h5>@L["No notifications found"]</h5>
+                    <p class="text-muted mb-0">@L["Approval requests, product and route updates will show up here."]</p>
                 </div>
             }
         </div>
@@ -281,19 +281,19 @@
                     $item.removeClass('unread').attr('data-read', 'read');
                     $item.find('.btn-outline-primary').remove();
                     $item.find('.badge.bg-primary').remove();
-                    showToast('Notification marked as read', 'success');
+                    showToast(t('Notification marked as read'), 'success');
                 },
                 error: function() {
-                    showToast('Failed to mark notification as read', 'error');
+                    showToast(t('Failed to mark notification as read'), 'error');
                 }
             });
         }
 
         function markAllAsRead() {
             confirmAction({
-                title: 'Mark all as read',
-                message: 'Mark every notification as read?',
-                okText: 'Mark all read'
+                title: t('Mark all as read'),
+                message: t('Mark every notification as read?'),
+                okText: t('Mark all read')
             }, function () {
                 $.ajax({
                     url: '/Notifications/MarkAllAsRead',
@@ -305,10 +305,10 @@
                         $('.notification-item').removeClass('unread').attr('data-read', 'read');
                         $('.notification-item .btn-outline-primary').remove();
                         $('.notification-item .badge.bg-primary').remove();
-                        showToast('All notifications marked as read', 'success');
+                        showToast(t('All notifications marked as read'), 'success');
                     },
                     error: function() {
-                        showToast('Failed to mark all as read', 'error');
+                        showToast(t('Failed to mark all as read'), 'error');
                     }
                 });
             });

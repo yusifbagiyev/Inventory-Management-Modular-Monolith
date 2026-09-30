@@ -14,7 +14,10 @@ namespace RouteService.Domain.Entities
         public string ToDepartmentName { get; private set; } = null!;
         public string? FromWorker { get; private set; }
         public string? ToWorker { get; private set; }
+        /// <summary>The cover image: always the first of <see cref="ImageUrls"/>.</summary>
         public string? ImageUrl { get; private set; }
+        /// <summary>All images, cover first.</summary>
+        public List<string> ImageUrls { get; private set; } = [];
         public string? Notes { get; private set; }
         public bool IsCompleted { get; private set; }
         public DateTime CreatedAt { get; private set; }
@@ -44,6 +47,7 @@ namespace RouteService.Domain.Entities
                 FromWorker = null,
                 ToWorker = toWorker,
                 ImageUrl = imageUrl,
+                ImageUrls = string.IsNullOrEmpty(imageUrl) ? [] : [imageUrl],
                 Notes = notes,
                 IsCompleted = false,
                 CreatedAt = DateTime.Now
@@ -60,7 +64,7 @@ namespace RouteService.Domain.Entities
             string toDepartmentName,
             string? fromWorker,
             string? toWorker,
-            string? imageUrl = null,
+            IReadOnlyList<string>? imageUrls = null,
             string? notes = null)
         {
             return new InventoryRoute
@@ -73,7 +77,8 @@ namespace RouteService.Domain.Entities
                 ToDepartmentName = toDepartmentName,
                 FromWorker = fromWorker,
                 ToWorker = toWorker,
-                ImageUrl = imageUrl,
+                ImageUrl = imageUrls?.FirstOrDefault(),
+                ImageUrls = imageUrls?.ToList() ?? [],
                 Notes = notes,
                 IsCompleted = false,
                 CreatedAt = DateTime.Now
@@ -128,6 +133,7 @@ namespace RouteService.Domain.Entities
                 FromWorker = changedProduct.Worker,
                 ToWorker = worker,
                 ImageUrl = imageUrl,
+                ImageUrls = string.IsNullOrEmpty(imageUrl) ? [] : [imageUrl],
                 Notes = notes,
                 CreatedAt = DateTime.Now
             };
@@ -139,9 +145,11 @@ namespace RouteService.Domain.Entities
             CompletedAt = DateTime.Now;
         }
 
-        public void UpdateImage(string? imageUrl)
+        /// <summary>Replaces the image list (cover first) and keeps <see cref="ImageUrl"/> in step.</summary>
+        public void SetImages(IEnumerable<string> imageUrls)
         {
-            ImageUrl = imageUrl ?? ImageUrl;
+            ImageUrls = imageUrls.ToList();
+            ImageUrl = ImageUrls.FirstOrDefault();
         }
         public void UpdateExistingRoute(string? toWorker,string? notes)
         {

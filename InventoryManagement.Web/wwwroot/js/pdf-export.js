@@ -14,11 +14,15 @@ function escapePdfText(value) {
  * Only text is collected, so images never reach the PDF.
  */
 function collectTableData(table, excludeHeaders = []) {
-    const skip = excludeHeaders.map(h => h.toLowerCase());
-    const allHeaders = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    // Headers are rendered in the interface language: match the English name and its translation.
+    // The actions column is also recognised by its class, whatever its caption says.
+    const skip = excludeHeaders.flatMap(h => [h, t(h)]).map(h => h.toLowerCase());
+    const allHeaders = Array.from(table.querySelectorAll('thead th'));
     const keep = allHeaders
-        .map((name, index) => ({ name, index }))
-        .filter(col => col.name && !skip.includes(col.name.toLowerCase()));
+        .map((th, index) => ({ name: th.textContent.trim(), index, th }))
+        .filter(col => col.name
+            && !col.th.classList.contains('actions-column')
+            && !skip.includes(col.name.toLowerCase()));
 
     const rows = Array.from(table.querySelectorAll('tbody tr'))
         .filter(tr => tr.offsetParent !== null || tr.style.display !== 'none')
@@ -64,7 +68,8 @@ function readCellText(td) {
  * reload (selects stopped opening) - the iframe has none of those side effects.
  */
 function renderPrintDocument({ title, headers, rows, filters }) {
-    const printed = new Date().toLocaleString();
+    title = t(title);
+    const printed = formatDate(new Date(), true);
     const filterLine = filters ? `<div class="filters">${escapePdfText(filters)}</div>` : '';
 
     const thead = headers.map(h => `<th>${escapePdfText(h)}</th>`).join('');
@@ -105,7 +110,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
 </style></head><body>
 <header>
   <h1>${escapePdfText(title)}</h1>
-  <div class="meta"><div>Printed: ${escapePdfText(printed)}</div><div>${rows.length} record(s)</div></div>
+  <div class="meta"><div>${escapePdfText(t('Printed: {0}', printed))}</div><div>${escapePdfText(t('{0} record(s)', rows.length))}</div></div>
 </header>
 ${filterLine}
 <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
@@ -160,19 +165,20 @@ function currentFilterSummary() {
     const chips = Array.from(document.querySelectorAll('.filter-applied .achip'))
         .map(c => c.textContent.replace(/\s*×\s*$/, '').replace(/\s+/g, ' ').trim())
         .filter(Boolean);
-    return chips.length ? 'Filters: ' + chips.join('   |   ') : '';
+    return chips.length ? t('Filters:') + ' ' + chips.join('   |   ') : '';
 }
 
 /** Exports one list table, columns picked by header name; `title` also names the toast target. */
 function exportListTable(table, title) {
+    title = t(title);
     if (!table) {
-        showToast(title + ' table not found', 'error');
+        showToast(t('{0} table not found', title), 'error');
         return;
     }
 
     const { headers, rows } = collectTableData(table, ['Actions']);
     if (!rows.length) {
-        showToast('Nothing to export', 'warning');
+        showToast(t('Nothing to export'), 'warning');
         return;
     }
     renderPrintDocument({ title, headers, rows, filters: currentFilterSummary() });
@@ -189,7 +195,7 @@ function exportRoutesToPDF() {
 function exportTimelineToPDF() {
     const timeline = document.querySelector('.timeline');
     if (!timeline) {
-        showToast('Timeline not found', 'error');
+        showToast(t('Timeline not found'), 'error');
         return;
     }
 
@@ -222,18 +228,11 @@ function exportTimelineToPDF() {
     const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
             <h1 style="text-align: center; color: #1e40af; margin-bottom: 10px;">
-                Transfer Timeline Report
+                ${escapePdfText(t('Transfer Timeline Report'))}
             </h1>
             <div style="text-align: center; color: #6b7280; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                <div>Generated on: ${new Date().toLocaleString('en-US', {
-        timeZone: 'Asia/Baku',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    })}</div>
-                <div>Total Transfers: ${timelineClone.querySelectorAll('.timeline-item').length}</div>
+                <div>${escapePdfText(t('Generated on: {0}', formatDate(new Date(), true)))}</div>
+                <div>${escapePdfText(t('Total Transfers: {0}', timelineClone.querySelectorAll('.timeline-item').length))}</div>
             </div>
             ${timelineClone.outerHTML}
         </div>
@@ -244,7 +243,7 @@ function exportTimelineToPDF() {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Transfer Timeline Report</title>
+            <title>${escapePdfText(t('Transfer Timeline Report'))}</title>
             <style>
                 @page { 
                     size: portrait; 

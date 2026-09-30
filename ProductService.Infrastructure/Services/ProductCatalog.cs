@@ -49,7 +49,7 @@ namespace ProductService.Infrastructure.Services
             int productId,
             int toDepartmentId,
             string? toWorker,
-            string? routeImageUrl,
+            IReadOnlyList<string> routeImageUrls,
             CancellationToken cancellationToken = default)
         {
             var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == productId, cancellationToken)
@@ -60,17 +60,21 @@ namespace ProductService.Infrastructure.Services
 
             product.UpdateAfterRouting(toDepartmentId, toWorker);
 
-            if (!string.IsNullOrEmpty(routeImageUrl))
+            // The route's photos show the item as handed over; they replace the product's images.
+            var copies = new List<string>();
+            foreach (var routeImageUrl in routeImageUrls)
             {
                 var copy = await _images.CopyAsync(routeImageUrl, ImageStorage.Products, product.InventoryCode, cancellationToken);
-                if (copy != null)
-                {
-                    var oldImageUrl = product.ImageUrl;
-                    product.UpdateImage(copy);
-                    _session.OnRollback(() => _images.DeleteAsync(copy));
-                    if (!string.IsNullOrEmpty(oldImageUrl))
-                        _session.AfterCommit((_, _) => _images.DeleteAsync(oldImageUrl));
-                }
+                if (copy == null) continue;
+                _session.OnRollback(() => _images.DeleteAsync(copy));
+                copies.Add(copy);
+            }
+            if (copies.Count > 0)
+            {
+                var oldImages = product.ImageUrls.ToList();
+                product.SetImages(copies);
+                foreach (var url in oldImages)
+                    _session.AfterCommit((_, _) => _images.DeleteAsync(url));
             }
 
             await _context.SaveChangesAsync(cancellationToken);

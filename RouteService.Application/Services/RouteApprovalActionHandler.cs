@@ -39,7 +39,8 @@ namespace RouteService.Application.Services
                 ToDepartmentId = RequireId(data, "toDepartmentId"),
                 ToWorker = data.GetString("toWorker"),
                 Notes = data.GetString("notes"),
-                ImageFile = data.GetImage()
+                ImageFile = data.GetImage(),
+                ImageFiles = data.GetImages()
             };
             return _mediator.Send(new TransferInventory.Command(dto), cancellationToken);
         }
@@ -60,7 +61,11 @@ namespace RouteService.Application.Services
                 Notes = data.Has("notes") ? data.GetString("notes") : existing.Notes,
                 ToWorker = data.Has("toWorker") ? data.GetString("toWorker") : existing.ToWorker,
                 ToDepartmentId = data.Has("toDepartmentId") ? data.GetInt("toDepartmentId") : null,
-                ImageFile = data.GetImage()
+                // Older requests carry one "imageData" image, which replaced the image.
+                ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
+                ImageFiles = data.GetImages(),
+                RemoveImageUrls = data.GetStrings("removeImageUrls"),
+                CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null
             };
             await _mediator.Send(new UpdateRoute.Command(routeId, dto), cancellationToken);
         }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FluentValidation;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,7 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                return new ApiResponse<T> { IsSuccess = true, Data = await action(), Message = successMessage };
+                return new ApiResponse<T> { IsSuccess = true, Data = await action(), Message = Tr(successMessage) };
             }
             catch (ApprovalRequiredException ex)
             {
@@ -49,22 +50,22 @@ namespace InventoryManagement.Web.Controllers
                     IsSuccess = false,
                     IsApprovalRequest = true,
                     ApprovalRequestId = ex.ApprovalRequestId,
-                    Message = ex.Message
+                    Message = JsonStringLocalizer.TranslateMessage(ex.Message)
                 };
             }
             catch (ValidationException ex)
             {
-                return Failure<T>(string.Join("; ", ex.Errors.Select(e => e.ErrorMessage).Distinct()));
+                return Failure<T>(string.Join("; ", ex.Errors.Select(e => Tr(e.ErrorMessage)).Distinct()));
             }
             catch (DbUpdateConcurrencyException)
             {
-                return Failure<T>("The record was changed by someone else. Reload and try again.");
+                return Failure<T>(Tr("The record was changed by someone else. Reload and try again."));
             }
             catch (Exception ex) when (ex is NotFoundException or DuplicateEntityException or ConflictException
                                           or InsufficientPermissionsException or InvalidOperationException
                                           or ArgumentException or UnauthorizedAccessException)
             {
-                return Failure<T>(ex.Message);
+                return Failure<T>(Tr(ex.Message));
             }
         }
 
@@ -72,6 +73,11 @@ namespace InventoryManagement.Web.Controllers
             => RunAsync(async () => { await action(); return true; }, successMessage);
 
         private static ApiResponse<T> Failure<T>(string message) => new() { IsSuccess = false, Message = message };
+
+        /// <summary>Translates a user-facing message into the interface language (see Resources/i18n/az.json).</summary>
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(message))]
+        protected static string? Tr(string? message)
+            => message is null ? null : JsonStringLocalizer.TranslateMessage(message);
 
         /// <summary>
         /// Handles a module response uniformly: JSON for AJAX callers; otherwise a redirect, with
@@ -101,7 +107,7 @@ namespace InventoryManagement.Web.Controllers
             }
             else
             {
-                TempData["Error"] = response.Message ?? "Operation failed";
+                TempData["Error"] = response.Message ?? Tr("Operation failed");
             }
 
             return RedirectToAction(redirectAction);
@@ -110,6 +116,7 @@ namespace InventoryManagement.Web.Controllers
         protected IActionResult HandleError(string errorMessage, object? model = null,
             Dictionary<string, string>? fieldErrors = null)
         {
+            errorMessage = Tr(errorMessage);
             _logger?.LogWarning("Error in {Controller}: {ErrorMessage}",
                 ControllerContext.ActionDescriptor.ControllerName, errorMessage);
 
@@ -123,7 +130,7 @@ namespace InventoryManagement.Web.Controllers
             if (fieldErrors != null)
             {
                 foreach (var error in fieldErrors)
-                    ModelState.AddModelError(error.Key, error.Value);
+                    ModelState.AddModelError(error.Key, Tr(error.Value));
             }
             return View(model);
         }
@@ -153,12 +160,12 @@ namespace InventoryManagement.Web.Controllers
                     .Where(x => x.Value?.Errors.Count > 0)
                     .ToDictionary(
                         kvp => kvp.Key,
-                        kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray());
+                        kvp => kvp.Value?.Errors.Select(e => Tr(e.ErrorMessage)).ToArray());
 
                 return Json(new
                 {
                     isSuccess = false,
-                    message = "Please correct the validation errors and try again.",
+                    message = Tr("Please correct the validation errors and try again."),
                     errors
                 });
             }
@@ -167,6 +174,6 @@ namespace InventoryManagement.Web.Controllers
 
         protected IActionResult AjaxResponse(bool success, string message, object? data = null,
             Dictionary<string, string[]>? errors = null)
-            => Json(new { isSuccess = success, message, data, errors });
+            => Json(new { isSuccess = success, message = Tr(message), data, errors });
     }
 }

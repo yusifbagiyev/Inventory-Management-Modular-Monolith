@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models;
 using InventoryManagement.Web.Models.ViewModels;
 using MediatR;
@@ -44,9 +45,18 @@ namespace InventoryManagement.Web.Controllers
             var startDate = period switch
             {
                 "last30days" => now.Date.AddDays(-29),
-                "last6months" => now.Date.AddMonths(-6),
+                // The current month and the five before it, so the monthly bars are whole months.
+                "last6months" => new DateTime(now.Year, now.Month, 1).AddMonths(-5),
                 "all" => DateTime.MinValue,
                 _ => now.Date.AddDays(-6)
+            };
+            // The preceding period of the same length, for the trend arrows.
+            DateTime? previousStart = period switch
+            {
+                "last30days" => startDate.AddDays(-30),
+                "last6months" => startDate.AddMonths(-6),
+                "all" => null,
+                _ => startDate.AddDays(-7)
             };
             if (period is not ("last30days" or "last6months" or "all"))
                 period = "last7days";
@@ -58,6 +68,15 @@ namespace InventoryManagement.Web.Controllers
             var categoryStats = await _mediator.Send(new GetCategoryStatsQuery());
             var departmentStats = await _mediator.Send(new GetDepartmentStatsQuery());
 
+            IReadOnlyList<TransferActivity>? previousTransfers = null;
+            int? previousProducts = null;
+            if (previousStart.HasValue)
+            {
+                var previousEnd = startDate.AddTicks(-1);
+                previousTransfers = await _mediator.Send(new GetTransferActivityQuery(previousStart.Value, previousEnd));
+                previousProducts = (await _mediator.Send(new GetProductCountsQuery(previousStart.Value, previousEnd))).Total;
+            }
+
             var model = new DashboardViewModel
             {
                 TotalProducts = products.Total,
@@ -67,7 +86,13 @@ namespace InventoryManagement.Web.Controllers
                 PendingTransfers = transfers.Count(t => !t.IsCompleted),
                 DepartmentStats = BuildDepartmentStats(transfers),
                 CategoryDistributions = BuildCategoryDistribution(transfers),
-                TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period)
+                TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
+                PreviousTotalProducts = previousProducts,
+                PreviousTotalRoutes = previousTransfers?.Count,
+                PreviousCompletedTransfers = previousTransfers?.Count(t => t.IsCompleted),
+                PreviousPendingTransfers = previousTransfers?.Count(t => !t.IsCompleted),
+                PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
+                PeriodEnd = period == "all" ? null : endDate.ToString("yyyy-MM-dd")
             };
 
             ViewBag.CurrentPeriod = period;
@@ -87,12 +112,12 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>Top 5 departments by transfers sent or received in the period.</summary>
         private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers)
         {
-            var byDepartment = new Dictionary<int, (string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>();
+            var byDepartment = new Dictionary<int, (int Id, string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>();
 
             void Add(int id, string? name, TransferActivity transfer, string? worker)
             {
                 if (!byDepartment.TryGetValue(id, out var entry))
-                    byDepartment[id] = entry = (name ?? $"#{id}", new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                    byDepartment[id] = entry = (id, name ?? $"#{id}", new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 if (!entry.Transfers.Contains(transfer))
                     entry.Transfers.Add(transfer);
                 if (!string.IsNullOrWhiteSpace(worker))
@@ -109,6 +134,7 @@ namespace InventoryManagement.Web.Controllers
             return byDepartment.Values
                 .Select(d => new DepartmentStats
                 {
+                    DepartmentId = d.Id,
                     DepartmentName = d.Name,
                     ProductCount = d.Transfers.Select(t => t.ProductId).Distinct().Count(),
                     ActiveWorkers = d.Workers.Count,
@@ -149,6 +175,8 @@ namespace InventoryManagement.Web.Controllers
                 data.Labels.Add(label);
                 data.CompletedData.Add(bucket.Count(t => t.IsCompleted));
                 data.PendingData.Add(bucket.Count(t => !t.IsCompleted));
+                data.BucketStarts.Add(from.ToString("yyyy-MM-dd"));
+                data.BucketEnds.Add(toExclusive.AddDays(-1).ToString("yyyy-MM-dd"));
             }
 
             switch (period)
@@ -156,33 +184,52 @@ namespace InventoryManagement.Web.Controllers
                 case "last30days":
                     var week = 1;
                     for (var from = startDate; from <= endDate && week <= 10; from = from.AddDays(7), week++)
-                        AddBucket($"Week {week}", from.Date, from.AddDays(7).Date);
+                        AddBucket(Tr("Week {0}").Replace("{0}", week.ToString()), from.Date, from.AddDays(7).Date);
                     break;
 
                 case "last6months":
                     for (var i = 5; i >= 0; i--)
                     {
-                        var monthStart = DateTime.Now.AddMonths(-i).Date;
-                        AddBucket(monthStart.ToString("MMM yyyy"), monthStart, monthStart.AddMonths(1));
+                        var monthStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddMonths(-i);
+                        AddBucket($"{MonthName(monthStart)} {monthStart.Year}", monthStart, monthStart.AddMonths(1));
                     }
                     break;
 
                 case "all":
                     var first = transfers.Min(t => t.CreatedAt);
                     for (var quarter = new DateTime(first.Year, ((first.Month - 1) / 3) * 3 + 1, 1); quarter <= endDate; quarter = quarter.AddMonths(3))
-                        AddBucket($"Q{((quarter.Month - 1) / 3) + 1} {quarter.Year}", quarter, quarter.AddMonths(3));
+                        AddBucket(QuarterName(quarter), quarter, quarter.AddMonths(3));
                     break;
 
                 default:
                     for (var i = 6; i >= 0; i--)
                     {
                         var day = DateTime.Now.Date.AddDays(-i);
-                        AddBucket(day.ToString("ddd, MMM dd"), day, day.AddDays(1));
+                        AddBucket(DayName(day), day, day.AddDays(1));
                     }
                     break;
             }
 
             return data;
+        }
+
+        // Chart labels in the interface language (the formatting culture stays en-US).
+        private static readonly string[] AzMonths = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
+        private static readonly string[] AzDays = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
+        private static readonly string[] Roman = ["I", "II", "III", "IV"];
+
+        private static string MonthName(DateTime date)
+            => JsonStringLocalizer.IsAzerbaijani ? AzMonths[date.Month - 1] : date.ToString("MMM");
+
+        private static string DayName(DateTime date)
+            => JsonStringLocalizer.IsAzerbaijani
+                ? $"{AzDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
+                : date.ToString("ddd, MMM dd");
+
+        private static string QuarterName(DateTime quarterStart)
+        {
+            var q = (quarterStart.Month - 1) / 3;
+            return JsonStringLocalizer.IsAzerbaijani ? $"{Roman[q]} rüb {quarterStart.Year}" : $"Q{q + 1} {quarterStart.Year}";
         }
 
         [AllowAnonymous]
@@ -199,7 +246,7 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new
                 {
                     isSuccess = false,
-                    message = "An error occurred while processing your request",
+                    message = Tr("An error occurred while processing your request"),
                     requestId = errorViewModel.RequestId
                 });
             }

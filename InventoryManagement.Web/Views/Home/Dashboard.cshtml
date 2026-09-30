@@ -15,39 +15,61 @@
     // Determine period display name
     var periodName = currentPeriod switch
     {
-        "last7days" => "Last 7 Days",
-        "last30days" => "Last 30 Days",
-        "last6months" => "Last 6 Months",
-        "all" => "All Time",
-        _ => "Last 7 Days"
+        "last7days" => L["Last 7 Days"].Value,
+        "last30days" => L["Last 30 Days"].Value,
+        "last6months" => L["Last 6 Months"].Value,
+        "all" => L["All Time"].Value,
+        _ => L["Last 7 Days"].Value
     };
+
+    // Links into the filtered lists for this period (tiles, chart points, table rows).
+    string PeriodQuery() => Model.PeriodStart is null ? "" : $"&startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
+    var transfersUrl = "/Routes?routeType=Transfer" + PeriodQuery();
+    var productsUrl = Model.PeriodStart is null ? "/Products" : $"/Products?startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
+}
+
+@functions {
+    /// <summary>Change against the previous period: arrow, colour and "+12%" (or "+3" when it was zero).</summary>
+    private (string Icon, string Css, string Text)? TrendOf(int current, int? previous, bool upIsBad = false)
+    {
+        if (previous is not { } prev)
+            return null;
+        if (current == prev)
+            return ("fa-minus", "trend-flat", "0%");
+
+        var up = current > prev;
+        var text = prev == 0
+            ? $"+{current}"
+            : $"{(up ? "+" : "−")}{Math.Abs(Math.Round((current - prev) * 100.0 / prev)):0}%";
+        return (up ? "fa-arrow-trend-up" : "fa-arrow-trend-down", up == upIsBad ? "trend-bad" : "trend-good", text);
+    }
 }
 
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Dashboard</h1>
+            <h1 class="mb-1">@L["Dashboard"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item active">Overview</li>
+                <li class="breadcrumb-item active">@L["Overview"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap align-items-center">
-            <span class="form-label mb-0">Period</span>
+            <span class="form-label mb-0">@L["Period"]</span>
             <button type="button" class="qchip @(currentPeriod == "last7days" ? "active" : "")"
                     onclick="changePeriod('last7days')">
-                Last 7 Days
+                @L["Last 7 Days"]
             </button>
             <button type="button" class="qchip @(currentPeriod == "last30days" ? "active" : "")"
                     onclick="changePeriod('last30days')">
-                Last 30 Days
+                @L["Last 30 Days"]
             </button>
             <button type="button" class="qchip @(currentPeriod == "last6months" ? "active" : "")"
                     onclick="changePeriod('last6months')">
-                Last 6 Months
+                @L["Last 6 Months"]
             </button>
             <button type="button" class="qchip @(currentPeriod == "all" ? "active" : "")"
                     onclick="changePeriod('all')">
-                All Time
+                @L["All Time"]
             </button>
         </div>
     </div>
@@ -57,12 +79,12 @@
     {
         <div class="alert alert-info mt-3 mb-3">
             <i class="fas fa-calendar-alt me-2"></i>
-            <strong>Viewing:</strong> @periodName
+            <strong>@L["Viewing:"]</strong> @periodName
             <span class="mx-2">|</span>
-            <strong>Date Range:</strong> @startDate.Value.ToString("MMM dd, yyyy") - @endDate.Value.ToString("MMM dd, yyyy")
+            <strong>@L["Date Range:"]</strong> @startDate.Value.ToString("dd.MM.yyyy") - @endDate.Value.ToString("dd.MM.yyyy")
             @if (currentPeriod != "all")
             {
-                <span class="ms-3"><em>(Showing transfer activity and new products for this period)</em></span>
+                <span class="ms-3"><em>@L["(Showing transfer activity and new products for this period)"]</em></span>
             }
         </div>
     }
@@ -76,16 +98,24 @@
                         <i class="fas fa-boxes me-1"></i>
                         @if (currentPeriod == "all")
                         {
-                            <text>Total Products</text>
+                            <text>@L["Total Products"]</text>
                         }
                         else
                         {
-                            <text>New Products Added</text>
+                            <text>@L["New Products Added"]</text>
                         }
                     </div>
-                    <div class="display-6 mb-2">@Model.TotalProducts.ToString("N0")</div>
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <a class="display-6 metric-link" href="@productsUrl">@Model.TotalProducts.ToString("N0")</a>
+                        @if (TrendOf(Model.TotalProducts, Model.PreviousTotalProducts) is { } productTrend)
+                        {
+                            <span class="trend @productTrend.Css" title="@L["Previous period: {0}", Model.PreviousTotalProducts!]">
+                                <i class="fas @productTrend.Icon"></i> @productTrend.Text
+                            </span>
+                        }
+                    </div>
                     <span class="state state-flat state-ok">
-                        <i class="fas fa-check-circle"></i> @Model.ActiveProducts active
+                        <i class="fas fa-check-circle"></i> @L["{0} active", Model.ActiveProducts]
                     </span>
                 </div>
             </div>
@@ -96,12 +126,24 @@
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-exchange-alt me-1"></i>
-                        Total Transfers
+                        @L["Total Transfers"]
                     </div>
-                    <div class="display-6 mb-2">@Model.TotalRoutes.ToString("N0")</div>
-                    <span class="state state-flat @pendingState">
-                        <i class="fas fa-hourglass-half"></i> @Model.PendingTransfers pending
-                    </span>
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <a class="display-6 metric-link" href="@transfersUrl">@Model.TotalRoutes.ToString("N0")</a>
+                        @if (TrendOf(Model.TotalRoutes, Model.PreviousTotalRoutes) is { } transferTrend)
+                        {
+                            <span class="trend @transferTrend.Css" title="@L["Previous period: {0}", Model.PreviousTotalRoutes!]">
+                                <i class="fas @transferTrend.Icon"></i> @transferTrend.Text
+                            </span>
+                        }
+                    </div>
+                    <a class="state state-flat @pendingState metric-chip" href="@(transfersUrl)&isCompleted=false">
+                        <i class="fas fa-hourglass-half"></i> @L["{0} pending", Model.PendingTransfers ?? 0]
+                        @if (TrendOf(Model.PendingTransfers ?? 0, Model.PreviousPendingTransfers, upIsBad: true) is { } pendingTrend && pendingTrend.Css != "trend-flat")
+                        {
+                            <span class="trend @pendingTrend.Css ms-1" title="@L["Previous period: {0}", Model.PreviousPendingTransfers!]"><i class="fas @pendingTrend.Icon"></i> @pendingTrend.Text</span>
+                        }
+                    </a>
                 </div>
             </div>
         </div>
@@ -111,11 +153,11 @@
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-building me-1"></i>
-                        Departments
+                        @L["Departments"]
                     </div>
-                    <div class="display-6 mb-2">@totalDepartments</div>
+                    <a class="display-6 mb-2 d-block metric-link" href="/Departments">@totalDepartments</a>
                     <span class="state state-flat state-info">
-                        <i class="fas fa-chart-line"></i> @activeDepartmentsInPeriod active in period
+                        <i class="fas fa-chart-line"></i> @L["{0} active in period", (object)activeDepartmentsInPeriod]
                     </span>
                 </div>
             </div>
@@ -126,11 +168,11 @@
                 <div class="card-body">
                     <div class="section-title">
                         <i class="fas fa-tags me-1"></i>
-                        Categories
+                        @L["Categories"]
                     </div>
-                    <div class="display-6 mb-2">@totalCategories</div>
+                    <a class="display-6 mb-2 d-block metric-link" href="/Categories">@totalCategories</a>
                     <span class="state state-flat state-idle">
-                        <i class="fas fa-chart-line"></i> @activeCategoriesInPeriod active in period
+                        <i class="fas fa-chart-line"></i> @L["{0} active in period", (object)activeCategoriesInPeriod]
                     </span>
                 </div>
             </div>
@@ -143,8 +185,8 @@
             <div class="card h-100">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Transfer Activity (@periodName)</h5>
-                        <small class="text-muted">Completed vs Pending</small>
+                        <h5 class="mb-0">@L["Transfer Activity"] (@periodName)</h5>
+                        <small class="text-muted">@L["Completed vs Pending"] · @L["click a point to open those transfers"]</small>
                     </div>
                 </div>
                 <div class="card-body">
@@ -152,15 +194,15 @@
                     {
                         @* Chart.js needs an explicitly sized box when maintainAspectRatio is off. *@
                         <div class="chart-container" style="position: relative; height: 300px;">
-                            <canvas id="transferChart" data-chart="@Json.Serialize(Model.TransferActivityData).ToString()"></canvas>
+                            <canvas id="transferChart" data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="/Routes?routeType=Transfer"></canvas>
                         </div>
                     }
                     else
                     {
                         <div class="empty-state">
                             <i class="fas fa-chart-line"></i>
-                            <h5>No transfer activity for this period</h5>
-                            <p class="text-muted mb-0">Pick a wider period to see movement over time.</p>
+                            <h5>@L["No transfer activity for this period"]</h5>
+                            <p class="text-muted mb-0">@L["Pick a wider period to see movement over time."]</p>
                         </div>
                     }
                 </div>
@@ -170,26 +212,26 @@
         <div class="col-xl-4">
             <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">Categories in Transfers</h5>
-                    <small class="text-muted">Products transferred by category</small>
+                    <h5 class="mb-0">@L["Categories in Transfers"]</h5>
+                    <small class="text-muted">@L["Products transferred by category"]</small>
                 </div>
                 <div class="card-body">
                     @if (Model.CategoryDistributions.Any())
                     {
                         <div class="chart-container" style="position: relative; height: 250px;">
-                            <canvas id="categoryChart" data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()"></canvas>
+                            <canvas id="categoryChart" data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@transfersUrl"></canvas>
                         </div>
                         <!-- Legend -->
                         <div class="detail-grid mt-3">
                             @foreach (var category in Model.CategoryDistributions)
                             {
-                                <div class="detail-row">
+                                <a class="detail-row row-link" href="@(transfersUrl)&categoryName=@Uri.EscapeDataString(category.CategoryName)">
                                     <span class="d-label">
                                         <span class="d-inline-block align-middle me-2"
                                               style="width: 10px; height: 10px; border-radius: 2px; background-color: @category.Color;"></span>@category.CategoryName
                                     </span>
-                                    <span class="d-value"><span class="mono">@category.Count</span> transfers</span>
-                                </div>
+                                    <span class="d-value"><span class="mono">@category.Count</span> @L["transfers"]</span>
+                                </a>
                             }
                         </div>
                     }
@@ -197,8 +239,8 @@
                     {
                         <div class="empty-state">
                             <i class="fas fa-chart-pie"></i>
-                            <h5>No transfers for this period</h5>
-                            <p class="text-muted mb-0">The category split appears once products move.</p>
+                            <h5>@L["No transfers for this period"]</h5>
+                            <p class="text-muted mb-0">@L["The category split appears once products move."]</p>
                         </div>
                     }
                 </div>
@@ -211,8 +253,8 @@
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">Top Departments by Transfer Activity</h5>
-                    <small class="text-muted">Departments with the most transfer activity during @periodName.ToLower()</small>
+                    <h5 class="mb-0">@L["Top Departments by Transfer Activity"]</h5>
+                    <small class="text-muted">@L["Departments with the most transfer activity during {0}", periodName.ToLower()]</small>
                 </div>
                 <div class="card-body p-0">
                     @if (Model.DepartmentStats.Any())
@@ -221,28 +263,28 @@
                             <table class="table table-hover align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Department</th>
+                                        <th>@L["Department"]</th>
                                         <th class="text-center">
                                             <i class="fas fa-exchange-alt me-1"></i>
-                                            Total Transfers
+                                            @L["Total Transfers"]
                                         </th>
                                         <th class="text-center">
                                             <i class="fas fa-box me-1"></i>
-                                            Unique Products
+                                            @L["Unique Products"]
                                         </th>
                                         <th class="text-center">
                                             <i class="fas fa-users me-1"></i>
-                                            Active Workers
+                                            @L["Active Workers"]
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var dept in Model.DepartmentStats)
                                     {
-                                        <tr>
+                                        <tr class="row-link" data-href="@(transfersUrl)&departmentId=@dept.DepartmentId">
                                             <td>
                                                 <i class="fas fa-building text-muted me-2"></i>
-                                                <strong>@dept.DepartmentName</strong>
+                                                <a class="fw-semibold text-reset text-decoration-none" href="@(transfersUrl)&departmentId=@dept.DepartmentId">@dept.DepartmentName</a>
                                             </td>
                                             <td class="text-center num">@dept.PeriodTransfers</td>
                                             <td class="text-center num">@dept.ProductCount</td>
@@ -255,7 +297,7 @@
                         <div class="page-actions">
                             <small class="text-muted">
                                 <i class="fas fa-info-circle me-1"></i>
-                                <strong>Note:</strong> "Active" means the department participated in at least one transfer during this period.
+                                <strong>@L["Note:"]</strong> @(L["\"Active\" means the department participated in at least one transfer during this period."])
                             </small>
                         </div>
                     }
@@ -263,8 +305,8 @@
                     {
                         <div class="empty-state">
                             <i class="fas fa-building"></i>
-                            <h5>No department activity for this period</h5>
-                            <p class="text-muted mb-0">Departments show up here once they send or receive a transfer.</p>
+                            <h5>@L["No department activity for this period"]</h5>
+                            <p class="text-muted mb-0">@L["Departments show up here once they send or receive a transfer."]</p>
                         </div>
                     }
                 </div>
@@ -339,6 +381,17 @@
             $('[data-bs-toggle="tooltip"]').tooltip();
         }
 
+        // Department rows open that department's transfers (delegated: survives live refreshes).
+        $(document).on('click', 'tr.row-link[data-href]', function (e) {
+            if (e.target.closest('a')) return;
+            window.location.href = this.dataset.href;
+        });
+
+        // Chart clicks: pointer over clickable parts, then navigate.
+        function pointerOnHover(event, elements) {
+            event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+        }
+
         function changePeriod(period) {
             if (period === currentPeriod) return;
 
@@ -352,10 +405,10 @@
                      style="background: color-mix(in srgb, var(--surface) 95%, transparent); z-index: 9999;">
                     <div class="text-center">
                         <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                            <span class="visually-hidden">${t('Loading...')}</span>
                         </div>
-                        <h5>Loading dashboard data...</h5>
-                        <p class="text-muted">Please wait</p>
+                        <h5>${t('Loading dashboard data...')}</h5>
+                        <p class="text-muted">${t('Please wait')}</p>
                     </div>
                 </div>
             `;
@@ -405,12 +458,18 @@
                                     const value = context.parsed || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} transfers (${percentage}%)`;
+                                    return `${label}: ${t('{0} transfers ({1}%)', value, percentage)}`;
                                 }
                             }
                         }
                     },
-                    cutout: '65%'
+                    cutout: '65%',
+                    onHover: pointerOnHover,
+                    onClick: function (event, elements) {
+                        if (!elements.length) return;
+                        const category = categoryData[elements[0].index];
+                        window.location.href = ctx.dataset.link + '&categoryName=' + encodeURIComponent(category.categoryName);
+                    }
                 }
             });
         }
@@ -428,7 +487,7 @@
                     labels: transferData.labels,
                     datasets: [
                         {
-                            label: 'Completed',
+                            label: t('Completed'),
                             data: transferData.completedData,
                             borderColor: chartColors.ok,
                             backgroundColor: chartColors.okFill,
@@ -442,7 +501,7 @@
                             pointBorderWidth: 2
                         },
                         {
-                            label: 'Pending',
+                            label: t('Pending'),
                             data: transferData.pendingData,
                             borderColor: chartColors.warn,
                             backgroundColor: chartColors.warnFill,
@@ -463,6 +522,17 @@
                     interaction: {
                         mode: 'index',
                         intersect: false
+                    },
+                    onHover: pointerOnHover,
+                    // A point opens the transfers of that day/week/month; the nearest series picks completed or pending.
+                    onClick: function (event, elements, chart) {
+                        if (!elements.length) return;
+                        const index = elements[0].index;
+                        const nearest = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, false)[0];
+                        const status = nearest ? (nearest.datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false') : '';
+                        window.location.href = ctx.dataset.link
+                            + '&startDate=' + transferData.bucketStarts[index]
+                            + '&endDate=' + transferData.bucketEnds[index] + status;
                     },
                     plugins: {
                         legend: {

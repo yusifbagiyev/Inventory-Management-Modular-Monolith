@@ -53,11 +53,11 @@ namespace InventoryManagement.Web.Controllers
 
             if (success)
             {
-                TempData["Success"] = "User created successfully";
+                TempData["Success"] = Tr("User created successfully");
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", "Failed to create user");
+            ModelState.AddModelError("", Tr("Failed to create user"));
             await LoadRoles(model);
             return View(model);
         }
@@ -87,11 +87,11 @@ namespace InventoryManagement.Web.Controllers
 
             if (success)
             {
-                TempData["Success"] = "User updated successfully";
+                TempData["Success"] = Tr("User updated successfully");
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", "Failed to update user");
+            ModelState.AddModelError("", Tr("Failed to update user"));
             await LoadRoles(model);
             return View(model);
         }
@@ -105,7 +105,7 @@ namespace InventoryManagement.Web.Controllers
             if (IsAjaxRequest())
                 return AjaxResponse(success, success ? "User deleted successfully" : "Failed to delete user");
 
-            TempData[success ? "Success" : "Error"] = success ? "User deleted successfully" : "Failed to delete user";
+            TempData[success ? "Success" : "Error"] = Tr(success ? "User deleted successfully" : "Failed to delete user");
             return RedirectToAction(nameof(Index));
         }
 
@@ -144,11 +144,11 @@ namespace InventoryManagement.Web.Controllers
 
             if (success)
             {
-                TempData["Success"] = "Password reset successfully";
+                TempData["Success"] = Tr("Password reset successfully");
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", "Failed to reset password");
+            ModelState.AddModelError("", Tr("Failed to reset password"));
             return View(model);
         }
 
@@ -176,7 +176,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var user = await _identity.GetUserAsync(id);
             if (user == null)
-                return Json(new { error = "User not found" });
+                return Json(new { error = Tr("User not found") });
 
             var direct = (await _identity.GetUserDirectPermissionsAsync(id)).Select(p => p.Name).ToHashSet();
             var permissions = await _identity.GetAllPermissionsAsync();
@@ -203,7 +203,7 @@ namespace InventoryManagement.Web.Controllers
 
             return Json(success
                 ? new { success = true, message = (string?)null }
-                : new { success = false, message = (string?)"Permission change failed" });
+                : new { success = false, message = (string?)Tr("Permission change failed") });
         }
 
 

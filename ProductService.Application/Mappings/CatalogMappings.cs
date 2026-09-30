@@ -14,6 +14,7 @@ namespace ProductService.Application.Mappings
             Model = product.Model,
             Vendor = product.Vendor,
             ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : product.ImageUrl,
+            ImageUrls = product.ImageUrls.ToList(),
             Description = product.Description,
             Worker = product.Worker,
             IsWorking = product.IsWorking,

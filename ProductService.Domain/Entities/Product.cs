@@ -7,7 +7,10 @@
         public string Model { get; private set; } = string.Empty;
         public string Vendor { get; private set; } = string.Empty;
         public string? Worker { get; private set; } = string.Empty;
+        /// <summary>The cover image: always the first of <see cref="ImageUrls"/> (empty when there are none).</summary>
         public string? ImageUrl { get; private set; } = string.Empty;
+        /// <summary>All images, cover first.</summary>
+        public List<string> ImageUrls { get; private set; } = [];
         public string? Description { get; private set; } = string.Empty;
         public bool IsWorking { get; private set; } = true;
         public bool IsActive { get; private set; } = true;
@@ -22,7 +25,7 @@
         // For EF Core
         protected Product() { }
 
-        public Product(int inventoryCode, string? model, string? vendor, int categoryId, int departmentId, string? worker, string? imageUrl, string? description, bool isActive, bool isWorking, bool isNewItem = true)
+        public Product(int inventoryCode, string? model, string? vendor, int categoryId, int departmentId, string? worker, IEnumerable<string>? imageUrls, string? description, bool isActive, bool isWorking, bool isNewItem = true)
         {
             if (inventoryCode <= 0)
                 throw new ArgumentException("Inventory Code must be greater than zero", nameof(inventoryCode));
@@ -36,7 +39,8 @@
             DepartmentId = departmentId;
             Model = model ?? "No Name";
             Vendor = vendor ?? "No Name";
-            ImageUrl = imageUrl ?? string.Empty;
+            ImageUrls = imageUrls?.ToList() ?? [];
+            ImageUrl = ImageUrls.FirstOrDefault() ?? string.Empty;
             Description = description ?? string.Empty;
             Worker = worker;
             IsActive = isActive;
@@ -45,7 +49,7 @@
             CreatedAt = DateTime.Now;
         }
 
-        public void Update(string? model, string? vendor, int categoryId, int departmentId,string? worker, string? imageUrl, string? description,bool? isActive,bool? isNewItem,bool? isWorking)
+        public void Update(string? model, string? vendor, int categoryId, int departmentId,string? worker, string? description,bool? isActive,bool? isNewItem,bool? isWorking)
         {
             if(categoryId <= 0)
                 throw new ArgumentException("Category ID must be greater than zero", nameof(categoryId));
@@ -57,7 +61,6 @@
             Worker = worker;
             CategoryId = categoryId;
             DepartmentId = departmentId;
-            ImageUrl = imageUrl ?? string.Empty;
             Description = description ?? string.Empty;
             IsActive=isActive ?? IsActive;
             IsWorking=isWorking ?? IsWorking;
@@ -72,9 +75,11 @@
             Worker = worker;
             UpdatedAt = DateTime.Now;
         }
-        public void UpdateImage(string imageUrl)
+        /// <summary>Replaces the image list (cover first) and keeps <see cref="ImageUrl"/> in step.</summary>
+        public void SetImages(IEnumerable<string> imageUrls)
         {
-            ImageUrl = imageUrl;
+            ImageUrls = imageUrls.ToList();
+            ImageUrl = ImageUrls.FirstOrDefault() ?? string.Empty;
             UpdatedAt = DateTime.Now;
         }
         public void ChangeInventoryCode(int inventoryCode)

@@ -28,6 +28,9 @@ namespace ProductService.Application.Features.Products.Commands
 
                 RuleFor(x => x.ProductDto.Description)
                     .MaximumLength(500).WithMessage("Description cannot exceed 500 characters");
+
+                RuleFor(x => ImageSet.Files(x.ProductDto.ImageFile, x.ProductDto.ImageFiles).Count)
+                    .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
         }
 
@@ -60,16 +63,23 @@ namespace ProductService.Application.Features.Products.Commands
 
                 var dto = request.ProductDto;
                 var before = product.ToState();
-                var oldImageUrl = product.ImageUrl;
+                var oldCover = product.ImageUrl;
 
-                string? newImageUrl = null;
-                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+                var added = new List<string>();
+                foreach (var file in ImageSet.Files(dto.ImageFile, dto.ImageFiles))
                 {
-                    await using var stream = dto.ImageFile.OpenReadStream();
-                    newImageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
-                    var uploaded = newImageUrl;
+                    await using var stream = file.OpenReadStream();
+                    var uploaded = await _imageService.UploadImageAsync(stream, file.FileName, product.InventoryCode);
                     _session.OnRollback(() => _imageService.DeleteImageAsync(uploaded));
+                    added.Add(uploaded);
                 }
+
+                // A single ImageFile (older clients) replaces the images, as it always did.
+                var (images, removed) = ImageSet.Apply(
+                    product.ImageUrls, dto.RemoveImageUrls, added, dto.CoverImageUrl,
+                    replaceAll: dto.ImageFile is { Length: > 0 });
+                if (!images.SequenceEqual(product.ImageUrls))
+                    product.SetImages(images);
 
                 product.Update(
                     dto.Model,
@@ -77,7 +87,6 @@ namespace ProductService.Application.Features.Products.Commands
                     dto.CategoryId,
                     dto.DepartmentId,
                     dto.Worker,
-                    newImageUrl ?? oldImageUrl,
                     dto.Description,
                     dto.IsActive,
                     dto.IsNewItem,
@@ -93,12 +102,13 @@ namespace ProductService.Application.Features.Products.Commands
                     before,
                     after,
                     string.Join(", ", request.Changes),
-                    newImageUrl,
+                    // The history row keeps a copy of the cover when it changed.
+                    product.ImageUrl != oldCover && !string.IsNullOrEmpty(product.ImageUrl) ? product.ImageUrl : null,
                     DateTime.Now), cancellationToken);
 
-                // The replaced image is only removed once the update is durable.
-                if (newImageUrl != null && !string.IsNullOrEmpty(oldImageUrl))
-                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(oldImageUrl));
+                // Removed images are only deleted once the update is durable.
+                foreach (var url in removed)
+                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(url));
             }
         }
     }

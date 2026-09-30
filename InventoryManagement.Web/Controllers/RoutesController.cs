@@ -51,6 +51,8 @@ namespace InventoryManagement.Web.Controllers
                 pageNumber, pageSize, search, isCompleted, startDate, endDate,
                 departmentId, categoryName, type));
             var routes = ModelMapper.Map<PagedResultDto<RouteViewModel>>(result);
+            foreach (var r in routes.Items)
+                TranslateNotes(r);
 
             ViewBag.ShowingStart = ((routes.PageNumber - 1) * routes.PageSize) + 1;
             ViewBag.ShowingEnd = Math.Min(routes.PageNumber * routes.PageSize, routes.TotalCount);
@@ -100,7 +102,7 @@ namespace InventoryManagement.Web.Controllers
                 ToDepartmentId = model.ToDepartmentId,
                 ToWorker = model.ToWorker,
                 Notes = model.Notes,
-                ImageFile = model.ImageFile
+                ImageFiles = model.ImageFiles
             };
 
             var response = await RunAsync(
@@ -137,7 +139,9 @@ namespace InventoryManagement.Web.Controllers
 
             var dto = new ModuleDtos.UpdateRouteDto
             {
-                ImageFile = model.ImageFile,
+                ImageFiles = model.ImageFiles,
+                RemoveImageUrls = model.RemoveImageUrls,
+                CoverImageUrl = model.CoverImageUrl,
                 ToDepartmentId = model.ToDepartmentId,
                 ToWorker = model.ToWorker,
                 Notes = model.Notes
@@ -154,7 +158,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var routes = await _mediator.Send(new GetRoutesByProductQuery(productId));
             ViewBag.ProductId = productId;
-            return View(ModelMapper.MapList<RouteViewModel>(routes));
+            return View(ModelMapper.MapList<RouteViewModel>(routes).Select(TranslateNotes).ToList());
         }
 
 
@@ -163,7 +167,18 @@ namespace InventoryManagement.Web.Controllers
             var route = await _mediator.Send(new GetRouteByIdQuery(id));
             return route == null
                 ? RedirectToNotFound()
-                : View(ModelMapper.Map<RouteViewModel>(route));
+                : View(TranslateNotes(ModelMapper.Map<RouteViewModel>(route)));
+        }
+
+        /// <summary>
+        /// History rows carry notes the system wrote in English ("Auto-created from product service",
+        /// "Product updated: …"); show them in the interface language. User-typed notes match no key
+        /// and stay as written.
+        /// </summary>
+        private static RouteViewModel TranslateNotes(RouteViewModel route)
+        {
+            route.Notes = Tr(route.Notes);
+            return route;
         }
 
 

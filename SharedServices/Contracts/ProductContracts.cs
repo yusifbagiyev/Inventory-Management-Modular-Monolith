@@ -26,15 +26,15 @@ namespace SharedServices.Contracts
     public interface IProductTransfers
     {
         /// <summary>
-        /// Moves the product to <paramref name="toDepartmentId"/>/<paramref name="toWorker"/>. When
-        /// <paramref name="routeImageUrl"/> is set the product image is replaced by a copy of it.
+        /// Moves the product to <paramref name="toDepartmentId"/>/<paramref name="toWorker"/>. When the
+        /// route has images, the product's images are replaced by copies of them.
         /// Runs in the caller's transaction.
         /// </summary>
         Task ApplyTransferAsync(
             int productId,
             int toDepartmentId,
             string? toWorker,
-            string? routeImageUrl,
+            IReadOnlyList<string> routeImageUrls,
             CancellationToken cancellationToken = default);
     }
 }

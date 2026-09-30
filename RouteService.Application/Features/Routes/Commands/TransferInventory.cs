@@ -9,6 +9,7 @@ using RouteService.Domain.ValueObjects;
 using SharedServices.Contracts;
 using SharedServices.Exceptions;
 using SharedServices.Persistence;
+using SharedServices.Storage;
 using RouteService.Application.Mappings;
 
 namespace RouteService.Application.Features.Routes.Commands
@@ -24,6 +25,8 @@ namespace RouteService.Application.Features.Routes.Commands
                 RuleFor(x => x.Dto.ProductId).GreaterThan(0);
                 RuleFor(x => x.Dto.ToDepartmentId).GreaterThan(0);
                 RuleFor(x => x.Dto.Notes).MaximumLength(500);
+                RuleFor(x => ImageSet.Files(x.Dto.ImageFile, x.Dto.ImageFiles).Count)
+                    .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
         }
 
@@ -64,13 +67,13 @@ namespace RouteService.Application.Features.Routes.Commands
                 if (await _repository.HasPendingRouteForProductAsync(product.Id, cancellationToken))
                     throw new RouteException("This product already has a pending transfer. Complete or delete it first.");
 
-                string? imageUrl = null;
-                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+                var imageUrls = new List<string>();
+                foreach (var file in ImageSet.Files(dto.ImageFile, dto.ImageFiles))
                 {
-                    await using var stream = dto.ImageFile.OpenReadStream();
-                    imageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, product.InventoryCode);
-                    var uploaded = imageUrl;
+                    await using var stream = file.OpenReadStream();
+                    var uploaded = await _imageService.UploadImageAsync(stream, file.FileName, product.InventoryCode);
                     _session.OnRollback(() => _imageService.DeleteImageAsync(uploaded));
+                    imageUrls.Add(uploaded);
                 }
 
                 var route = InventoryRoute.CreateTransfer(
@@ -87,7 +90,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     toDepartment.Name,
                     product.Worker,
                     dto.ToWorker,
-                    imageUrl,
+                    imageUrls,
                     dto.Notes);
 
                 await _repository.AddAsync(route, cancellationToken);

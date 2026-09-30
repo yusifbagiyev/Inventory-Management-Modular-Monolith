@@ -6,16 +6,16 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Create Category</h1>
+            <h1 class="mb-1">@L["Create Category"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
-                <li class="breadcrumb-item active">Create</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Categories"]</a></li>
+                <li class="breadcrumb-item active">@L["Create"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
         </div>
     </div>
@@ -26,7 +26,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <i class="fas fa-plus-circle me-1"></i>
-                        New Category Information
+                        @L["New Category Information"]
                     </div>
 
                     <div class="form-section">
@@ -35,13 +35,13 @@
                         <div class="form-grid">
                             <div class="full">
                                 <label asp-for="Name" class="form-label"></label>
-                                <input asp-for="Name" class="form-control" placeholder="Enter category name" autofocus />
+                                <input asp-for="Name" class="form-control" placeholder="@L["Enter category name"]" autofocus />
                                 <span asp-validation-for="Name" class="text-danger"></span>
                             </div>
 
                             <div class="full">
                                 <label asp-for="Description" class="form-label"></label>
-                                <textarea asp-for="Description" class="form-control" rows="3" placeholder="Enter category description"></textarea>
+                                <textarea asp-for="Description" class="form-control" rows="3" placeholder="@L["Enter category description"]"></textarea>
                                 <span asp-validation-for="Description" class="text-danger"></span>
                             </div>
 
@@ -55,10 +55,10 @@
                     </div>
 
                     <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@L["Cancel"]</a>
                         <div class="actions-right">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> Create Category
+                                <i class="fas fa-save"></i> @L["Create Category"]
                             </button>
                         </div>
                     </div>
@@ -73,7 +73,7 @@
     <script>
         $(document).ready(function() {
             AjaxHandler.handleForm('form', {
-                successMessage: 'Category created successfully!',
+                successMessage: t('Category created successfully!'),
                 successRedirect: '@Url.Action("Index")',
                 redirectDelay: 1500
             });

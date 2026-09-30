@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Services.Interfaces;
 using NotificationService.Application.Interfaces;
@@ -20,8 +21,18 @@ namespace InventoryManagement.Web.Services
         private int UserId => int.TryParse(
             _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
+        /// <summary>
+        /// Notifications are stored in English (the text is written once, for every recipient); they are
+        /// shown in the viewer's language through the same table as the rest of the UI.
+        /// </summary>
         public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false)
-            => ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly));
+            => ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly))
+                .Select(n => n with
+                {
+                    Title = JsonStringLocalizer.TranslateMessage(n.Title),
+                    Message = JsonStringLocalizer.TranslateMessage(n.Message)
+                })
+                .ToList();
 
         public Task<int> GetUnreadCountAsync() => _inbox.GetUnreadCountAsync(UserId);
 

@@ -94,10 +94,10 @@ namespace NotificationService.Infrastructure.Services
             _logger.LogInformation("Deleted {Count} notification(s) for cancelled request {RequestId}", deleted, e.RequestId);
         }
 
-        public async Task ProductCreatedAsync(ProductCreatedEvent e, CancellationToken cancellationToken)
+        public async Task ProductCreatedAsync(ProductCreatedEvent e, int? actorId, CancellationToken cancellationToken)
         {
             var product = e.Product;
-            var users = await _users.GetActiveUserIdsAsync(cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
             var data = Json(new { productId = product.ProductId, inventoryCode = product.InventoryCode, model = product.Model });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -125,10 +125,10 @@ namespace NotificationService.Infrastructure.Services
             }, $"product_{product.InventoryCode}.jpg", cancellationToken);
         }
 
-        public async Task ProductDeletedAsync(ProductDeletedEvent e, CancellationToken cancellationToken)
+        public async Task ProductDeletedAsync(ProductDeletedEvent e, int? actorId, CancellationToken cancellationToken)
         {
             var product = e.Product;
-            var users = await _users.GetActiveUserIdsAsync(cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
             var data = Json(new { productId = product.ProductId, inventoryCode = product.InventoryCode, departmentName = product.DepartmentName });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -139,9 +139,9 @@ namespace NotificationService.Infrastructure.Services
                 data)), cancellationToken);
         }
 
-        public async Task RouteCompletedAsync(RouteCompletedEvent e, CancellationToken cancellationToken)
+        public async Task RouteCompletedAsync(RouteCompletedEvent e, int? actorId, CancellationToken cancellationToken)
         {
-            var users = await _users.GetActiveUserIdsAsync(cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
             var data = Json(new { routeId = e.RouteId, productId = e.ProductId });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -168,6 +168,9 @@ namespace NotificationService.Infrastructure.Services
                 ImageUrl = e.ImageUrl
             }, $"route_{e.InventoryCode}.jpg", cancellationToken);
         }
+
+        private async Task<IEnumerable<int>> OtherActiveUsersAsync(int? actorId, CancellationToken cancellationToken)
+            => (await _users.GetActiveUserIdsAsync(cancellationToken)).Where(id => id != actorId);
 
         /// <summary>Persists the whole fan-out in one SaveChanges, then pushes each over SignalR.</summary>
         private async Task SaveAndPushAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken)

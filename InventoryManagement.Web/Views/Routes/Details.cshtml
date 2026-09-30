@@ -15,16 +15,16 @@
 <div class="container-fluid px-4" id="detailsRegion">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Route Details</h1>
+            <h1 class="mb-1">@L[(string)ViewData["Title"]!]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
-                <li class="breadcrumb-item active">Details</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Routes"]</a></li>
+                <li class="breadcrumb-item active">@L["Details"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
         </div>
     </div>
@@ -33,50 +33,50 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <span><i class="fas fa-signs-post me-1"></i> Route Information</span>
+                    <span><i class="fas fa-signs-post me-1"></i> @L["Route Information"]</span>
                     <span class="d-flex gap-2 flex-wrap">
-                        <span class="state state-flat @typeClass">@Model.RouteTypeName</span>
+                        <span class="state state-flat @typeClass">@L[Model.RouteTypeName ?? ""]</span>
                         @if (Model.IsCompleted)
                         {
-                            <span class="state state-ok">Completed</span>
+                            <span class="state state-ok">@L["Completed"]</span>
                         }
                         else
                         {
-                            <span class="state state-warn">Pending</span>
+                            <span class="state state-warn">@L["Pending"]</span>
                         }
                     </span>
                 </div>
 
                 <div class="card-body">
-                    <h2 class="section-title">Transfer</h2>
+                    <h2 class="section-title">@L["Transfer"]</h2>
                     <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
                         @if (Model.FromDepartmentName != null)
                         {
                             <div class="cell-text">
-                                <span class="cell-sub">From</span>
+                                <span class="cell-sub">@L["From"]</span>
                                 <span class="cell-title">@Model.FromDepartmentName</span>
-                                <span class="cell-sub">Worker: @(Model.FromWorker ?? "N/A")</span>
+                                <span class="cell-sub">@L["Worker"]: @(Model.FromWorker ?? L["N/A"].Value)</span>
                             </div>
                             <i class="fas fa-arrow-right text-muted"></i>
                         }
                         <div class="cell-text">
-                            <span class="cell-sub">To</span>
+                            <span class="cell-sub">@L["To"]</span>
                             <span class="cell-title">@Model.ToDepartmentName</span>
-                            <span class="cell-sub">Worker: @(Model.ToWorker ?? "N/A")</span>
+                            <span class="cell-sub">@L["Worker"]: @(Model.ToWorker ?? L["N/A"].Value)</span>
                         </div>
                     </div>
 
-                    <h2 class="section-title">Product</h2>
+                    <h2 class="section-title">@L["Product"]</h2>
                     <div class="detail-grid mb-4">
                         <div class="detail-row">
-                            <span class="d-label">Code</span>
+                            <span class="d-label">@L["Code"]</span>
                             <span class="d-value mono">@Model.InventoryCode</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Model</span>
+                            <span class="d-label">@L["Model"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.Model))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -84,10 +84,10 @@
                             }
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Vendor</span>
+                            <span class="d-label">@L["Vendor"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.Vendor))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -95,10 +95,10 @@
                             }
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Category</span>
+                            <span class="d-label">@L["Category"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.CategoryName))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -107,44 +107,39 @@
                         </div>
                     </div>
 
-                    <h2 class="section-title">Route</h2>
+                    <h2 class="section-title">@L["Route"]</h2>
                     <div class="detail-grid mb-4">
                         <div class="detail-row">
-                            <span class="d-label">Route type</span>
-                            <span class="d-value">@Model.RouteTypeName</span>
+                            <span class="d-label">@L["Route type"]</span>
+                            <span class="d-value">@L[Model.RouteTypeName ?? ""]</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Created</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+                            <span class="d-label">@L["Created"]</span>
+                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Completed</span>
+                            <span class="d-label">@L["Completed"]</span>
                             @if (Model.IsCompleted && Model.CompletedAt.HasValue)
                             {
-                                <span class="d-value mono">@Model.CompletedAt.Value.ToString("MM/dd/yyyy HH:mm")</span>
+                                <span class="d-value mono">@Model.CompletedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                             }
                             else
                             {
-                                <span class="d-value d-empty">Not completed</span>
+                                <span class="d-value d-empty">@L["Not completed"]</span>
                             }
                         </div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.Notes))
                     {
-                        <h2 class="section-title">Notes</h2>
+                        <h2 class="section-title">@L["Notes"]</h2>
                         <p class="mb-4">@Model.Notes</p>
                     }
 
-                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    @if (Model.ImageUrls.Count > 0)
                     {
-                        <h2 class="section-title">Transfer image</h2>
-                        <div class="image-preview">
-                            <img src="@Model.FullImageUrl"
-                                 style="cursor: pointer;"
-                                 alt="Transfer Image"
-                                 data-src="@Model.FullImageUrl" onclick="showImageModal(this.dataset.src, 'Transfer Image')" />
-                        </div>
+                        <h2 class="section-title">@L["Images"]</h2>
+                        <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = L["Transfer image"].Value }' />
                     }
                 </div>
 
@@ -153,21 +148,21 @@
                         @if (!Model.IsCompleted)
                         {
                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteRoute(@Model.Id)">
-                                <i class="fas fa-trash"></i> Delete
+                                <i class="fas fa-trash"></i> @L["Delete"]
                             </button>
                             <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
                                class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-box"></i> View Product
+                                <i class="fas fa-box"></i> @L["View Product"]
                             </a>
                             <button type="button" class="btn btn-primary btn-sm" onclick="completeRoute(@Model.Id)">
-                                <i class="fas fa-check"></i> Mark as Complete
+                                <i class="fas fa-check"></i> @L["Mark as Complete"]
                             </button>
                         }
                         else
                         {
                             <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId"
                                class="btn btn-primary btn-sm">
-                                <i class="fas fa-box"></i> View Product
+                                <i class="fas fa-box"></i> @L["View Product"]
                             </a>
                         }
                     </div>
@@ -179,17 +174,17 @@
             <div class="card mb-4 side-panel">
                 <div class="card-header">
                     <i class="fas fa-bolt me-1"></i>
-                    Quick Actions
+                    @L["Quick Actions"]
                 </div>
                 <div class="list-group list-group-flush">
                     <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="list-group-item list-group-item-action">
-                        <i class="fas fa-clock-rotate-left me-2"></i> View Full Timeline
+                        <i class="fas fa-clock-rotate-left me-2"></i> @L["View Full Timeline"]
                     </a>
                     <a asp-action="Transfer" class="list-group-item list-group-item-action">
-                        <i class="fas fa-arrow-right-arrow-left me-2"></i> New Transfer
+                        <i class="fas fa-arrow-right-arrow-left me-2"></i> @L["New Transfer"]
                     </a>
                     <button type="button" class="list-group-item list-group-item-action text-start" onclick="printRoute()">
-                        <i class="fas fa-print me-2"></i> Print Details
+                        <i class="fas fa-print me-2"></i> @L["Print Details"]
                     </button>
                 </div>
             </div>
@@ -201,9 +196,9 @@
     <script>
         function completeRoute(id) {
             confirmAction({
-                title: 'Complete route',
-                message: 'Mark this route as completed?',
-                okText: 'Complete'
+                title: t('Complete route'),
+                message: t('Mark this route as completed?'),
+                okText: t('Complete')
             }, function () {
                 const form = document.createElement('form');
                 form.method = 'POST';
@@ -222,9 +217,9 @@
 
         function deleteRoute(id) {
             confirmAction({
-                title: 'Delete route',
-                message: 'Delete this route? This cannot be undone.',
-                okText: 'Delete',
+                title: t('Delete route'),
+                message: t('Delete this route? This cannot be undone.'),
+                okText: t('Delete'),
                 danger: true
             }, function () {
                 const form = document.createElement('form');

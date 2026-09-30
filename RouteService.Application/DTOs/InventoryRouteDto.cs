@@ -19,6 +19,8 @@ namespace RouteService.Application.DTOs
         public string? FromWorker { get; set; }
         public string ToWorker { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
+        /// <summary>All images, cover (= ImageUrl) first.</summary>
+        public List<string> ImageUrls { get; set; } = [];
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }

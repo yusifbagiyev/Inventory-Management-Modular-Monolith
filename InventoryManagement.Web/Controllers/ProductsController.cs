@@ -113,7 +113,7 @@ namespace InventoryManagement.Web.Controllers
                 IsNewItem = productModel.IsNewItem,
                 CategoryId = productModel.CategoryId,
                 DepartmentId = productModel.DepartmentId,
-                ImageFile = productModel.ImageFile
+                ImageFiles = productModel.ImageFiles
             };
 
             var response = await RunAsync(
@@ -158,7 +158,9 @@ namespace InventoryManagement.Web.Controllers
                 IsWorking = productModel.IsWorking,
                 IsActive = productModel.IsActive,
                 IsNewItem = productModel.IsNewItem,
-                ImageFile = productModel.ImageFile
+                ImageFiles = productModel.ImageFiles,
+                RemoveImageUrls = productModel.RemoveImageUrls,
+                CoverImageUrl = productModel.CoverImageUrl
             };
 
             var response = await RunAsync(

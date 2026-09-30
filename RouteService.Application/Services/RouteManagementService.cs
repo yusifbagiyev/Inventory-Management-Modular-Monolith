@@ -5,6 +5,7 @@ using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
 using SharedServices.Contracts;
+using SharedServices.Storage;
 using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
@@ -223,15 +224,9 @@ namespace RouteService.Application.Services
                 ["transferReason"] = BuildTransferReason(product, toDepartment)
             };
 
-            // Add image data if present
-            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await dto.ImageFile.CopyToAsync(ms);
-                actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                actionData["imageFileName"] = dto.ImageFile.FileName;
-                actionData["imageSize"] = dto.ImageFile.Length;
-            }
+            var images = ImageSet.Files(dto.ImageFile, dto.ImageFiles);
+            if (images.Count > 0)
+                actionData["images"] = await ApprovalActionData.EncodeImagesAsync(images);
 
             return actionData;
         }
@@ -268,16 +263,18 @@ namespace RouteService.Application.Services
                 changes.Add("Destination department changed");
             }
 
-            // Handle image update
-            if (updated.ImageFile != null && updated.ImageFile.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await updated.ImageFile.CopyToAsync(ms);
-                updateData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                updateData["imageFileName"] = updated.ImageFile.FileName;
-                updateData["imageSize"] = updated.ImageFile.Length;
-                changes.Add("New image uploaded");
-            }
+            // Images. A single legacy ImageFile keeps its "replace the images" meaning.
+            if (updated.ImageFile is { Length: > 0 })
+                updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([updated.ImageFile]);
+            if (updated.ImageFiles?.Any(f => f.Length > 0) == true)
+                updateData["images"] = await ApprovalActionData.EncodeImagesAsync(updated.ImageFiles);
+            if (updated.RemoveImageUrls?.Count > 0)
+                updateData["removeImageUrls"] = updated.RemoveImageUrls;
+            if (!string.IsNullOrEmpty(updated.CoverImageUrl))
+                updateData["coverImageUrl"] = updated.CoverImageUrl;
+            if (ImageSet.Changes(existing.ImageUrls, updated.RemoveImageUrls,
+                    ImageSet.Files(updated.ImageFile, updated.ImageFiles).Count, updated.CoverImageUrl))
+                changes.Add("Images updated");
 
             updateData["changesSummary"] = string.Join(", ", changes);
 
@@ -306,9 +303,10 @@ namespace RouteService.Application.Services
                 changes.Add($"Destination: {existing.ToDepartmentName} -> department #{updated.ToDepartmentId.Value}");
             }
 
-            if (updated.ImageFile != null)
+            if (ImageSet.Changes(existing.ImageUrls, updated.RemoveImageUrls,
+                    ImageSet.Files(updated.ImageFile, updated.ImageFiles).Count, updated.CoverImageUrl))
             {
-                changes.Add($"New image: {updated.ImageFile.FileName}");
+                changes.Add("Images updated");
             }
 
             return changes.Any() ? string.Join(", ", changes) : "No changes";

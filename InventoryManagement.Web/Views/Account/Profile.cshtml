@@ -6,22 +6,22 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">My Profile</h1>
+            <h1 class="mb-1">@L["My Profile"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">Profile</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["Profile"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             @* Self-service change (verifies the current password). Previously this pointed at the
                Admin-only ResetPassword action, so a non-admin got Access Denied. *@
             <a href="@Url.Action("ChangePassword")" class="btn btn-sm btn-primary">
-                <i class="fas fa-key me-1"></i> Change Password
+                <i class="fas fa-key me-1"></i> @L["Change Password"]
             </a>
             <form asp-action="Logout" method="post" class="mb-0">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-sm btn-outline-danger">
-                    <i class="fas fa-sign-out-alt me-1"></i> Sign Out
+                    <i class="fas fa-sign-out-alt me-1"></i> @L["Sign Out"]
                 </button>
             </form>
         </div>
@@ -32,7 +32,7 @@
         <div class="col-lg-4 mb-3">
             <div class="card">
                 <div class="card-header">
-                    <i class="fas fa-id-badge me-2"></i>Account
+                    <i class="fas fa-id-badge me-2"></i>@L["Account"]
                 </div>
                 <div class="card-body">
                     <div class="cell-item mb-3">
@@ -47,20 +47,20 @@
 
                     <div class="detail-grid">
                         <div class="detail-row">
-                            <span class="d-label">Status</span>
+                            <span class="d-label">@L["Status"]</span>
                             <span class="d-value">
                                 @if (Model.IsActive)
                                 {
-                                    <span class="state state-ok">Active Account</span>
+                                    <span class="state state-ok">@L["Active Account"]</span>
                                 }
                                 else
                                 {
-                                    <span class="state state-idle">Inactive</span>
+                                    <span class="state state-idle">@L["Inactive"]</span>
                                 }
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Roles (@Model.Roles.Count)</span>
+                            <span class="d-label">@L["Roles"] (@Model.Roles.Count)</span>
                             <span class="d-value">
                                 @if (Model.Roles.Any())
                                 {
@@ -73,12 +73,12 @@
                                 }
                                 else
                                 {
-                                    <span class="d-empty">No roles</span>
+                                    <span class="d-empty">@L["No roles"]</span>
                                 }
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Permissions</span>
+                            <span class="d-label">@L["Permissions"]</span>
                             <span class="d-value mono">@Model.Permissions.Count</span>
                         </div>
                     </div>
@@ -91,47 +91,47 @@
             <!-- Personal Information -->
             <div class="card mb-3">
                 <div class="card-header">
-                    <i class="fas fa-circle-info me-2"></i>Personal Information
+                    <i class="fas fa-circle-info me-2"></i>@L["Personal Information"]
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
                         <div class="detail-row">
-                            <span class="d-label">First Name</span>
+                            <span class="d-label">@L["First Name"]</span>
                             <span class="d-value">@Model.FirstName</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Last Name</span>
+                            <span class="d-label">@L["Last Name"]</span>
                             <span class="d-value">@Model.LastName</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Username</span>
+                            <span class="d-label">@L["Username"]</span>
                             <span class="d-value">@Model.Username</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Email Address</span>
+                            <span class="d-label">@L["Email Address"]</span>
                             <span class="d-value">@Model.Email</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Account Created</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
+                            <span class="d-label">@L["Account Created"]</span>
+                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Last Login</span>
+                            <span class="d-label">@L["Last Login"]</span>
                             <span class="d-value">
                                 @if (Model.LastLoginAt.HasValue)
                                 {
-                                    <span class="mono">@Model.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm")</span>
+                                    <span class="mono">@Model.LastLoginAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                                 }
                                 else
                                 {
-                                    <span class="d-empty">Never</span>
+                                    <span class="d-empty">@L["Never"]</span>
                                 }
                             </span>
                         </div>
                     </div>
 
                     <p class="form-text mb-0 mt-3">
-                        To update your profile information, please contact your system administrator.
+                        @L["To update your profile information, please contact your system administrator."]
                     </p>
                 </div>
             </div>
@@ -139,7 +139,7 @@
             <!-- Permissions -->
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                    <span><i class="fas fa-shield-halved me-2"></i>My Permissions (@Model.Permissions.Count)</span>
+                    <span><i class="fas fa-shield-halved me-2"></i>@L["My Permissions"] (@Model.Permissions.Count)</span>
                     <div class="filter-search">
                         <div class="input-group">
                             <span class="input-group-text">
@@ -148,7 +148,7 @@
                             <input type="text"
                                    id="permissionSearch"
                                    class="form-control"
-                                   placeholder="Search permissions...">
+                                   placeholder="@L["Search permissions..."]">
                         </div>
                     </div>
                 </div>
@@ -171,7 +171,7 @@
                                                 type="button"
                                                 data-bs-toggle="collapse"
                                                 data-bs-target="#@categoryId">
-                                            <span class="fw-semibold">@category.Key</span>
+                                            <span class="fw-semibold">@L[category.Key]</span>
                                             <span class="badge bg-primary ms-2">@category.Count()</span>
                                         </button>
                                     </h2>
@@ -190,7 +190,7 @@
                                                                 <div class="mono">@permission.Name</div>
                                                                 @if (!string.IsNullOrEmpty(permission.Description))
                                                                 {
-                                                                    <div class="form-text">@permission.Description</div>
+                                                                    <div class="form-text">@L[permission.Description]</div>
                                                                 }
                                                             </div>
                                                         </div>
@@ -207,8 +207,8 @@
                     {
                         <div class="empty-state">
                             <i class="fas fa-triangle-exclamation"></i>
-                            <h5>No permissions assigned</h5>
-                            <p class="mb-0">Ask your administrator to grant the access you need.</p>
+                            <h5>@L["No permissions assigned"]</h5>
+                            <p class="mb-0">@L["Ask your administrator to grant the access you need."]</p>
                         </div>
                     }
                 </div>
@@ -258,7 +258,7 @@
         function logoutAllDevices() {
             // Nothing is wired up behind this yet, so asking for confirmation first would be
             // misleading - say plainly that it is not available instead.
-            showToast('Signing out other devices is not available yet.', 'info');
+            showToast(t('Signing out other devices is not available yet.'), 'info');
         }
     </script>
 }

@@ -21,6 +21,7 @@ namespace RouteService.Application.Mappings
             FromWorker = route.FromWorker,
             ToWorker = route.ToWorker ?? string.Empty,
             ImageUrl = route.ImageUrl,
+            ImageUrls = route.ImageUrls.ToList(),
             Notes = route.Notes,
             IsCompleted = route.IsCompleted,
             CreatedAt = route.CreatedAt,

@@ -5,7 +5,7 @@
     var widths = new[] { "100%", "92%", "78%", "96%", "68%", "88%" };
 }
 <div class="skeleton-group" aria-busy="true" role="status">
-    <span class="visually-hidden">Loading...</span>
+    <span class="visually-hidden">@L["Loading..."]</span>
     <span class="skeleton skeleton-title"></span>
     @for (var i = 0; i < Math.Max(1, Model); i++)
     {

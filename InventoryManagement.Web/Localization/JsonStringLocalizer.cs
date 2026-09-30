@@ -1,0 +1,156 @@
+using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.Extensions.Localization;
+
+namespace InventoryManagement.Web.Localization
+{
+    /// <summary>Marker type for <c>IStringLocalizer&lt;SharedResource&gt;</c>: the whole UI shares one table.</summary>
+    public sealed class SharedResource;
+
+    /// <summary>
+    /// UI translations. The English text is the key; <c>Resources/i18n/az.json</c> (embedded) maps it to
+    /// Azerbaijani. The same table is handed to the browser (<c>window.I18n</c>) so views and scripts
+    /// translate from one file. Anything missing falls back to the English key.
+    /// </summary>
+    public sealed partial class JsonStringLocalizer : IStringLocalizer
+    {
+        private static readonly Lazy<Dictionary<string, string>> Azerbaijani = new(() => Load("i18n.az.json"));
+
+        /// <summary>Keys with {0}-style placeholders turned into regexes, for translating runtime messages.</summary>
+        private static readonly Lazy<List<(Regex Pattern, string Template)>> Patterns = new(BuildPatterns);
+
+        public static bool IsAzerbaijani => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "az";
+
+        public static IReadOnlyDictionary<string, string> CurrentTable
+            => IsAzerbaijani ? Azerbaijani.Value : new Dictionary<string, string>();
+
+        /// <summary>Changes whenever the translation file does; cache-busts the script that ships it to the browser.</summary>
+        public static string Version => VersionHash.Value;
+
+        private static readonly Lazy<string> VersionHash = new(() => Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(Azerbaijani.Value)))[..12].ToLowerInvariant());
+
+        public LocalizedString this[string name]
+        {
+            get
+            {
+                name ??= string.Empty;
+                var found = TryGet(name, out var value);
+                return new LocalizedString(name, value, resourceNotFound: !found);
+            }
+        }
+
+        public LocalizedString this[string name, params object[] arguments]
+        {
+            get
+            {
+                name ??= string.Empty;
+                var found = TryGet(name, out var value);
+                return new LocalizedString(name, string.Format(CultureInfo.CurrentCulture, value, arguments), !found);
+            }
+        }
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => CurrentTable.Select(p => new LocalizedString(p.Key, p.Value, false));
+
+        /// <summary>
+        /// Translates a message produced at runtime (exception, validation error) that may carry values,
+        /// e.g. "Product with inventory code 1042 already exists" against the key
+        /// "Product with inventory code {0} already exists". Untranslated messages are returned as-is.
+        /// </summary>
+        public static string TranslateMessage(string? message)
+        {
+            if (string.IsNullOrEmpty(message) || !IsAzerbaijani)
+                return message ?? string.Empty;
+
+            if (Azerbaijani.Value.TryGetValue(message, out var exact))
+                return exact;
+
+            // Several messages joined by "; " (validation errors).
+            if (message.Contains("; "))
+                return string.Join("; ", message.Split("; ").Select(TranslateMessage));
+
+            foreach (var (pattern, template) in Patterns.Value)
+            {
+                var match = pattern.Match(message);
+                if (!match.Success)
+                    continue;
+                // Captured values can be translatable text themselves (e.g. a ", "-joined change list).
+                var values = match.Groups.Cast<Group>().Skip(1).Select(g => (object)TranslateParts(g.Value)).ToArray();
+                return string.Format(CultureInfo.CurrentCulture, template, values);
+            }
+
+            // A ", "-joined list of known messages (change summaries).
+            return message.Contains(", ") ? TranslateParts(message) : message;
+        }
+
+        /// <summary>One level down: exact keys and patterns for each ", "-separated part (no further nesting).</summary>
+        private static string TranslateParts(string value)
+            => string.Join(", ", value.Split(", ").Select(part =>
+            {
+                if (Azerbaijani.Value.TryGetValue(part, out var exact) || Azerbaijani.Value.TryGetValue(part.Trim(), out exact))
+                    return exact;
+                foreach (var (pattern, template) in Patterns.Value)
+                {
+                    var m = pattern.Match(part);
+                    if (m.Success)
+                        return string.Format(CultureInfo.CurrentCulture, template, m.Groups.Cast<Group>().Skip(1).Select(g => (object)g.Value).ToArray());
+                }
+                return part;
+            }));
+
+        private static bool TryGet(string name, out string value)
+        {
+            if (IsAzerbaijani && Azerbaijani.Value.TryGetValue(name, out var translated))
+            {
+                value = translated;
+                return true;
+            }
+            value = name;
+            return false;
+        }
+
+        private static Dictionary<string, string> Load(string resourceName)
+        {
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName)
+                ?? throw new InvalidOperationException($"Embedded translation file '{resourceName}' is missing.");
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(stream, new JsonSerializerOptions
+            {
+                ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true
+            }) ?? [];
+        }
+
+        private static List<(Regex, string)> BuildPatterns()
+        {
+            var list = new List<(Regex, string)>();
+            foreach (var (key, value) in Azerbaijani.Value)
+            {
+                // A pattern needs real words around its placeholders, or it would match unrelated text.
+                if (!Placeholder().IsMatch(key) || Placeholder().Replace(key, "").Count(char.IsLetter) < 8)
+                    continue;
+                // Placeholders in the key become capture groups, in index order ({0} first).
+                var order = Placeholder().Matches(key).Select(m => int.Parse(m.Groups[1].Value)).ToList();
+                var regex = "^" + string.Concat(Placeholder().Split(key)
+                    .Select((part, i) => i % 2 == 0 ? Regex.Escape(part) : "(.*?)")) + "$";
+                // Rewrite the template so {n} refers to the n-th captured group.
+                var template = Placeholder().Replace(value, m => "{" + order.IndexOf(int.Parse(m.Groups[1].Value)) + "}");
+                list.Add((new Regex(regex, RegexOptions.CultureInvariant), template));
+            }
+            // Most specific (longest literal text) first.
+            return list.OrderByDescending(p => p.Item1.ToString().Length).ToList();
+        }
+
+        [GeneratedRegex(@"\{(\d+)\}")]
+        private static partial Regex Placeholder();
+    }
+
+    public sealed class JsonStringLocalizerFactory : IStringLocalizerFactory
+    {
+        private static readonly JsonStringLocalizer Instance = new();
+        public IStringLocalizer Create(Type resourceSource) => Instance;
+        public IStringLocalizer Create(string baseName, string location) => Instance;
+    }
+}

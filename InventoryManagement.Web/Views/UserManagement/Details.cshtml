@@ -6,19 +6,19 @@
 <div class="container-fluid px-4" id="detailsRegion">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">User Details</h1>
+            <h1 class="mb-1">@L["User Details"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="@Url.Action("Index")">User Management</a></li>
-                <li class="breadcrumb-item active">User Details</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["User Management"]</a></li>
+                <li class="breadcrumb-item active">@L["User Details"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Users
+                <i class="fas fa-arrow-left"></i> @L["Back to Users"]
             </a>
             <a href="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> Edit User
+                <i class="fas fa-edit"></i> @L["Edit User"]
             </a>
         </div>
     </div>
@@ -27,19 +27,19 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-user me-1"></i> User Information
+                    <i class="fas fa-user me-1"></i> @L["User Information"]
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
                         <div class="detail-row">
-                            <span class="d-label">Username</span>
+                            <span class="d-label">@L["Username"]</span>
                             <span class="d-value mono">@Model.Username</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Email</span>
+                            <span class="d-label">@L["Email"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.Email))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -47,10 +47,10 @@
                             }
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">First Name</span>
+                            <span class="d-label">@L["First Name"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.FirstName))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -58,10 +58,10 @@
                             }
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Last Name</span>
+                            <span class="d-label">@L["Last Name"]</span>
                             @if (string.IsNullOrWhiteSpace(Model.LastName))
                             {
-                                <span class="d-value d-empty">Not set</span>
+                                <span class="d-value d-empty">@L["Not set"]</span>
                             }
                             else
                             {
@@ -69,20 +69,20 @@
                             }
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Status</span>
+                            <span class="d-label">@L["Status"]</span>
                             <span class="d-value">
                                 @if (Model.IsActive)
                                 {
-                                    <span class="state state-ok">Active</span>
+                                    <span class="state state-ok">@L["Active"]</span>
                                 }
                                 else
                                 {
-                                    <span class="state state-idle">Inactive</span>
+                                    <span class="state state-idle">@L["Inactive"]</span>
                                 }
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Roles</span>
+                            <span class="d-label">@L["Roles"]</span>
                             <span class="d-value">
                                 @if (Model.CurrentRoles.Any())
                                 {
@@ -93,7 +93,7 @@
                                 }
                                 else
                                 {
-                                    <span class="d-empty">No roles assigned</span>
+                                    <span class="d-empty">@L["No roles assigned"]</span>
                                 }
                             </span>
                         </div>
@@ -103,21 +103,21 @@
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-chart-column me-1"></i> Activity Summary
+                    <i class="fas fa-chart-column me-1"></i> @L["Activity Summary"]
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
                         <div class="detail-row">
-                            <span class="d-label">Total Logins</span>
+                            <span class="d-label">@L["Total Logins"]</span>
                             <span class="d-value mono">15</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Last Login</span>
-                            <span class="d-value mono">2 days ago</span>
+                            <span class="d-label">@L["Last Login"]</span>
+                            <span class="d-value mono">@L["{0} days ago", 2]</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Account Age</span>
-                            <span class="d-value mono">30 days</span>
+                            <span class="d-label">@L["Account Age"]</span>
+                            <span class="d-value mono">@L["{0} days", 30]</span>
                         </div>
                     </div>
                 </div>
@@ -127,24 +127,24 @@
         <div class="col-lg-4">
             <div class="card side-panel mb-4">
                 <div class="card-header">
-                    <i class="fas fa-bolt me-1"></i> Quick Actions
+                    <i class="fas fa-bolt me-1"></i> @L["Quick Actions"]
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="@Url.Action("Edit", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="fas fa-pen-to-square me-2"></i>Edit User
+                        <i class="fas fa-pen-to-square me-2"></i>@L["Edit User"]
                     </a>
                     <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="fas fa-key me-2"></i>Reset Password
+                        <i class="fas fa-key me-2"></i>@L["Reset Password"]
                     </a>
                     <button type="button" class="list-group-item list-group-item-action text-start w-100"
                             onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
                         @if (Model.IsActive)
                         {
-                            <span><i class="fas fa-user-minus me-2"></i>Deactivate User</span>
+                            <span><i class="fas fa-user-minus me-2"></i>@L["Deactivate User"]</span>
                         }
                         else
                         {
-                            <span><i class="fas fa-user-check me-2"></i>Activate User</span>
+                            <span><i class="fas fa-user-check me-2"></i>@L["Activate User"]</span>
                         }
                     </button>
                 </div>
@@ -152,32 +152,32 @@
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-circle-info me-1"></i> Account Information
+                    <i class="fas fa-circle-info me-1"></i> @L["Account Information"]
                 </div>
                 <div class="card-body">
                     <div class="detail-row">
-                        <span class="d-label">User ID</span>
+                        <span class="d-label">@L["User ID"]</span>
                         <span class="d-value mono">#@Model.Id</span>
                     </div>
                     <div class="detail-row">
-                        <span class="d-label">Created</span>
-                        <span class="d-value mono">Jan 15, 2024</span>
+                        <span class="d-label">@L["Created"]</span>
+                        <span class="d-value mono">15.01.2024</span>
                     </div>
                     <div class="detail-row">
-                        <span class="d-label">Last Modified</span>
-                        <span class="d-value mono">Jan 20, 2024</span>
+                        <span class="d-label">@L["Last Modified"]</span>
+                        <span class="d-value mono">20.01.2024</span>
                     </div>
                 </div>
             </div>
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-triangle-exclamation me-1"></i> Danger Zone
+                    <i class="fas fa-triangle-exclamation me-1"></i> @L["Danger Zone"]
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>
+                    <p class="text-muted mb-3">@L["Once you delete a user, there is no going back. Please be certain."]</p>
                     <button type="button" class="btn btn-outline-danger btn-sm" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
-                        <i class="fas fa-trash"></i> Delete User
+                        <i class="fas fa-trash"></i> @L["Delete User"]
                     </button>
                 </div>
             </div>
@@ -190,18 +190,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">@L["Confirm Delete"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger">This action cannot be undone.</p>
+                <p>@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
+                <p class="text-danger">@L["This action cannot be undone."]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
                 <form id="deleteForm" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-danger">Delete</button>
+                    <button type="submit" class="btn btn-outline-danger">@L["Delete"]</button>
                 </form>
             </div>
         </div>
@@ -213,11 +213,11 @@
         function toggleUserStatus(userId, isActive) {
             const deactivating = !!isActive;
             confirmAction({
-                title: deactivating ? 'Deactivate user' : 'Activate user',
+                title: deactivating ? t('Deactivate user') : t('Activate user'),
                 message: deactivating
-                    ? 'Deactivate this user? They will no longer be able to sign in.'
-                    : 'Activate this user? They will be able to sign in again.',
-                okText: deactivating ? 'Deactivate' : 'Activate',
+                    ? t('Deactivate this user? They will no longer be able to sign in.')
+                    : t('Activate this user? They will be able to sign in again.'),
+                okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
                 // The id travels in the route: a JSON body never bound to the action's int id.
@@ -230,12 +230,12 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        showToast('Error updating user status: ' + (data.message || 'Unknown error'), 'error');
+                        showToast(t('Error updating user status: {0}', data.message || t('Unknown error')), 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showToast('Error updating user status', 'error');
+                    showToast(t('Error updating user status'), 'error');
                 });
             });
         }

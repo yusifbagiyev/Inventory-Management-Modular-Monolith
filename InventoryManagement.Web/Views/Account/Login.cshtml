@@ -4,11 +4,11 @@
 }
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@(JsonStringLocalizer.IsAzerbaijani ? "az" : "en")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign in - Inventory Pro</title>
+    <title>@L["Sign in"] - Inventory Pro</title>
 
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
 
@@ -241,6 +241,19 @@
             text-align: center;
         }
 
+        .brand .lang-switch { margin-left: auto; }
+        .brand .lang-switch button {
+            border: 1px solid var(--line-2);
+            background: none;
+            color: var(--ink-2);
+            border-radius: 6px;
+            padding: 3px 9px;
+            font: 600 11px/1.4 var(--font-mono);
+            letter-spacing: .06em;
+            cursor: pointer;
+        }
+        .brand .lang-switch button:hover { color: var(--accent-2); border-color: var(--accent); }
+
         @@media (prefers-reduced-motion: reduce) {
             * { transition: none !important; }
         }
@@ -254,10 +267,16 @@
                 <div class="brand-name">Inventory Pro</div>
                 <div class="brand-sub">166</div>
             </div>
+            <form method="post" asp-controller="Language" asp-action="Set" class="lang-switch">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="culture" value="@(JsonStringLocalizer.IsAzerbaijani ? "en-US" : "az-Latn-AZ")" />
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <button type="submit" title="@L["Switch language"]">@(JsonStringLocalizer.IsAzerbaijani ? "EN" : "AZ")</button>
+            </form>
         </div>
 
-        <h1>Sign in</h1>
-        <p class="lead">Use your work account to continue.</p>
+        <h1>@L["Sign in"]</h1>
+        <p class="lead">@L["Use your work account to continue."]</p>
 
         @if (!ViewData.ModelState.IsValid)
         {
@@ -274,32 +293,32 @@
 
         <form asp-action="Login" method="post">
             <div class="form-group">
-                <label asp-for="Username" class="form-label">Username</label>
+                <label asp-for="Username" class="form-label">@L["Username"]</label>
                 <div class="input-wrapper">
                     <i class="fas fa-user input-icon"></i>
-                    <input asp-for="Username" class="form-input" placeholder="Your username" autocomplete="username" autofocus>
+                    <input asp-for="Username" class="form-input" placeholder="@L["Your username"]" autocomplete="username" autofocus>
                 </div>
                 <span asp-validation-for="Username" class="text-danger"></span>
             </div>
 
             <div class="form-group">
-                <label asp-for="Password" class="form-label">Password</label>
+                <label asp-for="Password" class="form-label">@L["Password"]</label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock input-icon"></i>
-                    <input asp-for="Password" class="form-input" type="password" placeholder="Your password" autocomplete="current-password">
+                    <input asp-for="Password" class="form-input" type="password" placeholder="@L["Your password"]" autocomplete="current-password">
                 </div>
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
 
             <div class="form-check">
                 <input asp-for="RememberMe" class="form-check-input" type="checkbox">
-                <label asp-for="RememberMe" class="form-check-label">Keep me signed in for 30 days</label>
+                <label asp-for="RememberMe" class="form-check-label">@L["Keep me signed in for 30 days"]</label>
             </div>
 
-            <button type="submit" class="login-btn">Sign in</button>
+            <button type="submit" class="login-btn">@L["Sign in"]</button>
         </form>
 
-        <div class="foot">Trouble signing in? Contact your system administrator.</div>
+        <div class="foot">@L["Trouble signing in? Contact your system administrator."]</div>
     </div>
 
     <script>

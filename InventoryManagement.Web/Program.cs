@@ -1,5 +1,6 @@
 using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.HealthChecks;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.DataProtection;
 using Serilog;
@@ -24,7 +25,8 @@ try
     // Runtime Razor compilation is a development convenience (it watches the file system and
     // recompiles views on the fly). In production it only costs memory and first-render latency,
     // since the views are already compiled into the assembly at build time.
-    var mvcBuilder = builder.Services.AddControllersWithViews();
+    builder.Services.AddUiLocalization();
+    var mvcBuilder = builder.Services.AddControllersWithViews().AddDataAnnotationsLocalization();
     if (builder.Environment.IsDevelopment())
         mvcBuilder.AddRazorRuntimeCompilation();
 
@@ -59,6 +61,7 @@ try
     }
 
     app.UseStaticFiles();
+    app.UseUiLocalization();
     app.UseRouting();
 
     // HTML error pages for page navigations only; /api and AJAX callers keep their status codes

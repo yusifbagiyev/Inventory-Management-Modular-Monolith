@@ -6,10 +6,10 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">My Approval Requests</h1>
+            <h1 class="mb-1">@L["My Approval Requests"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">My Requests</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["My Requests"]</li>
             </ol>
         </div>
     </div>
@@ -17,28 +17,28 @@
     @* Status filter chips - the click handler keys off .filter-btn + data-filter *@
     <div class="filter-panel mt-3">
         <div class="filter-quick pt-2">
-            <span class="qlabel">Status</span>
+            <span class="qlabel">@L["Status"]</span>
             <button type="button" class="qchip filter-btn active" data-filter="all">
-                All <span class="mono">@Model.Requests.Count</span>
+                @L["All"] <span class="mono">@Model.Requests.Count</span>
             </button>
             <button type="button" class="qchip filter-btn" data-filter="pending">
-                Pending <span class="mono">@Model.Requests.Count(r => r.Status == "Pending")</span>
+                @L["Pending"] <span class="mono">@Model.Requests.Count(r => r.Status == "Pending")</span>
             </button>
             <button type="button" class="qchip filter-btn" data-filter="approved">
-                Approved <span class="mono">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
+                @L["Approved"] <span class="mono">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
             </button>
             <button type="button" class="qchip filter-btn" data-filter="rejected">
-                Rejected <span class="mono">@Model.Requests.Count(r => r.Status == "Rejected")</span>
+                @L["Rejected"] <span class="mono">@Model.Requests.Count(r => r.Status == "Rejected")</span>
             </button>
             <button type="button" class="qchip filter-btn" data-filter="failed">
-                Failed <span class="mono">@Model.Requests.Count(r => r.Status == "Failed")</span>
+                @L["Failed"] <span class="mono">@Model.Requests.Count(r => r.Status == "Failed")</span>
             </button>
         </div>
     </div>
 
     <div class="card mb-4" id="myRequestsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="fas fa-list-check me-1"></i> Your Approval Requests</span>
+            <span><i class="fas fa-list-check me-1"></i> @L["Your Approval Requests"]</span>
             <span class="text-muted mono">@Model.Requests.Count</span>
         </div>
         <div class="card-body">
@@ -48,27 +48,27 @@
                     <table class="table table-hover" id="myRequestsTable">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Entity</th>
-                                <th>Status</th>
-                                <th>Processed By</th>
-                                <th>Actions</th>
+                                <th>@L["Date"]</th>
+                                <th>@L["Type"]</th>
+                                <th>@L["Entity"]</th>
+                                <th>@L["Status"]</th>
+                                <th>@L["Processed By"]</th>
+                                <th>@L["Actions"]</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var request in Model.Requests)
                             {
                                 <tr data-status="@GetStatusFilter(request.Status)">
-                                    <td class="num text-muted">@request.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                                    <td class="num text-muted" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">@request.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
                                     <td>
                                         <span class="badge bg-info">
-                                            @GetRequestTypeDisplay(request.RequestType)
+                                            @L[GetRequestTypeDisplay(request.RequestType)]
                                         </span>
                                     </td>
                                     <td>
                                         <div class="cell-text">
-                                            <span class="cell-title">@request.EntityType</span>
+                                            <span class="cell-title">@L[request.EntityType]</span>
                                             @if (request.EntityId.HasValue)
                                             {
                                                 <span class="cell-sub mono">#@request.EntityId</span>
@@ -79,14 +79,14 @@
                                         @switch (request.Status)
                                         {
                                             case "Pending":
-                                                <span class="state state-warn">Pending</span>
+                                                <span class="state state-warn">@L["Pending"]</span>
                                                 break;
                                             case "Approved":
                                             case "Executed":
-                                                <span class="state state-ok">Approved</span>
+                                                <span class="state state-ok">@L["Approved"]</span>
                                                 break;
                                             case "Rejected":
-                                                <span class="state state-crit">Rejected</span>
+                                                <span class="state state-crit">@L["Rejected"]</span>
                                                 @if (!string.IsNullOrEmpty(request.RejectionReason))
                                                 {
                                                     <br />
@@ -95,16 +95,16 @@
                                                 }
                                                 break;
                                             case "Failed":
-                                                <span class="state state-crit">Failed</span>
+                                                <span class="state state-crit">@L["Failed"]</span>
                                                 @if (!string.IsNullOrEmpty(request.RejectionReason))
                                                 {
                                                     <br />
 
-                                                    <small class="text-muted">Reason: @request.RejectionReason</small>
+                                                    <small class="text-muted">@L["Reason"]: @request.RejectionReason</small>
                                                 }
                                                 break;
                                             default:
-                                                <span class="state state-idle">@request.Status</span>
+                                                <span class="state state-idle">@L[request.Status]</span>
                                                 break;
                                         }
                                     </td>
@@ -115,23 +115,23 @@
                                             @if (request.ProcessedAt.HasValue)
                                             {
                                                 <br />
-                                                <small class="text-muted mono">@request.ProcessedAt.Value.ToString("MM/dd HH:mm")</small>
+                                                <small class="text-muted mono">@request.ProcessedAt.Value.ToString("dd.MM HH:mm")</small>
                                             }
                                         }
                                         else
                                         {
-                                            <span class="d-empty">Not processed</span>
+                                            <span class="d-empty">@L["Not processed"]</span>
                                         }
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="View details">
-                                                <i class="fas fa-eye"></i> Details
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="@L["View details"]">
+                                                <i class="fas fa-eye"></i> @L["Details"]
                                             </button>
                                             @if (request.Status == "Pending")
                                             {
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequest(@request.Id)" title="Cancel request">
-                                                    <i class="fas fa-times"></i> Cancel
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequest(@request.Id)" title="@L["Cancel request"]">
+                                                    <i class="fas fa-times"></i> @L["Cancel"]
                                                 </button>
                                             }
                                         </div>
@@ -146,8 +146,8 @@
             {
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <h5>You have not submitted any requests</h5>
-                    <p class="text-muted mb-0">Actions that need an administrator's approval show up here with their status.</p>
+                    <h5>@L["You have not submitted any requests"]</h5>
+                    <p class="text-muted mb-0">@L["Actions that need an administrator's approval show up here with their status."]</p>
                 </div>
             }
         </div>
@@ -159,7 +159,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Request Details</h5>
+                <h5 class="modal-title">@L["Request Details"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsContent">
@@ -225,15 +225,15 @@
             $.get(`/MyRequests/Details/${requestId}`, function(data) {
                 $('#detailsContent').html(data);
             }).fail(function() {
-                $('#detailsContent').html('<div class="alert alert-danger">Failed to load details</div>');
+                $('#detailsContent').html(`<div class="alert alert-danger">${escapeHtml(t('Failed to load details'))}</div>`);
             });
         }
 
          function cancelRequest(requestId) {
             confirmAction({
-                title: 'Cancel request',
-                message: 'Cancel this request? It will be withdrawn from the approval queue.',
-                okText: 'Cancel request',
+                title: t('Cancel request'),
+                message: t('Cancel this request? It will be withdrawn from the approval queue.'),
+                okText: t('Cancel request'),
                 danger: true
             }, function () {
                 // Get the anti-forgery token from the page
@@ -243,7 +243,7 @@
                 const $cancelButton = $(`button[onclick="cancelRequest(${requestId})"]`);
                 const originalButtonText = $cancelButton.html();
                 $cancelButton.prop('disabled', true)
-                            .html('<span class="spinner-border spinner-border-sm me-2"></span>Cancelling...');
+                            .html(`<span class="spinner-border spinner-border-sm me-2"></span>${escapeHtml(t('Cancelling...'))}`);
 
                 $.ajax({
                     url: `/MyRequests/Cancel/${requestId}`,
@@ -258,7 +258,7 @@
                     success: function(response) {
                         // Be very explicit about what constitutes success
                         let isSuccess = false;
-                        let message = 'Request cancelled successfully';
+                        let message = t('Request cancelled successfully');
 
                         // Handle different response formats your server might return
                         if (typeof response === 'object' && response !== null) {
@@ -289,7 +289,7 @@
                             }, 1500);
                         } else {
                             // Handle case where server returned success HTTP status but indicates failure in response
-                            showToast(message || 'Failed to cancel request', 'error');
+                            showToast(message || t('Failed to cancel request'), 'error');
                             $cancelButton.prop('disabled', false).html(originalButtonText);
                         }
                     },
@@ -301,7 +301,7 @@
                         });
 
                         // Extract meaningful error message
-                        let errorMessage = 'Failed to cancel request';
+                        let errorMessage = t('Failed to cancel request');
 
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;

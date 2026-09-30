@@ -6,10 +6,10 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Approval Requests</h1>
+            <h1 class="mb-1">@L["Approval Requests"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">Approvals</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["Approvals"]</li>
             </ol>
         </div>
     </div>
@@ -20,7 +20,7 @@
             <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-between gap-3">
                     <div>
-                        <span class="state state-warn">Pending</span>
+                        <span class="state state-warn">@L["Pending"]</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalPending</div>
                     </div>
                     <i class="fas fa-hourglass-half fs-4 text-muted"></i>
@@ -31,7 +31,7 @@
             <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-between gap-3">
                     <div>
-                        <span class="state state-ok">Approved today</span>
+                        <span class="state state-ok">@L["Approved today"]</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalApproved</div>
                     </div>
                     <i class="fas fa-circle-check fs-4 text-muted"></i>
@@ -42,7 +42,7 @@
             <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-between gap-3">
                     <div>
-                        <span class="state state-crit">Rejected today</span>
+                        <span class="state state-crit">@L["Rejected today"]</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalRejected</div>
                     </div>
                     <i class="fas fa-circle-xmark fs-4 text-muted"></i>
@@ -53,7 +53,7 @@
 
     <div class="card mb-4" id="approvalsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="fas fa-hourglass-half me-1"></i> Pending Approval Requests</span>
+            <span><i class="fas fa-hourglass-half me-1"></i> @L["Pending Approval Requests"]</span>
             <span class="text-muted mono">@Model.PendingRequests.Count</span>
         </div>
         <div class="card-body">
@@ -63,31 +63,29 @@
                     <table class="table table-hover" id="approvalsTable">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Entity</th>
-                                <th>Requested By</th>
-                                <th style="width: 20%;">Summary</th>
-                                <th>Actions</th>
+                                <th>@L["Date"]</th>
+                                <th>@L["Type"]</th>
+                                <th>@L["Entity"]</th>
+                                <th>@L["Requested By"]</th>
+                                <th style="width: 20%;">@L["Summary"]</th>
+                                <th>@L["Actions"]</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var request in Model.PendingRequests)
                             {
                                 <tr data-request-id="@request.Id">
-                                    <td class="num text-muted" data-order="@request.CreatedAt.Ticks">
-                                        @request.CreatedAt.ToString("MM/dd/yyyy HH:mm")
+                                    <td class="num text-muted" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">
+                                        @request.CreatedAt.ToString("dd.MM.yyyy HH:mm")
                                     </td>
-                                    @* Keep this badge first in the row: the summary parser reads the
-                                       request type from $(tr).find('.badge').first(). *@
                                     <td>
                                         <span class="badge bg-info">
-                                            @GetRequestTypeDisplay(request.RequestType)
+                                            @L[GetRequestTypeDisplay(request.RequestType)]
                                         </span>
                                     </td>
                                     <td>
                                         <div class="cell-text">
-                                            <span class="cell-title">@request.EntityType</span>
+                                            <span class="cell-title">@L[request.EntityType]</span>
                                             @if (request.EntityId.HasValue)
                                             {
                                                 <span class="cell-sub mono">#@request.EntityId</span>
@@ -95,19 +93,20 @@
                                         </div>
                                     </td>
                                     <td>@request.RequestedByName</td>
-                                    <td class="request-summary" data-action-data="@request.ActionData">
-                                        <span class="text-muted">Loading...</span>
+                                    @* The summary parser switches on data-request-type (the raw type, not the translated badge). *@
+                                    <td class="request-summary" data-action-data="@request.ActionData" data-request-type="@request.RequestType">
+                                        <span class="text-muted">@L["Loading..."]</span>
                                     </td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="View details">
-                                                <i class="fas fa-eye"></i> Details
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="viewDetails(@request.Id)" title="@L["View details"]">
+                                                <i class="fas fa-eye"></i> @L["Details"]
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="quickApprove(@request.Id)" title="Approve request">
-                                                <i class="fas fa-check"></i> Approve
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="quickApprove(@request.Id)" title="@L["Approve request"]">
+                                                <i class="fas fa-check"></i> @L["Approve"]
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="showRejectModal(@request.Id)" title="Reject request">
-                                                <i class="fas fa-times"></i> Reject
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="showRejectModal(@request.Id)" title="@L["Reject request"]">
+                                                <i class="fas fa-times"></i> @L["Reject"]
                                             </button>
                                         </div>
                                     </td>
@@ -121,8 +120,8 @@
             {
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <h5>Nothing waiting for approval</h5>
-                    <p class="text-muted mb-0">New requests appear here as soon as a user submits one.</p>
+                    <h5>@L["Nothing waiting for approval"]</h5>
+                    <p class="text-muted mb-0">@L["New requests appear here as soon as a user submits one."]</p>
                 </div>
             }
         </div>
@@ -134,19 +133,19 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Request Details</h5>
+                <h5 class="modal-title">@L["Request Details"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsContent">
                 <partial name="_Skeleton" model="5" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Close"]</button>
                 <button type="button" class="btn btn-outline-danger" id="modalRejectBtn" style="display:none;">
-                    <i class="fas fa-times"></i> Reject
+                    <i class="fas fa-times"></i> @L["Reject"]
                 </button>
                 <button type="button" class="btn btn-primary" id="modalApproveBtn" style="display:none;">
-                    <i class="fas fa-check"></i> Approve
+                    <i class="fas fa-check"></i> @L["Approve"]
                 </button>
             </div>
         </div>
@@ -158,24 +157,24 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Reject Request</h5>
+                <h5 class="modal-title">@L["Reject Request"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-1">
-                    <label for="rejectionReason" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                    <label for="rejectionReason" class="form-label">@L["Rejection Reason"] <span class="text-danger">*</span></label>
                     <textarea id="rejectionReason" class="form-control" rows="3" required
-                              placeholder="Please provide a reason for rejection..."></textarea>
+                              placeholder="@L["Please provide a reason for rejection..."]"></textarea>
                     <div class="invalid-feedback">
-                        Rejection reason is required.
+                        @L["Rejection reason is required."]
                     </div>
-                    <div class="form-text">The requester sees this reason on their My Requests page.</div>
+                    <div class="form-text">@L["The requester sees this reason on their My Requests page."]</div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
                 <button type="button" class="btn btn-danger" onclick="confirmReject()">
-                    <i class="fas fa-times"></i> Reject
+                    <i class="fas fa-times"></i> @L["Reject"]
                 </button>
             </div>
         </div>
@@ -202,14 +201,14 @@
             $('.request-summary').each(function() {
                 const $this = $(this);
                 const actionData = $this.data('action-data');
-                const requestType = $this.closest('tr').find('.badge').first().text().trim();
+                const requestType = String($this.data('request-type') || '');
 
                 try {
                     const summary = getRequestSummary(requestType, actionData);
                     // .text() not .html(): the summary embeds user-supplied ActionData fields
                     $this.text(summary);
                 } catch (e) {
-                    $this.html('<span class="text-danger">Error parsing data</span>');
+                    $this.html(`<span class="text-danger">${escapeHtml(t('Error parsing data'))}</span>`);
                 }
             });
         }
@@ -229,36 +228,32 @@
                 const data = typeof actionData === 'string' ? JSON.parse(actionData) : actionData;
 
                 switch(requestType) {
-                    case 'Create Product':
-                    case 'Creating Product':
+                    case 'product.create':
                         const productData = data.ProductData || data;
-                        const code = productData.inventoryCode || productData.InventoryCode || 'N/A';
-                        const model = productData.model || productData.Model || 'N/A';
-                        const vendor = productData.vendor || productData.Vendor || 'N/A';
-                        const category = productData.categoryName || productData.CategoryName || `Category #${productData.categoryId || productData.CategoryId || 'N/A'}`;
-                        return `New product: ${model} by ${vendor} (Code: ${code}, Category: ${category})`;
+                        const code = productData.inventoryCode || productData.InventoryCode || t('N/A');
+                        const model = productData.model || productData.Model || t('N/A');
+                        const vendor = productData.vendor || productData.Vendor || t('N/A');
+                        const category = productData.categoryName || productData.CategoryName || t('Category #{0}', productData.categoryId || productData.CategoryId || t('N/A'));
+                        return t('New product: {0} by {1} (Code: {2}, Category: {3})', model, vendor, code, category);
 
-                    case 'Update Product':
-                    case 'Updating Product':
-                        return `Update product #${data.ProductId || data.productId || 'N/A'}`;
+                    case 'product.update':
+                        return t('Update product #{0}', data.ProductId || data.productId || t('N/A'));
 
-                    case 'Delete Product':
-                    case 'Deleting Product':
-                        return `Delete product #${data.ProductId || data.productId || 'N/A'}`;
+                    case 'product.delete':
+                        return t('Delete product #{0}', data.ProductId || data.productId || t('N/A'));
 
-                    case 'Transfer Product':
-                    case 'Transferring Product':
-                        const inventoryCode = data.inventoryCode || data.InventoryCode || 'N/A';
-                        const toDeptName = data.toDepartmentName || data.ToDepartmentName || 'Unknown Department';
+                    case 'product.transfer':
+                        const inventoryCode = data.inventoryCode || data.InventoryCode || t('N/A');
+                        const toDeptName = data.toDepartmentName || data.ToDepartmentName || t('Unknown Department');
                         const toWorker = data.toWorker || data.ToWorker || '';
-                        return `Transfer product (${inventoryCode}) to ${toDeptName}${toWorker ? ' - ' + toWorker : ''}`;
+                        return t('Transfer product ({0}) to {1}', inventoryCode, toDeptName) + (toWorker ? ' - ' + toWorker : '');
 
                     default:
-                        return 'View details for more information';
+                        return t('View details for more information');
                 }
             } catch (e) {
                 console.error('Error parsing action data:', e);
-                return 'Error parsing request data';
+                return t('Error parsing request data');
             }
         }
 
@@ -282,15 +277,15 @@
                     });
             }).fail(function(xhr, status, error) {
                 console.error('Failed to load details:', error);
-                $('#detailsContent').html('<div class="alert alert-danger">Failed to load details. Please try again.</div>');
+                $('#detailsContent').html(`<div class="alert alert-danger">${escapeHtml(t('Failed to load details. Please try again.'))}</div>`);
             });
         }
 
         function quickApprove(requestId) {
             confirmAction({
-                title: 'Approve request',
-                message: 'Approve this request? The change will be applied immediately.',
-                okText: 'Approve'
+                title: t('Approve request'),
+                message: t('Approve this request? The change will be applied immediately.'),
+                okText: t('Approve')
             }, function () {
                 showLoader();
 
@@ -298,16 +293,16 @@
                     .done(function(response) {
                         hideLoader();
                         if (response.success) {
-                            showToast('Request approved successfully', 'success');
+                            showToast(t('Request approved successfully'), 'success');
                             setTimeout(() => location.reload(), 1000);
                         } else {
-                            showToast('Failed to approve request: ' + response.message, 'error');
+                            showToast(t('Failed to approve request: {0}', response.message), 'error');
                         }
                     })
                     .fail(function(xhr) {
                         hideLoader();
-                        const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Unknown error';
-                        showToast('Failed to approve request: ' + errorMsg, 'error');
+                        const errorMsg = xhr.responseJSON?.message || xhr.responseText || t('Unknown error');
+                        showToast(t('Failed to approve request: {0}', errorMsg), 'error');
                     });
             });
         }
@@ -333,16 +328,16 @@
                     hideLoader();
                     $('#rejectModal').modal('hide');
                     if (response.success) {
-                        showToast('Request rejected', 'info');
+                        showToast(t('Request rejected'), 'info');
                         setTimeout(() => location.reload(), 1000);
                     } else {
-                        showToast('Failed to reject request: ' + response.message, 'error');
+                        showToast(t('Failed to reject request: {0}', response.message), 'error');
                     }
                 })
                 .fail(function(xhr) {
                     hideLoader();
-                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Unknown error';
-                    showToast('Failed to reject request: ' + errorMsg, 'error');
+                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || t('Unknown error');
+                    showToast(t('Failed to reject request: {0}', errorMsg), 'error');
                 });
         }
 

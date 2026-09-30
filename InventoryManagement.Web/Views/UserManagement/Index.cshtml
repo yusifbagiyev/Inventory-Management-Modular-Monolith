@@ -5,18 +5,18 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Users</h1>
+            <h1 class="mb-1">@L["Users"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item active">Users</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item active">@L["Users"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-outline-secondary btn-sm" onclick="exportUsersToPDF()">
-                <i class="fas fa-file-pdf"></i> Export PDF
+                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
             </button>
             <a href="@Url.Action("Create")" class="btn btn-primary btn-sm">
-                <i class="fas fa-user-plus"></i> New User
+                <i class="fas fa-user-plus"></i> @L["New User"]
             </a>
         </div>
     </div>
@@ -29,19 +29,19 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                     <input type="text" class="form-control" id="searchInput"
-                           placeholder="Search name, username, email...">
+                           placeholder="@L["Search name, username, email..."]">
                 </div>
             </div>
             <button class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">
-                <i class="fas fa-redo"></i> Reset
+                <i class="fas fa-redo"></i> @L["Reset"]
             </button>
         </div>
 
         <div class="filter-grid">
             <div class="filter-field">
-                <label for="roleFilter">Role</label>
+                <label for="roleFilter">@L["Role"]</label>
                 <select id="roleFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">All roles</option>
+                    <option value="">@L["All roles"]</option>
                     @foreach (var role in allRoles)
                     {
                         <option value="@role">@role</option>
@@ -49,26 +49,26 @@
                 </select>
             </div>
             <div class="filter-field">
-                <label for="statusFilter">Status</label>
+                <label for="statusFilter">@L["Status"]</label>
                 <select id="statusFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">All</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="">@L["All"]</option>
+                    <option value="active">@L["Active"]</option>
+                    <option value="inactive">@L["Inactive"]</option>
                 </select>
             </div>
             <div class="filter-field">
-                <label for="loginFilter">Sign-in</label>
+                <label for="loginFilter">@L["Sign-in"]</label>
                 <select id="loginFilter" class="form-select form-select-sm" onchange="applyUserFilters()">
-                    <option value="">All</option>
-                    <option value="signed">Has signed in</option>
-                    <option value="never">Never signed in</option>
+                    <option value="">@L["All"]</option>
+                    <option value="signed">@L["Has signed in"]</option>
+                    <option value="never">@L["Never signed in"]</option>
                 </select>
             </div>
         </div>
     </div>
 
     <div class="result-bar" id="usersSummary">
-        <span><b id="userCount">@Model.Count</b> of <b>@Model.Count</b> users</span>
+        <span><b id="userCount">@Model.Count</b> @L["of"] <b>@Model.Count</b> @L["users"]</span>
     </div>
 
     <div class="card mb-4" id="usersRegion">
@@ -77,13 +77,13 @@
                 <table class="table table-hover" id="usersTable">
                     <thead>
                         <tr>
-                            <th>User</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>Roles</th>
-                            <th>Created</th>
-                            <th>Last Login</th>
-                            <th>Actions</th>
+                            <th>@L["User"]</th>
+                            <th>@L["Email"]</th>
+                            <th>@L["Status"]</th>
+                            <th>@L["Roles"]</th>
+                            <th>@L["Created"]</th>
+                            <th>@L["Last Login"]</th>
+                            <th>@L["Actions"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,11 +103,11 @@
                                 <td>
                                     @if (user.IsActive)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success">@L["Active"]</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="badge bg-secondary">@L["Inactive"]</span>
                                     }
                                 </td>
                                 <td>
@@ -117,31 +117,31 @@
                                     }
                                 </td>
                                 <td>
-                                    <small>@(user.CreatedAt == default(DateTime) ? "Unknown" : user.CreatedAt.ToString("MMM dd, yyyy"))</small>
+                                    <small>@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</small>
                                 </td>
                                 <td>
                                     @if (user.LastLoginAt.HasValue && user.LastLoginAt.Value != default(DateTime))
                                     {
-                                        <small>@user.LastLoginAt.Value.ToString("MMM dd, yyyy HH:mm")</small>
+                                        <small>@user.LastLoginAt.Value.ToString("dd.MM.yyyy HH:mm")</small>
                                     }
                                     else
                                     {
-                                        <small class="text-muted">Never</small>
+                                        <small class="text-muted">@L["Never"]</small>
                                     }
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
                                         <a href="@Url.Action("Details", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="View Details">
+                                           class="btn btn-sm btn-outline-secondary" title="@L["View Details"]">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="@Url.Action("Edit", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="Edit User">
+                                           class="btn btn-sm btn-outline-secondary" title="@L["Edit User"]">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-warning"
                                                 onclick="toggleUserStatus(@user.Id, @user.IsActive.ToString().ToLower())"
-                                                title="Toggle Status">
+                                                title="@L["Toggle Status"]">
                                             @if (user.IsActive)
                                             {
                                                 <i class="fas fa-user-slash"></i>
@@ -152,12 +152,12 @@
                                             }
                                         </button>
                                         <a href="@Url.Action("ResetPassword", new { id = user.Id })"
-                                           class="btn btn-sm btn-outline-secondary" title="Reset Password">
+                                           class="btn btn-sm btn-outline-secondary" title="@L["Reset Password"]">
                                             <i class="fas fa-key"></i>
                                         </a>
                                         <button type="button" class="btn btn-sm btn-outline-danger"
                                                 data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
-                                                title="Delete User">
+                                                title="@L["Delete User"]">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -168,8 +168,8 @@
                             <td colspan="7">
                                 <div class="empty-state">
                                     <i class="fas fa-user-slash"></i>
-                                    <h5>No users match these filters</h5>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">Clear filters</button>
+                                    <h5>@L["No users match these filters"]</h5>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetUserFilters()">@L["Clear filters"]</button>
                                 </div>
                             </td>
                         </tr>
@@ -185,18 +185,18 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
+                <h5 class="modal-title">@L["Confirm Delete"]</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger">This action cannot be undone.</p>
+                <p>@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
+                <p class="text-danger">@L["This action cannot be undone."]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
                 <form id="deleteForm" method="post" style="display: inline;">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-danger">@L["Delete"]</button>
                 </form>
             </div>
         </div>
@@ -249,9 +249,9 @@
         function exportUsersToPDF() {
             const table = document.getElementById('usersTable');
             if (!table || typeof collectTableData !== 'function') return;
-            const data = collectTableData(table, ['Actions']);
-            if (!data.rows.length) { showToast('Nothing to export', 'warning'); return; }
-            renderPrintDocument({ title: 'Users', headers: data.headers, rows: data.rows });
+            const data = collectTableData(table, [t('Actions')]);
+            if (!data.rows.length) { showToast(t('Nothing to export'), 'warning'); return; }
+            renderPrintDocument({ title: t('Users'), headers: data.headers, rows: data.rows });
         }
 
         document.getElementById('searchInput').addEventListener('keyup', applyUserFilters);
@@ -262,11 +262,11 @@
             const deactivating = (isActive === true || isActive === 'true');
             const action = deactivating ? 'deactivate' : 'activate';
             confirmAction({
-                title: deactivating ? 'Deactivate user' : 'Activate user',
+                title: deactivating ? t('Deactivate user') : t('Activate user'),
                 message: deactivating
-                    ? 'Deactivate this user? They will no longer be able to sign in.'
-                    : 'Activate this user? They will be able to sign in again.',
-                okText: deactivating ? 'Deactivate' : 'Activate',
+                    ? t('Deactivate this user? They will no longer be able to sign in.')
+                    : t('Activate this user? They will be able to sign in again.'),
+                okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
                 $.ajax({
@@ -280,12 +280,12 @@
                         if (data.success) {
                             location.reload();
                         } else {
-                            showToast('Error updating user status: ' + (data.message || 'Unknown error'), 'error');
+                            showToast(t('Error updating user status: {0}', data.message || t('Unknown error')), 'error');
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error('Error:', error);
-                        showToast('Error updating user status', 'error');
+                        showToast(t('Error updating user status'), 'error');
                     }
                 });
             });

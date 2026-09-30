@@ -3,7 +3,7 @@
 
 <div class="gmail-pagination d-flex align-items-center justify-content-between">
     <div class="pagination-info">
-        <span class="text-muted">@Model.FirstItem–@Model.LastItem of @Model.TotalCount</span>
+        <span class="text-muted">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
     </div>
 
     <div class="pagination-controls">

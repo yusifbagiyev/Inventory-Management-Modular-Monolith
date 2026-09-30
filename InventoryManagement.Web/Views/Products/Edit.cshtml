@@ -6,16 +6,16 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Edit Product</h1>
+            <h1 class="mb-1">@L["Edit Product"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
-                <li class="breadcrumb-item active">Edit</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Products"]</a></li>
+                <li class="breadcrumb-item active">@L["Edit"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-eye"></i> View Details
+                <i class="fas fa-eye"></i> @L["View Details"]
             </a>
         </div>
     </div>
@@ -28,7 +28,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <i class="fas fa-pen-to-square me-1"></i>
-                        Edit Product Information
+                        @L["Edit Product Information"]
                     </div>
 
                     @if (!ViewData.ModelState.IsValid)
@@ -39,12 +39,12 @@
                     }
 
                     <div class="form-section">
-                        <div class="section-title">Identity</div>
+                        <div class="section-title">@L["Identity"]</div>
                         <div class="form-grid">
                             <div>
                                 <label asp-for="InventoryCode" class="form-label"></label>
                                 <input asp-for="InventoryCode" class="form-control" readonly />
-                                <div class="form-text">The inventory code cannot be changed after creation.</div>
+                                <div class="form-text">@L["The inventory code cannot be changed after creation."]</div>
                             </div>
                             <div>
                                 <label asp-for="Vendor" class="form-label"></label>
@@ -60,19 +60,19 @@
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Classification</div>
+                        <div class="section-title">@L["Classification"]</div>
                         <div class="form-grid">
                             <div>
                                 <label asp-for="CategoryId" class="form-label"></label>
                                 <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                                    <option value="">-- Select Category --</option>
+                                    <option value="">@L["-- Select Category --"]</option>
                                 </select>
                                 <span asp-validation-for="CategoryId" class="text-danger"></span>
                             </div>
                             <div>
                                 <label asp-for="DepartmentId" class="form-label"></label>
                                 <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select">
-                                    <option value="">-- Select Department --</option>
+                                    <option value="">@L["-- Select Department --"]</option>
                                 </select>
                                 <span asp-validation-for="DepartmentId" class="text-danger"></span>
                             </div>
@@ -80,13 +80,13 @@
                                 <label asp-for="Worker" class="form-label"></label>
                                 <input asp-for="Worker" class="form-control" />
                                 <span asp-validation-for="Worker" class="text-danger"></span>
-                                <div class="form-text">Person responsible for this item.</div>
+                                <div class="form-text">@L["Person responsible for this item."]</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Status</div>
+                        <div class="section-title">@L["Status"]</div>
                         <div class="form-grid">
                             <div class="form-check">
                                 <input asp-for="IsWorking" class="form-check-input" type="checkbox" />
@@ -104,40 +104,16 @@
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Product Image</div>
+                        <div class="section-title">@L["Images"]</div>
                         <div class="form-grid">
-                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
-                            {
-                                <div id="currentImageContainer">
-                                    <label class="form-label">Current image</label>
-                                    <div class="image-preview">
-                                        <img src="@Model.FullImageUrl"
-                                             alt="@Model.Model"
-                                             id="currentImage"
-                                             data-src="@Model.FullImageUrl" data-title="@Model.Model" onclick="showImageModal(this.dataset.src, this.dataset.title)"
-                                             style="cursor: pointer;" />
-                                        <button type="button" class="btn btn-outline-danger btn-sm mt-2"
-                                                onclick="removeCurrentImage()" title="Remove image">
-                                            <i class="fas fa-times"></i> Remove image
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-
-                            <div id="newImageContainer">
-                                <label asp-for="ImageFile" class="form-label">
-                                    @(string.IsNullOrEmpty(Model.ImageUrl) ? "Upload Image" : "Replace with New Image")
-                                </label>
-                                <input asp-for="ImageFile" class="form-control" accept="image/*"
-                                       onchange="previewNewImage(this, 'imagePreview')" />
-                                <span asp-validation-for="ImageFile" class="text-danger"></span>
-                                <img id="imagePreview" class="img-fluid mt-2" alt="Selected image preview" style="display: none;" />
+                            <div class="full">
+                                <partial name="_ImageManager" model="new ImageManagerModel { Existing = Model.ImageUrls }" />
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Notes</div>
+                        <div class="section-title">@L["Notes"]</div>
                         <div class="form-grid">
                             <div class="full">
                                 <label asp-for="Description" class="form-label"></label>
@@ -149,11 +125,11 @@
 
                     <div class="page-actions">
                         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
+                            <i class="fas fa-arrow-left"></i> @L["Back to List"]
                         </a>
                         <div class="actions-right">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> Save Changes
+                                <i class="fas fa-save"></i> @L["Save Changes"]
                             </button>
                         </div>
                     </div>
@@ -176,7 +152,7 @@
 
             // Initialize the AjaxHandler for this form
             AjaxHandler.handleForm('form', {
-                successMessage: 'Product updated successfully!',
+                successMessage: t('Product updated successfully!'),
                 successRedirect: '@Url.Action("Index")',
                 redirectDelay: 1500,
 
@@ -202,7 +178,7 @@
                     // This happens when a user updates but doesn't have direct permission
                     if (response.isApprovalRequest || response.approvalRequestId) {
                         showToast(
-                            response.message || 'Product update submitted for approval',
+                            response.message || t('Product update submitted for approval'),
                             'info',
                             3000
                         );
@@ -233,30 +209,6 @@
                 }
             });
         });
-
-        // Image handling functions - these are separate from submission logic
-
-        function removeCurrentImage() {
-            $('#currentImageContainer').hide();
-            $('#RemoveImage').val('true');
-            $('#newImageUpload label').text('Upload New Image');
-        }
-
-        function previewNewImage(input, previewId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    $('#' + previewId).attr('src', e.target.result).show();
-                };
-                reader.readAsDataURL(input.files[0]);
-
-                // If there's a current image, hide it since we're replacing it
-                if ($('#currentImageContainer').length) {
-                    $('#currentImageContainer').hide();
-                    $('#RemoveImage').val('true');
-                }
-            }
-        }
 
 
         // Someone else saving or deleting this product while it is open: warn, never touch the form.

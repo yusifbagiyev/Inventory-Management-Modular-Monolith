@@ -47,7 +47,7 @@ window.NotificationManager = (function () {
         outageNoticeTimer = setTimeout(() => {
             outageNoticeTimer = null;
             outageNoticeShown = true;
-            showToast('Connection lost. Reconnecting...', 'warning');
+            showToast(t('Connection lost. Reconnecting...'), 'warning');
         }, OUTAGE_NOTICE_DELAY_MS);
     }
 
@@ -56,7 +56,7 @@ window.NotificationManager = (function () {
         outageNoticeTimer = null;
         if (outageNoticeShown) {
             outageNoticeShown = false;
-            showToast('Connection restored', 'success');
+            showToast(t('Connection restored'), 'success');
         }
     }
 
@@ -164,7 +164,7 @@ window.NotificationManager = (function () {
                 console.error('Maximum reconnection attempts exceeded');
                 clearTimeout(outageNoticeTimer);
                 outageNoticeTimer = null;
-                showToast('Unable to connect to notification service', 'error');
+                showToast(t('Unable to connect to notification service'), 'error');
                 // Reset for potential future retry attempts
                 setTimeout(() => {
                     connectionRetryCount = 0;
@@ -344,10 +344,10 @@ window.NotificationManager = (function () {
                     scheduleReconnect(delay);
                 } else if (isAuthError(err)) {
                     console.error('Authentication error, user may need to login');
-                    showToast('Authentication expired. Please refresh the page.', 'warning');
+                    showToast(t('Authentication expired. Please refresh the page.'), 'warning');
                 } else {
                     console.error('Failed to establish SignalR connection after maximum retries');
-                    showToast('Unable to connect to notification service', 'error');
+                    showToast(t('Unable to connect to notification service'), 'error');
                 }
             });
     }
@@ -374,7 +374,7 @@ window.NotificationManager = (function () {
 
         // Show toast with appropriate type
         const toastType = window.getNotificationType(notification.type);
-        showToast(`${notification.title}: ${notification.message}`, toastType);
+        showToast(`${t(notification.title || '')}: ${t(notification.message || '')}`, toastType);
 
         // Update UI elements
         window.incrementNotificationCount();
@@ -402,14 +402,17 @@ window.NotificationManager = (function () {
         }
     }
 
-    // Prevent too frequent sound notifications
+    // At most one sound per 2 seconds - across all open tabs: every tab receives the same push,
+    // so without the shared timestamp each open tab played it again.
     let lastSoundPlayed = 0;
     function shouldPlaySound() {
         const now = Date.now();
-        const timeSinceLastSound = now - lastSoundPlayed;
+        let shared = 0;
+        try { shared = parseInt(localStorage.getItem('notificationSoundAt'), 10) || 0; } catch (e) { }
 
-        if (timeSinceLastSound > 2000) { // Minimum 2 seconds between sounds
+        if (now - Math.max(lastSoundPlayed, shared) > 2000) {
             lastSoundPlayed = now;
+            try { localStorage.setItem('notificationSoundAt', String(now)); } catch (e) { }
             return true;
         }
         return false;

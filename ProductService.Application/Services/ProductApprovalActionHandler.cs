@@ -48,7 +48,8 @@ namespace ProductService.Application.Services
                 IsNewItem = data.GetBool("isNewItem", true),
                 CategoryId = data.GetInt("categoryId"),
                 DepartmentId = data.GetInt("departmentId"),
-                ImageFile = data.GetImage()
+                ImageFile = data.GetImage(),
+                ImageFiles = data.GetImages()
             };
             return _mediator.Send(new CreateProduct.Command(dto), cancellationToken);
         }
@@ -69,7 +70,11 @@ namespace ProductService.Application.Services
                 IsWorking = data.GetBool("isWorking", true),
                 IsActive = data.GetBool("isActive", true),
                 IsNewItem = data.GetBool("isNewItem", true),
-                ImageFile = data.GetImage()
+                // Older requests carry one "imageData" image, which replaced the image.
+                ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
+                ImageFiles = data.GetImages(),
+                RemoveImageUrls = data.GetStrings("removeImageUrls"),
+                CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null
             };
 
             var existing = await _mediator.Send(new GetProductByIdQuery(productId), cancellationToken)

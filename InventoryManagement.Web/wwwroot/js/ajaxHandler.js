@@ -6,7 +6,7 @@
     function handleForm(formSelector, options) {
         const defaults = {
             validateBeforeSubmit: true,
-            successMessage: 'Operation completed successfully',
+            successMessage: t('Operation completed successfully'),
             successRedirect: null,
             redirectDelay: 1500,
             resetFormOnSuccess: false,
@@ -17,8 +17,9 @@
 
         const settings = { ...defaults, ...options };
 
-        // Get the specific form element(s)
-        const $forms = $(formSelector);
+        // Get the specific form element(s). Layout forms that must post normally (language switch,
+        // sign out) carry data-no-ajax, so a page calling handleForm('form') leaves them alone.
+        const $forms = $(formSelector).not('[data-no-ajax]');
 
         if (!$forms.length) {
             console.error('Form not found:', formSelector);
@@ -86,7 +87,7 @@
                 });
 
                 $currentSubmitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Processing...'));
 
 
                 // Validate form
@@ -117,7 +118,7 @@
 
                 // Disable button and show loading
                 $currentSubmitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+                    .html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Processing...'));
 
                 // Prepare form data
                 const formData = new FormData(form);
@@ -168,7 +169,7 @@
     function handleSuccess(response, form, settings) {
         // FIRST: Check if this is an approval request (before checking for errors)
         if (isApprovalRequest(response)) {
-            const message = response.message || 'Request submitted for approval';
+            const message = response.message || t('Request submitted for approval');
             showToast(message, 'info');
 
             // Still redirect for approval requests
@@ -184,7 +185,7 @@
             response.success === false ||
             (response.message && response.message.toLowerCase().includes('error'))
         )) {
-            const errorMessage = response.message || 'Operation failed';
+            const errorMessage = response.message || t('Operation failed');
             showToast(errorMessage, 'error');
 
             if (settings.onError) {
@@ -212,7 +213,7 @@
 
     // Rest of your functions remain the same...
     function handleError(xhr, form, settings) {
-        let errorMessage = 'An error occurred';
+        let errorMessage = t('An error occurred');
         let validationErrors = null;
 
         try {
@@ -239,16 +240,16 @@
 
             // Handle specific status codes
             if (xhr.status === 400) {
-                errorMessage = errorMessage || 'Invalid request. Please check your input.';
+                errorMessage = errorMessage || t('Invalid request. Please check your input.');
             } else if (xhr.status === 401) {
-                errorMessage = 'Session expired. Please login again.';
+                errorMessage = t('Session expired. Please login again.');
                 setTimeout(() => window.location.href = '/Account/Login', 2000);
             } else if (xhr.status === 403) {
-                errorMessage = 'You do not have permission to perform this action.';
+                errorMessage = t('You do not have permission to perform this action.');
             } else if (xhr.status === 409) {
-                errorMessage = errorMessage || 'This item already exists.';
+                errorMessage = errorMessage || t('This item already exists.');
             } else if (xhr.status >= 500) {
-                errorMessage = 'Server error occurred. Please try again later.';
+                errorMessage = t('Server error occurred. Please try again later.');
             }
         } catch (e) {
             console.error('Error parsing error response:', e);
@@ -322,7 +323,7 @@
 // Global error handler utility remains the same
 window.ErrorHandler = {
     parseErrorMessage: function (xhr, defaultMessage) {
-        defaultMessage = defaultMessage || 'An error occurred';
+        defaultMessage = defaultMessage || t('An error occurred');
 
         try {
             if (xhr.responseJSON) {

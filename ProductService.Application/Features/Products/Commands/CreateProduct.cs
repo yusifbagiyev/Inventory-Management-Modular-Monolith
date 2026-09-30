@@ -8,6 +8,7 @@ using ProductService.Domain.Repositories;
 using SharedServices.Events;
 using SharedServices.Exceptions;
 using SharedServices.Persistence;
+using SharedServices.Storage;
 
 namespace ProductService.Application.Features.Products.Commands
 {
@@ -28,6 +29,9 @@ namespace ProductService.Application.Features.Products.Commands
 
                 RuleFor(x => x.ProductDto.DepartmentId)
                     .GreaterThan(0).WithMessage("Valid department is required");
+
+                RuleFor(x => ImageSet.Files(x.ProductDto.ImageFile, x.ProductDto.ImageFiles).Count)
+                    .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
         }
 
@@ -60,13 +64,13 @@ namespace ProductService.Application.Features.Products.Commands
                 if (await _productRepository.GetByInventoryCodeAsync(dto.InventoryCode, cancellationToken) != null)
                     throw new DuplicateEntityException($"Product with inventory code {dto.InventoryCode} already exists");
 
-                string? imageUrl = null;
-                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+                var imageUrls = new List<string>();
+                foreach (var file in ImageSet.Files(dto.ImageFile, dto.ImageFiles))
                 {
-                    await using var stream = dto.ImageFile.OpenReadStream();
-                    imageUrl = await _imageService.UploadImageAsync(stream, dto.ImageFile.FileName, dto.InventoryCode);
-                    var uploaded = imageUrl;
+                    await using var stream = file.OpenReadStream();
+                    var uploaded = await _imageService.UploadImageAsync(stream, file.FileName, dto.InventoryCode);
                     _session.OnRollback(() => _imageService.DeleteImageAsync(uploaded));
+                    imageUrls.Add(uploaded);
                 }
 
                 var product = new Product(
@@ -76,7 +80,7 @@ namespace ProductService.Application.Features.Products.Commands
                     dto.CategoryId,
                     dto.DepartmentId,
                     dto.Worker,
-                    imageUrl,
+                    imageUrls,
                     dto.Description,
                     dto.IsActive,
                     dto.IsWorking,

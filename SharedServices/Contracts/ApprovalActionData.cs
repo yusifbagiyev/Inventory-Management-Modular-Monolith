@@ -77,6 +77,48 @@ namespace SharedServices.Contracts
             };
         }
 
+        /// <summary>
+        /// The uploaded images stored under <paramref name="name"/> by <see cref="EncodeImagesAsync"/>.
+        /// (Requests from before multiple images carry one image, read with <see cref="GetImage"/>.)
+        /// </summary>
+        public static List<IFormFile> GetImages(this JsonElement element, string name = "images")
+        {
+            var files = new List<IFormFile>();
+            if (TryGet(element, name, out var images) && images.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var image in images.EnumerateArray())
+                {
+                    var file = image.GetImage();
+                    if (file != null) files.Add(file);
+                }
+            }
+            return files;
+        }
+
+        /// <summary>A string array ("removeImageUrls"), empty when absent.</summary>
+        public static List<string> GetStrings(this JsonElement element, string name)
+            => TryGet(element, name, out var value) && value.ValueKind == JsonValueKind.Array
+                ? value.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.String).Select(v => v.GetString()!).ToList()
+                : [];
+
+        /// <summary>Uploaded files as stored ActionData: [{ imageData (base64), imageFileName, imageSize }].</summary>
+        public static async Task<List<Dictionary<string, object>>> EncodeImagesAsync(IEnumerable<IFormFile> files)
+        {
+            var encoded = new List<Dictionary<string, object>>();
+            foreach (var file in files.Where(f => f.Length > 0))
+            {
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                encoded.Add(new Dictionary<string, object>
+                {
+                    ["imageData"] = Convert.ToBase64String(ms.ToArray()),
+                    ["imageFileName"] = file.FileName,
+                    ["imageSize"] = file.Length
+                });
+            }
+            return encoded;
+        }
+
         private static bool TryGet(JsonElement element, string name, out JsonElement value)
         {
             value = default;

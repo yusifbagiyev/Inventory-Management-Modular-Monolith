@@ -6,16 +6,16 @@
 <div class="container-fluid px-4 transfer-page">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Transfer Product</h1>
+            <h1 class="mb-1">@L[(string)ViewData["Title"]!]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Routes</a></li>
-                <li class="breadcrumb-item active">Transfer</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Routes"]</a></li>
+                <li class="breadcrumb-item active">@L["Transfer"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
         </div>
     </div>
@@ -25,7 +25,7 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-arrow-right-arrow-left me-1"></i>
-                    Transfer Information
+                    @L["Transfer Information"]
                 </div>
 
                 <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm">
@@ -35,15 +35,15 @@
                     <div class="form-section">
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                        <h2 class="section-title">Find product</h2>
-                        <label class="form-label" for="inventoryCodeInput">Inventory Code <span class="text-danger">*</span></label>
+                        <h2 class="section-title">@L["Find product"]</h2>
+                        <label class="form-label" for="inventoryCodeInput">@L["Inventory Code"] <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-barcode"></i></span>
                             <input type="number" id="inventoryCodeInput" class="form-control form-control-lg"
-                                   placeholder="Enter inventory code" min="1" max="9999"
+                                   placeholder="@L["Enter inventory code"]" min="1" max="9999"
                                    autocomplete="off" autofocus />
                             <button type="button" id="searchBtn" class="btn btn-outline-secondary">
-                                <i class="fas fa-search"></i> Search
+                                <i class="fas fa-search"></i> @L["Search"]
                             </button>
                         </div>
                         <div id="searchFeedback" class="form-text mt-2"></div>
@@ -51,31 +51,31 @@
 
                     <!-- Product Information Display -->
                     <div id="productInfoContainer" class="form-section" style="display:none;">
-                        <h2 class="section-title">Product</h2>
+                        <h2 class="section-title">@L["Product"]</h2>
                         <div class="detail-grid">
                             <div class="detail-row">
-                                <span class="d-label">Model</span>
-                                <span class="d-value" id="productModel">N/A</span>
+                                <span class="d-label">@L["Model"]</span>
+                                <span class="d-value" id="productModel">@L["N/A"]</span>
                             </div>
                             <div class="detail-row">
-                                <span class="d-label">Category</span>
-                                <span class="d-value" id="productCategory">N/A</span>
+                                <span class="d-label">@L["Category"]</span>
+                                <span class="d-value" id="productCategory">@L["N/A"]</span>
                             </div>
                             <div class="detail-row">
-                                <span class="d-label">Vendor</span>
-                                <span class="d-value" id="productVendor">N/A</span>
+                                <span class="d-label">@L["Vendor"]</span>
+                                <span class="d-value" id="productVendor">@L["N/A"]</span>
                             </div>
                             <div class="detail-row">
-                                <span class="d-label">Current Department</span>
-                                <span class="d-value" id="currentDepartment">N/A</span>
+                                <span class="d-label">@L["Current Department"]</span>
+                                <span class="d-value" id="currentDepartment">@L["N/A"]</span>
                             </div>
                             <div class="detail-row">
-                                <span class="d-label">Current Worker</span>
-                                <span class="d-value" id="currentWorker">N/A</span>
+                                <span class="d-label">@L["Current Worker"]</span>
+                                <span class="d-value" id="currentWorker">@L["N/A"]</span>
                             </div>
                             <div class="detail-row">
-                                <span class="d-label">Working Status</span>
-                                <span class="d-value" id="workingStatus">N/A</span>
+                                <span class="d-label">@L["Working Status"]</span>
+                                <span class="d-value" id="workingStatus">@L["N/A"]</span>
                             </div>
                         </div>
                     </div>
@@ -90,41 +90,34 @@
                     <div id="transferFields" style="display:none;">
                         <div>
                         <div class="form-section">
-                            <h2 class="section-title">Destination</h2>
+                            <h2 class="section-title">@L["Destination"]</h2>
                             <div class="form-grid">
                                 <div>
                                     <label asp-for="ToDepartmentId" class="form-label">
-                                        To Department <span class="text-danger">*</span>
+                                        @L["To Department"] <span class="text-danger">*</span>
                                     </label>
                                     <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select" required>
-                                        <option value="">-- Select Department --</option>
+                                        <option value="">@L["-- Select Department --"]</option>
                                     </select>
                                     <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
                                 </div>
                                 <div>
-                                    <label asp-for="ToWorker" class="form-label">To Worker</label>
-                                    <input asp-for="ToWorker" class="form-control" placeholder="Enter worker name (optional)" />
+                                    <label asp-for="ToWorker" class="form-label">@L["To Worker"]</label>
+                                    <input asp-for="ToWorker" class="form-control" placeholder="@L["Enter worker name (optional)"]" />
                                     <span asp-validation-for="ToWorker" class="text-danger"></span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-section">
-                            <h2 class="section-title">Documentation</h2>
+                            <h2 class="section-title">@L["Documentation"]</h2>
                             <div class="form-grid">
                                 <div class="full">
-                                    <label asp-for="ImageFile" class="form-label">Transfer Image (Optional)</label>
-                                    <input asp-for="ImageFile" class="form-control" accept="image/*" />
-                                    <span asp-validation-for="ImageFile" class="text-danger"></span>
-                                    <div id="imagePreviewContainer" class="mt-2" style="display:none;">
-                                        <div class="image-preview">
-                                            <img id="imagePreview" alt="Transfer image preview" />
-                                        </div>
-                                    </div>
+                                    <partial name="_ImageManager" model='new ImageManagerModel { Label = "Transfer images (optional)", Hint = "Photos of the item as handed over. When the transfer is completed they become the product images." }' />
                                 </div>
                                 <div class="full">
-                                    <label asp-for="Notes" class="form-label">Notes</label>
-                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Add any transfer notes..."></textarea>
+                                    <label asp-for="Notes" class="form-label">@L["Notes"]</label>
+                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="@L["Add any transfer notes..."]"></textarea>
                                     <span asp-validation-for="Notes" class="text-danger"></span>
                                 </div>
                             </div>
@@ -133,11 +126,11 @@
 
                         <div class="page-actions">
                             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-arrow-left"></i> Back to List
+                                <i class="fas fa-arrow-left"></i> @L["Back to List"]
                             </a>
                             <div class="actions-right">
                                 <button type="submit" class="btn btn-primary btn-sm" id="submitBtn">
-                                    <i class="fas fa-exchange-alt"></i> Transfer Product
+                                    <i class="fas fa-exchange-alt"></i> @L["Transfer Product"]
                                 </button>
                             </div>
                         </div>
@@ -150,39 +143,39 @@
             <div class="card mb-4 side-panel">
                 <div class="card-header">
                     <i class="fas fa-lightbulb me-1"></i>
-                    Transfer Guidelines
+                    @L["Transfer Guidelines"]
                 </div>
                 <div class="list-group list-group-flush">
                     <div class="list-group-item">
                         <i class="fas fa-check me-2"></i>
-                        Enter inventory code and click Search or press Enter
+                        @L["Enter inventory code and click Search or press Enter"]
                     </div>
                     <div class="list-group-item">
                         <i class="fas fa-check me-2"></i>
-                        System will verify product exists and show current location
+                        @L["System will verify product exists and show current location"]
                     </div>
                     <div class="list-group-item">
                         <i class="fas fa-check me-2"></i>
-                        Choose destination department
+                        @L["Choose destination department"]
                     </div>
                     <div class="list-group-item">
                         <i class="fas fa-check me-2"></i>
-                        Assign to specific worker if needed
+                        @L["Assign to specific worker if needed"]
                     </div>
                     <div class="list-group-item">
                         <i class="fas fa-check me-2"></i>
-                        Add transfer image for documentation
+                        @L["Add transfer image for documentation"]
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Note:</strong> Products with pending transfers must have those completed first.
+                        <strong>@L["Note:"]</strong> @L["Products with pending transfers must have those completed first."]
                     </div>
 
                     <div class="alert alert-info mb-0">
                         <i class="fas fa-info-circle"></i>
-                        <strong>Tip:</strong> The current worker information will be automatically displayed when you search for a product.
+                        <strong>@L["Tip:"]</strong> @L["The current worker information will be automatically displayed when you search for a product."]
                     </div>
                 </div>
             </div>
@@ -191,10 +184,10 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-clock-rotate-left me-1"></i>
-                    Recent Transfers
+                    @L["Recent Transfers"]
                 </div>
                 <div class="card-body" id="recentTransfers">
-                    <p class="form-text mb-0">Loading recent transfers...</p>
+                    <p class="form-text mb-0">@L["Loading recent transfers..."]</p>
                 </div>
             </div>
         </div>
@@ -220,7 +213,7 @@
             // Initialize AjaxHandler for the form
             AjaxHandler.handleForm('#transferForm', {
                 validateBeforeSubmit: true,
-                successMessage: 'Product transferred successfully!',
+                successMessage: t('Product transferred successfully!'),
                 successRedirect: '/Routes',
                 redirectDelay: 1500,
                 onBeforeSubmit: function(form) {
@@ -236,7 +229,7 @@
 
                     // Validate that we have a product selected
                     if (!currentProductData || !$('#ProductId').val()) {
-                        showError('Please search for and select a valid product first');
+                        showError(t('Please search for and select a valid product first'));
                         $('#inventoryCodeInput').focus();
 
                         // Reset submission state so user can try again
@@ -246,7 +239,7 @@
 
                     // Validate department selection
                     if (!$('#ToDepartmentId').val()) {
-                        showError('Please select a destination department');
+                        showError(t('Please select a destination department'));
                         $('#ToDepartmentId').focus();
 
                         // Reset submission state so user can try again
@@ -260,7 +253,7 @@
                 onSuccess: function(response) {
                     // Handle approval request response
                     if (response.isApprovalRequest || response.approvalRequestId) {
-                        showToast(response.message || 'Transfer request submitted for approval', 'info');
+                        showToast(response.message || t('Transfer request submitted for approval'), 'info');
                         setTimeout(() => window.location.href = '/Routes', 2000);
                         return false; // Prevent default success handling
                     }
@@ -301,7 +294,7 @@
 
                 const codeNum = parseInt(inventoryCode);
                 if (isNaN(codeNum) || codeNum < 1 || codeNum > 9999) {
-                    showError('Inventory code must be between 1 and 9999');
+                    showError(t('Inventory code must be between 1 and 9999'));
                     return;
                 }
 
@@ -315,24 +308,10 @@
                 searchProduct();
             });
 
-            // Image preview
-            $('#ImageFile').on('change', function() {
-                if (this.files && this.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#imagePreview').attr('src', e.target.result);
-                        $('#imagePreviewContainer').show();
-                    };
-                    reader.readAsDataURL(this.files[0]);
-                } else {
-                    $('#imagePreviewContainer').hide();
-                }
-            });
-
             // Department change handler
             $('#ToDepartmentId').on('change', function() {
                 if (currentProductData && $(this).val() === currentProductData.departmentId?.toString()) {
-                    showWarning('You are transferring to the same department the product is currently in.');
+                    showWarning(t('You are transferring to the same department the product is currently in.'));
                 } else {
                     hideWarning();
                 }
@@ -343,7 +322,7 @@
                 const inventoryCode = $('#inventoryCodeInput').val().trim();
 
                 if (!inventoryCode) {
-                    showError('Please enter an inventory code');
+                    showError(t('Please enter an inventory code'));
                     return;
                 }
 
@@ -377,11 +356,11 @@
                     lastSearchedCode = '';
 
                     if (error.status === 404) {
-                        showError(`No product found with inventory code: ${inventoryCode}`);
+                        showError(t('No product found with inventory code: {0}', inventoryCode));
                     } else if (error.status === 401) {
-                        showError('Your session has expired. Please refresh the page or login again.');
+                        showError(t('Your session has expired. Please refresh the page or login again.'));
                     } else {
-                        showError(error.responseJSON?.error || error.responseJSON?.message || 'Error searching for product');
+                        showError(error.responseJSON?.error || error.responseJSON?.message || t('Error searching for product'));
                     }
 
                     hideProductInfo();
@@ -393,19 +372,19 @@
 
             // Display product information
             function displayProductInfo(product) {
-                $('#productModel').text(product.model || 'N/A');
-                $('#productVendor').text(product.vendor || 'N/A');
-                $('#currentWorker').text(product.worker || 'No worker assigned');
-                $('#productCategory').text(product.categoryName || 'N/A');
-                $('#currentDepartment').text(product.departmentName || 'N/A');
+                $('#productModel').text(product.model || t('N/A'));
+                $('#productVendor').text(product.vendor || t('N/A'));
+                $('#currentWorker').text(product.worker || t('No worker assigned'));
+                $('#productCategory').text(product.categoryName || t('N/A'));
+                $('#currentDepartment').text(product.departmentName || t('N/A'));
                 $('#workingStatus').html(product.isWorking ?
-                    '<span class="state state-ok">Working</span>' :
-                    '<span class="state state-crit">Not Working</span>');
+                    `<span class="state state-ok">${t('Working')}</span>` :
+                    `<span class="state state-crit">${t('Not Working')}</span>`);
 
                 $('#ProductId').val(product.id);
                 $('#productInfoContainer').slideDown();
 
-                showSuccess(`Product found: ${product.model} - Currently with ${product.worker || 'no worker'}`);
+                showSuccess(t('Product found: {0} - Currently with {1}', product.model || t('N/A'), product.worker || t('no worker')));
             }
 
             // Check for pending routes
@@ -422,9 +401,8 @@
 
                     if (pendingRoutes.length > 0) {
                         const lastPending = pendingRoutes[0];
-                        showWarning(`This product has a pending transfer to ${lastPending.toDepartmentName}
-                                    created on ${new Date(lastPending.createdAt).toLocaleDateString()}.
-                                    The pending transfer must be completed first.`, true);
+                        showWarning(t('This product has a pending transfer to {0} created on {1}. The pending transfer must be completed first.',
+                            lastPending.toDepartmentName || '', formatDate(lastPending.createdAt)), true);
                         hideTransferFields();
                     } else {
                         showTransferFields();
@@ -450,8 +428,8 @@
                         let html = '';
                         items.forEach((route, idx) => {
                             const statusChip = route.isCompleted ?
-                                '<span class="state state-ok">Completed</span>' :
-                                '<span class="state state-warn">Pending</span>';
+                                `<span class="state state-ok">${t('Completed')}</span>` :
+                                `<span class="state state-warn">${t('Pending')}</span>`;
                             const rowClass = idx === items.length - 1 ? '' : 'pb-2 mb-2 border-bottom';
 
                             html += `
@@ -460,9 +438,9 @@
                                         <span class="cell-title mono">${escapeHtml(route.inventoryCode)}</span>
                                         ${statusChip}
                                     </div>
-                                    <div class="cell-sub">${escapeHtml(route.model || 'N/A')}</div>
+                                    <div class="cell-sub">${escapeHtml(route.model || t('N/A'))}</div>
                                     <div class="cell-sub">
-                                        To: ${escapeHtml(route.toDepartmentName)}${route.toWorker ? ` (${escapeHtml(route.toWorker)})` : ''}
+                                        ${escapeHtml(t('To'))}: ${escapeHtml(route.toDepartmentName)}${route.toWorker ? ` (${escapeHtml(route.toWorker)})` : ''}
                                     </div>
                                 </div>
                             `;
@@ -470,11 +448,11 @@
                         $('#recentTransfers').html(html);
                     } else {
                         $('#recentTransfers').html(
-                            '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p class="mb-0">No recent transfers</p></div>');
+                            `<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p class="mb-0">${t('No recent transfers')}</p></div>`);
                     }
                 } catch (error) {
                     console.error('Failed to load recent transfers:', error);
-                    $('#recentTransfers').html('<p class="form-text mb-0">Unable to load recent transfers</p>');
+                    $('#recentTransfers').html(`<p class="form-text mb-0">${t('Unable to load recent transfers')}</p>`);
                 }
             }
 
@@ -496,13 +474,13 @@
             }
 
             function showSearching() {
-                $('#searchBtn').html('<span class="spinner-border spinner-border-sm me-1"></span> Searching...')
+                $('#searchBtn').html(`<span class="spinner-border spinner-border-sm me-1"></span> ${t('Searching...')}`)
                     .prop('disabled', true);
-                $('#searchFeedback').html('<span class="text-info"><i class="fas fa-search"></i> Searching...</span>');
+                $('#searchFeedback').html(`<span class="text-info"><i class="fas fa-search"></i> ${t('Searching...')}</span>`);
             }
 
             function hideSearching() {
-                $('#searchBtn').html('<i class="fas fa-search"></i> Search')
+                $('#searchBtn').html(`<i class="fas fa-search"></i> ${t('Search')}`)
                     .prop('disabled', false);
             }
 
@@ -526,7 +504,7 @@
                 $('#warningContainer').html(`
                     <div class="alert ${alertClass} mt-3">
                         <i class="fas ${icon}"></i>
-                        <strong>${isBlocking ? 'Blocked' : 'Warning'}:</strong> ${escapeHtml(message)}
+                        <strong>${isBlocking ? t('Blocked') : t('Warning')}:</strong> ${escapeHtml(message)}
                     </div>
                 `);
             }
@@ -547,7 +525,7 @@
                 $('#ToDepartmentId').val('');
                 $('#ToWorker').val('');
                 $('#Notes').val('');
-                $('#imagePreviewContainer').hide();
+                ImageManager.reset(document);
             }
 
             // Load recent transfers on page load

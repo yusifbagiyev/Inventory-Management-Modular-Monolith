@@ -1,4 +1,5 @@
 using IdentityService.API;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Services.Interfaces;
@@ -88,8 +89,8 @@ namespace InventoryManagement.Web.Controllers
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
                 ModelState.AddModelError(string.Empty, ex.Message.StartsWith("Account is locked")
-                    ? ex.Message
-                    : "Invalid username or password.");
+                    ? JsonStringLocalizer.TranslateMessage(ex.Message)
+                    : JsonStringLocalizer.TranslateMessage("Invalid username or password."));
                 return View(model);
             }
         }
@@ -136,11 +137,11 @@ namespace InventoryManagement.Web.Controllers
             var (success, error) = await _userManagementService.ChangePasswordAsync(model.CurrentPassword, model.NewPassword);
             if (success)
             {
-                TempData["Success"] = "Your password has been changed.";
+                TempData["Success"] = JsonStringLocalizer.TranslateMessage("Your password has been changed.");
                 return RedirectToAction(nameof(Profile));
             }
 
-            ModelState.AddModelError(string.Empty, error ?? "Could not change the password.");
+            ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(error ?? "Could not change the password."));
             return View(model);
         }
     }

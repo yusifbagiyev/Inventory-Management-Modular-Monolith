@@ -8,37 +8,36 @@
         <div class="col-lg-7">
             <div class="card">
                 <div class="card-body">
-                    <h1 class="mb-2">Error.</h1>
-                    <p class="mb-0">An error occurred while processing your request.</p>
+                    <h1 class="mb-2">@L["Error."]</h1>
+                    <p class="mb-0">@L["An error occurred while processing your request."]</p>
 
                     @if (Model.ShowRequestId)
                     {
                         <div class="detail-grid mt-3">
                             <div class="detail-row">
-                                <span class="d-label">Request ID</span>
+                                <span class="d-label">@L["Request ID"]</span>
                                 <span class="d-value mono">@Model.RequestId</span>
                             </div>
                         </div>
                     }
 
-                    <div class="section-title mt-4">Development Mode</div>
+                    <div class="section-title mt-4">@L["Development Mode"]</div>
                     <p class="mb-2">
-                        Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
+                        @L["Swapping to the Development environment will display more detailed information about the error that occurred."]
                     </p>
                     <p class="form-text mb-0">
-                        <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-                        It can result in displaying sensitive information from exceptions to end users.
-                        For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-                        and restarting the app.
+                        <strong>@L["The Development environment shouldn't be enabled for deployed applications."]</strong>
+                        @L["It can result in displaying sensitive information from exceptions to end users."]
+                        @L["For local debugging, enable the Development environment by setting the ASPNETCORE_ENVIRONMENT environment variable to Development and restarting the app."]
                     </p>
                 </div>
                 <div class="page-actions">
                     <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Go Back
+                        <i class="fas fa-arrow-left me-1"></i> @L["Go Back"]
                     </a>
                     <div class="actions-right">
                         <a href="/Home/Dashboard" class="btn btn-sm btn-primary">
-                            <i class="fas fa-home me-1"></i> Go to Dashboard
+                            <i class="fas fa-home me-1"></i> @L["Go to Dashboard"]
                         </a>
                     </div>
                 </div>

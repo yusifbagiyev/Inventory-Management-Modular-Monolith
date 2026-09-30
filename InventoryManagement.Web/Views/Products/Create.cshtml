@@ -6,11 +6,11 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Create Product</h1>
+            <h1 class="mb-1">@L["Create Product"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Products</a></li>
-                <li class="breadcrumb-item active">Create</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Products"]</a></li>
+                <li class="breadcrumb-item active">@L["Create"]</li>
             </ol>
         </div>
     </div>
@@ -21,7 +21,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <i class="fas fa-box me-1"></i>
-                        New Product Information
+                        @L["New Product Information"]
                     </div>
 
                     @if (!ViewData.ModelState.IsValid)
@@ -32,13 +32,13 @@
                     }
 
                     <div class="form-section">
-                        <div class="section-title">Identity</div>
+                        <div class="section-title">@L["Identity"]</div>
                         <div class="form-grid">
                             <div>
                                 <label asp-for="InventoryCode" class="form-label"></label>
                                 <input asp-for="InventoryCode" class="form-control" />
                                 <span asp-validation-for="InventoryCode" class="text-danger"></span>
-                                <div class="form-text">Must be unique, between 1 and 9999.</div>
+                                <div class="form-text">@L["Must be unique, between 1 and 9999."]</div>
                             </div>
                             <div>
                                 <label asp-for="Vendor" class="form-label"></label>
@@ -54,19 +54,19 @@
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Classification</div>
+                        <div class="section-title">@L["Classification"]</div>
                         <div class="form-grid">
                             <div>
                                 <label asp-for="CategoryId" class="form-label"></label>
                                 <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                                    <option value="">-- Select Category --</option>
+                                    <option value="">@L["-- Select Category --"]</option>
                                 </select>
                                 <span asp-validation-for="CategoryId" class="text-danger"></span>
                             </div>
                             <div>
                                 <label asp-for="DepartmentId" class="form-label"></label>
                                 <select asp-for="DepartmentId" asp-items="Model.Departments" class="form-select">
-                                    <option value="">-- Select Department --</option>
+                                    <option value="">@L["-- Select Department --"]</option>
                                 </select>
                                 <span asp-validation-for="DepartmentId" class="text-danger"></span>
                             </div>
@@ -74,13 +74,13 @@
                                 <label asp-for="Worker" class="form-label"></label>
                                 <input asp-for="Worker" class="form-control" />
                                 <span asp-validation-for="Worker" class="text-danger"></span>
-                                <div class="form-text">Person responsible for this item.</div>
+                                <div class="form-text">@L["Person responsible for this item."]</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Status</div>
+                        <div class="section-title">@L["Status"]</div>
                         <div class="form-grid">
                             <div class="form-check">
                                 <input asp-for="IsWorking" class="form-check-input" />
@@ -98,20 +98,16 @@
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Image</div>
+                        <div class="section-title">@L["Images"]</div>
                         <div class="form-grid">
                             <div class="full">
-                                <label asp-for="ImageFile" class="form-label"></label>
-                                <input asp-for="ImageFile" class="form-control" accept="image/*" onchange="previewImage(this, 'imagePreview')" />
-                                <span asp-validation-for="ImageFile" class="text-danger"></span>
-                                <div class="form-text">Optional. A photo makes the item easier to identify during transfers.</div>
-                                <img id="imagePreview" class="img-fluid mt-2" alt="Selected image preview" style="display: none;" />
+                                <partial name="_ImageManager" model='new ImageManagerModel { Hint = "Optional. Photos make the item easier to identify during transfers. The first image is the cover." }' />
                             </div>
                         </div>
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Notes</div>
+                        <div class="section-title">@L["Notes"]</div>
                         <div class="form-grid">
                             <div class="full">
                                 <label asp-for="Description" class="form-label"></label>
@@ -123,11 +119,11 @@
 
                     <div class="page-actions">
                         <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
+                            <i class="fas fa-arrow-left"></i> @L["Back to List"]
                         </a>
                         <div class="actions-right">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> Create Product
+                                <i class="fas fa-save"></i> @L["Create Product"]
                             </button>
                         </div>
                     </div>
@@ -139,25 +135,25 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-lightbulb me-1"></i>
-                    Quick Tips
+                    @L["Quick Tips"]
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled mb-0">
                         <li class="mb-2">
                             <i class="fas fa-check text-muted me-1"></i>
-                            Inventory codes must be unique and between 1-9999
+                            @L["Inventory codes must be unique and between 1-9999"]
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-muted me-1"></i>
-                            Upload product images for better tracking
+                            @L["Upload product images for better tracking"]
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-check text-muted me-1"></i>
-                            Mark products as "New Item" for recent acquisitions
+                            @(L["Mark products as \"New Item\" for recent acquisitions"])
                         </li>
                         <li>
                             <i class="fas fa-check text-muted me-1"></i>
-                            Assign workers to track responsibility
+                            @L["Assign workers to track responsibility"]
                         </li>
                     </ul>
                 </div>
@@ -179,7 +175,7 @@
 
             // Initialize the form with AjaxHandler
             AjaxHandler.handleForm('form', {
-                successMessage: 'Product created successfully!',
+                successMessage: t('Product created successfully!'),
                 successRedirect: '@Url.Action("Index")',
                 redirectDelay: 1500,
 
@@ -205,7 +201,7 @@
                     // This can happen if a user without direct create permission tries to create
                     if (response.isApprovalRequest || response.approvalRequestId) {
                         showToast(
-                            response.message || 'Product creation submitted for approval',
+                            response.message || t('Product creation submitted for approval'),
                             'info',
                             3000
                         );
@@ -236,16 +232,5 @@
             });
         });
 
-        // Helper function for image preview
-        // This is separate from the submission logic and doesn't need protection
-        function previewImage(input, previewId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    $('#' + previewId).attr('src', e.target.result).show();
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
     </script>
 }

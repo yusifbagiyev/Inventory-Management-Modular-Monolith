@@ -47,8 +47,8 @@ namespace InventoryManagement.Web.Controllers
                 return BadRequest(new { success = false, message = response.Message });
 
             return response.Data
-                ? Json(new { success = true, message = "Request approved successfully" })
-                : Json(new { success = false, message = "The request was approved but its action failed to execute. The requester has been notified." });
+                ? Json(new { success = true, message = Tr("Request approved successfully") })
+                : Json(new { success = false, message = Tr("The request was approved but its action failed to execute. The requester has been notified.") });
         }
 
         [HttpPost]
@@ -63,7 +63,7 @@ namespace InventoryManagement.Web.Controllers
 
             var response = await RunAsync(() => _approvalService.RejectRequestAsync(id, reason));
             return response.IsSuccess
-                ? Json(new { success = true, message = "Request rejected successfully" })
+                ? Json(new { success = true, message = Tr("Request rejected successfully") })
                 : BadRequest(new { success = false, message = response.Message });
         }
     }

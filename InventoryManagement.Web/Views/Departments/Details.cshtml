@@ -9,73 +9,73 @@
         <div>
             <h1 class="mb-1">@Model.Name</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="/Departments">Departments</a></li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a href="/Departments">@L["Departments"]</a></li>
                 <li class="breadcrumb-item active">@Model.Name</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
             <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-file-word"></i> Export to Word
+                <i class="fas fa-file-word"></i> @L["Export to Word"]
             </a>
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> Edit Department
+                <i class="fas fa-edit"></i> @L["Edit Department"]
             </a>
         </div>
     </div>
 
     <div class="card mt-3 mb-4">
-        <div class="card-header">Department</div>
+        <div class="card-header">@L["Department"]</div>
         <div class="card-body">
             <div class="detail-grid">
                 <div class="detail-row">
-                    <span class="d-label">Department head</span>
+                    <span class="d-label">@L["Department head"]</span>
                     @if (!string.IsNullOrEmpty(Model.DepartmentHead))
                     {
                         <span class="d-value">@Model.DepartmentHead</span>
                     }
                     else
                     {
-                        <span class="d-value d-empty">Not assigned</span>
+                        <span class="d-value d-empty">@L["Not assigned"]</span>
                     }
                 </div>
                 <div class="detail-row">
-                    <span class="d-label">Status</span>
+                    <span class="d-label">@L["Status"]</span>
                     <span class="d-value">
                         @if (Model.IsActive)
                         {
-                            <span class="state state-ok">Active</span>
+                            <span class="state state-ok">@L["Active"]</span>
                         }
                         else
                         {
-                            <span class="state state-idle">Inactive</span>
+                            <span class="state state-idle">@L["Inactive"]</span>
                         }
                     </span>
                 </div>
                 <div class="detail-row">
-                    <span class="d-label">Products</span>
+                    <span class="d-label">@L["Products"]</span>
                     <span class="d-value mono">@Model.ProductCount</span>
                 </div>
                 <div class="detail-row">
-                    <span class="d-label">Workers</span>
+                    <span class="d-label">@L["Workers"]</span>
                     <span class="d-value mono">@Model.WorkerCount</span>
                 </div>
                 <div class="detail-row">
-                    <span class="d-label">Created</span>
-                    <span class="d-value mono">@Model.CreatedAt.ToString("MMM dd, yyyy")</span>
+                    <span class="d-label">@L["Created"]</span>
+                    <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
                 </div>
                 <div class="detail-row">
-                    <span class="d-label">Description</span>
+                    <span class="d-label">@L["Description"]</span>
                     @if (!string.IsNullOrEmpty(Model.Description))
                     {
                         <span class="d-value">@Model.Description</span>
                     }
                     else
                     {
-                        <span class="d-value d-empty">No description provided</span>
+                        <span class="d-value d-empty">@L["No description provided"]</span>
                     }
                 </div>
             </div>
@@ -85,12 +85,12 @@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                Department Inventory
-                <div class="text-muted fw-normal">Complete list of products in this department</div>
+                @L["Department Inventory"]
+                <div class="text-muted fw-normal">@L["Complete list of products in this department"]</div>
             </div>
             @if (products.Any())
             {
-                <span class="badge bg-primary">@products.Count Total Items</span>
+                <span class="badge bg-primary">@L["{0} Total Items", products.Count]</span>
             }
         </div>
         <div class="card-body p-0">
@@ -100,13 +100,13 @@
                     <table class="table table-hover align-middle" id="departmentProductsTable">
                         <thead>
                             <tr>
-                                <th style="width: 10%">Code</th>
-                                <th style="width: 18%">Category</th>
-                                <th style="width: 20%">Model</th>
-                                <th style="width: 15%">Vendor</th>
-                                <th style="width: 15%">Assigned To</th>
-                                <th style="width: 12%" class="text-center">Status</th>
-                                <th style="width: 10%" class="text-center">Actions</th>
+                                <th style="width: 10%">@L["Code"]</th>
+                                <th style="width: 18%">@L["Category"]</th>
+                                <th style="width: 20%">@L["Model"]</th>
+                                <th style="width: 15%">@L["Vendor"]</th>
+                                <th style="width: 15%">@L["Assigned To"]</th>
+                                <th style="width: 12%" class="text-center">@L["Status"]</th>
+                                <th style="width: 10%" class="text-center">@L["Actions"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -116,9 +116,9 @@
                                     <td>
                                         <span class="badge bg-primary mono">@product.InventoryCode</span>
                                     </td>
-                                    <td>@(product.CategoryName ?? "Uncategorized")</td>
-                                    <td>@(product.Model ?? "N/A")</td>
-                                    <td class="text-muted">@(product.Vendor ?? "N/A")</td>
+                                    <td>@(product.CategoryName ?? L["Uncategorized"].Value)</td>
+                                    <td>@(product.Model ?? L["N/A"].Value)</td>
+                                    <td class="text-muted">@(product.Vendor ?? L["N/A"].Value)</td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(product.Worker))
                                         {
@@ -126,22 +126,22 @@
                                         }
                                         else
                                         {
-                                            <span class="text-muted fst-italic">Not assigned</span>
+                                            <span class="text-muted fst-italic">@L["Not assigned"]</span>
                                         }
                                     </td>
                                     <td class="text-center">
                                         @if (product.IsWorking)
                                         {
-                                            <span class="state state-ok">Working</span>
+                                            <span class="state state-ok">@L["Working"]</span>
                                         }
                                         else
                                         {
-                                            <span class="state state-crit">Not Working</span>
+                                            <span class="state state-crit">@L["Not Working"]</span>
                                         }
                                     </td>
                                     <td class="text-center">
                                         <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id"
-                                           class="btn btn-sm btn-outline-secondary" title="View Details">
+                                           class="btn btn-sm btn-outline-secondary" title="@L["View Details"]">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
@@ -155,8 +155,8 @@
             {
                 <div class="empty-state">
                     <i class="fas fa-box-open"></i>
-                    <h5>No Products Yet</h5>
-                    <p class="text-muted mb-0">This department doesn't have any products assigned.</p>
+                    <h5>@L["No Products Yet"]</h5>
+                    <p class="text-muted mb-0">@L["This department doesn't have any products assigned."]</p>
                 </div>
             }
         </div>
@@ -175,11 +175,11 @@
                 order: [[1, 'asc'], [0, 'asc']], // Sort by category, then code
                 language: {
                     search: "_INPUT_",
-                    searchPlaceholder: "Search products...",
-                    lengthMenu: "Show _MENU_ items",
-                    info: "Showing _START_ to _END_ of _TOTAL_ products",
-                    infoEmpty: "No products to show",
-                    infoFiltered: "(filtered from _MAX_ total)"
+                    searchPlaceholder: t('Search products...'),
+                    lengthMenu: t('Show _MENU_ items'),
+                    info: t('Showing _START_ to _END_ of _TOTAL_ products'),
+                    infoEmpty: t('No products to show'),
+                    infoFiltered: t('(filtered from _MAX_ total)')
                 }
                 // No `dom`/`layout`: DataTables' default (length + search above, info + paging below)
                 // is what the old `dom` string spelled out, and DataTables 3 dropped `dom`.

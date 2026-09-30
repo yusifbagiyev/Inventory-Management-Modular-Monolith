@@ -1,4 +1,52 @@
 /**
+ * Interface language. The layout loads the Azerbaijani table as window.I18n (from
+ * Resources/i18n/az.json, the same file the server's IStringLocalizer uses); in English it is absent.
+ *
+ *   t('Products')                        -> "Məhsullar"
+ *   t('{0} selected', n)                 -> "{0} seçilib" with n filled in
+ *
+ * The English text is the key, so an untranslated string simply shows in English.
+ */
+function t(key, ...args) {
+    const table = window.I18n || {};
+    const text = Object.prototype.hasOwnProperty.call(table, key) ? table[key] : key;
+    return args.length ? String(text).replace(/\{(\d+)\}/g, (m, i) => (args[i] ?? m)) : text;
+}
+
+/** The locale for Intl / toLocale*String: follows the interface language. */
+function uiLocale() {
+    return document.documentElement.lang === 'az' ? 'az-Latn-AZ' : 'en-US';
+}
+
+/** dd.MM.yyyy (and HH:mm when withTime): the one date format used across the UI. */
+function formatDate(value, withTime) {
+    if (!value) return '';
+    const d = value instanceof Date ? value : new Date(value);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    const date = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+    return withTime ? `${date} ${pad(d.getHours())}:${pad(d.getMinutes())}` : date;
+}
+
+// DataTables texts for every table (a page's own `language` option still wins).
+if (window.DataTable && window.DataTable.defaults) {
+    window.DataTable.defaults.language = Object.assign({}, window.DataTable.defaults.language, {
+        search: t('Search:'),
+        searchPlaceholder: t('Search...'),
+        lengthMenu: t('Show _MENU_ entries'),
+        info: t('Showing _START_ to _END_ of _TOTAL_ entries'),
+        infoEmpty: t('Showing 0 to 0 of 0 entries'),
+        infoFiltered: t('(filtered from _MAX_ total entries)'),
+        zeroRecords: t('No matching records found'),
+        emptyTable: t('No data available in table'),
+        loadingRecords: t('Loading...'),
+        processing: t('Processing...'),
+        paginate: { first: t('First'), last: t('Last'), next: t('Next'), previous: t('Previous') },
+        aria: { orderable: t('Activate to sort'), orderableReverse: t('Activate to invert sorting'), orderableRemove: t('Activate to remove sorting') }
+    });
+}
+
+/**
  * In-page confirmation dialog, replacing the browser's confirm() popup.
  * Enter confirms, Esc/Cancel dismisses (Bootstrap handles Esc).
  *
@@ -12,7 +60,7 @@ function confirmAction(options, onConfirm) {
     const modalEl = document.getElementById('globalConfirmModal');
 
     if (!modalEl || typeof bootstrap === 'undefined') {
-        if (window.confirm(opts.message || 'Are you sure?')) onConfirm?.();
+        if (window.confirm(opts.message || t('Are you sure?'))) onConfirm?.();
         return;
     }
 
@@ -20,9 +68,9 @@ function confirmAction(options, onConfirm) {
     const msgEl = document.getElementById('globalConfirmMessage');
     const okBtn = document.getElementById('globalConfirmOk');
 
-    titleEl.textContent = opts.title || 'Please confirm';
-    msgEl.textContent = opts.message || 'Are you sure?';
-    okBtn.textContent = opts.okText || 'Confirm';
+    titleEl.textContent = opts.title || t('Please confirm');
+    msgEl.textContent = opts.message || t('Are you sure?');
+    okBtn.textContent = opts.okText || t('Confirm');
     okBtn.className = 'btn btn-sm ' + (opts.danger ? 'btn-danger' : 'btn-primary');
 
     // Rebuild the OK button so a previous dialog's handler can never fire for this one.
@@ -120,6 +168,7 @@ function previewImage(input, previewId) {
 
 // Toast notification
 function showToast(message, type = 'info', duration = 5000) {
+    message = typeof message === 'string' ? t(message) : message;
     // Ensure we have a valid type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
     if (!validTypes.includes(type)) {
@@ -232,7 +281,7 @@ function setupSessionMonitor() {
 
             if (response.status === 401) {
                 clearInterval(monitorInterval);
-                showToast('Your session has expired. Please log in again.', 'warning');
+                showToast(t('Your session has expired. Please log in again.'), 'warning');
                 setTimeout(() => {
                     window.location.href = '/Account/Login?returnUrl=' +
                         encodeURIComponent(window.location.pathname);
@@ -257,7 +306,7 @@ function changePage(page) {
 /** Opens an image in the layout's shared preview modal. */
 function showImageModal(imageUrl, title) {
     $('#globalModalImage').attr('src', imageUrl);
-    $('#globalImageModal .modal-title').text(title || 'Image Preview');
+    $('#globalImageModal .modal-title').text(title || t('Image Preview'));
     $('#globalImageModal').modal('show');
 }
 
@@ -265,7 +314,7 @@ function showImageModal(imageUrl, title) {
 function skeletonHtml(lines) {
     const widths = ['100%', '92%', '78%', '96%', '68%', '88%'];
     let html = '<div class="skeleton-group" aria-busy="true" role="status">'
-        + '<span class="visually-hidden">Loading...</span><span class="skeleton skeleton-title"></span>';
+        + `<span class="visually-hidden">${t('Loading...')}</span><span class="skeleton skeleton-title"></span>`;
     for (let i = 0; i < Math.max(1, lines || 4); i++) {
         html += `<span class="skeleton" style="width: ${widths[i % widths.length]}"></span>`;
     }
@@ -294,7 +343,7 @@ window.Theme = (function () {
         document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
             const icon = button.querySelector('i');
             if (icon) icon.className = dark ? 'fas fa-sun' : 'fas fa-moon';
-            button.title = dark ? 'Light mode' : 'Dark mode';
+            button.title = dark ? t('Light mode') : t('Dark mode');
         });
     }
 

@@ -20,6 +20,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- UI translations (English text -> Azerbaijani), read by Localization/JsonStringLocalizer. -->
+    <EmbeddedResource Include="Resources\i18n\az.json" LogicalName="i18n.az.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.10" />

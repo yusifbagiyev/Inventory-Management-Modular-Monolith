@@ -6,16 +6,16 @@
 <div class="container-fluid px-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Edit Category</h1>
+            <h1 class="mb-1">@L["Edit Category"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
-                <li class="breadcrumb-item active">Edit</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Categories"]</a></li>
+                <li class="breadcrumb-item active">@L["Edit"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
         </div>
     </div>
@@ -26,7 +26,7 @@
                 <div class="card mb-4">
                     <div class="card-header">
                         <i class="fas fa-edit me-1"></i>
-                        Edit Category Information
+                        @L["Edit Category Information"]
                     </div>
 
                     <div class="form-section">
@@ -55,27 +55,27 @@
                     </div>
 
                     <div class="form-section">
-                        <div class="section-title">Record</div>
+                        <div class="section-title">@L["Record"]</div>
                         <div class="detail-grid">
                             <div class="detail-row">
-                                <span class="d-label">Created</span>
-                                <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")</span>
+                                <span class="d-label">@L["Created"]</span>
+                                <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
                             </div>
                             @if (Model.UpdatedAt.HasValue)
                             {
                                 <div class="detail-row">
-                                    <span class="d-label">Updated</span>
-                                    <span class="d-value mono">@Model.UpdatedAt.Value.ToString("MM/dd/yyyy HH:mm")</span>
+                                    <span class="d-label">@L["Updated"]</span>
+                                    <span class="d-value mono">@Model.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                                 </div>
                             }
                         </div>
                     </div>
 
                     <div class="page-actions">
-                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">@L["Cancel"]</a>
                         <div class="actions-right">
                             <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> Save Changes
+                                <i class="fas fa-save"></i> @L["Save Changes"]
                             </button>
                         </div>
                     </div>
@@ -94,7 +94,7 @@
                 var $btn = $(form).find('button[type="submit"]');
                 var originalText = $btn.html();
 
-                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Saving...'));
 
                 $.ajax({
                     url: form.action,
@@ -103,12 +103,12 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        showToast('Category updated successfully!', 'success');
+                        showToast(t('Category updated successfully!'), 'success');
                         setTimeout(() => window.location.href = '@Url.Action("Index")', 1500);
                     },
                     error: function(xhr) {
                         $btn.prop('disabled', false).html(originalText);
-                        var error = 'Failed to update category';
+                        var error = t('Failed to update category');
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             error = xhr.responseJSON.message;
                         }

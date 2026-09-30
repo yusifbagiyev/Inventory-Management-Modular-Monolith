@@ -53,7 +53,7 @@ namespace RouteService.Application.Features.Routes.Commands
                         route.ProductSnapshot.ProductId,
                         route.ToDepartmentId,
                         route.ToWorker,
-                        route.ImageUrl,
+                        route.ImageUrls,
                         cancellationToken);
                 }
 

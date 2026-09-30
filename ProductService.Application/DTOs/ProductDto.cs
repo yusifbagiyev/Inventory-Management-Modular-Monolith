@@ -7,6 +7,8 @@
         public string? Model { get; set; } = string.Empty;
         public string? Vendor { get; set; } = string.Empty;
         public string? ImageUrl { get; set; } = string.Empty;
+        /// <summary>All images, cover (= ImageUrl) first.</summary>
+        public List<string> ImageUrls { get; set; } = [];
         public string? Description { get; set; } = string.Empty;
         public string? Worker { get; set; } = string.Empty;
         public bool IsWorking { get; set; }

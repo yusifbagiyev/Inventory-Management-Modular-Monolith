@@ -7,19 +7,19 @@
 <div class="container-fluid px-4" id="detailsRegion">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
-            <h1 class="mb-1">Category Details</h1>
+            <h1 class="mb-1">@L["Category Details"]</h1>
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Home/Dashboard">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Categories</a></li>
-                <li class="breadcrumb-item active">Details</li>
+                <li class="breadcrumb-item"><a href="/Home/Dashboard">@L["Dashboard"]</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">@L["Categories"]</a></li>
+                <li class="breadcrumb-item active">@L["Details"]</li>
             </ol>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to List
+                <i class="fas fa-arrow-left"></i> @L["Back to List"]
             </a>
             <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary btn-sm">
-                <i class="fas fa-edit"></i> Edit Category
+                <i class="fas fa-edit"></i> @L["Edit Category"]
             </a>
         </div>
     </div>
@@ -29,20 +29,20 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-tags me-1"></i>
-                    Category Information
+                    @L["Category Information"]
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
                         <div class="detail-row">
-                            <span class="d-label">Name</span>
+                            <span class="d-label">@L["Name"]</span>
                             <span class="d-value">@Model.Name</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Description</span>
+                            <span class="d-label">@L["Description"]</span>
                             <span class="d-value">
                                 @if (string.IsNullOrWhiteSpace(Model.Description))
                                 {
-                                    <span class="d-empty">No description</span>
+                                    <span class="d-empty">@L["No description"]</span>
                                 }
                                 else
                                 {
@@ -51,31 +51,31 @@
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Status</span>
+                            <span class="d-label">@L["Status"]</span>
                             <span class="d-value">
                                 @if (Model.IsActive)
                                 {
-                                    <span class="state state-ok">Active</span>
+                                    <span class="state state-ok">@L["Active"]</span>
                                 }
                                 else
                                 {
-                                    <span class="state state-flat state-idle">Inactive</span>
+                                    <span class="state state-flat state-idle">@L["Inactive"]</span>
                                 }
                             </span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Total Products</span>
+                            <span class="d-label">@L["Total Products"]</span>
                             <span class="d-value mono">@Model.ProductCount</span>
                         </div>
                         <div class="detail-row">
-                            <span class="d-label">Created</span>
-                            <span class="d-value mono">@Model.CreatedAt.ToString("MM/dd/yyyy")</span>
+                            <span class="d-label">@L["Created"]</span>
+                            <span class="d-value mono">@Model.CreatedAt.ToString("dd.MM.yyyy")</span>
                         </div>
                         @if (Model.UpdatedAt.HasValue)
                         {
                             <div class="detail-row">
-                                <span class="d-label">Updated</span>
-                                <span class="d-value mono">@Model.UpdatedAt.Value.ToString("MM/dd/yyyy")</span>
+                                <span class="d-label">@L["Updated"]</span>
+                                <span class="d-value mono">@Model.UpdatedAt.Value.ToString("dd.MM.yyyy")</span>
                             </div>
                         }
                     </div>
@@ -87,7 +87,7 @@
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-boxes me-1"></i>
-                    Products in this Category
+                    @L["Products in this Category"]
                 </div>
                 <div class="card-body">
                     @if (products.Any())
@@ -96,12 +96,12 @@
                             <table class="table table-hover align-middle" id="categoryProductsTable">
                                 <thead>
                                     <tr>
-                                        <th style="width: 96px;">Code</th>
-                                        <th>Model</th>
-                                        <th>Vendor</th>
-                                        <th>Department</th>
-                                        <th style="width: 130px;">Status</th>
-                                        <th style="width: 80px;">Actions</th>
+                                        <th style="width: 96px;">@L["Code"]</th>
+                                        <th>@L["Model"]</th>
+                                        <th>@L["Vendor"]</th>
+                                        <th>@L["Department"]</th>
+                                        <th style="width: 130px;">@L["Status"]</th>
+                                        <th style="width: 80px;">@L["Actions"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -115,16 +115,16 @@
                                             <td>
                                                 @if (product.IsWorking)
                                                 {
-                                                    <span class="state state-ok">Working</span>
+                                                    <span class="state state-ok">@L["Working"]</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="state state-crit">Not Working</span>
+                                                    <span class="state state-crit">@L["Not Working"]</span>
                                                 }
                                             </td>
                                             <td>
                                                 <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id"
-                                                   class="btn btn-sm btn-outline-secondary" title="View">
+                                                   class="btn btn-sm btn-outline-secondary" title="@L["View"]">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </td>
@@ -138,8 +138,8 @@
                     {
                         <div class="empty-state">
                             <i class="fas fa-box-open"></i>
-                            <h5>No products in this category</h5>
-                            <p class="text-muted mb-0">Products assigned to this category will be listed here.</p>
+                            <h5>@L["No products in this category"]</h5>
+                            <p class="text-muted mb-0">@L["Products assigned to this category will be listed here."]</p>
                         </div>
                     }
                 </div>

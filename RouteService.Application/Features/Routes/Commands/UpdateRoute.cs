@@ -23,6 +23,8 @@ namespace RouteService.Application.Features.Routes.Commands
                 RuleFor(x => x.Id).GreaterThan(0);
                 RuleFor(x => x.Dto.Notes)
                     .MaximumLength(500).WithMessage("Notes cannot exceed 500 characters");
+                RuleFor(x => ImageSet.Files(x.Dto.ImageFile, x.Dto.ImageFiles).Count)
+                    .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
         }
 
@@ -57,7 +59,6 @@ namespace RouteService.Application.Features.Routes.Commands
                     throw new RouteException("Cannot update a completed route");
 
                 var dto = request.Dto;
-                var oldImageUrl = route.ImageUrl;
 
                 // Worker/notes. Applied whenever either was supplied - the edit form posts both,
                 // so this also lets a worker or note be cleared.
@@ -74,24 +75,27 @@ namespace RouteService.Application.Features.Routes.Commands
                     route.UpdateDestination(department.Id, department.Name);
                 }
 
-                string? newImageUrl = null;
-                if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+                var added = new List<string>();
+                foreach (var file in ImageSet.Files(dto.ImageFile, dto.ImageFiles))
                 {
-                    await using var stream = dto.ImageFile.OpenReadStream();
-                    newImageUrl = await _imageService.UploadImageAsync(
-                        stream,
-                        dto.ImageFile.FileName,
-                        route.ProductSnapshot.InventoryCode);
-                    var uploaded = newImageUrl;
+                    await using var stream = file.OpenReadStream();
+                    var uploaded = await _imageService.UploadImageAsync(stream, file.FileName, route.ProductSnapshot.InventoryCode);
                     _session.OnRollback(() => _imageService.DeleteImageAsync(uploaded));
-                    route.UpdateImage(newImageUrl);
+                    added.Add(uploaded);
                 }
+
+                // A single ImageFile (older clients) replaces the images, as it always did.
+                var (images, removed) = ImageSet.Apply(
+                    route.ImageUrls, dto.RemoveImageUrls, added, dto.CoverImageUrl,
+                    replaceAll: dto.ImageFile is { Length: > 0 });
+                if (!images.SequenceEqual(route.ImageUrls))
+                    route.SetImages(images);
 
                 await _repository.UpdateAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                if (newImageUrl != null && !string.IsNullOrEmpty(oldImageUrl))
-                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(oldImageUrl));
+                foreach (var url in removed)
+                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(url));
             }
         }
     }

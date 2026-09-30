@@ -67,8 +67,8 @@ window.LiveUpdates = (function () {
             if (w.mode === 'warn') {
                 if (Date.now() < ownSaveUntil) return;
                 showNotice(describe(w, update) + ' ' + (isDeletion(w, update)
-                    ? 'Saving is no longer possible.'
-                    : 'Reload to see the latest version; saving now may overwrite it.'));
+                    ? t('Saving is no longer possible.')
+                    : t('Reload to see the latest version; saving now may overwrite it.')));
             } else {
                 schedule(w, update);
             }
@@ -124,7 +124,7 @@ window.LiveUpdates = (function () {
             });
             // Redirected (record gone, signed out) or refused: keep what is on screen.
             if (!response.ok || new URL(response.url).pathname !== window.location.pathname) {
-                showNotice(describe(w, update) || 'This page is out of date.');
+                showNotice(describe(w, update) || t('This page is out of date.'));
                 return;
             }
             doc = new DOMParser().parseFromString(await response.text(), 'text/html');
@@ -137,7 +137,7 @@ window.LiveUpdates = (function () {
 
         const pairs = w.regions.map(selector => [document.querySelector(selector), doc.querySelector(selector)]);
         if (pairs.some(([current, fresh]) => current && !fresh)) {
-            showNotice(describe(w, update) || 'This page is out of date.');
+            showNotice(describe(w, update) || t('This page is out of date.'));
             return;
         }
 
@@ -157,16 +157,51 @@ window.LiveUpdates = (function () {
         return !!change && change.action === 'deleted' && change.id != null;
     }
 
+    // Whole sentences per kind of record (a noun spliced into one template reads badly once
+    // translated). Each list: [plain, by {0}, at {1}, by {0} at {1}]; {0} = actor, {1} = time.
+    const NOTICES = {
+        product: {
+            changed: ['This product was changed.', 'This product was changed by {0}.', 'This product was changed at {1}.', 'This product was changed by {0} at {1}.'],
+            deleted: ['This product was deleted.', 'This product was deleted by {0}.', 'This product was deleted at {1}.', 'This product was deleted by {0} at {1}.']
+        },
+        category: {
+            changed: ['This category was changed.', 'This category was changed by {0}.', 'This category was changed at {1}.', 'This category was changed by {0} at {1}.'],
+            deleted: ['This category was deleted.', 'This category was deleted by {0}.', 'This category was deleted at {1}.', 'This category was deleted by {0} at {1}.']
+        },
+        department: {
+            changed: ['This department was changed.', 'This department was changed by {0}.', 'This department was changed at {1}.', 'This department was changed by {0} at {1}.'],
+            deleted: ['This department was deleted.', 'This department was deleted by {0}.', 'This department was deleted at {1}.', 'This department was deleted by {0} at {1}.']
+        },
+        route: {
+            changed: ['This route was changed.', 'This route was changed by {0}.', 'This route was changed at {1}.', 'This route was changed by {0} at {1}.'],
+            deleted: ['This route was deleted.', 'This route was deleted by {0}.', 'This route was deleted at {1}.', 'This route was deleted by {0} at {1}.']
+        },
+        user: {
+            changed: ['This user was changed.', 'This user was changed by {0}.', 'This user was changed at {1}.', 'This user was changed by {0} at {1}.'],
+            deleted: ['This user was deleted.', 'This user was deleted by {0}.', 'This user was deleted at {1}.', 'This user was deleted by {0} at {1}.']
+        },
+        approval: {
+            changed: ['This request was changed.', 'This request was changed by {0}.', 'This request was changed at {1}.', 'This request was changed by {0} at {1}.'],
+            deleted: ['This request was deleted.', 'This request was deleted by {0}.', 'This request was deleted at {1}.', 'This request was deleted by {0} at {1}.']
+        },
+        page: {
+            changed: ['A record on this page was changed.', 'A record on this page was changed by {0}.', 'A record on this page was changed at {1}.', 'A record on this page was changed by {0} at {1}.'],
+            deleted: ['A record on this page was deleted.', 'A record on this page was deleted by {0}.', 'A record on this page was deleted at {1}.', 'A record on this page was deleted by {0} at {1}.']
+        }
+    };
+
     // "This product was changed by Aysel Məmmədova at 10:42."
     function describe(w, update) {
         const change = relevantChange(w, update);
         if (!change) return '';
-        const noun = w.label || change.entity;
-        const who = update.actorName ? ` by ${update.actorName}` : '';
+        const set = NOTICES[w.label || change.entity] || NOTICES.page;
+        const sentences = change.action === 'deleted' ? set.deleted : set.changed;
         const at = update.at
-            ? ` at ${new Date(update.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            ? new Date(update.at).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' })
             : '';
-        return `This ${noun} was ${change.action === 'deleted' ? 'deleted' : 'changed'}${who}${at}.`;
+        // [plain, by {0}, at {1}, by {0} at {1}]
+        const index = (update.actorName ? 1 : 0) + (at ? 2 : 0);
+        return t(sentences[index], update.actorName || '', at);
     }
 
     // One notice at the top of the page; later messages replace it. Built with textContent,
@@ -188,7 +223,7 @@ window.LiveUpdates = (function () {
         const reload = document.createElement('button');
         reload.type = 'button';
         reload.className = 'btn btn-sm btn-warning flex-shrink-0';
-        reload.textContent = 'Reload';
+        reload.textContent = t('Reload');
         reload.addEventListener('click', () => window.location.reload());
 
         notice.replaceChildren(message, reload);

@@ -12,16 +12,16 @@
         <li class="nav-item">
             <a href="/Home/Dashboard" class="nav-link @(action == "Dashboard" ? "active" : "")">
                 <span class="nav-icon"><i class="fas fa-table-cells-large"></i></span>
-                <span class="nav-text">Dashboard</span>
+                <span class="nav-text">@L["Dashboard"]</span>
             </a>
         </li>
 
-        <li class="nav-section"><span>Main menu</span></li>
+        <li class="nav-section"><span>@L["Main menu"]</span></li>
 
         <li class="nav-item">
             <a href="/Products" class="nav-link @(controller == "Products" ? "active" : "")">
                 <span class="nav-icon"><i class="fas fa-box"></i></span>
-                <span class="nav-text">Products</span>
+                <span class="nav-text">@L["Products"]</span>
                 <span class="badge bg-primary">@ViewBag.ProductCount</span>
             </a>
         </li>
@@ -29,35 +29,35 @@
         <li class="nav-item">
             <a href="/Routes" class="nav-link @(controller == "Routes" ? "active" : "")">
                 <span class="nav-icon"><i class="fas fa-arrow-right-arrow-left"></i></span>
-                <span class="nav-text">Routes</span>
+                <span class="nav-text">@L["Routes"]</span>
                 <span class="badge bg-warning" id="pendingRoutesCount"></span>
             </a>
         </li>
 
         @if (User.IsInRole("Admin"))
         {
-            <li class="nav-section"><span>Management</span></li>
+            <li class="nav-section"><span>@L["Management"]</span></li>
 
             <li class="nav-item">
                 <a href="/Categories" class="nav-link @(controller == "Categories" ? "active" : "")">
                     <span class="nav-icon"><i class="fas fa-tags"></i></span>
-                    <span class="nav-text">Categories</span>
+                    <span class="nav-text">@L["Categories"]</span>
                 </a>
             </li>
 
             <li class="nav-item">
                 <a href="/Departments" class="nav-link @(controller == "Departments" ? "active" : "")">
                     <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
-                    <span class="nav-text">Departments</span>
+                    <span class="nav-text">@L["Departments"]</span>
                 </a>
             </li>
 
-            <li class="nav-section"><span>Administration</span></li>
+            <li class="nav-section"><span>@L["Administration"]</span></li>
 
             <li class="nav-item">
                 <a href="/Approvals" class="nav-link @(controller == "Approvals" ? "active" : "")">
                     <span class="nav-icon"><i class="fas fa-square-check"></i></span>
-                    <span class="nav-text">Approvals</span>
+                    <span class="nav-text">@L["Approvals"]</span>
                     <span class="badge bg-danger" id="sidebarPendingCount"></span>
                 </a>
             </li>
@@ -65,7 +65,7 @@
             <li class="nav-item">
                 <a href="/UserManagement" class="nav-link @(controller == "UserManagement" ? "active" : "")">
                     <span class="nav-icon"><i class="fas fa-users"></i></span>
-                    <span class="nav-text">Users</span>
+                    <span class="nav-text">@L["Users"]</span>
                 </a>
             </li>
         }
@@ -74,7 +74,7 @@
             <li class="nav-item">
                 <a href="/MyRequests" class="nav-link @(controller == "MyRequests" ? "active" : "")">
                     <span class="nav-icon"><i class="fas fa-clock-rotate-left"></i></span>
-                    <span class="nav-text">My Requests</span>
+                    <span class="nav-text">@L["My Requests"]</span>
                 </a>
             </li>
         }
@@ -82,7 +82,7 @@
         <li class="nav-item">
             <a href="/Notifications" class="nav-link @(controller == "Notifications" ? "active" : "")">
                 <span class="nav-icon"><i class="fas fa-bell"></i></span>
-                <span class="nav-text">Notifications</span>
+                <span class="nav-text">@L["Notifications"]</span>
                 <span class="badge bg-info notification-badge" id="sidebarUnreadCount" style="display: none;"></span>
             </a>
         </li>

@@ -1,0 +1,35 @@
+@model ImageGalleryModel
+@* Details-page gallery: the cover large, the rest as thumbnails; a thumbnail becomes the large
+   image, the large image opens the preview modal. *@
+@if (Model.Images.Count == 0)
+{
+    <div class="empty-state py-4">
+        <i class="fas fa-image"></i>
+        <p class="mb-0">@L[Model.EmptyText]</p>
+    </div>
+}
+else
+{
+    <div class="image-gallery" data-image-gallery>
+        <div class="ig-main">
+            <img src="@Model.Images[0]" alt="@Model.Title" data-ig-main
+                 onclick="showImageModal(this.getAttribute('src'), this.alt)" />
+            @if (Model.Images.Count > 1)
+            {
+                <span class="ig-count" data-ig-counter>1 / @Model.Images.Count</span>
+            }
+        </div>
+        @if (Model.Images.Count > 1)
+        {
+            <div class="ig-thumbs">
+                @for (var i = 0; i < Model.Images.Count; i++)
+                {
+                    <button type="button" class="ig-thumb @(i == 0 ? "active" : "")" data-ig-thumb="@Model.Images[i]" data-ig-index="@(i + 1)"
+                            aria-label="@L["Image {0}", i + 1]">
+                        <img src="@Model.Images[i]" alt="" loading="lazy" />
+                    </button>
+                }
+            </div>
+        }
+    </div>
+}

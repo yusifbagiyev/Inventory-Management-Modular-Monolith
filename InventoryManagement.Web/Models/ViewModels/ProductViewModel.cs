@@ -54,10 +54,17 @@ namespace InventoryManagement.Web.Models.ViewModels
 
 
 
-        [Display(Name = "Image")]
-        public IFormFile? ImageFile { get; set; }
+        /// <summary>New images (create: in order, first is the cover; edit: added after the current ones).</summary>
+        [Display(Name = "Images")]
+        public List<IFormFile>? ImageFiles { get; set; }
 
+        /// <summary>Edit: current images to remove, and the one to make the cover.</summary>
+        public List<string>? RemoveImageUrls { get; set; }
+        public string? CoverImageUrl { get; set; }
+
+        /// <summary>The cover image (first of <see cref="ImageUrls"/>).</summary>
         public string? ImageUrl { get; set; }
+        public List<string> ImageUrls { get; set; } = [];
         public string? CategoryName { get; set; }
         public string? DepartmentName { get; set; }
 

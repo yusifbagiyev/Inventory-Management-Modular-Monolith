@@ -19,7 +19,9 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string ToDepartmentName { get; set; } = string.Empty;
         public string? FromWorker { get; set; }
         public string? ToWorker { get; set; }
+        /// <summary>The cover image (first of <see cref="ImageUrls"/>).</summary>
         public string? ImageUrl { get; set; }
+        public List<string> ImageUrls { get; set; } = [];
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }
         /// <summary>Images are served by this host, so the stored site-relative URL is used as-is.</summary>
@@ -41,8 +43,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         [Display(Name = "To Worker")]
         public string? ToWorker { get; set; }
 
-        [Display(Name = "Image")]
-        public IFormFile? ImageFile { get; set; }
+        [Display(Name = "Images")]
+        public List<IFormFile>? ImageFiles { get; set; }
 
         [Display(Name = "Notes")]
         [MaxLength(500)]
@@ -68,7 +70,10 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public record UpdateRouteViewModel
     {
-        public IFormFile? ImageFile { get; set; }
+        /// <summary>Images added after the current ones; current ones to remove; the one to make the cover.</summary>
+        public List<IFormFile>? ImageFiles { get; set; }
+        public List<string>? RemoveImageUrls { get; set; }
+        public string? CoverImageUrl { get; set; }
         public int ToDepartmentId { get; set; }
         public string? ToWorker { get; set; }
         public string? Notes { get; set; }

@@ -74,7 +74,7 @@ namespace InventoryManagement.Web.Controllers
                     return AjaxResponse(true, "All notifications marked as read");
                 }
 
-                TempData["Success"] = "All notifications marked as read";
+                TempData["Success"] = Tr("All notifications marked as read");
                 return RedirectToAction("Index");
             }
             catch (Exception ex)

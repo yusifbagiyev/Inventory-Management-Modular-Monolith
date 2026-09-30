@@ -12,6 +12,7 @@ using SharedServices.DTOs;
 using SharedServices.Enum;
 using SharedServices.Exceptions;
 using SharedServices.Identity;
+using SharedServices.Storage;
 using System.Security.Claims;
 
 namespace ProductService.Application.Services
@@ -240,15 +241,9 @@ namespace ProductService.Application.Services
                 _logger.LogWarning(ex, "Failed to enrich product data with names");
             }
 
-            // Handle image data if present
-            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await dto.ImageFile.CopyToAsync(ms);
-                actionData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                actionData["imageFileName"] = dto.ImageFile.FileName;
-                actionData["imageSize"] = dto.ImageFile.Length;
-            }
+            var images = ImageSet.Files(dto.ImageFile, dto.ImageFiles);
+            if (images.Count > 0)
+                actionData["images"] = await ApprovalActionData.EncodeImagesAsync(images);
 
             return actionData;
         }
@@ -270,22 +265,16 @@ namespace ProductService.Application.Services
                 ["isNewItem"] = dto.IsNewItem,
             };
 
-            // Add image data if present
-            if (dto.ImageFile != null && dto.ImageFile.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await dto.ImageFile.CopyToAsync(ms);
-                updateData["imageData"] = Convert.ToBase64String(ms.ToArray());
-                updateData["imageFileName"] = dto.ImageFile.FileName;
-                updateData["imageSize"] = dto.ImageFile.Length;
-            }
+            // A single legacy ImageFile keeps its "replace the images" meaning.
+            if (dto.ImageFile is { Length: > 0 })
+                updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([dto.ImageFile]);
+            if (dto.ImageFiles?.Any(f => f.Length > 0) == true)
+                updateData["images"] = await ApprovalActionData.EncodeImagesAsync(dto.ImageFiles);
+            if (dto.RemoveImageUrls?.Count > 0)
+                updateData["removeImageUrls"] = dto.RemoveImageUrls;
+            if (!string.IsNullOrEmpty(dto.CoverImageUrl))
+                updateData["coverImageUrl"] = dto.CoverImageUrl;
 
-            // If you want to remove image , send ImageFile as null
-            else
-            {
-                updateData["imageUrl"] = string.Empty;
-            }
-            
             return updateData;
         }
 
@@ -297,17 +286,17 @@ namespace ProductService.Application.Services
             ArgumentNullException.ThrowIfNull(updatedProduct);
 
             var changes = new List<string>();
-            if (existingProduct.Vendor != updatedProduct.Vendor)
+            if (TextDiffers(existingProduct.Vendor, updatedProduct.Vendor))
                 changes.Add($"Vendor: {existingProduct.Vendor} → {updatedProduct.Vendor}");
-            if (existingProduct.Model != updatedProduct.Model)
+            if (TextDiffers(existingProduct.Model, updatedProduct.Model))
                 changes.Add($"Model: {existingProduct.Model} → {updatedProduct.Model}");
             if (existingProduct.CategoryId != updatedProduct.CategoryId)
                 changes.Add($"Category: {existingProduct.CategoryName} → {await GetCategoryNameAsync(updatedProduct.CategoryId)}");
             if (existingProduct.DepartmentId != updatedProduct.DepartmentId)
                 changes.Add($"Department: {existingProduct.DepartmentName} → {await GetDepartmentNameAsync(updatedProduct.DepartmentId)}");
-            if (existingProduct.Worker != updatedProduct.Worker)
+            if (TextDiffers(existingProduct.Worker, updatedProduct.Worker))
                 changes.Add($"Worker: {existingProduct.Worker ?? "None"} → {updatedProduct.Worker ?? "None"}");
-            if (existingProduct.Description != updatedProduct.Description)
+            if (TextDiffers(existingProduct.Description, updatedProduct.Description))
                 changes.Add($"Description: {existingProduct.Description} → {updatedProduct.Description}");
             if (existingProduct.IsNewItem != updatedProduct.IsNewItem)
                 changes.Add(updatedProduct.IsNewItem == true ? "Product is new now" : "Product's status changed to old");
@@ -315,13 +304,18 @@ namespace ProductService.Application.Services
                 changes.Add(updatedProduct.IsActive == true ? "Product is active now" : "Product is not available");
             if (existingProduct.IsWorking != updatedProduct.IsWorking)
                 changes.Add(updatedProduct.IsWorking == true ? "Product is working now" : "Product is not working ");
-            if (updatedProduct.ImageFile != null)
-                changes.Add("Product image was updated");
+            if (ImageSet.Changes(existingProduct.ImageUrls, updatedProduct.RemoveImageUrls,
+                    ImageSet.Files(updatedProduct.ImageFile, updatedProduct.ImageFiles).Count, updatedProduct.CoverImageUrl))
+                changes.Add("Product images were updated");
 
             return changes;
         }
 
 
+
+        /// <summary>Form posts send "" where the stored value is null; that is not a change.</summary>
+        private static bool TextDiffers(string? current, string? updated)
+            => !string.Equals((current ?? "").Trim(), (updated ?? "").Trim(), StringComparison.Ordinal);
 
         public async Task<string?> GetCategoryNameAsync(int categoryId)
         {

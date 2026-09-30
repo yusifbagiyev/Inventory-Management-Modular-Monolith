@@ -1,7 +1,7 @@
 // InventoryManagement.Web/wwwroot/js/date-range.js
 //
 // Date-range inputs on Air Datepicker (wwwroot/lib/air-datepicker, no dependencies), replacing
-// the unmaintained daterangepicker + moment pair. The input shows "MM/DD/YYYY - MM/DD/YYYY";
+// the unmaintained daterangepicker + moment pair. The input shows "DD.MM.YYYY - DD.MM.YYYY";
 // pages read it back with DateRange.parse() and send DateRange.iso() dates to the server.
 //
 //   DateRange.attach('#dateRange', {
@@ -18,7 +18,21 @@ window.DateRange = (function () {
     const SEPARATOR = ' - ';
 
     // Air Datepicker's own locale files are CommonJS modules; the page loads the UMD build,
-    // so the English locale lives here.
+    // so the locales live here. Both show dates as dd.MM.yyyy, the format used across the UI.
+    const localeAz = {
+        days: ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'],
+        daysShort: ['B.', 'B.e.', 'Ç.a.', 'Ç.', 'C.a.', 'C.', 'Ş.'],
+        daysMin: ['B', 'Be', 'Ça', 'Ç', 'Ca', 'C', 'Ş'],
+        months: ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust',
+            'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'],
+        monthsShort: ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'],
+        today: 'Bu gün',
+        clear: 'Təmizlə',
+        dateFormat: 'dd.MM.yyyy',
+        timeFormat: 'HH:mm',
+        firstDay: 1
+    };
+
     const localeEn = {
         days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -28,8 +42,8 @@ window.DateRange = (function () {
         monthsShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         today: 'Today',
         clear: 'Clear',
-        dateFormat: 'MM/dd/yyyy',
-        timeFormat: 'hh:mm aa',
+        dateFormat: 'dd.MM.yyyy',
+        timeFormat: 'HH:mm',
         firstDay: 1
     };
 
@@ -50,7 +64,7 @@ window.DateRange = (function () {
         input.classList.add('date-range-input');
 
         const picker = new AirDatepicker(input, {
-            locale: localeEn,
+            locale: document.documentElement.lang === 'az' ? localeAz : localeEn,
             range: true,
             multipleDatesSeparator: SEPARATOR,
             autoClose: true,
@@ -81,17 +95,17 @@ window.DateRange = (function () {
         if (picker) picker.clear({ silent: true });
     }
 
-    function parseUs(text) {
-        const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(text || '').trim());
-        return m ? new Date(+m[3], +m[1] - 1, +m[2]) : null;
+    function parseDay(text) {
+        const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(text || '').trim());
+        return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
     }
 
-    /** "MM/DD/YYYY - MM/DD/YYYY" -> { start, end } (local dates), or null. */
+    /** "DD.MM.YYYY - DD.MM.YYYY" -> { start, end } (local dates), or null. */
     function parse(value) {
         const parts = String(value || '').split(SEPARATOR);
         if (parts.length !== 2) return null;
-        const start = parseUs(parts[0]);
-        const end = parseUs(parts[1]);
+        const start = parseDay(parts[0]);
+        const end = parseDay(parts[1]);
         return start && end ? { start: start, end: end } : null;
     }
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@(JsonStringLocalizer.IsAzerbaijani ? "az" : "en")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(ViewData["Title"] ?? "Inventory Pro")</title>
+    <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - Inventory Pro" : "Inventory Pro")</title>
     @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
        site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
     <script>
@@ -59,11 +59,21 @@
                     </div>
 
                     <div class="navbar-nav ms-auto d-flex align-items-center">
+                        @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
+                        <form method="post" asp-controller="Language" asp-action="Set" class="nav-item me-1 lang-switch" data-no-ajax>
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="culture" value="@(JsonStringLocalizer.IsAzerbaijani ? "en-US" : "az-Latn-AZ")" />
+                            <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                            <button type="submit" class="nav-link notification-toggle theme-toggle lang-toggle"
+                                    title="@L["Switch language"]" aria-label="@L["Switch language"]">
+                                @(JsonStringLocalizer.IsAzerbaijani ? "EN" : "AZ")
+                            </button>
+                        </form>
                         @if (User.Identity?.IsAuthenticated ?? false)
                         {
                             <div class="nav-item me-1">
                                 <button type="button" class="nav-link notification-toggle theme-toggle" data-theme-toggle
-                                        title="Dark mode" aria-label="Toggle dark mode">
+                                        title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
                                     <i class="fas fa-moon"></i>
                                 </button>
                             </div>
@@ -79,15 +89,15 @@
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end notification-dropdown modern-dropdown">
                                     <div class="dropdown-header">
-                                        <h6 class="mb-0">Notifications</h6>
-                                        <a href="/Notifications" class="text-primary">View All</a>
+                                        <h6 class="mb-0">@L["Notifications"]</h6>
+                                        <a href="/Notifications" class="text-primary">@L["View All"]</a>
                                     </div>
                                     <div id="notificationList" class="notification-list px-3 py-2">
                                         <partial name="_Skeleton" model="3" />
                                     </div>
                                     <div class="dropdown-footer">
                                         <a href="#" id="markAllAsRead" class="text-muted">
-                                            Mark all as read
+                                            @L["Mark all as read"]
                                         </a>
                                     </div>
                                 </div>
@@ -106,29 +116,29 @@
                                 <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
                                     <li>
                                         <a class="dropdown-item" href="/Account/Profile">
-                                            <i class="fas fa-user-circle me-2"></i> My Profile
+                                            <i class="fas fa-user-circle me-2"></i> @L["My Profile"]
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" href="/Account/ChangePassword">
-                                            <i class="fas fa-key me-2"></i> Change Password
+                                            <i class="fas fa-key me-2"></i> @L["Change Password"]
                                         </a>
                                     </li>
                                     @if (User.IsInRole("Admin"))
                                     {
                                         <li>
                                             <a class="dropdown-item" href="/Approvals">
-                                                <i class="fas fa-check-circle me-2"></i> Approvals
+                                                <i class="fas fa-check-circle me-2"></i> @L["Approvals"]
                                                 <span class="badge bg-warning ms-auto" id="pendingApprovalsCount"></span>
                                             </a>
                                         </li>
                                     }
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                        <form asp-controller="Account" asp-action="Logout" method="post" data-no-ajax>
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="dropdown-item text-danger">
-                                                <i class="fas fa-sign-out-alt me-2"></i> Sign Out
+                                                <i class="fas fa-sign-out-alt me-2"></i> @L["Sign Out"]
                                             </button>
                                         </form>
                                     </li>
@@ -149,7 +159,7 @@
                 <div class="container-fluid">
                     <div class="row">
                         <div class="col-md-6">
-                            <span class="text-muted">© @DateTime.Today.Year Inventory Pro. All rights reserved.</span>
+                            <span class="text-muted">© @DateTime.Today.Year Inventory Pro. @L["All rights reserved."]</span>
                         </div>
                     </div>
                 </div>
@@ -166,11 +176,11 @@
         <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Image Preview</h5>
+                    <h5 class="modal-title">@L["Image Preview"]</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center p-0" style="max-height: 70vh; overflow: auto;">
-                    <img id="globalModalImage" class="img-fluid" alt="Preview"
+                    <img id="globalModalImage" class="img-fluid" alt="@L["Preview"]"
                          style="max-width: 100%; max-height: 65vh; width: auto; height: auto;">
                 </div>
             </div>
@@ -183,15 +193,15 @@
         <div class="modal-dialog modal-dialog-centered modal-sm-plus">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="globalConfirmTitle">Please confirm</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="globalConfirmTitle">@L["Please confirm"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
                 </div>
                 <div class="modal-body">
-                    <p id="globalConfirmMessage" class="mb-0">Are you sure?</p>
+                    <p id="globalConfirmMessage" class="mb-0">@L["Are you sure?"]</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="globalConfirmOk">Confirm</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">@L["Cancel"]</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="globalConfirmOk">@L["Confirm"]</button>
                 </div>
             </div>
         </div>
@@ -207,10 +217,16 @@
     <script src="~/lib/chart.js/dist/chart.umd.min.js" asp-append-version="true"></script>
     <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
 
+    @* Translations for scripts: t('English text') in site.js looks them up here (absent = English). *@
+    @if (JsonStringLocalizer.IsAzerbaijani)
+    {
+        <script src="/Language/Strings?v=@JsonStringLocalizer.Version"></script>
+    }
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>
     <script src="~/js/notification-manager.js" asp-append-version="true"></script>
     <script src="~/js/live-updates.js" asp-append-version="true"></script>
+    <script src="~/js/image-manager.js" asp-append-version="true"></script>
 
     @if (User.IsInRole("Admin"))
     {
@@ -317,7 +333,7 @@
                     $('#notificationList').html(`
                         <div class="notification-empty">
                             <i class="fas fa-exclamation-circle"></i>
-                            <p class="mb-0">Failed to load notifications</p>
+                            <p class="mb-0">${t('Failed to load notifications')}</p>
                         </div>
                     `);
                 }
@@ -391,7 +407,7 @@
                 html = `
                     <div class="notification-empty">
                         <i class="fas fa-bell-slash"></i>
-                        <p class="mb-0">No new notifications</p>
+                        <p class="mb-0">${t('No new notifications')}</p>
                     </div>
                 `;
             } else {
@@ -476,11 +492,11 @@
                         loadNotificationCount(); // FIX: Also reload the count from server
                     }, 300);
 
-                    showToast('All notifications marked as read', 'success');
+                    showToast(t('All notifications marked as read'), 'success');
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to mark all as read:', error);
-                    showToast('Failed to mark notifications as read', 'error');
+                    showToast(t('Failed to mark notifications as read'), 'error');
                 }
             });
         }
@@ -552,12 +568,12 @@
             const diffHours = Math.floor(diffMins / 60);
             const diffDays = Math.floor(diffHours / 24);
 
-            if (diffSecs < 60) return 'just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 30) return `${diffDays}d ago`;
+            if (diffSecs < 60) return t('just now');
+            if (diffMins < 60) return t('{0}m ago', diffMins);
+            if (diffHours < 24) return t('{0}h ago', diffHours);
+            if (diffDays < 30) return t('{0}d ago', diffDays);
 
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString(uiLocale(), {
                 month: 'short',
                 day: 'numeric',
                 year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
@@ -569,8 +585,8 @@
     @* Surface server-side TempData messages (create/update/delete/password-reset) as toasts.
        Nothing rendered these before, so redirect-based flows showed no confirmation at all. *@
     @{
-        var tdSuccess = TempData["Success"] as string;
-        var tdError = (TempData["Error"] ?? TempData["ErrorMessage"]) as string;
+        var tdSuccess = JsonStringLocalizer.TranslateMessage(TempData["Success"] as string);
+        var tdError = JsonStringLocalizer.TranslateMessage((TempData["Error"] ?? TempData["ErrorMessage"]) as string);
     }
     @if (!string.IsNullOrEmpty(tdSuccess) || !string.IsNullOrEmpty(tdError))
     {
