@@ -246,3 +246,18 @@ function setupSessionMonitor() {
 
     window.sessionMonitorInterval = monitorInterval;
 }
+
+
+/** Pager buttons (_Pagination): same page with the current filters, a different pageNumber. */
+function changePage(page) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('pageNumber', page);
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+/** Opens an image in the layout's shared preview modal. */
+function showImageModal(imageUrl, title) {
+    $('#globalModalImage').attr('src', imageUrl);
+    $('#globalImageModal .modal-title').text(title || 'Image Preview');
+    $('#globalImageModal').modal('show');
+}

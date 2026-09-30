@@ -183,7 +183,7 @@
             }
         </div>
         <div class="card-footer">
-            <partial name="_CategoryPagination" model="Model" />
+            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
         </div>
     </div>
 </div>
