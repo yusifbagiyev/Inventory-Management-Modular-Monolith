@@ -167,8 +167,8 @@ function previewImage(input, previewId) {
     }
 }
 
-// Toast notification
-function showToast(message, type = 'info', duration = 5000) {
+// Toast notification (.ip-toast: surface card, bottom right, the icon carries the colour)
+function showToast(message, type = 'info', duration = 4000) {
     message = typeof message === 'string' ? t(message) : message;
     // Ensure we have a valid type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
@@ -187,13 +187,11 @@ function showToast(message, type = 'info', duration = 5000) {
     const icon = getToastIcon(type);
 
     const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body ${type === 'warning' || type === 'info' ? 'text-dark' : 'text-white'}">
-                    <i class="fas fa-${icon} me-2"></i>
-                    ${escapeHtml(message)}
-                </div>
-                <button type="button" class="btn-close ${type === 'warning' || type === 'info' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div id="${toastId}" class="toast ip-toast ${type}" role="${type === 'danger' ? 'alert' : 'status'}" aria-live="${type === 'danger' ? 'assertive' : 'polite'}" aria-atomic="true">
+            <div class="toast-body">
+                <i class="fa-solid fa-${icon}"></i>
+                <div class="text flex-grow-1">${escapeHtml(message)}</div>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="${escapeHtml(t('Close'))}"></button>
             </div>
         </div>
     `;
@@ -203,10 +201,9 @@ function showToast(message, type = 'info', duration = 5000) {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toastContainer';
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '9999';
         document.body.appendChild(container);
     }
+    container.className = 'toast-container position-fixed bottom-0 end-0 p-4';
 
     // Add toast to container
     container.insertAdjacentHTML('beforeend', toastHtml);
@@ -232,13 +229,13 @@ function showToast(message, type = 'info', duration = 5000) {
 // Helper function to get toast icon
 function getToastIcon(type) {
     const icons = {
-        'success': 'check-circle',
-        'danger': 'exclamation-circle',
-        'warning': 'exclamation-triangle',
-        'info': 'info-circle',
-        'secondary': 'cog'
+        'success': 'circle-check',
+        'danger': 'circle-xmark',
+        'warning': 'triangle-exclamation',
+        'info': 'circle-info',
+        'secondary': 'circle-info'
     };
-    return icons[type] || 'info-circle';
+    return icons[type] || 'circle-info';
 }
 
 

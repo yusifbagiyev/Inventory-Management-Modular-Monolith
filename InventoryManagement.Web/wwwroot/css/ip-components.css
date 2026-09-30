@@ -351,3 +351,11 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
   background-position: right .75rem center;
   background-size: 16px 12px;
 }
+
+/* ---------- toast: warning / info icons (the package styles success and danger) ---------- */
+.ip-toast.warning > .toast-body > i:first-child { color: var(--ip-warning-text); }
+.ip-toast.info > .toast-body > i:first-child, .ip-toast.secondary > .toast-body > i:first-child { color: var(--ip-info-text); }
+.ip-toast .toast-body { align-items: flex-start; }
+.ip-toast .toast-body .text { color: var(--ip-text-1); font-size: var(--ip-fs-base); }
+.ip-toast .btn-close { flex: none; background-size: 10px; opacity: .6; }
+.ip-toast .btn-close:hover { opacity: 1; background-color: var(--ip-surface-hover); }

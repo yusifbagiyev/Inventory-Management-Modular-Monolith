@@ -11,22 +11,6 @@ body {
     transition: all 0.3s ease;
 }
 
-/* Card Enhancements */
-.card {
-    border: none;
-    border-radius: 10px;
-}
-
-.card-header {
-    font-weight: 600;
-}
-
-/* Button Styles */
-.btn {
-    border-radius: 5px;
-    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
-}
-
 /* Table Enhancements */
 .table {
     margin-bottom: 0;
@@ -95,18 +79,6 @@ body {
     ::-webkit-scrollbar-thumb:hover {
         background: var(--ink-3);
     }
-
-/* Badge styles */
-.badge {
-    padding: 0.35em 0.65em;
-    font-weight: 500;
-}
-
-/* Alert improvements */
-.alert {
-    border: none;
-    border-radius: 8px;
-}
 
 /* Notification Dropdown */
 .notification-dropdown {
@@ -277,21 +249,6 @@ body {
     word-break: break-word;
 }
 
-/* Button group styles */
-.btn-group .btn {
-    border-radius: 0;
-}
-
-    .btn-group .btn:first-child {
-        border-top-left-radius: 0.25rem;
-        border-bottom-left-radius: 0.25rem;
-    }
-
-    .btn-group .btn:last-child {
-        border-top-right-radius: 0.25rem;
-        border-bottom-right-radius: 0.25rem;
-    }
-
 /* Permissions styles */
 .permissions-container {
     max-height: 600px;
@@ -354,72 +311,6 @@ body {
     border-bottom: 1px solid var(--line);
 }
 
-/* Enhanced Toast Styling */
-.toast {
-    min-width: 350px;
-    box-shadow: var(--ip-shadow-lg);
-    border: none;
-    overflow: hidden;
-    border-radius: var(--ip-radius-lg);
-}
-
-.toast-header {
-    font-weight: 600;
-    border-bottom: 1px solid var(--line);
-}
-
-.toast.bg-danger {
-    background-color: var(--ip-danger-solid) !important;
-}
-
-    .toast.bg-danger .toast-body {
-        color: white !important;
-    }
-
-    .toast.bg-danger .btn-close {
-        filter: brightness(0) invert(1);
-    }
-
-.toast.bg-success {
-    background-color: var(--ip-success-solid) !important;
-}
-
-.toast.bg-warning {
-    background-color: var(--ip-warning-soft) !important;
-}
-
-.toast.bg-info, .toast.bg-secondary {
-    background-color: var(--surface) !important;
-    border: 1px solid var(--line) !important;
-}
-
-    .toast.bg-warning .toast-body, .toast.bg-info .toast-body, .toast.bg-secondary .toast-body {
-        color: var(--ink) !important;
-    }
-
-.toast-body {
-    padding: 1rem;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.toast .btn-close {
-    background-color: transparent;
-    opacity: 0.8;
-    margin-left: 1rem;
-}
-
-    .toast .btn-close:hover {
-        opacity: 1;
-    }
-
-.toast-icon {
-    margin-right: 0.75rem;
-    font-size: 1.25rem;
-}
-
 /* Inventory code error styling */
 .inventory-code-edit .invalid-feedback {
     color: var(--ip-danger-text) !important;
@@ -441,19 +332,6 @@ body {
 canvas {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
-}
-
-/* Font weights */
-.fw-semibold {
-    font-weight: 500 !important;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 500;
-}
-
-.badge {
-    font-weight: 400;
 }
 
 /* Gmail pagination styles */
