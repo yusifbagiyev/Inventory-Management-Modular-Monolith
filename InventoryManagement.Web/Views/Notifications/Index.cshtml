@@ -142,14 +142,23 @@
         let itemsPerPage = 50;
         let isLoading = false;
         let allNotifications = [];
-        let filteredNotifications = [];
+        // null = no filter active. An empty array is a filter that matched nothing - the old code
+        // used [] for both, so a no-match filter fell back to "everything" and Clear emptied the list.
+        let filteredNotifications = null;
+
+        // Only this page's list: the header bell's dropdown uses the same .notification-item class.
+        const PAGE_ITEMS = '#notificationsContent .notification-item';
+
+        function currentItems() {
+            return filteredNotifications === null ? allNotifications : filteredNotifications;
+        }
 
         $(document).ready(function() {
             // Date range filter (client-side, like the others)
             DateRange.attach('#dateRangeFilter', { onApply: applyFilters, onClear: applyFilters });
 
             // Store all notifications for client-side filtering
-            allNotifications = $('.notification-item').toArray();
+            allNotifications = $(PAGE_ITEMS).toArray();
             updateCounts();
 
             // Implement infinite scrolling
@@ -170,6 +179,12 @@
             const type = $('#typeFilter').val();
             const dateRange = $('#dateRangeFilter').val();
             const searchTerm = $('#searchFilter').val().toLowerCase();
+
+            if (!status && !type && !DateRange.parse(dateRange) && !searchTerm) {
+                filteredNotifications = null;
+                displayFilteredNotifications();
+                return;
+            }
 
             filteredNotifications = allNotifications.filter(function(item) {
                 const $item = $(item);
@@ -209,7 +224,7 @@
         function displayFilteredNotifications() {
             $('#notificationsContent').empty();
 
-            const itemsToShow = filteredNotifications.slice(0, itemsPerPage);
+            const itemsToShow = currentItems().slice(0, itemsPerPage);
             itemsToShow.forEach(item => {
                 $('#notificationsContent').append(item);
             });
@@ -221,7 +236,7 @@
         function loadMoreNotifications() {
             if (isLoading) return;
 
-            const totalItems = filteredNotifications.length > 0 ? filteredNotifications.length : allNotifications.length;
+            const totalItems = currentItems().length;
             const startIndex = currentPage * itemsPerPage;
 
             if (startIndex >= totalItems) return;
@@ -230,7 +245,7 @@
             $('#loadMoreTrigger').removeClass('d-none');
 
             setTimeout(() => {
-                const items = filteredNotifications.length > 0 ? filteredNotifications : allNotifications;
+                const items = currentItems();
                 const endIndex = Math.min(startIndex + itemsPerPage, items.length);
 
                 for (let i = startIndex; i < endIndex; i++) {
@@ -245,8 +260,8 @@
         }
 
         function updateCounts() {
-            const visibleCount = $('#notificationsContent .notification-item').length;
-            const totalCount = filteredNotifications.length > 0 ? filteredNotifications.length : allNotifications.length;
+            const visibleCount = $(PAGE_ITEMS).length;
+            const totalCount = currentItems().length;
 
             $('#visibleCount').text(visibleCount);
             $('#totalCount').text(totalCount);
@@ -304,7 +319,7 @@
             $('#typeFilter').val('');
             DateRange.clear('#dateRangeFilter');
             $('#searchFilter').val('');
-            filteredNotifications = [];
+            filteredNotifications = null;
             displayFilteredNotifications();
         }
     </script>
