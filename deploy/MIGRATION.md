@@ -1,121 +1,139 @@
 # Mikroservislərdən modular monolitə keçid (production)
 
-Bu təlimat köhnə 7 konteynerli sistemi (5 servis + Ocelot gateway + ayrıca Web, RabbitMQ) yeni tək
-`app` konteynerinə keçirir. Data 5 ayrı bazadan (`identity_service`, `product_service`,
-`route_service`, `approval_service`, `notification_service`) bir `inventory` bazasına, hər modul
-üçün ayrıca schema-ya (`identity`, `product`, `route`, `approval`, `notification`) köçürülür.
+Serverdəki köhnə 11 konteynerli sistem yeni tək `app` konteynerinə keçirilir. Köhnə sistemdə 5 servis,
+Ocelot gateway, ayrıca Web, RabbitMQ, Postgres, Seq və nginx var. Data 5 bazadan bir `inventory` bazasına
+köçür, hər modul üçün ayrıca schema ilə:
 
-**Köhnə bazalara yalnız oxumaq üçün toxunulur.** Geri qayıtmaq üçün köhnə stack-i yenidən
-qaldırmaq kifayətdir (bax: *Geri qaytarma*).
+| Köhnə baza | Yeni schema |
+|---|---|
+| `identity_service` | `identity` |
+| `product_service` | `product` |
+| `route_service` | `route` |
+| `approval_service` | `approval` |
+| `notification_service` | `notification` |
 
-Gözlənilən dayanma müddəti: ~15–30 dəqiqə (əsasən image build).
+- **Köhnə bazalar yalnız oxunur.** Geri qayıtmaq bir əmrdir (bax: *Geri qaytarma*).
+- Hər şeyi `deploy/cutover.sh` edir: yoxlama, ehtiyat nüsxə, keçid, data köçürmə, sayların müqayisəsi.
+  Hər addımda xəta olarsa, dayanır və nə etməli olduğunuzu yazır.
+- Serverdə qovluq: `/opt/inventory166`. Əmrlər **root** ilə icra olunur.
 
-## 0. Hazırlıq (dayanmadan əvvəl)
+## 0. Hazırlıq (dayanma yoxdur, istənilən vaxt)
 
-1. Serverdə repo qovluğunda bu branch-ı çəkin (hələ işə salmayın).
-2. `.env` faylını `.env.example` əsasında yeniləyin:
-   - `DB_NAME=inventory` (yeni baza)
-   - `SERVICEDESK_API_KEY` — **yeni** açar yaradın (köhnə açar git tarixçəsindədir) və ServiceDesk tərəfində də dəyişin.
-   - `WHATSAPP_API_TOKEN`, `WHATSAPP_GROUP_ID` — köhnə token git tarixçəsində olduğu üçün WaSender panelində yeniləyin.
-   - `RABBITMQ_*` açarları artıq lazım deyil.
-3. `ssl/inventory166.crt` və `ssl/inventory166.key` repo kökündə `ssl/` qovluğunda olmalıdır (nginx onları oradan oxuyur).
-4. **Compose layihə adını yoxlayın.** Yeni stack köhnə `postgres_data` volume-unu görməlidir:
+1. **`.env`** (`/opt/inventory166/.env`):
+   - `SERVICEDESK_API_KEY=` — ServiceDesk inteqrasiyasının açarı (`X-Api-Key`).
+     **Boş qalarsa, ServiceDesk inteqrasiyası keçiddən sonra işləməyəcək.** Köhnə açar git tarixçəsində
+     olduğu üçün yeni açar yaradıb ServiceDesk tərəfində də dəyişmək tövsiyə olunur.
+   - `WHATSAPP_API_TOKEN`, `WHATSAPP_GROUP_ID` artıq var. Köhnə token git tarixçəsindədir, ona görə onu
+     WaSender panelində yeniləmək tövsiyə olunur.
+   - `RABBITMQ_USER` və `RABBITMQ_PASSWORD` artıq istifadə olunmur. Qalsalar, zərəri yoxdur.
+   - `APP_IMAGE` və `DB_NAME` dəyərlərini skript özü yazır.
+2. **Gecə backup-ı.** `scripts/postgres_backup.sh` hazırda köhnə bazaları saxlayır. Keçiddən sonra
+   `inventory` bazası da (və ya yalnız o) saxlanılmalıdır. Keçiddən əvvəl skripti yoxlayın.
+3. **Image və fayllar.** GitHub-da *Actions → Prepare cut-over → Run workflow* açın (branch: `master`).
+   Workflow serverdə `next/` qovluğunu yaradır (yeni compose, `deploy/`, image adı) və image-i çəkir.
+   Bu zaman işləyən sistemə toxunulmur.
+   - Ən son commit üçün *Actions → CD* yaşıl olmalıdır. Image-i o yaradır.
+   - Qırmızıdırsa, bir az gözləyib yenidən işə salın.
+4. **Yoxlama.** Bu addım heç nəyi dəyişmir, keçiddən bir gün əvvəl edin:
    ```bash
-   docker volume ls | grep postgres_data
+   cd /opt/inventory166
+   bash next/deploy/cutover.sh check
    ```
-   Çıxan ad `<layihə>_postgres_data` formasındadır. `<layihə>` bu qovluğun adından fərqlidirsə,
-   `.env`-ə `COMPOSE_PROJECT_NAME=<layihə>` əlavə edin. Əks halda yeni stack **boş** baza ilə başlayacaq.
+   Sonda `Preflight OK` görünməlidir. Skript nəyi yoxlayır:
+   - image serverdədir;
+   - `.env`-də lazımi açarlar var;
+   - `COMPOSE_PROJECT_NAME` işləyən Postgres-in layihəsinə uyğundur (əks halda yeni stack boş baza ilə açılardı);
+   - 5 köhnə baza var, `inventory` bazası isə hələ yoxdur;
+   - diskdə yer var.
 
-## 1. Köhnə tətbiq konteynerlərini dayandırın (Postgres işləməyə davam edir)
+## 1. Keçid (dayanma: bir neçə dəqiqə)
 
-```bash
-docker stop inventory_nginx inventory_web inventory_api_gateway \
-  inventory_identity_service inventory_product_service inventory_route_service \
-  inventory_approval_service inventory_notification_service inventory_rabbitmq
-```
-
-## 2. Tam ehtiyat nüsxə
+İstifadəçilərə əvvəlcədən xəbər verin, sonra:
 
 ```bash
-docker exec inventory_postgres pg_dumpall -U "$DB_USER" > backup-before-monolith-$(date +%F).sql
-ls -lh backup-before-monolith-*.sql   # boş olmadığını yoxlayın
+cd /opt/inventory166
+bash next/deploy/cutover.sh
 ```
 
-## 3. Yeni bazanı və qovluqları hazırlayın
+Skript bu addımları icra edir:
+1. Köhnə tətbiq konteynerlərini dayandırır. Postgres və Seq işləməyə davam edir.
+2. Bütün bazaların tam nüsxəsini götürür: `/root/pre-cutover-<vaxt>.sql.gz`. 5 bazanın hamısının nüsxədə olduğunu yoxlayır.
+3. `inventory` bazasını yaradır.
+4. `docker-compose.yml` faylını yenisi ilə əvəz edir. Köhnəsi `docker-compose.old.yml` kimi saxlanılır.
+5. Yeni tətbiqi bir dəfə işə salır ki, schema-lar yaransın, sonra onu dayandırır.
+6. Datanı köçürür: `deploy/migrate-data.sh`.
+   - Hər cədvəl üçün köhnə və yeni sətir sayı göstərilir və hamısı `OK` olmalıdır.
+   - Uyğunsuzluq olarsa, köçürmə geri alınır və skript dayanır.
+7. Yeni sistemi başladır. `/health` və giriş səhifəsinin (200) cavab verməsini yoxlayır.
 
-```bash
-docker exec inventory_postgres createdb -U "$DB_USER" inventory
+Köhnə konteynerlər silinmir, yalnız dayandırılır. Onlar *Təmizlik* addımına qədər qalır.
 
-# Konteyner uid 1654 (non-root) ilə işləyir; açar və şəkil qovluqlarına yaza bilməlidir.
-mkdir -p storage/keys storage/images/products storage/images/routes
-sudo chown -R 1654:1654 storage/keys storage/images
-```
+## 2. Yoxlama siyahısı
 
-## 4. Yeni tətbiqi bir dəfə işə salın (schema-lar yaradılır), sonra dayandırın
-
-```bash
-docker compose up -d --build app
-docker compose logs -f app      # "InventoryManagement configured successfully" görünənə qədər gözləyin
-docker compose stop app
-```
-
-İlk başlanğıcda `__EFMigrationsHistory` üçün bir neçə `Failed executing DbCommand` qeydi normaldır
-(EF Core cədvəlin mövcudluğunu belə yoxlayır).
-
-## 5. Datanı köçürün
-
-```bash
-PG_CONTAINER=inventory_postgres DB_USER="$DB_USER" TARGET_DB=inventory ./deploy/migrate-data.sh
-```
-
-Skript hər cədvəl üçün köhnə və yeni sətir sayını göstərir. Hamısı `OK` olmalıdır, əks halda
-skript xəta ilə dayanır və tətbiqi başlatmamalısınız.
-
-## 6. Yeni sistemi başladın
-
-```bash
-docker compose up -d
-docker compose ps
-```
-
-Yoxlama siyahısı:
-- `https://inventory166.az` açılır, mövcud istifadəçilərlə giriş işləyir.
+- `https://inventory166.az` açılır və mövcud istifadəçilərlə giriş işləyir.
 - Məhsul, route, kateqoriya və departament sayları köhnə sistemlə eynidir.
 - Məhsul və route şəkilləri görünür.
 - Bildiriş zəngi real vaxtda yenilənir: ikinci brauzerdə bir əməliyyat edib yoxlayın.
 - Gözləyən approval sorğusu varsa, birini təsdiqləyin və nəticəni yoxlayın.
+- ServiceDesk inteqrasiyası (açar qoyulubsa) məhsulları oxuya bilir.
 - Seq (`http://<server>:5342`) `ApplicationName = InventoryManagement` qeydlərini göstərir.
 
-## 7. (İxtiyari) Operator rolunun icazələri
+## 3. CD-ni aktiv edin
 
-Köhnə seed-də sürüşmə səbəbindən Operator rolu məhsulları **approval-sız** yaradıb yeniləyə bilir,
-amma silmə sorğusu göndərə bilmir. Niyyət olunan vəziyyətə keçmək üçün:
+GitHub-da *Settings → Secrets and variables → Actions → Variables* bölməsində:
+- `DEPLOY_DIR` = `/opt/inventory166` (yoxdursa əlavə edin);
+- `CD_ENABLED` = `true`.
+
+Bundan sonra `master`-ə hər push avtomatik deploy olunur (bax: `deploy/CD.md`).
+
+## 4. (İxtiyari) Operator rolunun icazələri
+
+Köhnə seed-dəki sürüşmə səbəbindən Operator rolu:
+- məhsulları **approval-sız** yarada və yeniləyə bilir;
+- amma silmə sorğusu göndərə bilmir.
+
+Niyyət olunan vəziyyətə keçmək üçün:
 
 ```bash
-docker exec -i inventory_postgres psql -U "$DB_USER" -d inventory < deploy/sql/fix-operator-permissions.sql
+cd /opt/inventory166
+docker exec -i inventory_postgres psql -U "$(grep ^DB_USER= .env | cut -d= -f2-)" -d inventory \
+  < deploy/sql/fix-operator-permissions.sql
 ```
 
 Dəyişiklik istifadəçilərin sessiyasına ən geci 5 dəqiqə ərzində tətbiq olunur.
 
 ## Geri qaytarma
 
-Yeni stack-dəki problem həll olunmursa:
+Yeni sistemdə həll olunmayan problem olarsa:
 
 ```bash
-docker compose down            # yalnız yeni konteynerlər; volume-lar qalır
-git checkout <əvvəlki versiya>  # köhnə compose faylı
-# köhnə konteynerləri əvvəlki kimi başladın
+cd /opt/inventory166
+bash deploy/cutover.sh rollback
 ```
 
-Köhnə bazalar keçid zamanı dəyişdirilmir. Keçiddən sonra yeni sistemdə daxil edilən data köhnə
-bazalarda **yoxdur**. Uzun müddətdən sonra geri qayıtmaq lazım olarsa, onu əl ilə köçürmək lazım gələcək.
+- Yeni konteynerlər dayanır, köhnə compose faylı yerinə qayıdır və köhnə konteynerlər köhnə bazalarla
+  yenidən başlayır.
+- Keçiddən sonra yeni sistemdə daxil edilən data köhnə bazalarda **yoxdur**. Uzun müddətdən sonra geri
+  qayıtmaq lazım olarsa, həmin datanı əl ilə köçürmək lazım gələcək.
+- Yenidən cəhd etmək üçün əvvəlcə `inventory` bazasını silin, sonra *0.3*-dən davam edin:
+  ```bash
+  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2-)" inventory
+  ```
 
 ## Təmizlik (1–2 həftə problemsiz işlədikdən sonra)
 
+Köhnə konteynerlər, bazalar və fayllar:
+
 ```bash
+cd /opt/inventory166
+docker rm inventory_web inventory_api_gateway inventory_identity_service inventory_product_service \
+  inventory_route_service inventory_approval_service inventory_notification_service inventory_rabbitmq
 for db in identity_service product_service route_service approval_service notification_service; do
-  docker exec inventory_postgres dropdb -U "$DB_USER" "$db"
+  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2-)" "$db"
 done
-docker volume rm <layihə>_rabbitmq_data
-docker image prune
+docker volume rm inventory166_rabbitmq_data
+rm -rf src nginx.conf docker-compose.old.yml deploy.old-* next
+docker image prune -a   # köhnə servis image-ləri (işləyən konteynerə aid olmayanlar silinir)
 ```
+
+`/root/pre-cutover-*.sql.gz` nüsxəsini ayrıca bir yerdə saxlayın. Bu, köhnə sistemin son tam vəziyyətidir.

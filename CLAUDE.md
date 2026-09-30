@@ -88,6 +88,6 @@ Every write permission has `x` and `x.direct` (`product.create` / `product.creat
 ## Deployment / data
 
 - `deploy/CD.md` (Azerbaijani): runner setup, rollback, restoring a pre-deploy backup.
-- `deploy/MIGRATION.md` (Azerbaijani) is the cut-over runbook from the old per-service databases; `deploy/migrate-data.sh` copies them into the module schemas (single transaction, row-count check, sequence realignment). `deploy/sql/fix-operator-permissions.sql` optionally fixes the Operator role's off-by-one seed.
+- `deploy/MIGRATION.md` (Azerbaijani) is the one-time cut-over runbook from the old 11-container stack. The *Prepare cut-over* workflow (`prepare-cutover.yml`, self-hosted runner) stages `next/` (compose, `deploy/`, pulled image) beside the running stack; `deploy/cutover.sh [check|rollback]`, run as root in `/opt/inventory166`, stops the old services, dumps everything, swaps the compose file and runs `deploy/migrate-data.sh`, which copies the per-service databases into the module schemas (single transaction, row-count check, sequence realignment). `deploy/sql/fix-operator-permissions.sql` optionally fixes the Operator role's off-by-one seed.
 - Data-protection keys persist to `DataProtection:KeysPath` (`./storage/keys` in compose) — without it every redeploy signs everyone out.
 - The container runs as uid 1654; bind-mounted `storage/keys` and `storage/images` must be writable by it.
