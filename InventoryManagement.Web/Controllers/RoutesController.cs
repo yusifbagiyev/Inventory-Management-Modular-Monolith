@@ -72,6 +72,12 @@ namespace InventoryManagement.Web.Controllers
             // The active status/type filters narrow the cascading facets.
             await LoadFilterLists(isCompleted, type);
 
+            // Tab counts (All / Pending / Completed): the same filters with each completion state.
+            ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type))).TotalCount;
+            ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, categoryName, type))).TotalCount;
+
             return View(routes);
         }
 

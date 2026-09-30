@@ -1,276 +1,154 @@
 @model TransferViewModel
 @{
-    ViewData["Title"] = "Transfer Product";
+    ViewData["Title"] = "Transfer";
+    var direct = User.HasPermission("route.create.direct");
 }
 
-<div class="container-fluid px-4 transfer-page">
+<div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-action="Index">@L["Routes"]</a></li>
-                <li class="breadcrumb-item active">@L["Transfer"]</li>
-            </ol>
-            <h1>@L[(string)ViewData["Title"]!]</h1>
-        </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> @L["Back to List"]
-            </a>
+            <h1>@L["Transfer"]</h1>
+            <div class="ip-sub">@L["Find the product by its inventory code and move it to another department."]</div>
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-arrow-right-arrow-left me-1"></i>
-                    @L["Transfer Information"]
+    <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm" class="ip-form" novalidate>
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+        <input type="hidden" asp-for="ProductId" id="ProductId" />
+
+        @* Step 1 (design: 06 Transfer): the code, then the found product or an inline error. *@
+        <section class="ip-form-section">
+            <h2><span class="ip-step">1</span>@L["Find the product"]</h2>
+            <label class="ip-label mb-2" for="inventoryCodeInput">@L["Inventory Code"]</label>
+            <div class="d-flex gap-2 flex-wrap align-items-start">
+                <input type="number" id="inventoryCodeInput" class="ip-input ip-input-lg mono ip-code-input"
+                       min="1" max="9999" autocomplete="off" autofocus inputmode="numeric"
+                       placeholder="1042" aria-describedby="searchFeedback" />
+                <button type="button" id="searchBtn" class="ip-btn ip-btn-secondary ip-btn-lg">
+                    <i class="fa-solid fa-magnifying-glass"></i><span>@L["Search"]</span>
+                </button>
+            </div>
+            <div id="searchFeedback" class="mt-2" role="status" aria-live="polite"></div>
+
+            <div id="productInfoContainer" class="ip-found mt-3" style="display:none;">
+                <span class="ip-found-thumb" id="productThumb"><i class="fa-solid fa-box"></i></span>
+                <div class="flex-grow-1" style="min-width: 0">
+                    <div class="d-flex flex-wrap align-items-baseline gap-2">
+                        <span class="fw-semibold" id="productModel"></span>
+                        <span class="ip-mono ip-muted" id="productCode"></span>
+                        <span id="workingStatus"></span>
+                    </div>
+                    <div class="ip-faint" id="productMeta"></div>
+                </div>
+                <div class="ip-found-where">
+                    <div class="ip-faint">@L["Currently"]</div>
+                    <div class="fw-semibold" id="currentDepartment"></div>
+                    <div class="ip-faint" id="currentWorker"></div>
+                </div>
+            </div>
+            <div id="warningContainer"></div>
+        </section>
+
+        @* Step 2: only once a product without a pending transfer is found. *@
+        <div id="transferFields" style="display:none;">
+            <section class="ip-form-section">
+                <h2><span class="ip-step">2</span>@L["Where to"]</h2>
+                <div class="ip-form-grid">
+                    <div class="ip-field">
+                        <label asp-for="ToDepartmentId" class="ip-label"><span>@L["To Department"]</span> <span class="req">*</span></label>
+                        <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="ip-select">
+                            <option value="">@L["-- Select Department --"]</option>
+                        </select>
+                        <span class="ip-error d-none" id="departmentError"></span>
+                        <span asp-validation-for="ToDepartmentId" class="ip-error"></span>
+                    </div>
+                    <div class="ip-field">
+                        <label asp-for="ToWorker" class="ip-label">@L["New worker"]</label>
+                        <input asp-for="ToWorker" class="ip-input" placeholder="@L["Enter worker name (optional)"]" />
+                        <span asp-validation-for="ToWorker" class="ip-error"></span>
+                    </div>
                 </div>
 
-                <form asp-action="Transfer" method="post" enctype="multipart/form-data" id="transferForm">
-                    @Html.AntiForgeryToken()
+                <div class="ip-field mt-4">
+                    <label asp-for="Notes" class="ip-label">@L["Notes"]</label>
+                    <textarea asp-for="Notes" class="ip-textarea" rows="3" placeholder="@L["Reason for the transfer, condition of the device"]"></textarea>
+                    <span asp-validation-for="Notes" class="ip-error"></span>
+                </div>
 
-                    <!-- Inventory Code Search Section -->
-                    <div class="form-section">
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                <div class="mt-4">
+                    <partial name="_ImageManager" model='new ImageManagerModel { Label = "Handover photos (optional)", Hint = "When the transfer is completed they become the product images; the starred one becomes the cover." }' />
+                </div>
+            </section>
 
-                        <h2 class="section-title">@L["Find product"]</h2>
-                        <label class="form-label" for="inventoryCodeInput">@L["Inventory Code"] <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                            <input type="number" id="inventoryCodeInput" class="form-control form-control-lg"
-                                   placeholder="@L["Enter inventory code"]" min="1" max="9999"
-                                   autocomplete="off" autofocus />
-                            <button type="button" id="searchBtn" class="btn btn-outline-secondary">
-                                <i class="fas fa-search"></i> @L["Search"]
-                            </button>
-                        </div>
-                        <div id="searchFeedback" class="form-text mt-2"></div>
-                    </div>
-
-                    <!-- Product Information Display -->
-                    <div id="productInfoContainer" class="form-section" style="display:none;">
-                        <h2 class="section-title">@L["Product"]</h2>
-                        <div class="detail-grid">
-                            <div class="detail-row">
-                                <span class="d-label">@L["Model"]</span>
-                                <span class="d-value" id="productModel">@L["N/A"]</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="d-label">@L["Category"]</span>
-                                <span class="d-value" id="productCategory">@L["N/A"]</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="d-label">@L["Vendor"]</span>
-                                <span class="d-value" id="productVendor">@L["N/A"]</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="d-label">@L["Current Department"]</span>
-                                <span class="d-value" id="currentDepartment">@L["N/A"]</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="d-label">@L["Current Worker"]</span>
-                                <span class="d-value" id="currentWorker">@L["N/A"]</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="d-label">@L["Working Status"]</span>
-                                <span class="d-value" id="workingStatus">@L["N/A"]</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Warning Messages -->
-                    <div id="warningContainer" class="px-3"></div>
-
-                    <!-- Hidden Product ID -->
-                    <input type="hidden" asp-for="ProductId" id="ProductId" />
-
-                    <!-- Transfer Fields -->
-                    <div id="transferFields" style="display:none;">
-                        <div>
-                        <div class="form-section">
-                            <h2 class="section-title">@L["Destination"]</h2>
-                            <div class="form-grid">
-                                <div>
-                                    <label asp-for="ToDepartmentId" class="form-label">
-                                        @L["To Department"] <span class="text-danger">*</span>
-                                    </label>
-                                    <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="form-select" required>
-                                        <option value="">@L["-- Select Department --"]</option>
-                                    </select>
-                                    <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
-                                </div>
-                                <div>
-                                    <label asp-for="ToWorker" class="form-label">@L["To Worker"]</label>
-                                    <input asp-for="ToWorker" class="form-control" placeholder="@L["Enter worker name (optional)"]" />
-                                    <span asp-validation-for="ToWorker" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h2 class="section-title">@L["Documentation"]</h2>
-                            <div class="form-grid">
-                                <div class="full">
-                                    <partial name="_ImageManager" model='new ImageManagerModel { Label = "Transfer images (optional)", Hint = "Photos of the item as handed over. When the transfer is completed they become the product images, and the cover (★) becomes its main image." }' />
-                                </div>
-                                <div class="full">
-                                    <label asp-for="Notes" class="form-label">@L["Notes"]</label>
-                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="@L["Add any transfer notes..."]"></textarea>
-                                    <span asp-validation-for="Notes" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-                        </div>
-
-                        <div class="page-actions">
-                            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-arrow-left"></i> @L["Back to List"]
-                            </a>
-                            <div class="actions-right">
-                                <button type="submit" class="btn btn-primary btn-sm" id="submitBtn">
-                                    <i class="fas fa-exchange-alt"></i> @L["Transfer Product"]
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
+            <div class="ip-form-foot">
+                <span class="note ip-transfer-summary" id="transferSummary"></span>
+                <a asp-action="Index" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+                <button type="submit" class="ip-btn ip-btn-primary" id="submitBtn">
+                    <span>@L["Start transfer"]</span><i class="fa-solid fa-arrow-right"></i>
+                </button>
             </div>
+            @if (!direct)
+            {
+                <p class="ip-hint mt-2"><i class="fa-solid fa-circle-info me-1"></i>@L["Operator changes are applied after an administrator approves them."]</p>
+            }
         </div>
-
-        <div class="col-lg-4">
-            <div class="card mb-4 side-panel">
-                <div class="card-header">
-                    <i class="fas fa-lightbulb me-1"></i>
-                    @L["Transfer Guidelines"]
-                </div>
-                <div class="list-group list-group-flush">
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Enter inventory code and click Search or press Enter"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["System will verify product exists and show current location"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Choose destination department"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Assign to specific worker if needed"]
-                    </div>
-                    <div class="list-group-item">
-                        <i class="fas fa-check me-2"></i>
-                        @L["Add transfer image for documentation"]
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>@L["Note:"]</strong> @L["Products with pending transfers must have those completed first."]
-                    </div>
-
-                    <div class="alert alert-info mb-0">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>@L["Tip:"]</strong> @L["The current worker information will be automatically displayed when you search for a product."]
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Transfers Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-clock-rotate-left me-1"></i>
-                    @L["Recent Transfers"]
-                </div>
-                <div class="card-body" id="recentTransfers">
-                    <p class="form-text mb-0">@L["Loading recent transfers..."]</p>
-                </div>
-            </div>
-        </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-                    $(document).ready(function() {
+        $(document).ready(function() {
             let currentProductData = null;
             let searchTimeout = null;
             let lastSearchedCode = '';
-            let isSubmitting = false; // Track submission state
+            let isSubmitting = false;
 
-            // Focus on inventory code input
-            $('#inventoryCodeInput').focus();
-
-            // Get the submit button reference
             const $submitBtn = $('#submitBtn');
             const originalButtonHtml = $submitBtn.html();
 
-            // Initialize AjaxHandler for the form
             AjaxHandler.handleForm('#transferForm', {
                 validateBeforeSubmit: true,
                 successMessage: t('Product transferred successfully!'),
                 successRedirect: '/Routes',
                 redirectDelay: 1500,
-                onBeforeSubmit: function(form) {
-                    // FIRST: Check if we're already submitting (this prevents duplicates)
-                    if (isSubmitting) {
-                        return false; // Stop here, don't proceed with submission
-                    }
+                onBeforeSubmit: function() {
+                    if (isSubmitting) return false;
 
-                    // SECOND: Mark as submitting immediately
-                    isSubmitting = true;
-
-                    // THIRD: Now do validation (if validation fails, we'll reset the flag)
-
-                    // Validate that we have a product selected
                     if (!currentProductData || !$('#ProductId').val()) {
                         showError(t('Please search for and select a valid product first'));
                         $('#inventoryCodeInput').focus();
-
-                        // Reset submission state so user can try again
-                        isSubmitting = false;
                         return false;
                     }
-
-                    // Validate department selection
                     if (!$('#ToDepartmentId').val()) {
-                        showError(t('Please select a destination department'));
+                        showDepartmentError(t('Please select a destination department'));
                         $('#ToDepartmentId').focus();
-
-                        // Reset submission state so user can try again
-                        isSubmitting = false;
                         return false;
                     }
-
-                    // All validation passed, proceed with submission
+                    if (sameAsNow()) {
+                        showDepartmentError(t('The product is already there. Choose another department or worker.'));
+                        $('#ToDepartmentId').focus();
+                        return false;
+                    }
+                    isSubmitting = true;
                     return true;
                 },
                 onSuccess: function(response) {
-                    // Handle approval request response
                     if (response.isApprovalRequest || response.approvalRequestId) {
                         showToast(response.message || t('Transfer request submitted for approval'), 'info');
                         setTimeout(() => window.location.href = '/Routes', 2000);
-                        return false; // Prevent default success handling
+                        return false;
                     }
-                    return true; // Continue with default success handling
+                    return true;
                 },
-                onError: function(errorMessage, xhr) {
-                    // IMPORTANT: Reset submission state on error so user can retry
+                onError: function(errorMessage) {
                     isSubmitting = false;
-
-                    // Also restore button state
                     $submitBtn.prop('disabled', false).html(originalButtonHtml);
-
-                    showError(errorMessage);
                     console.error('Transfer error:', errorMessage);
                 }
             });
 
-            // Handle Enter key in inventory code input
             $('#inventoryCodeInput').on('keypress', function(e) {
                 if (e.which === 13) {
                     e.preventDefault();
@@ -278,82 +156,58 @@
                 }
             });
 
-            // Auto-search on input with debouncing
+            // Search a moment after typing stops.
             $('#inventoryCodeInput').on('input', function() {
                 const inventoryCode = $(this).val().trim();
-
-                if (searchTimeout) {
-                    clearTimeout(searchTimeout);
-                }
-
-                if (!inventoryCode) {
-                    resetForm();
-                    return;
-                }
+                clearTimeout(searchTimeout);
+                if (!inventoryCode) { resetForm(); return; }
 
                 const codeNum = parseInt(inventoryCode);
                 if (isNaN(codeNum) || codeNum < 1 || codeNum > 9999) {
                     showError(t('Inventory code must be between 1 and 9999'));
                     return;
                 }
-
-                searchTimeout = setTimeout(() => {
-                    searchProduct();
-                }, 750);
+                searchTimeout = setTimeout(searchProduct, 600);
             });
 
-            // Search button click
-            $('#searchBtn').on('click', function() {
-                searchProduct();
+            $('#searchBtn').on('click', searchProduct);
+            $('#ToDepartmentId, #ToWorker').on('change input', function() {
+                hideDepartmentError();
+                if (sameAsNow()) showDepartmentError(t('The product is already there. Choose another department or worker.'));
+                updateSummary();
             });
 
-            // Department change handler
-            $('#ToDepartmentId').on('change', function() {
-                if (currentProductData && $(this).val() === currentProductData.departmentId?.toString()) {
-                    showWarning(t('You are transferring to the same department the product is currently in.'));
-                } else {
-                    hideWarning();
-                }
-            });
+            // Same department and same worker: the transfer would change nothing.
+            function sameAsNow() {
+                if (!currentProductData) return false;
+                const sameDepartment = $('#ToDepartmentId').val() === String(currentProductData.departmentId ?? '');
+                const worker = ($('#ToWorker').val() || '').trim().toLowerCase();
+                return sameDepartment && worker === (currentProductData.worker || '').trim().toLowerCase();
+            }
 
-            // Search product function
             async function searchProduct() {
                 const inventoryCode = $('#inventoryCodeInput').val().trim();
-
-                if (!inventoryCode) {
-                    showError(t('Please enter an inventory code'));
-                    return;
-                }
-
-                if (inventoryCode === lastSearchedCode && currentProductData) {
-                    return;
-                }
+                if (!inventoryCode) { showError(t('Please enter an inventory code')); return; }
+                if (inventoryCode === lastSearchedCode && currentProductData) return;
 
                 showSearching();
                 hideError();
                 hideWarning();
 
                 try {
-                    const apiUrl = AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`);
-
                     const response = await $.ajax({
-                        url: apiUrl,
+                        url: AppConfig.buildApiUrl(`products/search/inventory-code/${inventoryCode}`),
                         type: 'GET'
                     });
+                    if (!response || !response.id) throw new Error('Product not found');
 
-                    if (response && response.id) {
-                        lastSearchedCode = inventoryCode;
-                        currentProductData = response;
-                        displayProductInfo(response);
-                        await checkPendingRoutes(response.id);
-                    } else {
-                        throw new Error('Product not found');
-                    }
+                    lastSearchedCode = inventoryCode;
+                    currentProductData = response;
+                    displayProductInfo(response);
+                    await checkPendingRoutes(response.id);
                 } catch (error) {
-                    console.error('Search error:', error);
                     currentProductData = null;
                     lastSearchedCode = '';
-
                     if (error.status === 404) {
                         showError(t('No product found with inventory code: {0}', inventoryCode));
                     } else if (error.status === 401) {
@@ -361,7 +215,6 @@
                     } else {
                         showError(error.responseJSON?.error || error.responseJSON?.message || t('Error searching for product'));
                     }
-
                     hideProductInfo();
                     hideTransferFields();
                 } finally {
@@ -369,39 +222,34 @@
                 }
             }
 
-            // Display product information
             function displayProductInfo(product) {
                 $('#productModel').text(product.model || t('N/A'));
-                $('#productVendor').text(product.vendor || t('N/A'));
-                $('#currentWorker').text(product.worker || t('No worker assigned'));
-                $('#productCategory').text(product.categoryName || t('N/A'));
+                $('#productCode').text('#' + product.inventoryCode);
+                $('#productMeta').text([product.vendor, product.categoryName].filter(Boolean).join(' · '));
                 $('#currentDepartment').text(product.departmentName || t('N/A'));
-                $('#workingStatus').html(product.isWorking ?
-                    `<span class="state state-ok">${t('Working')}</span>` :
-                    `<span class="state state-crit">${t('Not Working')}</span>`);
-
+                $('#currentWorker').text(product.worker || t('No worker assigned'));
+                $('#workingStatus').html(product.isWorking
+                    ? `<span class="ip-badge ip-badge-success">${escapeHtml(t('Working'))}</span>`
+                    : `<span class="ip-badge ip-badge-danger">${escapeHtml(t('Not working'))}</span>`);
+                const thumb = document.getElementById('productThumb');
+                thumb.innerHTML = product.imageUrl
+                    ? `<img src="${escapeHtml(product.imageUrl)}" alt="" />`
+                    : '<i class="fa-solid fa-box"></i>';
                 $('#ProductId').val(product.id);
-                $('#productInfoContainer').slideDown();
-
-                showSuccess(t('Product found: {0} - Currently with {1}', product.model || t('N/A'), product.worker || t('no worker')));
+                $('#productInfoContainer').show();
+                updateSummary();
             }
 
-            // Check for pending routes
             async function checkPendingRoutes(productId) {
                 try {
-                    const apiUrl = AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`);
-
                     const routes = await $.ajax({
-                        url: apiUrl,
+                        url: AppConfig.buildApiUrl(`inventoryroutes/product/${productId}`),
                         type: 'GET'
                     });
-
-                    const pendingRoutes = (routes || []).filter(r => !r.isCompleted);
-
-                    if (pendingRoutes.length > 0) {
-                        const lastPending = pendingRoutes[0];
+                    const pending = (routes || []).filter(r => !r.isCompleted);
+                    if (pending.length > 0) {
                         showWarning(t('This product has a pending transfer to {0} created on {1}. The pending transfer must be completed first.',
-                            lastPending.toDepartmentName || '', formatDate(lastPending.createdAt)), true);
+                            pending[0].toDepartmentName || '', formatDate(pending[0].createdAt)));
                         hideTransferFields();
                     } else {
                         showTransferFields();
@@ -412,126 +260,82 @@
                 }
             }
 
-            // Load recent transfers
-            async function loadRecentTransfers() {
-                try {
-                    const apiUrl = AppConfig.buildApiUrl('inventoryroutes?pageSize=5&pageNumber=1');
-
-                    const response = await $.ajax({
-                        url: apiUrl,
-                        type: 'GET'
-                    });
-
-                    if (response && response.items && response.items.length > 0) {
-                        const items = response.items;
-                        let html = '';
-                        items.forEach((route, idx) => {
-                            const statusChip = route.isCompleted ?
-                                `<span class="state state-ok">${t('Completed')}</span>` :
-                                `<span class="state state-warn">${t('Pending')}</span>`;
-                            const rowClass = idx === items.length - 1 ? '' : 'pb-2 mb-2 border-bottom';
-
-                            html += `
-                                <div class="${rowClass}">
-                                    <div class="d-flex justify-content-between align-items-center gap-2">
-                                        <span class="cell-title mono">${escapeHtml(route.inventoryCode)}</span>
-                                        ${statusChip}
-                                    </div>
-                                    <div class="cell-sub">${escapeHtml(route.model || t('N/A'))}</div>
-                                    <div class="cell-sub">
-                                        ${escapeHtml(t('To'))}: ${escapeHtml(route.toDepartmentName)}${route.toWorker ? ` (${escapeHtml(route.toWorker)})` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        });
-                        $('#recentTransfers').html(html);
-                    } else {
-                        $('#recentTransfers').html(
-                            `<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p class="mb-0">${t('No recent transfers')}</p></div>`);
-                    }
-                } catch (error) {
-                    console.error('Failed to load recent transfers:', error);
-                    $('#recentTransfers').html(`<p class="form-text mb-0">${t('Unable to load recent transfers')}</p>`);
-                }
+            // "Finance -> IT · worker" in the footer.
+            function updateSummary() {
+                if (!currentProductData) { $('#transferSummary').empty(); return; }
+                const to = $('#ToDepartmentId').val() ? $('#ToDepartmentId option:selected').text() : '…';
+                const worker = ($('#ToWorker').val() || '').trim();
+                $('#transferSummary').html(
+                    `<span class="fw-semibold text-body">${escapeHtml(currentProductData.departmentName || '-')}</span>` +
+                    ` <i class="fa-solid fa-arrow-right mx-1"></i> ` +
+                    `<span class="fw-semibold text-body">${escapeHtml(to)}</span>` +
+                    (worker ? ` · ${escapeHtml(worker)}` : ''));
             }
 
-            // UI Helper Functions
-            function showTransferFields() {
-                $('#transferFields').slideDown();
-                $submitBtn.prop('disabled', false);
-            }
-
-            function hideTransferFields() {
-                $('#transferFields').slideUp();
-                $submitBtn.prop('disabled', true);
-            }
+            function showTransferFields() { $('#transferFields').show(); $submitBtn.prop('disabled', false); }
+            function hideTransferFields() { $('#transferFields').hide(); $submitBtn.prop('disabled', true); }
 
             function hideProductInfo() {
-                $('#productInfoContainer').slideUp();
+                $('#productInfoContainer').hide();
                 $('#ProductId').val('');
                 currentProductData = null;
             }
 
             function showSearching() {
-                $('#searchBtn').html(`<span class="spinner-border spinner-border-sm me-1"></span> ${t('Searching...')}`)
-                    .prop('disabled', true);
-                $('#searchFeedback').html(`<span class="text-info"><i class="fas fa-search"></i> ${t('Searching...')}</span>`);
+                $('#searchBtn').prop('disabled', true)
+                    .html(`<span class="spinner-border spinner-border-sm"></span><span>${escapeHtml(t('Searching...'))}</span>`);
             }
-
             function hideSearching() {
-                $('#searchBtn').html(`<i class="fas fa-search"></i> ${t('Search')}`)
-                    .prop('disabled', false);
+                $('#searchBtn').prop('disabled', false)
+                    .html(`<i class="fa-solid fa-magnifying-glass"></i><span>${escapeHtml(t('Search'))}</span>`);
             }
 
             function showError(message) {
-                $('#searchFeedback').html(`<span class="text-danger"><i class="fas fa-times-circle"></i> ${escapeHtml(message)}</span>`);
-                $('#warningContainer').html('');
+                $('#searchFeedback').html(`<span class="ip-error">${escapeHtml(message)}</span>`);
+                $('#inventoryCodeInput').addClass('is-invalid');
+                hideWarning();
             }
-
             function hideError() {
-                $('#searchFeedback').html('');
+                $('#searchFeedback').empty();
+                $('#inventoryCodeInput').removeClass('is-invalid');
             }
 
-            function showSuccess(message) {
-                $('#searchFeedback').html(`<span class="text-success"><i class="fas fa-check-circle"></i> ${escapeHtml(message)}</span>`);
+            function showDepartmentError(message) {
+                $('#departmentError').text(message).removeClass('d-none');
+                $('#ToDepartmentId').addClass('is-invalid');
+            }
+            function hideDepartmentError() {
+                $('#departmentError').text('').addClass('d-none');
+                $('#ToDepartmentId').removeClass('is-invalid');
             }
 
-            function showWarning(message, isBlocking = false) {
-                const alertClass = isBlocking ? 'alert-danger' : 'alert-warning';
-                const icon = isBlocking ? 'fa-ban' : 'fa-exclamation-triangle';
-
-                $('#warningContainer').html(`
-                    <div class="alert ${alertClass} mt-3">
-                        <i class="fas ${icon}"></i>
-                        <strong>${isBlocking ? t('Blocked') : t('Warning')}:</strong> ${escapeHtml(message)}
-                    </div>
-                `);
+            function showWarning(message) {
+                $('#warningContainer').html(
+                    `<div class="ip-banner ip-banner-danger mt-3"><i class="fa-solid fa-ban"></i><span>${escapeHtml(message)}</span></div>`);
             }
-
-            function hideWarning() {
-                $('#warningContainer').html('');
-            }
+            function hideWarning() { $('#warningContainer').empty(); }
 
             function resetForm() {
                 hideProductInfo();
                 hideTransferFields();
                 hideError();
                 hideWarning();
-                currentProductData = null;
+                hideDepartmentError();
                 lastSearchedCode = '';
-                isSubmitting = false; // Reset submission flag when resetting form
-                $('#ProductId').val('');
+                isSubmitting = false;
                 $('#ToDepartmentId').val('');
                 $('#ToWorker').val('');
                 $('#Notes').val('');
                 ImageManager.reset(document);
+                updateSummary();
             }
 
-            // Load recent transfers on page load
-            loadRecentTransfers();
-
-            // Refresh recent transfers every 30 seconds
-            setInterval(loadRecentTransfers, 30000);
+            // Opened from a product (?code=1042): search straight away.
+            const preset = new URLSearchParams(window.location.search).get('code');
+            if (preset && /^\d{1,4}$/.test(preset)) {
+                $('#inventoryCodeInput').val(preset);
+                searchProduct();
+            }
         });
     </script>
 }
