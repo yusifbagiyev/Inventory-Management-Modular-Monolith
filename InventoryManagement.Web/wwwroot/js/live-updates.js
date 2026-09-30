@@ -211,8 +211,8 @@ window.LiveUpdates = (function () {
         if (!notice) {
             notice = document.createElement('div');
             notice.id = 'liveUpdateNotice';
-            // alert-permanent: site.js auto-closes other alerts 5 s after load; this one must stay.
-            notice.className = 'alert alert-warning alert-permanent d-flex align-items-center justify-content-between gap-3';
+            // A banner, not a Bootstrap .alert: site.js auto-closes alerts 5 s after load.
+            notice.className = 'ip-banner ip-banner-warning justify-content-between mt-3';
             notice.setAttribute('role', 'status');
             const toolbar = document.querySelector('.ip-main > .ip-toolbar');
             if (toolbar) toolbar.after(notice);
@@ -224,7 +224,7 @@ window.LiveUpdates = (function () {
 
         const reload = document.createElement('button');
         reload.type = 'button';
-        reload.className = 'btn btn-sm btn-warning flex-shrink-0';
+        reload.className = 'ip-btn ip-btn-secondary ip-btn-sm flex-shrink-0';
         reload.textContent = t('Reload');
         reload.addEventListener('click', () => window.location.reload());
 

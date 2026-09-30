@@ -472,3 +472,18 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 /* its Bootstrap rows have negative gutters, which overflowed .ip-table-wrap by 12px */
 .dt-container > .row { margin-left: 0; margin-right: 0; }
 .dt-container > .row > [class*="col"] { padding-left: 0; padding-right: 0; }
+
+/* Inside the width-capped .ip-form the sticky footer keeps the form's width: the package's
+   negative margins (made for a full-width page) pushed it under the rail on the left. */
+.ip-form .ip-form-foot { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+
+/* Absolutely positioned bits inside a table (visually-hidden header text, the inline code editor)
+   need a positioned ancestor inside the scroller, or they escape its clipping and widen the page
+   on phones. */
+.ip-table-wrap { position: relative; }
+.ip-table td { position: relative; }
+/* phones: a filter sharing the tabs row goes onto its own line */
+@media (max-width: 575.98px) {
+  .ip-tabs { flex-wrap: wrap; }
+  .ip-tabs > .ip-filter { margin-left: 0 !important; flex: 1 1 100%; order: 10; }
+}
