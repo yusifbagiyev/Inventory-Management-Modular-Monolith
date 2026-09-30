@@ -106,6 +106,12 @@ namespace InventoryManagement.Web.Controllers
                 .Count();
             ViewBag.ActiveCategoriesInPeriod = transfers.Select(t => t.CategoryName).Distinct().Count();
 
+            // "Needs attention": the current state, whatever the period.
+            ViewBag.NotWorking = (period == "all" ? products : await _mediator.Send(new GetProductCountsQuery())).NotWorking;
+            ViewBag.OpenTransfers = (await _mediator.Send(new GetAllRoutesQuery(1, 1, IsCompleted: false))).TotalCount;
+            if (User.IsInRole(SharedServices.Identity.AllRoles.Admin))
+                ViewBag.PendingApprovals = (await _mediator.Send(new ApprovalService.Application.Features.Queries.GetApprovalStatistics.Query())).Pending;
+
             return View(model);
         }
 

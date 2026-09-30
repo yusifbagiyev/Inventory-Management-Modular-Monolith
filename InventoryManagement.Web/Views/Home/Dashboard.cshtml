@@ -2,312 +2,187 @@
 @{
     ViewData["Title"] = "Dashboard";
     var currentPeriod = ViewBag.CurrentPeriod as string ?? "last7days";
-    var totalDepartments = ViewBag.TotalDepartments ?? 0;
-    var totalCategories = ViewBag.TotalCategories ?? 0;
-    var activeDepartmentsInPeriod = ViewBag.ActiveDepartmentsInPeriod ?? 0;
-    var activeCategoriesInPeriod = ViewBag.ActiveCategoriesInPeriod ?? 0;
-    var startDate = ViewBag.PeriodStartDate as DateTime?;
-    var endDate = ViewBag.PeriodEndDate as DateTime?;
+    var allTime = currentPeriod == "all";
+    var notWorking = (int)(ViewBag.NotWorking ?? 0);
+    var openTransfers = (int)(ViewBag.OpenTransfers ?? 0);
+    var pendingApprovals = ViewBag.PendingApprovals as int?;
 
-    // Pending transfers are the only tile figure that can signal a problem, so it is the only one that gets colour
-    var pendingState = Model.PendingTransfers > 0 ? "state-warn" : "state-idle";
-
-    // Determine period display name
-    var periodName = currentPeriod switch
+    // "compared with the previous 30 days" etc.
+    var comparedWith = currentPeriod switch
     {
-        "last7days" => L["Last 7 Days"].Value,
-        "last30days" => L["Last 30 Days"].Value,
-        "last6months" => L["Last 6 Months"].Value,
-        "all" => L["All Time"].Value,
-        _ => L["Last 7 Days"].Value
+        "last30days" => L["vs the previous 30 days"].Value,
+        "last6months" => L["vs the previous 6 months"].Value,
+        _ => L["vs the previous 7 days"].Value
     };
 
-    // Links into the filtered lists for this period (tiles, chart points, table rows).
+    // Links into the filtered lists for this period (figures, chart bars, rows).
     string PeriodQuery() => Model.PeriodStart is null ? "" : $"&startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
     var transfersUrl = "/Routes?routeType=Transfer" + PeriodQuery();
     var productsUrl = Model.PeriodStart is null ? "/Products" : $"/Products?startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
+    var categoryTotal = Model.CategoryDistributions.Sum(c => c.Count);
+    var maxDepartment = Math.Max(1, Model.DepartmentStats.Select(d => d.PeriodTransfers).DefaultIfEmpty(0).Max());
+    var today = DateTime.Today;
 }
 
 @functions {
-    /// <summary>Change against the previous period: arrow, colour and "+12%" (or "+3" when it was zero).</summary>
+    /// <summary>Change against the previous period, coloured by meaning (fewer pending is good).</summary>
     private (string Icon, string Css, string Text)? TrendOf(int current, int? previous, bool upIsBad = false)
     {
         if (previous is not { } prev)
             return null;
-        if (current == prev)
-            return ("fa-minus", "trend-flat", "0%");
-
-        var up = current > prev;
-        var text = prev == 0
-            ? $"+{current}"
-            : $"{(up ? "+" : "−")}{Math.Abs(Math.Round((current - prev) * 100.0 / prev)):0}%";
-        return (up ? "fa-arrow-trend-up" : "fa-arrow-trend-down", up == upIsBad ? "trend-bad" : "trend-good", text);
+        var delta = current - prev;
+        if (delta == 0)
+            return ("fa-minus", "", "0");
+        var up = delta > 0;
+        return (up ? "fa-arrow-trend-up" : "fa-arrow-trend-down", up == upIsBad ? "bad" : "good", (up ? "+" : "−") + Math.Abs(delta));
     }
 }
 
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
+            <div class="ip-faint mb-1">@L[today.DayOfWeek.ToString()], @today.ToString("dd.MM.yyyy")</div>
             <h1>@L["Dashboard"]</h1>
         </div>
-        <div class="d-flex gap-2 flex-wrap align-items-center">
-            <span class="form-label mb-0">@L["Period"]</span>
-            <button type="button" class="qchip @(currentPeriod == "last7days" ? "active" : "")"
-                    onclick="changePeriod('last7days')">
-                @L["Last 7 Days"]
-            </button>
-            <button type="button" class="qchip @(currentPeriod == "last30days" ? "active" : "")"
-                    onclick="changePeriod('last30days')">
-                @L["Last 30 Days"]
-            </button>
-            <button type="button" class="qchip @(currentPeriod == "last6months" ? "active" : "")"
-                    onclick="changePeriod('last6months')">
-                @L["Last 6 Months"]
-            </button>
-            <button type="button" class="qchip @(currentPeriod == "all" ? "active" : "")"
-                    onclick="changePeriod('all')">
-                @L["All Time"]
-            </button>
-        </div>
+        <nav class="ip-tabs ink border-0" aria-label="@L["Period"]">
+            <a class="ip-tab @(currentPeriod == "last7days" ? "active" : "")" href="/Home/Dashboard?period=last7days">@L["7 days"]</a>
+            <a class="ip-tab @(currentPeriod == "last30days" ? "active" : "")" href="/Home/Dashboard?period=last30days">@L["30 days"]</a>
+            <a class="ip-tab @(currentPeriod == "last6months" ? "active" : "")" href="/Home/Dashboard?period=last6months">@L["6 months"]</a>
+            <a class="ip-tab @(allTime ? "active" : "")" href="/Home/Dashboard?period=all">@L["All"]</a>
+        </nav>
     </div>
 
-    <!-- Period Info Banner -->
-    @if (startDate.HasValue && endDate.HasValue)
-    {
-        <div class="alert alert-info mt-3 mb-3">
-            <i class="fas fa-calendar-alt me-2"></i>
-            <strong>@L["Viewing:"]</strong> @periodName
-            <span class="mx-2">|</span>
-            <strong>@L["Date Range:"]</strong> @startDate.Value.ToString("dd.MM.yyyy") - @endDate.Value.ToString("dd.MM.yyyy")
-            @if (currentPeriod != "all")
+    <div class="ip-kpi-grid" id="dashboardStats">
+        <a class="ip-kpi" href="@productsUrl">
+            <span class="label">@(allTime ? L["Total products"] : L["New products"])</span>
+            <span class="value">@Model.TotalProducts.ToString("N0")</span>
+            @if (!allTime && TrendOf(Model.TotalProducts, Model.PreviousTotalProducts) is { } t1)
             {
-                <span class="ms-3"><em>@L["(Showing transfer activity and new products for this period)"]</em></span>
+                <span class="trend"><b class="@t1.Css"><i class="fa-solid @t1.Icon"></i> @t1.Text</b> @comparedWith</span>
             }
-        </div>
-    }
-
-    <!-- Key Metrics -->
-    <div class="row g-3 mt-1 mb-3" id="dashboardStats">
-        <div class="col-xl-3 col-md-6">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-boxes me-1"></i>
-                        @if (currentPeriod == "all")
-                        {
-                            <text>@L["Total Products"]</text>
-                        }
-                        else
-                        {
-                            <text>@L["New Products Added"]</text>
-                        }
-                    </div>
-                    <div class="d-flex align-items-baseline gap-2 mb-2">
-                        <a class="display-6 metric-link" href="@productsUrl">@Model.TotalProducts.ToString("N0")</a>
-                        @if (TrendOf(Model.TotalProducts, Model.PreviousTotalProducts) is { } productTrend)
-                        {
-                            <span class="trend @productTrend.Css" title="@L["Previous period: {0}", Model.PreviousTotalProducts!]">
-                                <i class="fas @productTrend.Icon"></i> @productTrend.Text
-                            </span>
-                        }
-                    </div>
-                    <span class="state state-flat state-ok">
-                        <i class="fas fa-check-circle"></i> @L["{0} active", Model.ActiveProducts]
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-exchange-alt me-1"></i>
-                        @L["Total Transfers"]
-                    </div>
-                    <div class="d-flex align-items-baseline gap-2 mb-2">
-                        <a class="display-6 metric-link" href="@transfersUrl">@Model.TotalRoutes.ToString("N0")</a>
-                        @if (TrendOf(Model.TotalRoutes, Model.PreviousTotalRoutes) is { } transferTrend)
-                        {
-                            <span class="trend @transferTrend.Css" title="@L["Previous period: {0}", Model.PreviousTotalRoutes!]">
-                                <i class="fas @transferTrend.Icon"></i> @transferTrend.Text
-                            </span>
-                        }
-                    </div>
-                    <a class="state state-flat @pendingState metric-chip" href="@(transfersUrl)&isCompleted=false">
-                        <i class="fas fa-hourglass-half"></i> @L["{0} pending", Model.PendingTransfers ?? 0]
-                        @if (TrendOf(Model.PendingTransfers ?? 0, Model.PreviousPendingTransfers, upIsBad: true) is { } pendingTrend && pendingTrend.Css != "trend-flat")
-                        {
-                            <span class="trend @pendingTrend.Css ms-1" title="@L["Previous period: {0}", Model.PreviousPendingTransfers!]"><i class="fas @pendingTrend.Icon"></i> @pendingTrend.Text</span>
-                        }
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-building me-1"></i>
-                        @L["Departments"]
-                    </div>
-                    <a class="display-6 mb-2 d-block metric-link" href="/Departments">@totalDepartments</a>
-                    <span class="state state-flat state-info">
-                        <i class="fas fa-chart-line"></i> @L["{0} active in period", (object)activeDepartmentsInPeriod]
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="section-title">
-                        <i class="fas fa-tags me-1"></i>
-                        @L["Categories"]
-                    </div>
-                    <a class="display-6 mb-2 d-block metric-link" href="/Categories">@totalCategories</a>
-                    <span class="state state-flat state-idle">
-                        <i class="fas fa-chart-line"></i> @L["{0} active in period", (object)activeCategoriesInPeriod]
-                    </span>
-                </div>
-            </div>
-        </div>
+        </a>
+        <a class="ip-kpi" href="@(productsUrl)@(Model.PeriodStart is null ? "?" : "&")availability=true">
+            <span class="label">@(allTime ? L["Active products"] : L["Of them active"])</span>
+            <span class="value">@Model.ActiveProducts.ToString("N0")</span>
+            <span class="trend">@L["{0} not working in total", notWorking]</span>
+        </a>
+        <a class="ip-kpi" href="@(transfersUrl)&isCompleted=true">
+            <span class="label">@L["Completed transfers"]</span>
+            <span class="value">@((Model.CompletedTransfers ?? 0).ToString("N0"))</span>
+            @if (!allTime && TrendOf(Model.CompletedTransfers ?? 0, Model.PreviousCompletedTransfers) is { } t3)
+            {
+                <span class="trend"><b class="@t3.Css"><i class="fa-solid @t3.Icon"></i> @t3.Text</b> @comparedWith</span>
+            }
+        </a>
+        <a class="ip-kpi" href="@(transfersUrl)&isCompleted=false">
+            <span class="label">@L["Pending transfers"]</span>
+            <span class="value">@((Model.PendingTransfers ?? 0).ToString("N0"))</span>
+            @if (!allTime && TrendOf(Model.PendingTransfers ?? 0, Model.PreviousPendingTransfers, upIsBad: true) is { } t4)
+            {
+                <span class="trend"><b class="@t4.Css"><i class="fa-solid @t4.Icon"></i> @t4.Text</b> @comparedWith</span>
+            }
+        </a>
     </div>
 
-    <!-- Charts Row -->
-    <div class="row g-3 mb-3" id="dashboardCharts">
+    <div class="row g-5 mt-0" id="dashboardCharts">
         <div class="col-xl-8">
-            <div class="card h-100">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@L["Transfer Activity"] (@periodName)</h5>
-                        <small class="text-muted">@L["Completed vs Pending"] · @L["click a point to open those transfers"]</small>
+            <section class="ip-section">
+                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+                    <h2>@L["Transfer Activity"]</h2>
+                    <div class="ip-legend">
+                        <span><i style="background: var(--ip-chart-1)"></i>@L["Completed"]</span>
+                        <span><i style="background: var(--ip-chart-pending)"></i>@L["Pending"]</span>
                     </div>
                 </div>
-                <div class="card-body">
-                    @if (Model.TransferActivityData.Labels.Any())
-                    {
-                        @* Chart.js needs an explicitly sized box when maintainAspectRatio is off. *@
-                        <div class="chart-container" style="position: relative; height: 300px;">
-                            <canvas id="transferChart" data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="/Routes?routeType=Transfer"></canvas>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-chart-line"></i>
-                            <h5>@L["No transfer activity for this period"]</h5>
-                            <p class="text-muted mb-0">@L["Pick a wider period to see movement over time."]</p>
-                        </div>
-                    }
-                </div>
-            </div>
+                @if (Model.TransferActivityData.Labels.Any())
+                {
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="transferChart" role="img" aria-label="@L["Transfer Activity"]"
+                                data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="/Routes?routeType=Transfer"></canvas>
+                    </div>
+                    <p class="ip-hint mt-2 mb-0">@L["Click a bar to open those transfers."]</p>
+                }
+                else
+                {
+                    <p class="ip-muted py-4 mb-0">@L["No transfer activity for this period"]</p>
+                }
+            </section>
         </div>
 
         <div class="col-xl-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">@L["Categories in Transfers"]</h5>
-                    <small class="text-muted">@L["Products transferred by category"]</small>
-                </div>
-                <div class="card-body">
-                    @if (Model.CategoryDistributions.Any())
-                    {
-                        <div class="chart-container" style="position: relative; height: 250px;">
-                            <canvas id="categoryChart" data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@transfersUrl"></canvas>
+            <section class="ip-section">
+                <h2 class="mb-3">@L["Needs attention"]</h2>
+                @if (pendingApprovals is int approvals)
+                {
+                    <a class="ip-list-link" href="/Approvals">
+                        <span>@L["Requests awaiting approval"]</span>
+                        <b class="ip-num @(approvals > 0 ? "ip-status-text warning fs-6" : "")">@approvals</b>
+                    </a>
+                }
+                <a class="ip-list-link" href="/Routes?isCompleted=false">
+                    <span>@L["Unfinished transfers"]</span>
+                    <b class="ip-num @(openTransfers > 0 ? "ip-status-text warning fs-6" : "")">@openTransfers</b>
+                </a>
+                <a class="ip-list-link" href="/Products?status=false">
+                    <span>@L["Broken devices"]</span>
+                    <b class="ip-num @(notWorking > 0 ? "text-danger" : "")">@notWorking</b>
+                </a>
+            </section>
+        </div>
+
+        <div class="col-xl-5">
+            <section class="ip-section">
+                <h2 class="mb-3">@L["Categories in Transfers"]</h2>
+                @if (Model.CategoryDistributions.Any())
+                {
+                    <div class="d-flex gap-4 align-items-center flex-wrap">
+                        <div style="position: relative; width: 168px; height: 168px;">
+                            <canvas id="categoryChart" role="img" aria-label="@L["Categories in Transfers"]"
+                                    data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@transfersUrl"></canvas>
                         </div>
-                        <!-- Legend -->
-                        <div class="detail-grid mt-3">
-                            @foreach (var category in Model.CategoryDistributions)
+                        <div class="flex-grow-1" style="min-width: 200px">
+                            @for (var i = 0; i < Model.CategoryDistributions.Count; i++)
                             {
-                                <a class="detail-row row-link" href="@(transfersUrl)&categoryName=@Uri.EscapeDataString(category.CategoryName)">
-                                    <span class="d-label">
-                                        <span class="d-inline-block align-middle me-2"
-                                              style="width: 10px; height: 10px; border-radius: 2px; background-color: @category.Color;"></span>@category.CategoryName
+                                var category = Model.CategoryDistributions[i];
+                                <a class="ip-list-link" href="@(transfersUrl)&categoryName=@Uri.EscapeDataString(category.CategoryName)">
+                                    <span class="d-flex align-items-center gap-2" style="min-width: 0">
+                                        <i class="ip-swatch" style="background: var(--ip-chart-@(i % 5 + 1))"></i>
+                                        <span class="text-truncate">@category.CategoryName</span>
                                     </span>
-                                    <span class="d-value"><span class="mono">@category.Count</span> @L["transfers"]</span>
+                                    <span class="ip-num ip-muted text-nowrap">@(categoryTotal == 0 ? 0 : Math.Round(category.Count * 100.0 / categoryTotal))% · @category.Count</span>
                                 </a>
                             }
                         </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-chart-pie"></i>
-                            <h5>@L["No transfers for this period"]</h5>
-                            <p class="text-muted mb-0">@L["The category split appears once products move."]</p>
-                        </div>
-                    }
-                </div>
-            </div>
+                    </div>
+                }
+                else
+                {
+                    <p class="ip-muted py-4 mb-0">@L["No transfers for this period"]</p>
+                }
+            </section>
         </div>
-    </div>
 
-    <!-- Department Performance -->
-    <div class="row" id="dashboardRecent">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">@L["Top Departments by Transfer Activity"]</h5>
-                    <small class="text-muted">@L["Departments with the most transfer activity during {0}", periodName.ToLower()]</small>
-                </div>
-                <div class="card-body p-0">
-                    @if (Model.DepartmentStats.Any())
+        <div class="col-xl-7" id="dashboardRecent">
+            <section class="ip-section">
+                <h2 class="mb-3">@L["Top Departments by Transfer Activity"]</h2>
+                @if (Model.DepartmentStats.Any())
+                {
+                    @foreach (var dept in Model.DepartmentStats)
                     {
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>@L["Department"]</th>
-                                        <th class="text-center">
-                                            <i class="fas fa-exchange-alt me-1"></i>
-                                            @L["Total Transfers"]
-                                        </th>
-                                        <th class="text-center">
-                                            <i class="fas fa-box me-1"></i>
-                                            @L["Unique Products"]
-                                        </th>
-                                        <th class="text-center">
-                                            <i class="fas fa-users me-1"></i>
-                                            @L["Active Workers"]
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var dept in Model.DepartmentStats)
-                                    {
-                                        <tr class="row-link" data-href="@(transfersUrl)&departmentId=@dept.DepartmentId">
-                                            <td>
-                                                <i class="fas fa-building text-muted me-2"></i>
-                                                <a class="fw-semibold text-reset text-decoration-none" href="@(transfersUrl)&departmentId=@dept.DepartmentId">@dept.DepartmentName</a>
-                                            </td>
-                                            <td class="text-center num">@dept.PeriodTransfers</td>
-                                            <td class="text-center num">@dept.ProductCount</td>
-                                            <td class="text-center num">@dept.ActiveWorkers</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="page-actions">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                <strong>@L["Note:"]</strong> @(L["\"Active\" means the department participated in at least one transfer during this period."])
-                            </small>
-                        </div>
+                        <a class="ip-list-link" href="@(transfersUrl)&departmentId=@dept.DepartmentId">
+                            <span class="text-truncate" style="width: 30%">@dept.DepartmentName</span>
+                            <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
+                            <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">
+                                @L["{0} transfers", dept.PeriodTransfers]
+                            </span>
+                        </a>
                     }
-                    else
-                    {
-                        <div class="empty-state">
-                            <i class="fas fa-building"></i>
-                            <h5>@L["No department activity for this period"]</h5>
-                            <p class="text-muted mb-0">@L["Departments show up here once they send or receive a transfer."]</p>
-                        </div>
-                    }
-                </div>
-            </div>
+                }
+                else
+                {
+                    <p class="ip-muted py-4 mb-0">@L["No department activity for this period"]</p>
+                }
+            </section>
         </div>
     </div>
 </div>
@@ -315,264 +190,105 @@
 @section Scripts {
     <script>
         let transferChart, categoryChart;
-        const currentPeriod = '@currentPeriod';
 
-        // Chart palette, read from the design tokens (modern-ui.css) so it follows the theme.
-        let chartColors = readChartColors();
+        // Colours come from the design tokens, so the charts follow the theme.
+        const v = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-        function readChartColors() {
-            const css = getComputedStyle(document.documentElement);
-            const token = name => css.getPropertyValue(name).trim();
-            const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-            return {
-                accent: token('--accent'),
-                ok: token('--ok'),
-                warn: token('--warn'),
-                crit: token('--crit'),
-                neutral: token('--ink-3'),
-                surface: token('--surface'),
-                ink: dark ? 'rgba(8, 16, 21, 0.94)' : 'rgba(20, 35, 43, 0.92)',   // tooltip background
-                grid: dark ? 'rgba(227, 237, 242, 0.08)' : 'rgba(20, 35, 43, 0.06)',
-                okFill: withAlpha(token('--ok'), 0.14),
-                warnFill: withAlpha(token('--warn'), 0.14)
-            };
+        function initializeCharts() {
+            Chart.defaults.font.family = v('--ip-font-sans');
+            Chart.defaults.color = v('--ip-text-3');
+            initializeTransferChart();
+            initializeCategoryChart();
         }
 
-        // '#RRGGBB' -> 'rgba(r, g, b, a)' (a canvas fill cannot rely on CSS color-mix()).
-        function withAlpha(hex, alpha) {
-            const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-            return m ? `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})` : hex;
-        }
-
-        // Toggling the theme redraws the charts in the new palette.
-        window.addEventListener('themechange', function () {
+        function destroyCharts() {
             transferChart?.destroy();
             categoryChart?.destroy();
             transferChart = categoryChart = undefined;
-            chartColors = readChartColors();
-            initializeCharts();
-        });
+        }
 
-        $(document).ready(function() {
-            initializeCharts();
-            initializeTooltips();
-        });
+        window.addEventListener('themechange', function () { destroyCharts(); initializeCharts(); });
+        $(initializeCharts);
 
         // Any product, route, category, department or approval change updates the figures.
         LiveUpdates.watch({
             entities: ['product', 'route', 'category', 'department', 'approval'],
-            regions: ['#dashboardStats', '#dashboardCharts', '#dashboardRecent'],
-            beforeRefresh() {
-                transferChart?.destroy();
-                categoryChart?.destroy();
-                transferChart = categoryChart = undefined;
-                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
-            },
-            afterRefresh() {
-                initializeCharts();
-                initializeTooltips();
-            }
+            regions: ['#dashboardStats', '#dashboardCharts'],
+            beforeRefresh: destroyCharts,
+            afterRefresh: initializeCharts
         });
 
-        function initializeTooltips() {
-            $('[data-bs-toggle="tooltip"]').tooltip();
-        }
-
-        // Department rows open that department's transfers (delegated: survives live refreshes).
-        $(document).on('click', 'tr.row-link[data-href]', function (e) {
-            if (e.target.closest('a')) return;
-            window.location.href = this.dataset.href;
-        });
-
-        // Chart clicks: pointer over clickable parts, then navigate.
         function pointerOnHover(event, elements) {
             event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
         }
 
-        function changePeriod(period) {
-            if (period === currentPeriod) return;
-
-            showLoadingOverlay();
-            window.location.href = '/Home/Dashboard?period=' + period;
+        function tooltip() {
+            return { backgroundColor: v('--ip-text-1'), titleColor: v('--ip-surface'), bodyColor: v('--ip-surface'), padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4 };
         }
 
-        function showLoadingOverlay() {
-            const overlay = `
-                <div class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-                     style="background: color-mix(in srgb, var(--surface) 95%, transparent); z-index: 9999;">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
-                            <span class="visually-hidden">${t('Loading...')}</span>
-                        </div>
-                        <h5>${t('Loading dashboard data...')}</h5>
-                        <p class="text-muted">${t('Please wait')}</p>
-                    </div>
-                </div>
-            `;
-            $('body').append(overlay);
-        }
-
-        function initializeCharts() {
-            initializeCategoryChart();
-            initializeTransferChart();
-        }
-
-        function initializeCategoryChart() {
-            const ctx = document.getElementById('categoryChart');
-            if (!ctx) return;
-
-            // Data rides on the canvas (data-chart, HTML-encoded by Razor) so a live refresh brings the new figures.
-            const categoryData = JSON.parse(ctx.dataset.chart || 'null');
-            if (!categoryData || categoryData.length === 0) return;
-
-            categoryChart = new Chart(ctx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: categoryData.map(c => c.categoryName),
-                    datasets: [{
-                        data: categoryData.map(c => c.count),
-                        backgroundColor: categoryData.map(c => c.color),
-                        borderWidth: 3,
-                        borderColor: chartColors.surface,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: chartColors.ink,
-                            padding: 12,
-                            titleFont: { size: 13, weight: 'bold' },
-                            bodyFont: { size: 12 },
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${t('{0} transfers ({1}%)', value, percentage)}`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '65%',
-                    onHover: pointerOnHover,
-                    onClick: function (event, elements) {
-                        if (!elements.length) return;
-                        const category = categoryData[elements[0].index];
-                        window.location.href = ctx.dataset.link + '&categoryName=' + encodeURIComponent(category.categoryName);
-                    }
-                }
-            });
-        }
-
+        // Stacked bars: completed and pending per day/week/month. A bar opens those transfers.
         function initializeTransferChart() {
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
+            const data = JSON.parse(ctx.dataset.chart || 'null');
+            if (!data || !data.labels || !data.labels.length) return;
 
-            const transferData = JSON.parse(ctx.dataset.chart || 'null');
-            if (!transferData || !transferData.labels || transferData.labels.length === 0) return;
-
-            transferChart = new Chart(ctx.getContext('2d'), {
-                type: 'line',
+            transferChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: transferData.labels,
+                    labels: data.labels,
                     datasets: [
-                        {
-                            label: t('Completed'),
-                            data: transferData.completedData,
-                            borderColor: chartColors.ok,
-                            backgroundColor: chartColors.okFill,
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 3,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: chartColors.ok,
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2
-                        },
-                        {
-                            label: t('Pending'),
-                            data: transferData.pendingData,
-                            borderColor: chartColors.warn,
-                            backgroundColor: chartColors.warnFill,
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 3,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: chartColors.warn,
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2
-                        }
+                        { label: t('Completed'), data: data.completedData, backgroundColor: v('--ip-chart-1'), borderRadius: 4, maxBarThickness: 64 },
+                        { label: t('Pending'), data: data.pendingData, backgroundColor: v('--ip-chart-pending'), borderRadius: 4, maxBarThickness: 64 }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false }, tooltip: tooltip() },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') } },
+                        y: { stacked: true, beginAtZero: true, grid: { color: v('--ip-border') }, border: { display: false }, ticks: { precision: 0 } }
                     },
                     onHover: pointerOnHover,
-                    // A point opens the transfers of that day/week/month; the nearest series picks completed or pending.
-                    onClick: function (event, elements, chart) {
+                    onClick: function (event, elements) {
                         if (!elements.length) return;
-                        const index = elements[0].index;
-                        const nearest = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, false)[0];
-                        const status = nearest ? (nearest.datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false') : '';
-                        window.location.href = ctx.dataset.link
-                            + '&startDate=' + transferData.bucketStarts[index]
-                            + '&endDate=' + transferData.bucketEnds[index] + status;
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 15,
-                                color: chartColors.neutral,
-                                font: { size: 12, weight: 'bold' }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: chartColors.ink,
-                            padding: 12,
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            titleFont: { size: 13, weight: 'bold' },
-                            bodyFont: { size: 12 }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1,
-                                precision: 0,
-                                color: chartColors.neutral,
-                                font: { size: 11 }
-                            },
-                            grid: {
-                                color: chartColors.grid,
-                                drawBorder: false
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                color: chartColors.neutral,
-                                font: { size: 11 }
-                            }
-                        }
+                        const i = elements[0].index;
+                        const status = elements.length === 1 ? (elements[0].datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false') : '';
+                        window.location.href = ctx.dataset.link + '&startDate=' + data.bucketStarts[i] + '&endDate=' + data.bucketEnds[i] + status;
+                    }
+                }
+            });
+        }
+
+        // Doughnut: transfers per category; the legend beside it is HTML. A slice opens those transfers.
+        function initializeCategoryChart() {
+            const ctx = document.getElementById('categoryChart');
+            if (!ctx) return;
+            const data = JSON.parse(ctx.dataset.chart || 'null');
+            if (!data || !data.length) return;
+
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(c => c.categoryName),
+                    datasets: [{
+                        data: data.map(c => c.count),
+                        backgroundColor: data.map((c, i) => v('--ip-chart-' + (i % 5 + 1))),
+                        borderColor: v('--ip-surface'),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: { legend: { display: false }, tooltip: tooltip() },
+                    onHover: pointerOnHover,
+                    onClick: function (event, elements) {
+                        if (!elements.length) return;
+                        window.location.href = ctx.dataset.link + '&categoryName=' + encodeURIComponent(data[elements[0].index].categoryName);
                     }
                 }
             });

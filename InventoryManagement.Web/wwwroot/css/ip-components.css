@@ -422,3 +422,9 @@ tr.ip-clickable { cursor: pointer; }
 .ip-notif-day .ip-notif-item:focus-visible { outline-offset: -2px; }
 .ip-notif-link { display: inline-block; margin-top: 4px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-accent-text); }
 .ip-tabs > .ip-filter { margin-bottom: 4px; }
+
+/* ---------- dashboard (design: 02) ---------- */
+.ip-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.ip-list-link .ip-bar { max-width: 50%; }
+.ip-kpi-grid { margin-bottom: var(--ip-space-8); }
+.ip-page-head .ip-tabs.border-0 { border-bottom: 0; }

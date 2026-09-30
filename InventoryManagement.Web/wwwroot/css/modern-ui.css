@@ -723,15 +723,5 @@ td > .empty-state, .table .empty-state { padding: 40px 0; }
     border: 2px solid var(--surface);
 }
 
-/* Dashboard: figures link to the lists behind them; trend against the previous period. */
-.metric-link { color: inherit; text-decoration: none; }
-.metric-link:hover { color: var(--accent-2); }
-a.metric-chip { text-decoration: none; }
-a.metric-chip:hover { filter: brightness(.96); }
-.trend { display: inline-flex; align-items: center; gap: 4px; font: 600 12.5px/1 var(--font-mono, monospace); padding: 3px 6px; border-radius: 6px; }
-.trend-good { color: var(--ok); background: var(--ok-weak); }
-.trend-bad { color: var(--crit); background: var(--crit-weak); }
-.trend-flat { color: var(--ink-3); background: var(--surface-2); }
-.state .trend { padding: 0 4px; background: transparent; }
 a.row-link, tr.row-link { color: inherit; text-decoration: none; cursor: pointer; }
 a.row-link:hover .d-label, tr.row-link:hover td { color: var(--accent-2); }
