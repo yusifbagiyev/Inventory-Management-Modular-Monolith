@@ -68,7 +68,7 @@
     }
 
     <!-- Key Metrics -->
-    <div class="row g-3 mt-1 mb-3">
+    <div class="row g-3 mt-1 mb-3" id="dashboardStats">
         <div class="col-xl-3 col-md-6">
             <div class="card h-100">
                 <div class="card-body">
@@ -138,7 +138,7 @@
     </div>
 
     <!-- Charts Row -->
-    <div class="row g-3 mb-3">
+    <div class="row g-3 mb-3" id="dashboardCharts">
         <div class="col-xl-8">
             <div class="card h-100">
                 <div class="card-header">
@@ -152,7 +152,7 @@
                     {
                         @* Chart.js needs an explicitly sized box when maintainAspectRatio is off. *@
                         <div class="chart-container" style="position: relative; height: 300px;">
-                            <canvas id="transferChart"></canvas>
+                            <canvas id="transferChart" data-chart="@Json.Serialize(Model.TransferActivityData).ToString()"></canvas>
                         </div>
                     }
                     else
@@ -177,7 +177,7 @@
                     @if (Model.CategoryDistributions.Any())
                     {
                         <div class="chart-container" style="position: relative; height: 250px;">
-                            <canvas id="categoryChart"></canvas>
+                            <canvas id="categoryChart" data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()"></canvas>
                         </div>
                         <!-- Legend -->
                         <div class="detail-grid mt-3">
@@ -207,7 +207,7 @@
     </div>
 
     <!-- Department Performance -->
-    <div class="row">
+    <div class="row" id="dashboardRecent">
         <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header">
@@ -297,6 +297,22 @@
             initializeTooltips();
         });
 
+        // Any product, route, category, department or approval change updates the figures.
+        LiveUpdates.watch({
+            entities: ['product', 'route', 'category', 'department', 'approval'],
+            regions: ['#dashboardStats', '#dashboardCharts', '#dashboardRecent'],
+            beforeRefresh() {
+                transferChart?.destroy();
+                categoryChart?.destroy();
+                transferChart = categoryChart = undefined;
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+            },
+            afterRefresh() {
+                initializeCharts();
+                initializeTooltips();
+            }
+        });
+
         function initializeTooltips() {
             $('[data-bs-toggle="tooltip"]').tooltip();
         }
@@ -333,7 +349,8 @@
             const ctx = document.getElementById('categoryChart');
             if (!ctx) return;
 
-            const categoryData = @Html.Raw(Json.Serialize(Model.CategoryDistributions));
+            // Data rides on the canvas (data-chart, HTML-encoded by Razor) so a live refresh brings the new figures.
+            const categoryData = JSON.parse(ctx.dataset.chart || 'null');
             if (!categoryData || categoryData.length === 0) return;
 
             categoryChart = new Chart(ctx.getContext('2d'), {
@@ -380,7 +397,7 @@
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
 
-            const transferData = @Html.Raw(Json.Serialize(Model.TransferActivityData));
+            const transferData = JSON.parse(ctx.dataset.chart || 'null');
             if (!transferData || !transferData.labels || transferData.labels.length === 0) return;
 
             transferChart = new Chart(ctx.getContext('2d'), {

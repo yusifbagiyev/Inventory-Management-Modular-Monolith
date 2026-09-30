@@ -166,12 +166,12 @@
         }
     </div>
 
-    <div class="result-bar">
+    <div class="result-bar" id="productsSummary">
         <span><b>@Model.TotalCount</b> product@(Model.TotalCount == 1 ? "" : "s")@(hasFilters ? " matched" : "")</span>
         <span class="text-muted">Page @Model.PageNumber</span>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="productsRegion">
         <div class="card-body p-0">
             @if (Model.Items.Any())
             {
@@ -610,5 +610,12 @@
             }
         });
 
+        // Other users' changes refresh the count and the table in place (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['product', 'category', 'department'],
+            regions: ['#productsSummary', '#productsRegion'],
+            // An inventory code being edited in a row must not be swapped away.
+            isEditing: () => $('.inventory-code-input:visible').length > 0
+        });
     </script>
 }

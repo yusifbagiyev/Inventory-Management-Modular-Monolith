@@ -36,7 +36,7 @@
         </div>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="myRequestsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
             <span><i class="bi bi-list-check me-1"></i> Your Approval Requests</span>
             <span class="text-muted mono">@Model.Requests.Count</span>
@@ -176,6 +176,17 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
+            initRequestsTable();
+
+            $('.filter-btn').click(function() {
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
+                applyStatusFilter();
+            });
+        });
+
+        // Runs on load and again after live-updates.js swaps in a fresh table.
+        function initRequestsTable() {
             // the table is only rendered when the user has at least one request
             if ($('#myRequestsTable').length) {
                 $('#myRequestsTable').DataTable({
@@ -183,24 +194,32 @@
                     pageLength: 25
                 });
             }
+        }
 
-            // Filter functionality
-            $('.filter-btn').click(function() {
-                $('.filter-btn').removeClass('active');
-                $(this).addClass('active');
+        function applyStatusFilter() {
+            const filter = $('.filter-btn.active').data('filter') || 'all';
 
-                var filter = $(this).data('filter');
+            if (filter === 'all') {
+                $('tr[data-status]').show();
+            } else {
+                $('tr[data-status]').hide();
+                $(`tr[data-status="${filter}"]`).show();
+            }
 
-                if (filter === 'all') {
-                    $('tr[data-status]').show();
-                } else {
-                    $('tr[data-status]').hide();
-                    $(`tr[data-status="${filter}"]`).show();
-                }
+            if ($.fn.DataTable.isDataTable('#myRequestsTable')) $('#myRequestsTable').DataTable().draw();
+        }
 
-                // Refresh DataTable
-                $('#myRequestsTable').DataTable().draw();
-            });
+        // An admin approving or rejecting one of your requests updates its status here.
+        LiveUpdates.watch({
+            entities: ['approval'],
+            regions: ['#myRequestsRegion'],
+            beforeRefresh() {
+                if ($.fn.DataTable.isDataTable('#myRequestsTable')) $('#myRequestsTable').DataTable().destroy();
+            },
+            afterRefresh() {
+                initRequestsTable();
+                applyStatusFilter();
+            }
         });
 
         function viewDetails(requestId) {

@@ -4,7 +4,7 @@
     var products = ViewBag.Products as List<ProductViewModel> ?? new List<ProductViewModel>();
 }
 
-<div class="container-fluid px-4">
+<div class="container-fluid px-4" id="detailsRegion">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
             <h1 class="mb-1">@Model.Name</h1>
@@ -165,7 +165,10 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
+        $(document).ready(initProductsTable);
+
+        // Runs on load and again after live-updates.js swaps in a fresh table.
+        function initProductsTable() {
             // Initialize DataTable with modern styling
             $('#departmentProductsTable').DataTable({
                 pageLength: 25,
@@ -180,6 +183,19 @@
                 },
                 dom: '<"row mb-3"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row mt-3"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
             });
+        }
+
+
+        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['department', 'product'],
+            ids: { department: @Model.Id },
+            regions: ['#detailsRegion'],
+            label: 'department',
+            beforeRefresh() {
+                if ($.fn.DataTable.isDataTable('#departmentProductsTable')) $('#departmentProductsTable').DataTable().destroy();
+            },
+            afterRefresh: initProductsTable
         });
     </script>
 }

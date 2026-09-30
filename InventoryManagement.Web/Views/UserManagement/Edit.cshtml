@@ -361,5 +361,14 @@
                 }
             });
         }
+
+
+        // Someone else saving or deleting this user while it is open: warn, never touch the form.
+        LiveUpdates.watch({
+            mode: 'warn',
+            entities: ['user'],
+            ids: { user: @Model.Id },
+            label: 'user'
+        });
     </script>
 }

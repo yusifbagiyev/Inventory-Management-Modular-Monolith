@@ -5,6 +5,7 @@ using IdentityService.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using SharedServices.Contracts;
+using SharedServices.LiveUpdates;
 using SharedServices.Persistence;
 
 namespace IdentityService.Infrastructure
@@ -14,6 +15,13 @@ namespace IdentityService.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddModuleDbContext<IdentityDbContext>(IdentityDbContext.Schema);
+            // Sign-ins stamp these; they are not changes anyone needs to see.
+            services.TrackLiveEntity<User>("user", "Id",
+                nameof(User.LastLoginAt), nameof(User.SecurityStamp), nameof(User.ConcurrencyStamp),
+                nameof(User.AccessFailedCount), nameof(User.LockoutEnd));
+            // Role and permission grants change what the user row shows.
+            services.TrackLiveEntity<IdentityUserRole<int>>("user", "UserId");
+            services.TrackLiveEntity<UserPermission>("user", "UserId");
 
             // AddIdentityCore rather than AddIdentity: the host owns the authentication schemes
             // (cookie for the UI, JWT/API key for /api); AddIdentity would register its own

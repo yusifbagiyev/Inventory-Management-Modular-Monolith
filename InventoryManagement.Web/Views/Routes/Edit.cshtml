@@ -458,5 +458,14 @@
                 });
             }
         })(); // End of page-specific namespace
+
+
+        // Someone else saving or deleting this route while it is open: warn, never touch the form.
+        LiveUpdates.watch({
+            mode: 'warn',
+            entities: ['route'],
+            ids: { route: @Model.Id },
+            label: 'route'
+        });
     </script>
 }

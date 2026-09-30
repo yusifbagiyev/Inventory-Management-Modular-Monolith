@@ -3,7 +3,7 @@
     ViewData["Title"] = "User Details";
 }
 
-<div class="container-fluid px-4">
+<div class="container-fluid px-4" id="detailsRegion">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-3 mb-1">
         <div>
             <h1 class="mb-1">User Details</h1>
@@ -247,5 +247,14 @@
             const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
             modal.show();
         }
+
+
+        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['user'],
+            ids: { user: @Model.Id },
+            regions: ['#detailsRegion'],
+            label: 'user'
+        });
     </script>
 }

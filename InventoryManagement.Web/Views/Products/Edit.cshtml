@@ -257,5 +257,14 @@
                 }
             }
         }
+
+
+        // Someone else saving or deleting this product while it is open: warn, never touch the form.
+        LiveUpdates.watch({
+            mode: 'warn',
+            entities: ['product'],
+            ids: { product: @Model.Id },
+            label: 'product'
+        });
     </script>
 }

@@ -67,11 +67,11 @@
         </div>
     </div>
 
-    <div class="result-bar">
+    <div class="result-bar" id="usersSummary">
         <span><b id="userCount">@Model.Count</b> of <b>@Model.Count</b> users</span>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="usersRegion">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover" id="usersTable">
@@ -308,5 +308,12 @@
                 bsAlert.close();
             });
         }, 5000);
+
+        // Other users' changes refresh the count and the table in place (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['user'],
+            regions: ['#usersSummary', '#usersRegion'],
+            afterRefresh: applyUserFilters
+        });
     </script>
 }

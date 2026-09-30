@@ -4,6 +4,7 @@ using NotificationService.Domain.Repositories;
 using NotificationService.Infrastructure.Data;
 using NotificationService.Infrastructure.Repositories;
 using NotificationService.Infrastructure.Services;
+using SharedServices.LiveUpdates;
 using SharedServices.Persistence;
 
 namespace NotificationService.Infrastructure
@@ -18,6 +19,7 @@ namespace NotificationService.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
             services.AddScoped<INotificationInbox, NotificationInbox>();
+            services.AddSingleton<ILiveUpdatePublisher, LiveUpdatePublisher>();
 
             services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
             {

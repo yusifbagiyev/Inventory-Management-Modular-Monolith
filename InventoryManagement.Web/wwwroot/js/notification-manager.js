@@ -13,6 +13,34 @@ window.NotificationManager = (function () {
     const OUTAGE_NOTICE_DELAY_MS = 10000;
     let outageNoticeTimer = null;
     let outageNoticeShown = false;
+    let hasConnectedBefore = false; // a later start() is a reconnection: pages may have missed changes
+    let suspended = false;
+
+    // Browsers freeze background tabs and keep pages in the back/forward cache; both cut the
+    // socket, which showed up as "Connection lost" on every back/forward. Close it quietly
+    // first and reopen when the page is back (the reconnect makes open pages resync).
+    function suspendConnection() {
+        suspended = true;
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+        clearTimeout(outageNoticeTimer);
+        outageNoticeTimer = null;
+        if (connection && connection.state !== signalR.HubConnectionState.Disconnected) {
+            connection.stop();
+        }
+    }
+
+    function resumeConnection() {
+        if (!suspended) return;
+        suspended = false;
+        connectionRetryCount = 0;
+        if (connection) startConnection();
+    }
+
+    window.addEventListener('pagehide', e => { if (e.persisted) suspendConnection(); });
+    window.addEventListener('pageshow', e => { if (e.persisted) resumeConnection(); });
+    document.addEventListener('freeze', suspendConnection);
+    document.addEventListener('resume', resumeConnection);
 
     function noteOutage() {
         if (outageNoticeTimer || outageNoticeShown) return;
@@ -108,6 +136,7 @@ window.NotificationManager = (function () {
             connectionState = 'connected';
             connectionRetryCount = 0;
             noteRecovered();
+            window.dispatchEvent(new Event('live:resync'));
 
             // Reload data after reconnection, but with a delay to avoid overwhelming the server
             setTimeout(() => {
@@ -123,6 +152,7 @@ window.NotificationManager = (function () {
 
         connection.onclose((error) => {
             connectionState = 'disconnected';
+            if (suspended) return; // closed on purpose; resumeConnection() reopens it
             console.error('SignalR connection closed:', error);
             noteOutage();
 
@@ -208,17 +238,13 @@ window.NotificationManager = (function () {
                     loadPendingApprovalsCount();
                 }
 
-                // If on approvals page, refresh the list (also with rate limiting)
-                if (window.location.pathname.includes('/Approvals')) {
-                    // Debounce page refreshes to prevent excessive updates
-                    clearTimeout(window.approvalsPageRefreshTimeout);
-                    window.approvalsPageRefreshTimeout = setTimeout(() => {
-                        if (typeof window.refreshApprovalsList === 'function') {
-                            window.refreshApprovalsList();
-                        }
-                    }, 1000);
-                }
             }
+        });
+
+        // A change was committed somewhere in the system. live-updates.js decides whether the
+        // open page shows that kind of record and refreshes it (the approvals list included).
+        connection.on("EntityChanged", function (update) {
+            window.dispatchEvent(new CustomEvent('live:changed', { detail: update }));
         });
     }
 
@@ -298,6 +324,8 @@ window.NotificationManager = (function () {
                 connectionState = 'connected';
                 connectionRetryCount = 0;
                 noteRecovered();
+                if (hasConnectedBefore) window.dispatchEvent(new Event('live:resync'));
+                hasConnectedBefore = true;
 
                 // Clear any existing reconnect timeout
                 if (reconnectTimeout) {
@@ -366,128 +394,12 @@ window.NotificationManager = (function () {
 
 
 
-    // Handle special notification types with proper debouncing
+    // The pending-approvals badge; the lists themselves refresh through live-updates.js.
     function handleSpecialNotifications(notification) {
-        if (notification.type === 'ApprovalRequest' && window.isAdmin) {
-            // Use debounced function to prevent rapid calls
-            if (typeof debouncedLoadPendingApprovalsCount === 'function') {
-                debouncedLoadPendingApprovalsCount();
-            }
-
-            // Handle approvals page refresh with debouncing
-            if (window.location.pathname.includes('/Approvals')) {
-                clearTimeout(window.approvalsRefreshTimeout);
-                window.approvalsRefreshTimeout = setTimeout(() => {
-                    // Try to refresh the table data without full page reload
-                    refreshApprovalsTable();
-                }, 1500); // 1.5 second delay to batch multiple notifications
-            }
+        if (notification.type === 'ApprovalRequest' && window.isAdmin
+            && typeof debouncedLoadPendingApprovalsCount === 'function') {
+            debouncedLoadPendingApprovalsCount();
         }
-        else if (notification.type === 'ApprovalResponse') {
-            // Handle approval responses
-            if (window.location.pathname.includes('/MyRequests')) {
-                clearTimeout(window.myRequestsRefreshTimeout);
-                window.myRequestsRefreshTimeout = setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            }
-        }
-    }
-
-    function refreshApprovalsTable() {
-        // Check if DataTable exists
-        const table = $('#approvalsTable');
-        if (table.length && $.fn.DataTable.isDataTable(table)) {
-            // Show a subtle loading indicator
-            showSubtleLoader();
-
-            // Reload the entire page content for the approvals section
-            $.ajax({
-                url: window.location.pathname,
-                type: 'GET',
-                success: function (html) {
-                    // Extract just the table section from the response
-                    const $newContent = $(html);
-                    const $newTable = $newContent.find('#approvalsTable').closest('.card');
-                    const $newStats = $newContent.find('.row.mb-4').first(); // Statistics cards
-
-                    // Update statistics cards if they exist
-                    if ($newStats.length) {
-                        $('.row.mb-4').first().replaceWith($newStats);
-                    }
-
-                    // Update the table
-                    if ($newTable.length) {
-                        $('#approvalsTable').closest('.card').replaceWith($newTable);
-
-                        // Reinitialize DataTable
-                        $('#approvalsTable').DataTable({
-                            order: [[0, 'desc']],
-                            pageLength: 25
-                        });
-
-                        // Re-parse summaries for the new rows
-                        $('.request-summary').each(function () {
-                            const $this = $(this);
-                            const actionData = $this.data('action-data');
-                            const requestType = $this.closest('tr').find('.badge').first().text().trim();
-
-                            try {
-                                // Use the getRequestSummary function from the page
-                                const summary = getRequestSummary(requestType, actionData);
-                                $this.text(summary);
-                            } catch (e) {
-                                $this.empty().append($('<span class="text-danger">').text('Error parsing data'));
-                            }
-                        });
-
-                        hideSubtleLoader();
-
-                    } else {
-                        // Fallback to full page reload if we can't find the table
-                        console.warn('Could not find table in response, reloading page');
-                        location.reload();
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Failed to refresh approvals table:', error);
-                    hideSubtleLoader();
-
-                    // Show error message and offer manual refresh
-                    showToast('New approvals available. Click to refresh.', 'warning', 10000)
-                        .addEventListener('click', function () {
-                            location.reload();
-                        });
-                }
-            });
-        } else {
-            // If no DataTable, just reload the page
-            location.reload();
-        }
-    }
-
-
-
-    function showSubtleLoader() {
-        if (!$('.subtle-loader').length) {
-            const loader = $(`
-            <div class="subtle-loader" style="position: fixed; top: 70px; right: 20px; z-index: 9998; 
-                        background: rgba(255, 255, 255, 0.95); padding: 10px 20px; border-radius: 8px;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px;">
-                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                <span class="text-muted" style="font-size: 0.9rem;">Updating...</span>
-            </div>
-        `);
-            $('body').append(loader);
-        }
-    }
-
-
-
-    function hideSubtleLoader() {
-        $('.subtle-loader').fadeOut(300, function () {
-            $(this).remove();
-        });
     }
 
     // Prevent too frequent sound notifications
@@ -504,10 +416,6 @@ window.NotificationManager = (function () {
     }
 
 
-    // Make functions available globally
-    window.refreshApprovalsTable = refreshApprovalsTable;
-    window.showSubtleLoader = showSubtleLoader;
-    window.hideSubtleLoader = hideSubtleLoader;
 
 
     // Public API

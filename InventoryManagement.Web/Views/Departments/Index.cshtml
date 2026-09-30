@@ -77,7 +77,7 @@
         }
     </div>
 
-    <div class="result-bar">
+    <div class="result-bar" id="departmentsSummary">
         <span>
             <b>@Model.TotalCount</b> department@(Model.TotalCount == 1 ? "" : "s")@(string.IsNullOrEmpty(currentSearch) ? "" : " matched")
         </span>
@@ -88,7 +88,7 @@
         </span>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="departmentsRegion">
         <div class="card-body p-0">
             @if (Model.Items.Any())
             {
@@ -341,5 +341,15 @@
             $('#deleteForm').attr('action', '/Departments/Delete/' + id);
             $('#deleteModal').modal('show');
         }
+
+        // Other users' changes refresh the count and the table in place (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['department', 'product'],
+            regions: ['#departmentsSummary', '#departmentsRegion'],
+            afterRefresh() {
+                allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr'));
+                filterDepartments();
+            }
+        });
     </script>
 }

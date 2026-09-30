@@ -4,6 +4,8 @@ using ProductService.Infrastructure.Data;
 using ProductService.Infrastructure.Repositories;
 using ProductService.Infrastructure.Services;
 using SharedServices.Contracts;
+using ProductService.Domain.Entities;
+using SharedServices.LiveUpdates;
 using SharedServices.Persistence;
 
 namespace ProductService.Infrastructure
@@ -13,6 +15,9 @@ namespace ProductService.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddModuleDbContext<ProductDbContext>(ProductDbContext.Schema);
+            services.TrackLiveEntity<Product>("product");
+            services.TrackLiveEntity<Category>("category");
+            services.TrackLiveEntity<Department>("department");
 
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();

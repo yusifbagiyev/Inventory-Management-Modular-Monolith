@@ -530,3 +530,11 @@ h1, h2, h3, h4, h5, h6 {
         right: -1rem;
     }
 }
+
+/* live-updates.js: a region just refreshed because another user changed something */
+@keyframes live-refreshed {
+    from { box-shadow: 0 0 0 2px rgba(14, 155, 196, .45); }
+    to { box-shadow: 0 0 0 2px rgba(14, 155, 196, 0); }
+}
+.live-refreshed { animation: live-refreshed 1.6s ease-out; }
+@media (prefers-reduced-motion: reduce) { .live-refreshed { animation: none; } }

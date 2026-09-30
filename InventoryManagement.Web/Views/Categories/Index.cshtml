@@ -76,7 +76,7 @@
         }
     </div>
 
-    <div class="result-bar">
+    <div class="result-bar" id="categoriesSummary">
         <span><b>@Model.TotalCount</b> categor@(Model.TotalCount == 1 ? "y" : "ies")@(hasSearch ? " matched" : "")</span>
         <span class="text-muted">
             <b>@(Model.ActiveItems ?? ViewBag.ActiveCategories)</b> active
@@ -85,7 +85,7 @@
         </span>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="categoriesRegion">
         <div class="card-body p-0">
             @if (Model.Items.Any())
             {
@@ -332,5 +332,15 @@
             $('#deleteForm').attr('action', '/Categories/Delete/' + id);
             $('#deleteModal').modal('show');
         }
+
+        // Other users' changes refresh the count and the table in place (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['category', 'product'],
+            regions: ['#categoriesSummary', '#categoriesRegion'],
+            afterRefresh() {
+                allCategoryRows = Array.from(document.querySelectorAll('#categoriesTable tr.category-item'));
+                filterCategories();
+            }
+        });
     </script>
 }

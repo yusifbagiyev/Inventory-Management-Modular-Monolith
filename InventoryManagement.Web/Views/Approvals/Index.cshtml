@@ -14,9 +14,8 @@
         </div>
     </div>
 
-    @* Statistics. The container must stay ".row mb-4" and stay first on the page:
-       notification-manager.js swaps it in place with $('.row.mb-4').first(). *@
-    <div class="row g-3 mb-4 mt-1">
+    @* Statistics and the table below are refreshed in place by live-updates.js (see Scripts). *@
+    <div class="row g-3 mb-4 mt-1" id="approvalsStats">
         <div class="col-12 col-sm-6 col-lg-4">
             <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-between gap-3">
@@ -52,9 +51,7 @@
         </div>
     </div>
 
-    @* The table has to stay inside a .card - notification-manager.js replaces
-       $('#approvalsTable').closest('.card') when a new request arrives. *@
-    <div class="card mb-4">
+    <div class="card mb-4" id="approvalsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
             <span><i class="bi bi-hourglass-split me-1"></i> Pending Approval Requests</span>
             <span class="text-muted mono">@Model.PendingRequests.Count</span>
@@ -193,7 +190,10 @@
     <script>
         let currentRequestId = null;
 
-        $(document).ready(function() {
+        $(document).ready(initApprovalsTable);
+
+        // Runs on load and again after live-updates.js swaps in a fresh table.
+        function initApprovalsTable() {
             // the table is only rendered when there is at least one pending request
             if ($('#approvalsTable').length) {
                 $('#approvalsTable').DataTable({
@@ -216,6 +216,16 @@
                     $this.html('<span class="text-danger">Error parsing data</span>');
                 }
             });
+        }
+
+        // New, approved and rejected requests from other admins update the counts and the list.
+        LiveUpdates.watch({
+            entities: ['approval'],
+            regions: ['#approvalsStats', '#approvalsRegion'],
+            beforeRefresh() {
+                if ($.fn.DataTable.isDataTable('#approvalsTable')) $('#approvalsTable').DataTable().destroy();
+            },
+            afterRefresh: initApprovalsTable
         });
 
         function getRequestSummary(requestType, actionData) {

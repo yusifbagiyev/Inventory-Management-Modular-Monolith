@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SharedServices.LiveUpdates;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace SharedServices.Persistence
@@ -20,6 +23,12 @@ namespace SharedServices.Persistence
                 var session = sp.GetRequiredService<DbSession>();
                 options.UseNpgsql(session.Connection, npgsql => ConfigureNpgsql<TContext>(npgsql, schema));
                 options.AddInterceptors(new TransactionEnlistmentInterceptor(session));
+
+                // Committed changes to the types modules registered with TrackLiveEntity are pushed
+                // to open pages (see SharedServices.LiveUpdates).
+                var live = sp.GetService<IOptions<LiveUpdateOptions>>()?.Value;
+                if (live is { Entities.Count: > 0 })
+                    options.AddInterceptors(new LiveUpdateInterceptor(session, live, sp.GetService<IHttpContextAccessor>()));
             });
             return services;
         }

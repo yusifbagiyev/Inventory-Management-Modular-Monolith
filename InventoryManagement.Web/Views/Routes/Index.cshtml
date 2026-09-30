@@ -162,12 +162,12 @@
         }
     </div>
 
-    <div class="result-bar">
+    <div class="result-bar" id="routesSummary">
         <span><b>@Model.TotalCount</b> route@(Model.TotalCount == 1 ? "" : "s")@(hasFilters ? " matched" : "")</span>
         <span class="text-muted">Page @Model.PageNumber</span>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-4" id="routesRegion">
         <div class="card-body p-0">
                 @if (Model.Items.Any())
                 {
@@ -414,6 +414,12 @@
                 form.submit();
             });
         }
+
+        // Other users' changes refresh the count and the table in place (live-updates.js).
+        LiveUpdates.watch({
+            entities: ['route', 'product', 'department', 'category'],
+            regions: ['#routesSummary', '#routesRegion']
+        });
     </script>
     <style>
         .gmail-pagination {

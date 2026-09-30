@@ -117,5 +117,14 @@
                 });
             });
         });
+
+
+        // Someone else saving or deleting this category while it is open: warn, never touch the form.
+        LiveUpdates.watch({
+            mode: 'warn',
+            entities: ['category'],
+            ids: { category: @Model.Id },
+            label: 'category'
+        });
     </script>
 }
