@@ -344,7 +344,7 @@ namespace InventoryManagement.Web.Services
             // Header row - only the header row has golden background
             var headerRow = new TableRow();
             headerRow.Append(CreateHeaderCell("Avadanlıq", ColumnWidths[0]));
-            headerRow.Append(CreateHeaderCell("Vendor", ColumnWidths[1]));
+            headerRow.Append(CreateHeaderCell("İstehsalçı", ColumnWidths[1]));
             headerRow.Append(CreateHeaderCell("Model", ColumnWidths[2]));
             headerRow.Append(CreateHeaderCell("İstifadəçi", ColumnWidths[3]));
             headerRow.Append(CreateHeaderCell("İnventar kodu", ColumnWidths[4]));

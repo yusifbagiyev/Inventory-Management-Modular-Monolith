@@ -135,7 +135,8 @@ namespace InventoryManagement.Web.Controllers
             if (department == null)
                 return RedirectToNotFound();
 
-            var products = await GetDepartmentProducts(id);
+            // The hand-over document lists what is actually in use: deactivated items are left out.
+            var products = await GetDepartmentProducts(id, activeOnly: true);
             var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
 
             var fileBytes = _wordExportService.GenerateDepartmentInventoryDocument(
@@ -147,9 +148,10 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        private async Task<List<ProductViewModel>> GetDepartmentProducts(int departmentId)
+        private async Task<List<ProductViewModel>> GetDepartmentProducts(int departmentId, bool activeOnly = false)
         {
-            var products = await _mediator.Send(new GetAllProductsQuery(1, MaxProductsListed, departmentId: departmentId));
+            var products = await _mediator.Send(new GetAllProductsQuery(1, MaxProductsListed,
+                departmentId: departmentId, availability: activeOnly ? true : null));
             return ModelMapper.MapList<ProductViewModel>(products.Items);
         }
     }
