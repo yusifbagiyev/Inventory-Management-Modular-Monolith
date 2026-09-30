@@ -319,7 +319,7 @@
             }
         </div>
         <div class="card-footer">
-            <partial name="_ProductPagination" model="Model" />
+            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
         </div>
     </div>
 
@@ -354,188 +354,33 @@
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
+    <script src="~/js/list-filters.js" asp-append-version="true"></script>
     <script>
         let currentDeleteProductId = null;
-        // Initialize date range picker when document is ready
-        $(document).ready(function() {
-            // Initialize date range picker with proper configuration
-            $('#dateRange').daterangepicker({
-                autoUpdateInput: false,
-                locale: {
-                    cancelLabel: 'Clear',
-                    format: 'MM/DD/YYYY'
-                },
-                opens: 'left'
-            });
-
-            // Handle date range selection - apply immediately, like the other filters do.
-            $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
-                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-                applyProductFilters();
-            });
-
-            // "Clear" drops the date filter and reloads (only if one was set).
-            $('#dateRange').on('cancel.daterangepicker', function(ev, picker) {
-                const hadValue = $(this).val() !== '';
-                $(this).val('');
-                if (hadValue) {
-                    removeFilter('dates');
-                }
-            });
-
-            // Restore filter values from query parameters
-            restoreFilterValues();
-
-            // Reflect the current department/category selection in the cascading dropdowns.
-            cascadeCategoryOptions();
-            cascadeDepartmentOptions();
+        const productFilters = ListFilters.init({
+            basePath: '/Products',
+            pageSize: @Model.PageSize,
+            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [[departmentId, categoryId], ...]
+            categoryKey: 'id',
+            fields: {
+                status: '#statusFilter',
+                availability: '#availabilityFilter',
+                categoryId: '#categoryFilter',
+                departmentId: '#departmentFilter'
+            },
+            // Server-side quick flags with no control of their own.
+            urlFlags: ['hasImage', 'assigned']
         });
 
-        // Restore filter values from URL parameters
-        function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
+        // Names used by the markup's onclick/onchange handlers.
+        function applyProductFilters() { productFilters.apply(); }
+        function onDepartmentChange() { productFilters.onDepartmentChange(); }
+        function onCategoryChange() { productFilters.onCategoryChange(); }
+        function removeFilter(key) { productFilters.remove(key); }
+        function resetProductFilters() { productFilters.reset(); }
 
-            // Restore search
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(search);
-            }
-
-            // Restore date range
-            const startDate = params.get('startDate');
-            const endDate = params.get('endDate');
-            if (startDate && endDate) {
-                const formattedStart = moment(startDate).format('MM/DD/YYYY');
-                const formattedEnd = moment(endDate).format('MM/DD/YYYY');
-                $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
-            }
-
-            // Restore status filter
-            const status = params.get('status');
-            if (status !== null) {
-                $('#statusFilter').val(status);
-            }
-
-            // Restore availability filter
-            const availability = params.get('availability');
-            if (availability !== null) {
-                $('#availabilityFilter').val(availability);
-            }
-        }
-
-        // Cascading filters: which categories occur in which department. Built from the
-        // [[deptId, catId], ...] facet list the server emits, into two lookup maps.
-        const FILTER_PAIRS = @Html.Raw(ViewBag.FilterPairsJson ?? "[]");
-        const deptToCats = new Map();   // departmentId -> Set(categoryId)
-        const catToDepts = new Map();   // categoryId   -> Set(departmentId)
-        FILTER_PAIRS.forEach(function (pair) {
-            const dep = pair[0], cat = pair[1];
-            if (!deptToCats.has(dep)) deptToCats.set(dep, new Set());
-            if (!catToDepts.has(cat)) catToDepts.set(cat, new Set());
-            deptToCats.get(dep).add(cat);
-            catToDepts.get(cat).add(dep);
-        });
-
-        // Show only the category options that exist in the selected department (all when none).
-        function cascadeCategoryOptions() {
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            const allowed = Number.isNaN(dep) ? null : (deptToCats.get(dep) || new Set());
-            document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
-                if (opt.value === '') { opt.hidden = false; return; }
-                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
-            });
-        }
-
-        // Show only the department options that contain the selected category (all when none).
-        function cascadeDepartmentOptions() {
-            const cat = parseInt($('#categoryFilter').val(), 10);
-            const allowed = Number.isNaN(cat) ? null : (catToDepts.get(cat) || new Set());
-            document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
-                if (opt.value === '') { opt.hidden = false; return; }
-                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
-            });
-        }
-
-        function onDepartmentChange() {
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            const cat = parseInt($('#categoryFilter').val(), 10);
-            // If the chosen category doesn't exist in the new department, drop it - avoids an
-            // empty result the user didn't ask for.
-            if (!Number.isNaN(dep) && !Number.isNaN(cat) && !(deptToCats.get(dep) || new Set()).has(cat)) {
-                $('#categoryFilter').val('');
-            }
-            cascadeCategoryOptions();
-            applyProductFilters();
-        }
-
-        function onCategoryChange() {
-            const cat = parseInt($('#categoryFilter').val(), 10);
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            if (!Number.isNaN(cat) && !Number.isNaN(dep) && !(catToDepts.get(cat) || new Set()).has(dep)) {
-                $('#departmentFilter').val('');
-            }
-            cascadeDepartmentOptions();
-            applyProductFilters();
-        }
-
-        // Collect every active filter control into query params. `hasImage`/`assigned` have no
-        // dropdown, so they are carried over from the current URL (a quick chip toggles them).
-        function collectFilterParams() {
-            const params = new URLSearchParams();
-
-            const searchTerm = $('#searchInput').val().trim();
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-
-            const dateRange = $('#dateRange').val();
-            if (dateRange) {
-                const dates = dateRange.split(' - ');
-                if (dates.length === 2) {
-                    params.append('startDate', moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD'));
-                    params.append('endDate', moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD'));
-                }
-            }
-
-            const status = $('#statusFilter').val();
-            if (status !== '') {
-                params.append('status', status);
-            }
-
-            const availability = $('#availabilityFilter').val();
-            if (availability !== '') {
-                params.append('availability', availability);
-            }
-
-            const categoryId = $('#categoryFilter').val();
-            if (categoryId) {
-                params.append('categoryId', categoryId);
-            }
-
-            const departmentId = $('#departmentFilter').val();
-            if (departmentId) {
-                params.append('departmentId', departmentId);
-            }
-
-            // Preserve the two URL-only quick flags across any other filter change.
-            const cur = new URLSearchParams(window.location.search);
-            ['hasImage', 'assigned'].forEach(function (k) {
-                if (cur.get(k) === 'false') params.set(k, 'false');
-            });
-
-            const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
-            params.append('pageSize', pageSize);
-            params.append('pageNumber', '1');
-            return params;
-        }
-
-        // Apply all filters and reload the page with query parameters.
-        function applyProductFilters() {
-            window.location.href = '/Products?' + collectFilterParams().toString();
-        }
-
-        // One-click presets. "Not working"/"Inactive" drive their dropdowns; "Unassigned"/"No image"
-        // are server-side flags with no control, so they toggle directly in the URL.
+        // One-click presets: "Not working"/"Inactive" drive their dropdowns, "Unassigned"/"No image"
+        // are URL-only flags.
         function quickFilter(kind) {
             if (kind === 'notWorking') {
                 $('#statusFilter').val($('#statusFilter').val() === 'false' ? '' : 'false');
@@ -544,80 +389,10 @@
                 $('#availabilityFilter').val($('#availabilityFilter').val() === 'false' ? '' : 'false');
                 applyProductFilters();
             } else if (kind === 'unassigned') {
-                toggleQuickFlag('assigned');
+                productFilters.toggleFlag('assigned');
             } else if (kind === 'noImage') {
-                toggleQuickFlag('hasImage');
+                productFilters.toggleFlag('hasImage');
             }
-        }
-
-        // Flip a URL-only quick flag on/off while preserving every other active filter.
-        function toggleQuickFlag(key) {
-            const params = collectFilterParams();
-            if (params.get(key) === 'false') { params.delete(key); }
-            else { params.set(key, 'false'); }
-            params.set('pageNumber', '1');
-            window.location.href = '/Products?' + params.toString();
-        }
-
-        // Drop a single applied filter and reload.
-        function removeFilter(key) {
-            const params = new URLSearchParams(window.location.search);
-            if (key === 'dates') {
-                params.delete('startDate');
-                params.delete('endDate');
-            } else {
-                params.delete(key);
-            }
-            params.set('pageNumber', '1');
-            window.location.href = '/Products?' + params.toString();
-        }
-
-        // Drop a single word from a multi-word search (its own chip's ×).
-        function removeSearchWord(word) {
-            const params = new URLSearchParams(window.location.search);
-            const remaining = (params.get('search') || '')
-                .split(/\s+/)
-                .filter(w => w && w.toLowerCase() !== word.toLowerCase());
-            if (remaining.length) { params.set('search', remaining.join(' ')); }
-            else { params.delete('search'); }
-            params.set('pageNumber', '1');
-            window.location.href = '/Products?' + params.toString();
-        }
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.achip-word').forEach(function (b) {
-                b.addEventListener('click', function () { removeSearchWord(b.dataset.word); });
-            });
-        });
-
-        // Make search work on Enter key
-        $('#searchInput').on('keypress', function(e) {
-            if (e.which === 13) {
-                applyProductFilters();
-            }
-        });
-
-        // Reset all filters and reload the page
-        function resetProductFilters() {
-            $('#searchInput').val('');
-            $('#dateRange').val('');
-            $('#statusFilter').val('');
-            $('#availabilityFilter').val('');
-            $('#categoryFilter').val('');
-            $('#departmentFilter').val('');
-            window.location.href = '/Products?pageSize=@Model.PageSize&pageNumber=1';
-        }
-
-        // Change page with current filters maintained
-        function changePage(page) {
-            const params = new URLSearchParams(window.location.search);
-            params.set('pageNumber', page);
-
-            // Ensure we always have pageSize
-            if (!params.has('pageSize')) {
-                params.set('pageSize', '@Model.PageSize');
-            }
-
-            window.location.href = '/Products?' + params.toString();
         }
 
         // Delete product confirmation
@@ -835,11 +610,5 @@
             }
         });
 
-        // Show image modal
-        function showImageModal(imageUrl, title) {
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
-        }
     </script>
 }

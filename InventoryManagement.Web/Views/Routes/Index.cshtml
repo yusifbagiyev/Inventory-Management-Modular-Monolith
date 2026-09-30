@@ -327,7 +327,7 @@
                 }
             </div>
             <div class="card-footer">
-                <partial name="_RoutePagination" model="Model" />
+                <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
             </div>
 
         </div>
@@ -344,240 +344,28 @@
     <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
+    <script src="~/js/list-filters.js" asp-append-version="true"></script>
     <script>
-        $(document).ready(function() {
-            // Initialize date range picker
-                    $('#dateRange').daterangepicker({
-                        autoUpdateInput: false,
-                        locale: {
-                            cancelLabel: 'Clear',
-                            format: 'MM/DD/YYYY'
-                        }
-                    });
-
-                    $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
-                        $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-                        applyRouteFilters();
-                    });
-
-                    $('#dateRange').on('cancel.daterangepicker', function() {
-                        const hadValue = $(this).val() !== '';
-                        $(this).val('');
-                        if (hadValue) {
-                            removeRouteFilter('dates');
-                        }
-                    });
-
-                    restoreFilterValues();
-
-                    // Reflect the current department/category selection in the cascading dropdowns.
-                    cascadeCategoryOptions();
-                    cascadeDepartmentOptions();
-                });
-
-            // Restore filter values from URL parameters
-        function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
-
-            // Restore search
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(search);
-            }
-
-            // Restore date range
-            const startDate = params.get('startDate');
-            const endDate = params.get('endDate');
-            if (startDate && endDate) {
-                const formattedStart = moment(startDate).format('MM/DD/YYYY');
-                const formattedEnd = moment(endDate).format('MM/DD/YYYY');
-                $('#dateRange').val(formattedStart + ' - ' + formattedEnd);
-            }
-
-            // Restore status filter. Same key the action binds (`isCompleted`), so the dropdown
-            // also reflects the state when it was set by a quick chip.
-            const status = params.get('isCompleted');
-            if (status !== null) {
-                $('#statusFilter').val(status);
-            }
-        }
-
-        // Cascading filters: which category names occur in which department (either end of a route).
-        // Department options carry the department id; category options carry the category NAME, since
-        // routes store only the name. Built from the [[deptId, "categoryName"], ...] facet list.
-        const FILTER_PAIRS = @Html.Raw(ViewBag.FilterPairsJson ?? "[]");
-        const deptToCats = new Map();   // departmentId -> Set(categoryName)
-        const catToDepts = new Map();   // categoryName -> Set(departmentId)
-        FILTER_PAIRS.forEach(function (pair) {
-            const dep = pair[0], cat = pair[1];
-            if (!deptToCats.has(dep)) deptToCats.set(dep, new Set());
-            if (!catToDepts.has(cat)) catToDepts.set(cat, new Set());
-            deptToCats.get(dep).add(cat);
-            catToDepts.get(cat).add(dep);
-        });
-
-        // Show only the category options present in the selected department (all when none).
-        function cascadeCategoryOptions() {
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            const allowed = Number.isNaN(dep) ? null : (deptToCats.get(dep) || new Set());
-            document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
-                if (opt.value === '') { opt.hidden = false; return; }
-                opt.hidden = allowed ? !allowed.has(opt.value) : false;
-            });
-        }
-
-        // Show only the department options that contain the selected category (all when none).
-        function cascadeDepartmentOptions() {
-            const cat = $('#categoryFilter').val();
-            const allowed = cat ? (catToDepts.get(cat) || new Set()) : null;
-            document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
-                if (opt.value === '') { opt.hidden = false; return; }
-                opt.hidden = allowed ? !allowed.has(parseInt(opt.value, 10)) : false;
-            });
-        }
-
-        function onDepartmentChange() {
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            const cat = $('#categoryFilter').val();
-            // Drop an incompatible category so the reload can't land on an empty result.
-            if (!Number.isNaN(dep) && cat && !(deptToCats.get(dep) || new Set()).has(cat)) {
-                $('#categoryFilter').val('');
-            }
-            cascadeCategoryOptions();
-            applyRouteFilters();
-        }
-
-        function onCategoryChange() {
-            const cat = $('#categoryFilter').val();
-            const dep = parseInt($('#departmentFilter').val(), 10);
-            if (cat && !Number.isNaN(dep) && !(catToDepts.get(cat) || new Set()).has(dep)) {
-                $('#departmentFilter').val('');
-            }
-            cascadeDepartmentOptions();
-            applyRouteFilters();
-        }
-
-        // Apply all filters and reload the page with query parameters
-        function applyRouteFilters() {
-            const params = new URLSearchParams();
-
-            const searchTerm = $('#searchInput').val().trim();
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-
-            // Get date range value
-            const dateRange = $('#dateRange').val();
-            if (dateRange) {
-                const dates = dateRange.split(' - ');
-                if (dates.length === 2) {
-                    const startDate = moment(dates[0], 'MM/DD/YYYY').format('YYYY-MM-DD');
-                    const endDate = moment(dates[1], 'MM/DD/YYYY').format('YYYY-MM-DD');
-                    params.append('startDate', startDate);
-                    params.append('endDate', endDate);
-                }
-            }
-
-            // Status. The action binds `isCompleted` (true/false) - sending it as `status`
-            // meant the dropdown silently did nothing while the quick chips (which link to
-            // ?isCompleted=) worked.
-            const status = $('#statusFilter').val();
-            if (status !== '') {
-                params.append('isCompleted', status);
-            }
-
-            // Department (by id, either end of the transfer) and category (by name).
-            const departmentId = $('#departmentFilter').val();
-            if (departmentId) {
-                params.append('departmentId', departmentId);
-            }
-
-            const categoryName = $('#categoryFilter').val();
-            if (categoryName) {
-                params.append('categoryName', categoryName);
-            }
-
-            const routeType = $('#typeFilter').val();
-            if (routeType) {
-                params.append('routeType', routeType);
-            }
-
-            // Respect the rows-per-page dropdown rather than always re-sending the current size.
-            const pageSize = $('#pageSizeFilter').val() || '@Model.PageSize';
-            params.append('pageSize', pageSize);
-            params.append('pageNumber', '1');
-
-            // Build the URL property
-            window.location.href = '/Routes?' + params.toString();
-        }
-
-        // Make search work on Enter key
-        $('#searchInput').on('keypress', function(e) {
-            if (e.which === 13) {
-                applyRouteFilters();
+        const routeFilters = ListFilters.init({
+            basePath: '/Routes',
+            pageSize: @Model.PageSize,
+            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [[departmentId, "categoryName"], ...]
+            // Routes store the category by name, so the category options carry names.
+            categoryKey: 'name',
+            fields: {
+                isCompleted: '#statusFilter',
+                departmentId: '#departmentFilter',
+                categoryName: '#categoryFilter',
+                routeType: '#typeFilter'
             }
         });
 
-        function resetFilters() {
-            $('#searchInput').val('');
-            $('#dateRange').val('');
-            $('#statusFilter').val('');
-            $('#typeFilter').val('');
-            $('#departmentFilter').val('');
-            $('#categoryFilter').val('');
-            window.location.href = '/Routes';
-        }
-
-        // Drop a single applied filter and reload.
-        function removeRouteFilter(key) {
-            const params = new URLSearchParams(window.location.search);
-            if (key === 'dates') {
-                params.delete('startDate');
-                params.delete('endDate');
-            } else {
-                params.delete(key);
-            }
-            params.set('pageNumber', '1');
-            window.location.href = '/Routes?' + params.toString();
-        }
-
-        // Drop a single word from a multi-word search (its own chip's ×).
-        function removeRouteWord(word) {
-            const params = new URLSearchParams(window.location.search);
-            const remaining = (params.get('search') || '')
-                .split(/\s+/)
-                .filter(w => w && w.toLowerCase() !== word.toLowerCase());
-            if (remaining.length) { params.set('search', remaining.join(' ')); }
-            else { params.delete('search'); }
-            params.set('pageNumber', '1');
-            window.location.href = '/Routes?' + params.toString();
-        }
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.achip-word').forEach(function (b) {
-                b.addEventListener('click', function () { removeRouteWord(b.dataset.word); });
-            });
-        });
-
-
-
-        // Change page with current filters maintained
-                function changePage(page) {
-            const params = new URLSearchParams(window.location.search);
-            params.set('pageNumber', page);
-
-            // Ensure we always have pageSize
-            if (!params.has('pageSize')) {
-                params.set('pageSize', '@Model.PageSize');
-            }
-
-            window.location.href = '/Routes?' + params.toString();
-        }
-
-        function showImageModal(imageUrl, title) {
-            $('#globalModalImage').attr('src', imageUrl);
-            $('#globalImageModal .modal-title').text(title || 'Image Preview');
-            $('#globalImageModal').modal('show');
-        }
+        // Names used by the markup's onclick/onchange handlers.
+        function applyRouteFilters() { routeFilters.apply(); }
+        function onDepartmentChange() { routeFilters.onDepartmentChange(); }
+        function onCategoryChange() { routeFilters.onCategoryChange(); }
+        function removeRouteFilter(key) { routeFilters.remove(key); }
+        function resetFilters() { routeFilters.reset(); }
 
         function completeRoute(id) {
             confirmAction({
