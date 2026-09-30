@@ -23,7 +23,7 @@
                         <span class="state state-warn">Pending</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalPending</div>
                     </div>
-                    <i class="bi bi-hourglass-split fs-4 text-muted"></i>
+                    <i class="fas fa-hourglass-half fs-4 text-muted"></i>
                 </div>
             </div>
         </div>
@@ -34,7 +34,7 @@
                         <span class="state state-ok">Approved today</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalApproved</div>
                     </div>
-                    <i class="bi bi-check2-circle fs-4 text-muted"></i>
+                    <i class="fas fa-circle-check fs-4 text-muted"></i>
                 </div>
             </div>
         </div>
@@ -45,7 +45,7 @@
                         <span class="state state-crit">Rejected today</span>
                         <div class="h2 mb-0 mt-2">@Model.TotalRejected</div>
                     </div>
-                    <i class="bi bi-x-circle fs-4 text-muted"></i>
+                    <i class="fas fa-circle-xmark fs-4 text-muted"></i>
                 </div>
             </div>
         </div>
@@ -53,7 +53,7 @@
 
     <div class="card mb-4" id="approvalsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="bi bi-hourglass-split me-1"></i> Pending Approval Requests</span>
+            <span><i class="fas fa-hourglass-half me-1"></i> Pending Approval Requests</span>
             <span class="text-muted mono">@Model.PendingRequests.Count</span>
         </div>
         <div class="card-body">
@@ -120,7 +120,7 @@
             else
             {
                 <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
+                    <i class="fas fa-inbox"></i>
                     <h5>Nothing waiting for approval</h5>
                     <p class="text-muted mb-0">New requests appear here as soon as a user submits one.</p>
                 </div>
@@ -138,11 +138,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
+                <partial name="_Skeleton" model="5" />
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
@@ -268,7 +264,7 @@
 
                 function viewDetails(requestId) {
             currentRequestId = requestId;
-            $('#detailsContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+            $('#detailsContent').html(skeletonHtml(5));
             $('#modalApproveBtn, #modalRejectBtn').hide();
             $('#detailsModal').modal('show');
 

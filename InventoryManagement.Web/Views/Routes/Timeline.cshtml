@@ -29,7 +29,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-clock-history me-1"></i>
+                    <i class="fas fa-clock-rotate-left me-1"></i>
                     Product Transfer History
                 </div>
                 <div class="card-body">
@@ -87,7 +87,7 @@
                                                         <span class="cell-sub">@route.FromWorker</span>
                                                     }
                                                 </div>
-                                                <i class="bi bi-arrow-right text-muted"></i>
+                                                <i class="fas fa-arrow-right text-muted"></i>
                                             }
                                             <div class="cell-text">
                                                 <span class="cell-sub">To</span>
@@ -102,7 +102,7 @@
                                         @if (!string.IsNullOrEmpty(route.Notes))
                                         {
                                             <p class="text-muted mb-2">
-                                                <i class="bi bi-sticky me-1"></i> @route.Notes
+                                                <i class="fas fa-note-sticky me-1"></i> @route.Notes
                                             </p>
                                         }
 
@@ -129,7 +129,7 @@
                     else
                     {
                         <div class="empty-state">
-                            <i class="bi bi-clock-history"></i>
+                            <i class="fas fa-clock-rotate-left"></i>
                             <h5>No transfers yet</h5>
                             <p class="mb-0">No transfer history available for this product.</p>
                         </div>
@@ -141,7 +141,7 @@
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-bar-chart-line me-1"></i>
+                    <i class="fas fa-chart-line me-1"></i>
                     Statistics
                 </div>
                 <div class="card-body">

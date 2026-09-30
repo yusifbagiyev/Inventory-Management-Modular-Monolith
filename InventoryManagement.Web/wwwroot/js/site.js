@@ -260,3 +260,14 @@ function showImageModal(imageUrl, title) {
     $('#globalImageModal .modal-title').text(title || 'Image Preview');
     $('#globalImageModal').modal('show');
 }
+
+/** Placeholder lines while a panel's content loads (same markup as Views/Shared/_Skeleton.cshtml). */
+function skeletonHtml(lines) {
+    const widths = ['100%', '92%', '78%', '96%', '68%', '88%'];
+    let html = '<div class="skeleton-group" aria-busy="true" role="status">'
+        + '<span class="visually-hidden">Loading...</span><span class="skeleton skeleton-title"></span>';
+    for (let i = 0; i < Math.max(1, lines || 4); i++) {
+        html += `<span class="skeleton" style="width: ${widths[i % widths.length]}"></span>`;
+    }
+    return html + '</div>';
+}

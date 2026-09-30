@@ -279,12 +279,12 @@
                                     <td class="num text-muted">@(product.CreatedAt?.ToString("dd.MM.yyyy") ?? "-")</td>
                                     <td>
                                         <div class="btn-group" role="group">
-                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-info" title="View">
+                                            <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-outline-secondary" title="View">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             @if(User.HasPermission("product.update") || User.HasPermission("product.update.direct"))
                                             {
-                                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                             }

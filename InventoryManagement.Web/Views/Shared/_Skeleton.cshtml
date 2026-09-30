@@ -1,0 +1,14 @@
+@model int
+@* Placeholder lines while a panel's content loads. The same markup comes from skeletonHtml() in site.js
+   when a script swaps content in. Model = number of lines. *@
+@{
+    var widths = new[] { "100%", "92%", "78%", "96%", "68%", "88%" };
+}
+<div class="skeleton-group" aria-busy="true" role="status">
+    <span class="visually-hidden">Loading...</span>
+    <span class="skeleton skeleton-title"></span>
+    @for (var i = 0; i < Math.Max(1, Model); i++)
+    {
+        <span class="skeleton" style="width: @widths[i % widths.Length]"></span>
+    }
+</div>

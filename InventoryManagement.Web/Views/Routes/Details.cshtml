@@ -33,7 +33,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <span><i class="bi bi-signpost-split me-1"></i> Route Information</span>
+                    <span><i class="fas fa-signs-post me-1"></i> Route Information</span>
                     <span class="d-flex gap-2 flex-wrap">
                         <span class="state state-flat @typeClass">@Model.RouteTypeName</span>
                         @if (Model.IsCompleted)
@@ -57,7 +57,7 @@
                                 <span class="cell-title">@Model.FromDepartmentName</span>
                                 <span class="cell-sub">Worker: @(Model.FromWorker ?? "N/A")</span>
                             </div>
-                            <i class="bi bi-arrow-right text-muted"></i>
+                            <i class="fas fa-arrow-right text-muted"></i>
                         }
                         <div class="cell-text">
                             <span class="cell-sub">To</span>
@@ -178,18 +178,18 @@
         <div class="col-lg-4">
             <div class="card mb-4 side-panel">
                 <div class="card-header">
-                    <i class="bi bi-lightning-charge me-1"></i>
+                    <i class="fas fa-bolt me-1"></i>
                     Quick Actions
                 </div>
                 <div class="list-group list-group-flush">
                     <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="list-group-item list-group-item-action">
-                        <i class="bi bi-clock-history me-2"></i> View Full Timeline
+                        <i class="fas fa-clock-rotate-left me-2"></i> View Full Timeline
                     </a>
                     <a asp-action="Transfer" class="list-group-item list-group-item-action">
-                        <i class="bi bi-arrow-left-right me-2"></i> New Transfer
+                        <i class="fas fa-arrow-right-arrow-left me-2"></i> New Transfer
                     </a>
                     <button type="button" class="list-group-item list-group-item-action text-start" onclick="printRoute()">
-                        <i class="bi bi-printer me-2"></i> Print Details
+                        <i class="fas fa-print me-2"></i> Print Details
                     </button>
                 </div>
             </div>

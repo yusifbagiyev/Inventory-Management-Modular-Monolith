@@ -626,7 +626,10 @@ textarea.form-control { min-height: 84px; }
 /* Only the standalone illustration icon gets the big block treatment - scoping this to a direct
    child keeps it off icons inside buttons/links, where display:block + 26px pushed the glyph onto
    its own line and made the button twice as tall. */
-.empty-state > i { font-size: 26px; color: var(--line-2); display: block; margin-bottom: 10px; }
+.empty-state > i {
+    font-size: 22px; color: var(--accent-2); display: grid; place-items: center;
+    width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 50%; background: var(--surface-3);
+}
 .empty-state .btn i { font-size: inherit; color: inherit; display: inline; margin: 0; }
 .empty-state h5 { color: var(--ink-2); font-weight: 620; margin-bottom: 4px; }
 
@@ -785,8 +788,20 @@ textarea.form-control { min-height: 84px; }
 .transfer-page #productInfoContainer .detail-row { border-bottom-color: var(--line-2); }
 
 /* Guidelines: green ticks read as "steps done", warmer than flat grey. */
-.transfer-page .side-panel .list-group-item i.bi-check2 { color: var(--ok); font-weight: 700; }
+.transfer-page .side-panel .list-group-item i.fa-check { color: var(--ok); font-weight: 700; }
 
 /* Recent transfers: emphasise the code, keep rows tidy. */
 .transfer-page #recentTransfers .mono { font-weight: 700; color: var(--ink); font-family: var(--font-mono); }
 .transfer-page #recentTransfers .empty-state { padding: 22px 12px; }
+
+/* Skeleton placeholders while content loads (_Skeleton.cshtml / skeletonHtml in site.js). */
+.skeleton-group { padding: 4px 0; }
+.skeleton {
+    display: block; height: .75rem; margin: .6rem 0; border-radius: 6px;
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 45%, var(--surface-2) 65%);
+    background-size: 300% 100%;
+    animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+.skeleton-title { height: 1rem; width: 42% !important; margin-bottom: .9rem; }
+@keyframes skeleton-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

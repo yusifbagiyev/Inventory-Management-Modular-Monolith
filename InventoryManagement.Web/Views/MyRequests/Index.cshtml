@@ -38,7 +38,7 @@
 
     <div class="card mb-4" id="myRequestsRegion">
         <div class="card-header d-flex align-items-center justify-content-between gap-2">
-            <span><i class="bi bi-list-check me-1"></i> Your Approval Requests</span>
+            <span><i class="fas fa-list-check me-1"></i> Your Approval Requests</span>
             <span class="text-muted mono">@Model.Requests.Count</span>
         </div>
         <div class="card-body">
@@ -145,7 +145,7 @@
             else
             {
                 <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
+                    <i class="fas fa-inbox"></i>
                     <h5>You have not submitted any requests</h5>
                     <p class="text-muted mb-0">Actions that need an administrator's approval show up here with their status.</p>
                 </div>
@@ -163,11 +163,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
+                <partial name="_Skeleton" model="5" />
             </div>
         </div>
     </div>
@@ -223,7 +219,7 @@
         });
 
         function viewDetails(requestId) {
-            $('#detailsContent').html('<div class="text-center"><div class="spinner-border" role="status"></div></div>');
+            $('#detailsContent').html(skeletonHtml(5));
             $('#detailsModal').modal('show');
 
             $.get(`/MyRequests/Details/${requestId}`, function(data) {

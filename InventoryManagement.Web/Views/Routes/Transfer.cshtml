@@ -24,7 +24,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-arrow-left-right me-1"></i>
+                    <i class="fas fa-arrow-right-arrow-left me-1"></i>
                     Transfer Information
                 </div>
 
@@ -149,28 +149,28 @@
         <div class="col-lg-4">
             <div class="card mb-4 side-panel">
                 <div class="card-header">
-                    <i class="bi bi-lightbulb me-1"></i>
+                    <i class="fas fa-lightbulb me-1"></i>
                     Transfer Guidelines
                 </div>
                 <div class="list-group list-group-flush">
                     <div class="list-group-item">
-                        <i class="bi bi-check2 me-2"></i>
+                        <i class="fas fa-check me-2"></i>
                         Enter inventory code and click Search or press Enter
                     </div>
                     <div class="list-group-item">
-                        <i class="bi bi-check2 me-2"></i>
+                        <i class="fas fa-check me-2"></i>
                         System will verify product exists and show current location
                     </div>
                     <div class="list-group-item">
-                        <i class="bi bi-check2 me-2"></i>
+                        <i class="fas fa-check me-2"></i>
                         Choose destination department
                     </div>
                     <div class="list-group-item">
-                        <i class="bi bi-check2 me-2"></i>
+                        <i class="fas fa-check me-2"></i>
                         Assign to specific worker if needed
                     </div>
                     <div class="list-group-item">
-                        <i class="bi bi-check2 me-2"></i>
+                        <i class="fas fa-check me-2"></i>
                         Add transfer image for documentation
                     </div>
                 </div>
@@ -190,7 +190,7 @@
             <!-- Recent Transfers Card -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-clock-history me-1"></i>
+                    <i class="fas fa-clock-rotate-left me-1"></i>
                     Recent Transfers
                 </div>
                 <div class="card-body" id="recentTransfers">
@@ -470,7 +470,7 @@
                         $('#recentTransfers').html(html);
                     } else {
                         $('#recentTransfers').html(
-                            '<div class="empty-state"><i class="bi bi-clock-history"></i><p class="mb-0">No recent transfers</p></div>');
+                            '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p class="mb-0">No recent transfers</p></div>');
                     }
                 } catch (error) {
                     console.error('Failed to load recent transfers:', error);

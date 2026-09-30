@@ -27,7 +27,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-person me-1"></i> User Information
+                    <i class="fas fa-user me-1"></i> User Information
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
@@ -103,7 +103,7 @@
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-bar-chart me-1"></i> Activity Summary
+                    <i class="fas fa-chart-column me-1"></i> Activity Summary
                 </div>
                 <div class="card-body">
                     <div class="detail-grid">
@@ -127,24 +127,24 @@
         <div class="col-lg-4">
             <div class="card side-panel mb-4">
                 <div class="card-header">
-                    <i class="bi bi-lightning-charge me-1"></i> Quick Actions
+                    <i class="fas fa-bolt me-1"></i> Quick Actions
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="@Url.Action("Edit", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="bi bi-pencil-square me-2"></i>Edit User
+                        <i class="fas fa-pen-to-square me-2"></i>Edit User
                     </a>
                     <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="bi bi-key me-2"></i>Reset Password
+                        <i class="fas fa-key me-2"></i>Reset Password
                     </a>
                     <button type="button" class="list-group-item list-group-item-action text-start w-100"
                             onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
                         @if (Model.IsActive)
                         {
-                            <span><i class="bi bi-person-dash me-2"></i>Deactivate User</span>
+                            <span><i class="fas fa-user-minus me-2"></i>Deactivate User</span>
                         }
                         else
                         {
-                            <span><i class="bi bi-person-check me-2"></i>Activate User</span>
+                            <span><i class="fas fa-user-check me-2"></i>Activate User</span>
                         }
                     </button>
                 </div>
@@ -152,7 +152,7 @@
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-info-circle me-1"></i> Account Information
+                    <i class="fas fa-circle-info me-1"></i> Account Information
                 </div>
                 <div class="card-body">
                     <div class="detail-row">
@@ -172,7 +172,7 @@
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-exclamation-triangle me-1"></i> Danger Zone
+                    <i class="fas fa-triangle-exclamation me-1"></i> Danger Zone
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Once you delete a user, there is no going back. Please be certain.</p>

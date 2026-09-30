@@ -24,7 +24,7 @@
         <div class="col-lg-8">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-person-gear me-1"></i> User Information
+                    <i class="fas fa-user-gear me-1"></i> User Information
                 </div>
 
                 <form asp-action="Edit" method="post">
@@ -95,7 +95,7 @@
                         @if (!Model.AvailableRoles.Any())
                         {
                             <div class="empty-state">
-                                <i class="bi bi-person-badge"></i>
+                                <i class="fas fa-id-badge"></i>
                                 <h5>No roles available</h5>
                             </div>
                         }
@@ -126,7 +126,7 @@
         <div class="col-lg-4">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="bi bi-shield-lock me-1"></i> User Permissions
+                    <i class="fas fa-user-shield me-1"></i> User Permissions
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -136,22 +136,18 @@
 
                     @* Fixed-height scroll region: the permission list can run to hundreds of rows. *@
                     <div id="permissionsContainer" style="max-height: 500px; overflow-y: auto;">
-                        <div class="text-center">
-                            <div class="spinner-border spinner-border-sm" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
+                        <partial name="_Skeleton" model="6" />
                     </div>
                 </div>
             </div>
 
             <div class="card side-panel mb-4">
                 <div class="card-header">
-                    <i class="bi bi-lock me-1"></i> Password Management
+                    <i class="fas fa-lock me-1"></i> Password Management
                 </div>
                 <div class="list-group list-group-flush">
                     <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="list-group-item list-group-item-action">
-                        <i class="bi bi-key me-2"></i>Reset Password
+                        <i class="fas fa-key me-2"></i>Reset Password
                     </a>
                 </div>
             </div>
@@ -227,7 +223,7 @@
             if (!permissions || permissions.length === 0) {
                 $('#permissionsContainer').html(`
                     <div class="empty-state">
-                        <i class="bi bi-shield-slash"></i>
+                        <i class="fas fa-user-slash"></i>
                         <h5>No permissions defined</h5>
                     </div>
                 `);
@@ -285,7 +281,7 @@
             // Search filters the rendered rows, so it needs its own no-match block.
             html += `
                 <div id="permissionsNoResults" class="empty-state" style="display: none;">
-                    <i class="bi bi-search"></i>
+                    <i class="fas fa-magnifying-glass"></i>
                     <h5>No permissions match</h5>
                 </div>
             `;

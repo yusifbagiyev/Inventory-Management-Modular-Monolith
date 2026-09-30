@@ -280,13 +280,13 @@
                                         <td class="actions-column">
                                             <div class="btn-group" role="group">
                                                 <a asp-action="Details" asp-route-id="@route.Id"
-                                                   class="btn btn-sm btn-outline-info" title="View Details">
+                                                   class="btn btn-sm btn-outline-secondary" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if ((User.HasPermission("route.update") || User.HasPermission("route.update.direct")) && !route.IsCompleted)
                                                 {
                                                     <a asp-action="Edit" asp-route-id="@route.Id"
-                                                       class="btn btn-sm btn-outline-warning" title="Edit">
+                                                       class="btn btn-sm btn-outline-secondary" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 }
