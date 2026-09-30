@@ -21,7 +21,8 @@ PG_CONTAINER=inventory_postgres
 cd "$DEPLOY_DIR"
 [ -f .env ] || { echo "No .env in $DEPLOY_DIR" >&2; exit 1; }
 
-env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- || true; }
+# .env may have Windows line endings (the server's does); compose ignores the \r, so must we.
+env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | tr -d '\r' || true; }
 
 set_env_value() {
     if grep -qE "^$1=" .env; then

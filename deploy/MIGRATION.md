@@ -79,7 +79,7 @@ Köhnə konteynerlər silinmir, yalnız dayandırılır. Onlar *Təmizlik* addı
 - Gözləyən approval sorğusu varsa, birini təsdiqləyin və nəticəni yoxlayın.
 - ServiceDesk inteqrasiyası işləyir. Serverdə yoxlayın: açarla 200, açarsız 401 gözlənilir.
   ```bash
-  K=$(grep ^SERVICEDESK_API_KEY= .env | cut -d= -f2- | tr -d "'")
+  K=$(grep ^SERVICEDESK_API_KEY= .env | cut -d= -f2- | tr -d "'\r")
   curl -s -o /dev/null -w '%{http_code}\n' -H "X-Api-Key: $K" 'http://localhost:5001/api/products?pageSize=1'
   curl -s -o /dev/null -w '%{http_code}\n' 'http://localhost:5001/api/products?pageSize=1'
   ```
@@ -103,7 +103,7 @@ Niyyət olunan vəziyyətə keçmək üçün:
 
 ```bash
 cd /opt/inventory166
-docker exec -i inventory_postgres psql -U "$(grep ^DB_USER= .env | cut -d= -f2-)" -d inventory \
+docker exec -i inventory_postgres psql -U "$(grep ^DB_USER= .env | cut -d= -f2- | tr -d '\r')" -d inventory \
   < deploy/sql/fix-operator-permissions.sql
 ```
 
@@ -124,7 +124,7 @@ bash deploy/cutover.sh rollback
   qayıtmaq lazım olarsa, həmin datanı əl ilə köçürmək lazım gələcək.
 - Yenidən cəhd etmək üçün əvvəlcə `inventory` bazasını silin, sonra *0.3*-dən davam edin:
   ```bash
-  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2-)" inventory
+  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2- | tr -d '\r')" inventory
   ```
 
 ## Təmizlik (1–2 həftə problemsiz işlədikdən sonra)
@@ -136,7 +136,7 @@ cd /opt/inventory166
 docker rm inventory_web inventory_api_gateway inventory_identity_service inventory_product_service \
   inventory_route_service inventory_approval_service inventory_notification_service inventory_rabbitmq
 for db in identity_service product_service route_service approval_service notification_service; do
-  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2-)" "$db"
+  docker exec inventory_postgres dropdb -U "$(grep ^DB_USER= .env | cut -d= -f2- | tr -d '\r')" "$db"
 done
 docker volume rm inventory166_rabbitmq_data
 rm -rf src nginx.conf docker-compose.old.yml deploy.old-* next
