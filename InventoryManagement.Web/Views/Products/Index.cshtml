@@ -36,8 +36,8 @@
             }
         </div>
         <div class="ip-page-actions">
-            <button type="button" class="btn btn-outline-secondary" onclick="exportProductsToPDF()">
-                <i class="fas fa-file-pdf"></i> @L["Export PDF"]
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()">
+                <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
             </button>
             @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
             {
@@ -112,7 +112,7 @@
                 <table class="ip-table" id="productsTable">
                     <thead>
                         <tr>
-                            <th style="width: 60px"><span class="visually-hidden">@L["Image"]</span></th>
+                            <th class="pdf-omit" style="width: 60px"><span class="visually-hidden">@L["Image"]</span></th>
                             <th>@L["Code"]</th>
                             <th>@L["Product"]</th>
                             <th>@L["Department and worker"]</th>
@@ -143,14 +143,14 @@
                                     {
                                         <span class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Double-click to change the code"]">@product.InventoryCode</span>
                                         <div class="inventory-code-edit d-none" data-id="@product.Id">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control form-control-sm inventory-code-input"
+                                            <div class="d-flex align-items-center gap-1">
+                                                <input type="number" class="ip-input ip-input-sm mono inventory-code-input"
                                                        value="@product.InventoryCode" min="1" max="9999" data-id="@product.Id" aria-label="@L["Inventory Code"]">
-                                                <button type="button" class="btn btn-primary btn-sm save-inventory-code" data-id="@product.Id" title="@L["Save"]">
-                                                    <i class="fas fa-check"></i>
+                                                <button type="button" class="ip-btn-icon save-inventory-code" data-id="@product.Id" title="@L["Save"]" aria-label="@L["Save"]">
+                                                    <i class="fa-solid fa-check"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-secondary btn-sm cancel-inventory-code" data-id="@product.Id" title="@L["Cancel"]">
-                                                    <i class="fas fa-times"></i>
+                                                <button type="button" class="ip-btn-icon cancel-inventory-code" data-id="@product.Id" title="@L["Cancel"]" aria-label="@L["Cancel"]">
+                                                    <i class="fa-solid fa-xmark"></i>
                                                 </button>
                                             </div>
                                         </div>

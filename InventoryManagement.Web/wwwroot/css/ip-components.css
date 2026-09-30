@@ -451,3 +451,7 @@ tr.ip-clickable { cursor: pointer; }
 .ip-table tbody tr:hover .sub, .ip-table tbody tr:hover .cell-sub, .ip-table tbody tr:hover .ip-faint { color: var(--ip-text-2); }
 .ip-rail-link:hover .ip-rail-count { color: var(--ip-text-2); }
 .ip-empty .icon, .ip-notif-icon, .ip-thumb { color: var(--ip-text-2); }
+
+/* ---------- small input (inline edits, e.g. the product code in the list) ---------- */
+.ip-input-sm { width: 8ch; min-width: 8ch; height: 32px; padding: 0 8px; }
+.inventory-code-edit .ip-input-sm { width: 9ch; }

@@ -71,7 +71,7 @@ function confirmAction(options, onConfirm) {
     titleEl.textContent = opts.title || t('Please confirm');
     msgEl.textContent = opts.message || t('Are you sure?');
     okBtn.textContent = opts.okText || t('Confirm');
-    okBtn.className = 'btn btn-sm ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+    okBtn.className = 'ip-btn ' + (opts.danger ? 'ip-btn-danger' : 'ip-btn-primary');
 
     // Rebuild the OK button so a previous dialog's handler can never fire for this one.
     const freshOk = okBtn.cloneNode(true);

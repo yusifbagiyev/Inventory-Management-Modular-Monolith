@@ -116,7 +116,7 @@
     </div>
 
     <!-- Global Image Modal -->
-    <div class="modal fade" id="globalImageModal" tabindex="-1">
+    <div class="modal fade ip-modal" id="globalImageModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content">
                 <div class="modal-header">
@@ -133,7 +133,7 @@
 
     @* Shared confirmation dialog. Replaces the browser's confirm() popup, which cannot be styled
        and reads as a system error. Enter confirms, Esc/Cancel dismisses. Use via confirmAction(). *@
-    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmTitle" aria-hidden="true">
+    <div class="modal fade ip-modal" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm-plus">
             <div class="modal-content">
                 <div class="modal-header">
@@ -144,8 +144,8 @@
                     <p id="globalConfirmMessage" class="mb-0">@L["Are you sure?"]</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">@L["Cancel"]</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="globalConfirmOk">@L["Confirm"]</button>
+                    <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
+                    <button type="button" class="ip-btn ip-btn-primary" id="globalConfirmOk">@L["Confirm"]</button>
                 </div>
             </div>
         </div>
