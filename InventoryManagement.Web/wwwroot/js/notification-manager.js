@@ -8,6 +8,30 @@ window.NotificationManager = (function () {
     let reconnectTimeout = null;
     let isInitialized = false; // Flag to prevent multiple initializations
 
+    // Short drops (a laptop waking up, a network switch, a restart) usually recover within
+    // seconds; only an outage that lasts is worth a toast, and "restored" only follows that toast.
+    const OUTAGE_NOTICE_DELAY_MS = 10000;
+    let outageNoticeTimer = null;
+    let outageNoticeShown = false;
+
+    function noteOutage() {
+        if (outageNoticeTimer || outageNoticeShown) return;
+        outageNoticeTimer = setTimeout(() => {
+            outageNoticeTimer = null;
+            outageNoticeShown = true;
+            showToast('Connection lost. Reconnecting...', 'warning');
+        }, OUTAGE_NOTICE_DELAY_MS);
+    }
+
+    function noteRecovered() {
+        clearTimeout(outageNoticeTimer);
+        outageNoticeTimer = null;
+        if (outageNoticeShown) {
+            outageNoticeShown = false;
+            showToast('Connection restored', 'success');
+        }
+    }
+
     // Track recent notifications to prevent duplicates
     const recentNotifications = new Map();
     const DUPLICATE_CHECK_WINDOW = 5000; // 5 seconds
@@ -59,6 +83,9 @@ window.NotificationManager = (function () {
             .configureLogging(signalR.LogLevel.Warning)
             .build();
 
+        // Pairs with the server's ClientTimeoutInterval (2 min) and KeepAliveInterval (15 s).
+        connection.serverTimeoutInMilliseconds = 60000;
+
         // Set up event handlers before starting
         setupConnectionHandlers();
         setupMessageHandlers();
@@ -74,13 +101,13 @@ window.NotificationManager = (function () {
         connection.onreconnecting((error) => {
             connectionState = 'reconnecting';
             console.warn('SignalR connection lost, attempting to reconnect...', error);
-            showToast('Connection lost. Reconnecting...', 'warning');
+            noteOutage();
         });
 
         connection.onreconnected((connectionId) => {
             connectionState = 'connected';
             connectionRetryCount = 0;
-            showToast('Connection restored', 'success');
+            noteRecovered();
 
             // Reload data after reconnection, but with a delay to avoid overwhelming the server
             setTimeout(() => {
@@ -97,6 +124,7 @@ window.NotificationManager = (function () {
         connection.onclose((error) => {
             connectionState = 'disconnected';
             console.error('SignalR connection closed:', error);
+            noteOutage();
 
             // Only try to reconnect if we haven't exceeded max retries
             if (connectionRetryCount < maxRetries) {
@@ -104,6 +132,8 @@ window.NotificationManager = (function () {
                 scheduleReconnect(5000);
             } else {
                 console.error('Maximum reconnection attempts exceeded');
+                clearTimeout(outageNoticeTimer);
+                outageNoticeTimer = null;
                 showToast('Unable to connect to notification service', 'error');
                 // Reset for potential future retry attempts
                 setTimeout(() => {
@@ -267,6 +297,7 @@ window.NotificationManager = (function () {
             .then(() => {
                 connectionState = 'connected';
                 connectionRetryCount = 0;
+                noteRecovered();
 
                 // Clear any existing reconnect timeout
                 if (reconnectTimeout) {

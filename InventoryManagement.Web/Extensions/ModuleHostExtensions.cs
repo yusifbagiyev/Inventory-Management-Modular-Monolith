@@ -67,7 +67,9 @@ namespace InventoryManagement.Web.Extensions
             services.AddSignalR(options =>
             {
                 options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-                options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+                // Browsers throttle timers in background tabs to about once a minute, so the
+                // client's 15 s ping can arrive a minute late; 30 s dropped those connections.
+                options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
             });
 
             services.AddRateLimiter(options =>
