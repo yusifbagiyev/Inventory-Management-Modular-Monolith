@@ -14,6 +14,8 @@ namespace InventoryManagement.Web.Extensions
             services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<IWordExportService, WordExportService>();
             services.AddHostedService<StartupWarmup>();
+            services.AddMemoryCache();
+            services.AddScoped<RailCounts>();
             return services;
         }
 

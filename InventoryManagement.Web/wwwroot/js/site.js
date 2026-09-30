@@ -266,7 +266,7 @@ function hideLoader() {
 }
 
 function setupSessionMonitor() {
-    const isUserAuthenticated = document.querySelector('.user-menu-toggle') !== null;
+    const isUserAuthenticated = document.getElementById('ipRail') !== null;
 
     if (!isUserAuthenticated) {
         return;
@@ -370,4 +370,74 @@ window.Theme = (function () {
 
     syncButtons();
     return { current: current, apply: apply };
+})();
+
+/**
+ * The sidebar rail (_Sidebar.cshtml). Wide screens: expanded or collapsed to icons, the choice
+ * kept in localStorage 'ip-rail' (the inline script in _Sidebar applies it before first paint).
+ * 768-1024px: collapsed by default, the toggle opens it for the moment. Phones: a drawer.
+ */
+window.Rail = (function () {
+    const KEY = 'ip-rail';
+    const phone = window.matchMedia('(max-width: 767.98px)');
+    const narrow = window.matchMedia('(max-width: 1024px)');
+
+    function rail() { return document.getElementById('ipRail'); }
+
+    function syncToggle() {
+        const r = rail();
+        const button = r && r.querySelector('.ip-rail-toggle');
+        if (!button) return;
+        const label = r.classList.contains('collapsed') ? button.dataset.labelExpand : button.dataset.labelCollapse;
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        const span = button.querySelector('span');
+        if (span) span.textContent = label;
+    }
+
+    function layout() {
+        const r = rail();
+        if (!r) return;
+        if (phone.matches) {
+            r.classList.remove('collapsed', 'expanded');
+        } else {
+            document.body.classList.remove('rail-open');
+            if (narrow.matches) {
+                r.classList.toggle('collapsed', !r.classList.contains('expanded'));
+            } else {
+                let stored = null;
+                try { stored = localStorage.getItem(KEY); } catch (e) { }
+                r.classList.remove('expanded');
+                r.classList.toggle('collapsed', stored === 'collapsed');
+            }
+        }
+        syncToggle();
+    }
+
+    function toggle() {
+        const r = rail();
+        if (!r) return;
+        if (phone.matches) {
+            document.body.classList.toggle('rail-open');
+        } else if (narrow.matches) {
+            r.classList.toggle('expanded');
+            layout();
+        } else {
+            const collapse = !r.classList.contains('collapsed');
+            try { localStorage.setItem(KEY, collapse ? 'collapsed' : 'expanded'); } catch (e) { }
+            layout();
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-rail-toggle]')) toggle();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && document.body.classList.contains('rail-open')) document.body.classList.remove('rail-open');
+    });
+    phone.addEventListener('change', layout);
+    narrow.addEventListener('change', layout);
+    document.addEventListener('DOMContentLoaded', layout);
+
+    return { toggle: toggle };
 })();

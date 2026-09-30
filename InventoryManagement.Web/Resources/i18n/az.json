@@ -1055,5 +1055,16 @@
   "Photos of the item as handed over. When the transfer is completed they become the product images, and the cover (★) becomes its main image.": "Əşyanın təhvil verildiyi vəziyyətdəki şəkilləri. Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
   "When the transfer is completed these become the product images, and the cover (★) becomes its main image.": "Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
   "Optional. Photos make the item easier to identify during transfers. The star (★) chooses the cover image.": "İstəyə bağlı. Şəkillər transfer zamanı əşyanı tanımağı asanlaşdırır. Əsas şəkli ulduz (★) ilə seçin.",
-  "The request could not be carried out: {0}. The requester has been notified.": "Sorğunu icra etmək mümkün olmadı: {0}. Sorğu sahibinə bildiriş göndərildi."
+  "The request could not be carried out: {0}. The requester has been notified.": "Sorğunu icra etmək mümkün olmadı: {0}. Sorğu sahibinə bildiriş göndərildi.",
+  "Operations": "Uçot",
+  "Oversight": "Nəzarət",
+  "Catalog": "Kataloq",
+  "Collapse menu": "Menyunu yığ",
+  "Expand menu": "Menyunu aç",
+  "Find by code": "Kod ilə tap",
+  "Find by code, e.g. 1042": "Kod ilə tap, məs. 1042",
+  "All notifications": "Bütün bildirişlər",
+  "Admin": "Admin",
+  "Operator": "Operator",
+  "{0} selected": "{0} seçilib"
 }

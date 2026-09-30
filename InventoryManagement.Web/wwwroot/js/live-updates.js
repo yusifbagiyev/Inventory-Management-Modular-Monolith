@@ -214,7 +214,9 @@ window.LiveUpdates = (function () {
             // alert-permanent: site.js auto-closes other alerts 5 s after load; this one must stay.
             notice.className = 'alert alert-warning alert-permanent d-flex align-items-center justify-content-between gap-3';
             notice.setAttribute('role', 'status');
-            (document.querySelector('.page-content') || document.body).prepend(notice);
+            const toolbar = document.querySelector('.ip-main > .ip-toolbar');
+            if (toolbar) toolbar.after(notice);
+            else document.body.prepend(notice);
         }
 
         const message = document.createElement('span');

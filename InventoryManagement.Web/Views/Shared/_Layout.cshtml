@@ -18,6 +18,7 @@
     <!-- Bootstrap 5, then the design tokens (design/tokens.css, light + dark) that everything below reads -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
     <!-- DataTables -->
@@ -29,142 +30,80 @@
 
 </head>
 <body>
-    <div class="layout-wrapper" id="wrapper">
-        <!-- Sidebar -->
-        @if (User.Identity?.IsAuthenticated ?? false)
+    @{ var signedIn = User.Identity?.IsAuthenticated ?? false; }
+    <div class="ip-app" id="wrapper">
+        @if (signedIn)
         {
             <partial name="_Sidebar" />
-            <!-- Overlay for mobile -->
-            <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
         }
 
-        <!-- Main Content -->
-        <div class="main-content" id="page-content-wrapper">
-            <!-- Modern Top Navigation -->
-            <nav class="navbar navbar-expand-lg navbar-light top-navbar">
-                <div class="container-fluid px-4">
-                    <div class="d-flex align-items-center">
-                        @if (User.Identity?.IsAuthenticated ?? false)
-                        {
-                            <button class="btn btn-link sidebar-toggle" id="menu-toggle">
-                                <i class="fas fa-bars"></i>
-                            </button>
-                        }
+        <main class="ip-main page-content" id="page-content-wrapper">
+            @* Toolbar (design/: "IP Toolbar"): no bar of its own, it sits in the content area. *@
+            <header class="ip-toolbar">
+                @if (signedIn)
+                {
+                    <button type="button" class="ip-btn-icon lg ip-rail-open" data-rail-toggle
+                            title="@L["Main menu"]" aria-label="@L["Main menu"]">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
 
-                        <div class="navbar-brand-wrapper">
-                            <a class="navbar-brand" href="/">
-                                <span class="brand-text">Inventory Pro</span>
+                    @* Exact inventory code -> that product; anything else -> the filtered product list. *@
+                    <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" name="code" autocomplete="off" inputmode="search"
+                               placeholder="@L["Find by code, e.g. 1042"]" aria-label="@L["Find by code"]" />
+                    </form>
+                }
+
+                @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
+                <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax
+                      role="group" aria-label="@L["Switch language"]">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    @if (JsonStringLocalizer.IsAzerbaijani)
+                    {
+                        <button type="button" class="active" aria-pressed="true">AZ</button>
+                        <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
+                    }
+                    else
+                    {
+                        <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
+                        <button type="button" class="active" aria-pressed="true">EN</button>
+                    }
+                </form>
+
+                @if (signedIn)
+                {
+                    <button type="button" class="ip-btn-icon lg" data-theme-toggle
+                            title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
+                        <i class="fas fa-moon"></i>
+                    </button>
+
+                    <div class="dropdown">
+                        <button type="button" class="ip-btn-icon lg position-relative" id="notificationIcon"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                                title="@L["Notifications"]" aria-label="@L["Notifications"]">
+                            <i class="fa-regular fa-bell"></i>
+                            <span id="notificationBadge" class="ip-dot" style="display:none"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end ip-dropdown ip-notif-menu">
+                            <div class="head">
+                                <span>@L["Notifications"]</span>
+                                <button type="button" id="markAllAsRead" class="ip-btn ip-btn-ghost ip-btn-sm">@L["Mark all as read"]</button>
+                            </div>
+                            <div id="notificationList" class="ip-notif-list">
+                                <div class="px-3 py-2"><partial name="_Skeleton" model="3" /></div>
+                            </div>
+                            <a href="/Notifications" class="ip-notif-foot">
+                                <span>@L["All notifications"]</span><i class="fa-solid fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
+                }
+            </header>
 
-                    <div class="navbar-nav ms-auto d-flex align-items-center">
-                        @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
-                        <form method="post" asp-controller="Language" asp-action="Set" class="nav-item me-1 lang-switch" data-no-ajax>
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="culture" value="@(JsonStringLocalizer.IsAzerbaijani ? "en-US" : "az-Latn-AZ")" />
-                            <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                            <button type="submit" class="nav-link notification-toggle theme-toggle lang-toggle"
-                                    title="@L["Switch language"]" aria-label="@L["Switch language"]">
-                                @(JsonStringLocalizer.IsAzerbaijani ? "EN" : "AZ")
-                            </button>
-                        </form>
-                        @if (User.Identity?.IsAuthenticated ?? false)
-                        {
-                            <div class="nav-item me-1">
-                                <button type="button" class="nav-link notification-toggle theme-toggle" data-theme-toggle
-                                        title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
-                                    <i class="fas fa-moon"></i>
-                                </button>
-                            </div>
-                            <div class="nav-item dropdown me-3">
-                                <a class="nav-link notification-toggle" href="#" id="notificationIcon"
-                                   data-bs-toggle="dropdown">
-                                    <div class="icon-badge">
-                                        <i class="far fa-bell"></i>
-                                        <span id="notificationBadge" class="badge rounded-pill bg-accent position-absolute top-0 start-100 translate-middle"
-                                              style="display:none; font-size: 0.65rem; padding: 0.25em 0.5em;">
-                                        </span>
-                                    </div>
-                                </a>
-                                <div class="dropdown-menu dropdown-menu-end notification-dropdown modern-dropdown">
-                                    <div class="dropdown-header">
-                                        <h6 class="mb-0">@L["Notifications"]</h6>
-                                        <a href="/Notifications" class="text-primary">@L["View All"]</a>
-                                    </div>
-                                    <div id="notificationList" class="notification-list px-3 py-2">
-                                        <partial name="_Skeleton" model="3" />
-                                    </div>
-                                    <div class="dropdown-footer">
-                                        <a href="#" id="markAllAsRead" class="text-muted">
-                                            @L["Mark all as read"]
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- User Menu -->
-                            <div class="nav-item dropdown">
-                                <a class="nav-link user-menu-toggle" href="#" id="userDropdown"
-                                   data-bs-toggle="dropdown">
-                                    <div class="user-avatar">
-                                        <span>@User.Identity.Name?.Substring(0, 1).ToUpper()</span>
-                                    </div>
-                                    <span class="user-name d-none d-md-inline ms-2">@User.Identity.Name</span>
-                                    <i class="fas fa-chevron-down ms-1 small"></i>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end modern-dropdown">
-                                    <li>
-                                        <a class="dropdown-item" href="/Account/Profile">
-                                            <i class="fas fa-user-circle me-2"></i> @L["My Profile"]
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="/Account/ChangePassword">
-                                            <i class="fas fa-key me-2"></i> @L["Change Password"]
-                                        </a>
-                                    </li>
-                                    @if (User.IsInRole("Admin"))
-                                    {
-                                        <li>
-                                            <a class="dropdown-item" href="/Approvals">
-                                                <i class="fas fa-check-circle me-2"></i> @L["Approvals"]
-                                                <span class="badge bg-warning ms-auto" id="pendingApprovalsCount"></span>
-                                            </a>
-                                        </li>
-                                    }
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li>
-                                        <form asp-controller="Account" asp-action="Logout" method="post" data-no-ajax>
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="dropdown-item text-danger">
-                                                <i class="fas fa-sign-out-alt me-2"></i> @L["Sign Out"]
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </nav>
-
-            <!-- Page Content -->
-            <div class="page-content">
-                @RenderBody()
-            </div>
-
-            <!-- Modern Footer -->
-            <footer class="modern-footer">
-                <div class="container-fluid">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <span class="text-muted">© @DateTime.Today.Year Inventory Pro. @L["All rights reserved."]</span>
-                        </div>
-                    </div>
-                </div>
-            </footer>
-        </div>
+            @RenderBody()
+        </main>
     </div>
 
     <!-- Toast Container -->
@@ -233,32 +172,7 @@
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
     <script>
-        // Initialize application when document is ready
-        // Single entry point for the sidebar, shared by the header button and the mobile
-        // overlay. The overlay markup has always called toggleSidebar(), but the function was
-        // never defined - so tapping outside the drawer did nothing. Layout widths are owned by
-        // the stylesheet; setting margin-left from JS here fought those rules.
-        function toggleSidebar() {
-            if (window.matchMedia('(max-width: 992px)').matches) {
-                document.body.classList.toggle('sidebar-open');   // drawer over the content
-            } else {
-                document.getElementById('wrapper').classList.toggle('toggled'); // collapse to rail
-            }
-        }
-
         $(document).ready(function() {
-            $('#menu-toggle').click(function(e) {
-                e.preventDefault();
-                toggleSidebar();
-            });
-
-            // Leaving the mobile breakpoint should never strand an open drawer.
-            window.addEventListener('resize', function () {
-                if (!window.matchMedia('(max-width: 992px)').matches) {
-                    document.body.classList.remove('sidebar-open');
-                }
-            });
-
                 // Pass the admin status to the notification manager
                 const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
 
@@ -291,7 +205,7 @@
             });
 
             // Handle individual notification clicks
-            $(document).on('click', '.notification-item', function() {
+            $(document).on('click', '.notification-item, .ip-notif-item', function() {
                 const notificationId = $(this).data('id');
                 if (notificationId) {
                     markNotificationAsRead(notificationId);
@@ -329,12 +243,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to load notifications:', error);
-                    $('#notificationList').html(`
-                        <div class="notification-empty">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <p class="mb-0">${t('Failed to load notifications')}</p>
-                        </div>
-                    `);
+                    $('#notificationList').html(`<div class="ip-notif-empty">${escapeHtml(t('Failed to load notifications'))}</div>`);
                 }
             });
         };
@@ -403,14 +312,10 @@
             let html = '';
 
             if (!notifications || notifications.length === 0) {
-                html = `
-                    <div class="notification-empty">
-                        <i class="fas fa-bell-slash"></i>
-                        <p class="mb-0">${t('No new notifications')}</p>
-                    </div>
-                `;
+                html = `<div class="ip-notif-empty">${escapeHtml(t('No new notifications'))}</div>`;
             } else {
-                notifications.forEach(function(notification) {
+                // The latest four; the rest is one click away (Notifications page).
+                notifications.slice(0, 4).forEach(function(notification) {
                     html += createNotificationItem(notification);
                 });
             }
@@ -418,27 +323,19 @@
             $('#notificationList').html(html);
         }
 
+        // Unread = accent dot + stronger title; the type icon sits on a neutral tile.
         function createNotificationItem(notification) {
-            const timeAgo = formatTimeAgo(notification.createdAt);
             const unreadClass = notification.isRead ? '' : 'unread';
-            const icon = getNotificationIcon(notification.type);
-            const iconColor = getNotificationIconColor(notification.type);
-
             return `
-                <div class="notification-item ${unreadClass}" data-id="${notification.id}">
-                    <div class="d-flex align-items-start">
-                        <div class="notification-icon ${iconColor} me-3">
-                            <i class="${icon} text-white"></i>
+                <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}" role="button" tabindex="0">
+                    <span class="unread-dot" aria-hidden="true"></span>
+                    <span class="ip-notif-icon"><i class="${getNotificationIcon(notification.type)}"></i></span>
+                    <div class="flex-grow-1" style="min-width: 0">
+                        <div class="d-flex justify-content-between align-items-baseline gap-2">
+                            <span class="title">${escapeHtml(notification.title)}</span>
+                            <span class="time">${escapeHtml(formatTimeAgo(notification.createdAt))}</span>
                         </div>
-                        <div class="notification-content">
-                            <h6>${escapeHtml(notification.title)}</h6>
-                            <p>${escapeHtml(notification.message)}</p>
-                            <div class="notification-time">
-                                <i class="fas fa-clock me-1"></i>
-                                ${timeAgo}
-                                ${!notification.isRead ? '<span class="notification-dot ms-2"></span>' : ''}
-                            </div>
-                        </div>
+                        <div class="text">${escapeHtml(notification.message)}</div>
                     </div>
                 </div>
             `;
@@ -454,7 +351,7 @@
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
                 success: function(response) {
-                    $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                    $(`.notification-item[data-id="${notificationId}"], .ip-notif-item[data-id="${notificationId}"]`).removeClass('unread');
                     loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
@@ -474,7 +371,7 @@
                 },
                 success: function(response) {
                     // Remove unread class from all items
-                    $('.notification-item').removeClass('unread');
+                    $('.notification-item, .ip-notif-item').removeClass('unread');
                     $('.notification-dot').remove();
 
                     updateNotificationBadge(0);
@@ -544,19 +441,6 @@
             return icons[type] || 'fas fa-bell';
         }
 
-
-        function getNotificationIconColor(type) {
-            const colors = {
-                'ApprovalRequest': 'bg-warning',
-                'ApprovalResponse': 'bg-success',
-                'ProductUpdate': 'bg-info',
-                'RouteUpdate': 'bg-primary',
-                'RouteCompleted': 'bg-success',
-                'TransferCompleted': 'bg-success',
-                'System': 'bg-secondary'
-            };
-            return colors[type] || 'bg-primary';
-        }
 
         function formatTimeAgo(dateString) {
             const date = new Date(dateString);

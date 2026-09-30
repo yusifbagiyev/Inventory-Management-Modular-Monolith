@@ -72,6 +72,26 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        /// <summary>
+        /// The toolbar's "find by code": an existing inventory code opens that product, anything
+        /// else becomes a search on the product list.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Find(string? code)
+        {
+            code = code?.Trim();
+            if (string.IsNullOrEmpty(code))
+                return RedirectToAction(nameof(Index));
+
+            if (int.TryParse(code, out var inventoryCode))
+            {
+                var product = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
+                if (product != null)
+                    return RedirectToAction(nameof(Details), new { id = product.Id });
+            }
+            return RedirectToAction(nameof(Index), new { search = code });
+        }
+
         public async Task<IActionResult> Details(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));

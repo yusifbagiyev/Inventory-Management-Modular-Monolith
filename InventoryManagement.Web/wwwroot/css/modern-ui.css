@@ -35,11 +35,6 @@
     --font-mono: var(--ip-font-mono);
 }
 
-:root {
-    --sidebar-width: 232px;
-    --navbar-height: 58px;
-}
-
 body {
     font-family: var(--ip-font-sans);
     background-color: var(--ground);
@@ -48,182 +43,6 @@ body {
     line-height: var(--ip-lh-base);
     -webkit-font-smoothing: antialiased;
 }
-
-/* ── shell ───────────────────────────────────────────────────────────────── */
-.layout-wrapper { display: flex; min-height: 100vh; width: 100%; }
-
-/* flex-basis 0 + min-width 0 so the column always consumes the full remaining width and
-   never gets sized by its content (a wide table used to shrink it and leave a dead gap
-   on the right). The sidebar is position:fixed, so margin-left is what reserves its space. */
-.main-content {
-    flex: 1 1 0%;
-    display: flex;
-    flex-direction: column;
-    margin-left: var(--sidebar-width);
-    transition: margin-left .25s ease;
-    min-width: 0;
-    max-width: 100%;
-}
-.layout-wrapper.toggled .main-content { margin-left: 68px; }
-
-/* Collapsed sidebar on desktop: an icon rail. Below 992px the sidebar is a drawer instead. */
-@media (min-width: 993px) {
-    .layout-wrapper.toggled .modern-sidebar { width: 68px; }
-    .layout-wrapper.toggled .modern-sidebar .brand-text,
-    .layout-wrapper.toggled .modern-sidebar .nav-text,
-    .layout-wrapper.toggled .modern-sidebar .nav-section,
-    .layout-wrapper.toggled .modern-sidebar .nav-link .badge { display: none; }
-    .layout-wrapper.toggled .modern-sidebar .sidebar-header,
-    .layout-wrapper.toggled .modern-sidebar .nav-link { justify-content: center; }
-    .modern-sidebar { transition: transform .25s ease, width .25s ease; }
-}
-
-/* Navigation is chrome, not content: it gets its own deep brand surface so the eye
-   separates "where am I" from "what am I looking at" without a single dark page. */
-.modern-sidebar {
-    --nav-bg: var(--ip-sunken);
-    --nav-bg-2: var(--ip-sunken);
-    --nav-ink: var(--ip-text-2);
-    --nav-ink-strong: var(--ip-text-1);
-    --nav-line: var(--ip-border);
-    color: var(--nav-ink);
-    width: var(--sidebar-width);
-    height: 100vh;
-    background: var(--nav-bg);
-    position: fixed;
-    left: 0;
-    top: 0;
-    z-index: 1000;
-    transition: transform .25s ease;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--ip-border-strong) transparent;
-}
-.modern-sidebar::-webkit-scrollbar { width: 8px; }
-.modern-sidebar::-webkit-scrollbar-thumb { background: var(--ip-border-strong); border-radius: 8px; }
-
-.sidebar-header {
-    padding: 0 16px;
-    height: var(--navbar-height);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--nav-ink-strong);
-    background: var(--nav-bg-2);
-    border-bottom: 1px solid var(--nav-line);
-    font-weight: 650;
-}
-.sidebar-header h5, .sidebar-header .brand-text {
-    font-size: 15px; font-weight: 650; letter-spacing: -.01em; color: var(--nav-ink-strong);
-}
-.sidebar-header img { border-radius: 6px; }
-
-.sidebar-content { padding: 10px 8px 24px; list-style: none; margin: 0; }
-
-.nav-section {
-    padding: 15px 10px 6px;
-    font-size: 10.5px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--ip-text-3);
-    font-weight: 700;
-}
-
-.modern-sidebar .nav-item { margin-bottom: 2px; position: relative; list-style: none; }
-
-.modern-sidebar .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 9px 12px;
-    border-radius: 8px;
-    color: var(--nav-ink);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 520;
-    transition: background .15s ease, color .15s ease;
-    position: relative;
-}
-.modern-sidebar .nav-link:hover { color: var(--nav-ink-strong); background: var(--ip-surface-hover); }
-
-.modern-sidebar .nav-link.active {
-    color: var(--nav-ink-strong);
-    background: var(--ip-surface-active);
-    font-weight: 600;
-}
-.modern-sidebar .nav-link.active::before { content: none; }
-.modern-sidebar .nav-link.active .nav-icon { opacity: 1; }
-
-.nav-icon {
-    width: 20px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    opacity: .9;
-    flex: none;
-}
-.nav-text { flex: 1 1 auto; min-width: 0; }
-
-/* counters sit inline at the end of the row, not absolutely positioned */
-.modern-sidebar .nav-link .badge,
-.modern-sidebar .notification-badge {
-    position: static;
-    transform: none;
-    min-width: 20px;
-    height: 19px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 0 6px;
-    font-family: var(--font-mono);
-    border-radius: 20px;
-    margin-left: auto;
-}
-/* A total is plain text; a count that asks for action (pending, unread) is a soft accent pill. */
-.modern-sidebar .nav-link .badge.bg-primary { background: transparent !important; color: var(--ip-text-3) !important; font-weight: 500; }
-.modern-sidebar .nav-link .badge.bg-warning,
-.modern-sidebar .nav-link .badge.bg-danger,
-.modern-sidebar .nav-link .badge.bg-info { background: var(--ip-accent-soft) !important; color: var(--ip-accent-text) !important; border-radius: var(--ip-radius-sm); }
-/* An empty count badge must not linger as a coloured dot. The notification badge hides itself
-   via inline display:none + JS; this covers the rest (Products total, pending-routes/approvals)
-   when there is no number to show. A real count re-shows it (it is no longer :empty). */
-.modern-sidebar .nav-link .badge:empty { display: none; }
-
-/* ── top bar ─────────────────────────────────────────────────────────────── */
-.top-navbar {
-    background: var(--surface);
-    height: var(--navbar-height);
-    min-height: var(--navbar-height);
-    border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    padding: 0;
-}
-/* the brand already lives in the sidebar - this bar carries context and account actions */
-.top-navbar .navbar-brand { font-size: 15px; font-weight: 640; color: var(--ink); letter-spacing: -.01em; }
-.top-navbar .navbar-brand:hover { color: var(--accent-2); }
-
-.sidebar-toggle {
-    color: var(--ink-2); font-size: 1.1rem; padding: .3rem .55rem; border: none;
-    background: none; border-radius: var(--r); line-height: 1;
-}
-.sidebar-toggle:hover { background: var(--surface-2); color: var(--accent-2); }
-
-.search-wrapper { display: none; }
-
-/* bell / account triggers */
-.top-navbar .nav-link.notification-toggle,
-.top-navbar .nav-link.user-menu-toggle {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: .35rem .5rem; border-radius: var(--r); font-size: 1.05rem;
-}
-.top-navbar .nav-link.notification-toggle:hover,
-.top-navbar .nav-link.user-menu-toggle:hover { background: var(--surface-2); }
 
 .user-avatar {
     width: 34px;
@@ -257,36 +76,6 @@ body {
     line-height: 1;
     letter-spacing: .01em;
     text-transform: uppercase;
-}
-
-.nav-link.notification-toggle,
-.nav-link.user-menu-toggle { color: var(--ink-2) !important; }
-.nav-link.notification-toggle:hover,
-.nav-link.user-menu-toggle:hover { color: var(--ink) !important; }
-.user-name { color: var(--ink) !important; font-size: 13.5px; font-weight: 560; }
-
-.modern-dropdown {
-    border: 1px solid var(--line-2);
-    border-radius: var(--r);
-    box-shadow: var(--ip-shadow-lg);
-    padding: .35rem 0;
-}
-.modern-dropdown .dropdown-item { padding: .45rem 1rem; font-size: 13.5px; color: var(--ink-2); }
-.modern-dropdown .dropdown-item:hover { background: var(--surface-2); color: var(--ink); }
-
-.icon-badge { position: relative; display: inline-block; }
-.icon-badge .badge { min-width: 17px; height: 17px; line-height: 1; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); }
-.badge-dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; background: var(--accent); border-radius: 50%; border: 2px solid var(--surface); }
-
-.page-content { padding: 20px; flex: 1; min-width: 0; }
-
-.modern-footer {
-    background: var(--surface);
-    padding: .9rem 0;
-    border-top: 1px solid var(--line);
-    margin-top: auto;
-    color: var(--ink-3);
-    font-size: 12.5px;
 }
 
 /* ── typography / page header ────────────────────────────────────────────── */
@@ -518,7 +307,6 @@ tr.row-crit > td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
 .modal-title { font-size: 15px; font-weight: 640; }
 
 /* ── misc ────────────────────────────────────────────────────────────────── */
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: var(--ip-backdrop); z-index: 999; }
 .fade-in { animation: fadeUp .25s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
@@ -686,19 +474,11 @@ textarea.form-control { min-height: 84px; }
 
 /* laptops: tighten the shell so the table keeps as much width as possible */
 @media (max-width: 1400px) {
-    :root { --sidebar-width: 214px; }
-    .page-content { padding: 16px; }
     .container-fluid.px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
     .table > thead > tr > th, .table > tbody > tr > td { padding-left: .55rem; padding-right: .55rem; }
 }
 
-/* tablets: sidebar collapses to an overlay drawer */
 @media (max-width: 992px) {
-    .modern-sidebar { transform: translateX(-100%); }
-    .main-content { margin-left: 0; }
-    .sidebar-open .modern-sidebar { transform: none; }
-    .sidebar-open .sidebar-overlay { display: block; }
-    .page-content { padding: 12px; }
     .filter-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
     .table-responsive { -webkit-overflow-scrolling: touch; }
 }
@@ -707,7 +487,6 @@ textarea.form-control { min-height: 84px; }
 @media (max-width: 640px) {
     body { font-size: 15px; }
     h1, .h1 { font-size: 19px; }
-    .page-content { padding: 10px; }
     .container-fluid.px-4 { padding-left: .6rem !important; padding-right: .6rem !important; }
     .filter-grid { grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; }
     .filter-top { padding: 9px 10px; }
@@ -799,9 +578,6 @@ textarea.form-control { min-height: 84px; }
     --bs-link-color: var(--ip-accent-text);
     --bs-link-hover-color: var(--ip-accent-hover);
 }
-
-/* Theme toggle in the top bar: same look as the bell / account triggers. */
-.top-navbar .theme-toggle { background: none; border: 0; color: var(--ink-2); }
 
 /* Air Datepicker (date-range.js) in the app palette, both themes. */
 .air-datepicker {

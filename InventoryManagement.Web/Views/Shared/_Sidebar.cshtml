@@ -1,91 +1,127 @@
+@inject InventoryManagement.Web.Services.RailCounts RailCounts
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var isAdmin = User.IsInRole("Admin");
+    var productTotal = await RailCounts.ProductTotalAsync();
+
+    var firstName = User.FindFirst("FirstName")?.Value;
+    var lastName = User.FindFirst("LastName")?.Value;
+    var fullName = $"{firstName} {lastName}".Trim();
+    if (fullName.Length == 0) fullName = User.Identity?.Name ?? "";
+    var initials = string.Concat(fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
+    var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+    string Active(bool on) => on ? "ip-rail-link active" : "ip-rail-link";
 }
-@* Dark in both themes: data-bs-theme switches the tokens for everything inside. *@
-<aside class="modern-sidebar" id="sidebar-wrapper" data-bs-theme="dark">
-    <div class="sidebar-header">
-        <img src="/inventory.png" alt="" height="30">
-        <span class="brand-text">Inventory Pro</span>
+@* The rail (design/: "IP Rail"). Dark in both themes: data-bs-theme switches the tokens for
+   everything inside. Collapsed state: localStorage 'ip-rail', applied by the script below before
+   the first paint; the toggle lives in site.js (Rail). Below 768px it is a drawer. *@
+<aside class="ip-rail" id="ipRail" data-bs-theme="dark" aria-label="@L["Main menu"]">
+    <a class="ip-rail-brand text-reset text-decoration-none" href="/">
+        <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
+        <span>Inventory Pro</span>
+    </a>
+
+    <nav class="ip-rail-nav">
+        <div class="ip-rail-group">
+            <a href="/Home/Dashboard" class="@Active(action == "Dashboard")" title="@L["Dashboard"]">
+                <i class="fa-solid fa-table-cells-large"></i><span>@L["Dashboard"]</span>
+            </a>
+        </div>
+
+        <div class="ip-rail-group">
+            <div class="ip-rail-title">@L["Operations"]</div>
+            <a href="/Products" class="@Active(controller == "Products")" title="@L["Products"]">
+                <i class="fa-solid fa-box"></i><span>@L["Products"]</span>
+                @if (productTotal is int total)
+                {
+                    <span class="ip-rail-count">@total</span>
+                }
+            </a>
+            <a href="/Routes" class="@Active(controller == "Routes" && action != "Transfer")" title="@L["Routes"]">
+                <i class="fa-solid fa-route"></i><span>@L["Routes"]</span>
+            </a>
+            @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
+            {
+                <a href="/Routes/Transfer" class="@Active(controller == "Routes" && action == "Transfer")" title="@L["Transfer"]">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i><span>@L["Transfer"]</span>
+                </a>
+            }
+        </div>
+
+        <div class="ip-rail-group">
+            <div class="ip-rail-title">@L["Oversight"]</div>
+            @if (isAdmin)
+            {
+                <a href="/Approvals" class="@Active(controller == "Approvals")" title="@L["Approvals"]">
+                    <i class="fa-solid fa-clipboard-check"></i><span>@L["Approvals"]</span>
+                    <span class="ip-rail-count is-alert" id="sidebarPendingCount" style="display: none;"></span>
+                </a>
+            }
+            else
+            {
+                <a href="/MyRequests" class="@Active(controller == "MyRequests")" title="@L["My Requests"]">
+                    <i class="fa-solid fa-clock-rotate-left"></i><span>@L["My Requests"]</span>
+                </a>
+            }
+            <a href="/Notifications" class="@Active(controller == "Notifications")" title="@L["Notifications"]">
+                <i class="fa-regular fa-bell"></i><span>@L["Notifications"]</span>
+                <span class="ip-rail-count is-alert" id="sidebarUnreadCount" style="display: none;"></span>
+            </a>
+            @if (isAdmin)
+            {
+                <a href="/UserManagement" class="@Active(controller == "UserManagement")" title="@L["Users"]">
+                    <i class="fa-solid fa-users"></i><span>@L["Users"]</span>
+                </a>
+            }
+        </div>
+
+        @if (isAdmin)
+        {
+            <div class="ip-rail-group">
+                <div class="ip-rail-title">@L["Catalog"]</div>
+                <a href="/Categories" class="@Active(controller == "Categories")" title="@L["Categories"]">
+                    <i class="fa-solid fa-tags"></i><span>@L["Categories"]</span>
+                </a>
+                <a href="/Departments" class="@Active(controller == "Departments")" title="@L["Departments"]">
+                    <i class="fa-solid fa-sitemap"></i><span>@L["Departments"]</span>
+                </a>
+            </div>
+        }
+    </nav>
+
+    <div class="ip-rail-foot">
+        <button type="button" class="ip-rail-link ip-rail-toggle" data-rail-toggle
+                data-label-collapse="@L["Collapse menu"]" data-label-expand="@L["Expand menu"]" title="@L["Collapse menu"]">
+            <i class="fa-solid fa-angles-left"></i><span>@L["Collapse menu"]</span>
+        </button>
+        <div class="ip-rail-account">
+            <a class="ip-rail-user" href="/Account/Profile" title="@L["My Profile"]">
+                <span class="ip-avatar">@initials</span>
+                <span class="ip-rail-user-text">
+                    <span class="name">@fullName</span>
+                    @if (!string.IsNullOrEmpty(role))
+                    {
+                        <span class="role">@L[role]</span>
+                    }
+                </span>
+            </a>
+            <form asp-controller="Account" asp-action="Logout" method="post" data-no-ajax class="ip-rail-logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="ip-btn-icon" title="@L["Sign Out"]" aria-label="@L["Sign Out"]">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </form>
+        </div>
     </div>
-
-    <ul class="sidebar-content">
-        <li class="nav-item">
-            <a href="/Home/Dashboard" class="nav-link @(action == "Dashboard" ? "active" : "")">
-                <span class="nav-icon"><i class="fas fa-table-cells-large"></i></span>
-                <span class="nav-text">@L["Dashboard"]</span>
-            </a>
-        </li>
-
-        <li class="nav-section"><span>@L["Main menu"]</span></li>
-
-        <li class="nav-item">
-            <a href="/Products" class="nav-link @(controller == "Products" ? "active" : "")">
-                <span class="nav-icon"><i class="fas fa-box"></i></span>
-                <span class="nav-text">@L["Products"]</span>
-                <span class="badge bg-primary">@ViewBag.ProductCount</span>
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a href="/Routes" class="nav-link @(controller == "Routes" ? "active" : "")">
-                <span class="nav-icon"><i class="fas fa-arrow-right-arrow-left"></i></span>
-                <span class="nav-text">@L["Routes"]</span>
-                <span class="badge bg-warning" id="pendingRoutesCount"></span>
-            </a>
-        </li>
-
-        @if (User.IsInRole("Admin"))
-        {
-            <li class="nav-section"><span>@L["Management"]</span></li>
-
-            <li class="nav-item">
-                <a href="/Categories" class="nav-link @(controller == "Categories" ? "active" : "")">
-                    <span class="nav-icon"><i class="fas fa-tags"></i></span>
-                    <span class="nav-text">@L["Categories"]</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="/Departments" class="nav-link @(controller == "Departments" ? "active" : "")">
-                    <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
-                    <span class="nav-text">@L["Departments"]</span>
-                </a>
-            </li>
-
-            <li class="nav-section"><span>@L["Administration"]</span></li>
-
-            <li class="nav-item">
-                <a href="/Approvals" class="nav-link @(controller == "Approvals" ? "active" : "")">
-                    <span class="nav-icon"><i class="fas fa-square-check"></i></span>
-                    <span class="nav-text">@L["Approvals"]</span>
-                    <span class="badge bg-danger" id="sidebarPendingCount"></span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a href="/UserManagement" class="nav-link @(controller == "UserManagement" ? "active" : "")">
-                    <span class="nav-icon"><i class="fas fa-users"></i></span>
-                    <span class="nav-text">@L["Users"]</span>
-                </a>
-            </li>
-        }
-        else
-        {
-            <li class="nav-item">
-                <a href="/MyRequests" class="nav-link @(controller == "MyRequests" ? "active" : "")">
-                    <span class="nav-icon"><i class="fas fa-clock-rotate-left"></i></span>
-                    <span class="nav-text">@L["My Requests"]</span>
-                </a>
-            </li>
-        }
-
-        <li class="nav-item">
-            <a href="/Notifications" class="nav-link @(controller == "Notifications" ? "active" : "")">
-                <span class="nav-icon"><i class="fas fa-bell"></i></span>
-                <span class="nav-text">@L["Notifications"]</span>
-                <span class="badge bg-info notification-badge" id="sidebarUnreadCount" style="display: none;"></span>
-            </a>
-        </li>
-    </ul>
 </aside>
+<script>
+    (function () {
+        var rail = document.getElementById('ipRail'), stored = null;
+        try { stored = localStorage.getItem('ip-rail'); } catch (e) { }
+        if (stored === 'collapsed' && window.matchMedia('(min-width: 1025px)').matches) rail.classList.add('collapsed');
+        if (window.matchMedia('(min-width: 768px) and (max-width: 1024px)').matches) rail.classList.add('collapsed');
+    })();
+</script>
+<div class="ip-rail-backdrop" data-rail-toggle></div>
