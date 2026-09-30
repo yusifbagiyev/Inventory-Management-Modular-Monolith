@@ -17,18 +17,21 @@ Runner GitHub-a özü qoşulur (yalnız çıxan HTTPS). Serverə kənardan port 
 
 ## Bir dəfəlik quraşdırma (serverdə)
 
-Aşağıda `/opt/inventory` MIGRATION.md-də istifadə etdiyiniz qovluqdur (`.env`, `ssl/`, `storage/` oradadır).
-Fərqlidirsə, öz yolunuzu yazın.
+Aşağıda `/opt/inventory166` layihə qovluğudur (`.env`, `ssl/`, `storage/` oradadır).
+
+> **Qovluq adı = compose layihə adı = volume-ların prefiksi** (`inventory166_postgres_data`).
+> Qovluğu köçürəndə və ya adını dəyişəndə `.env`-də `COMPOSE_PROJECT_NAME=inventory166` olmalıdır,
+> əks halda compose köhnə volume-u görmür və boş baza ilə başlayır.
 
 1. **Runner istifadəçisi.** `docker` qrupu root-a bərabər hüquq verir. Buna görə ayrıca istifadəçi yaradın:
    ```bash
    sudo useradd -m -s /bin/bash github-runner
    sudo usermod -aG docker github-runner
-   sudo chown -R github-runner: /opt/inventory
+   sudo chown -R github-runner: /opt/inventory166
    ```
    Konteyner `storage/keys` və `storage/images`-ə uid 1654 ilə yazır. Onların sahibini MIGRATION.md-dəki kimi saxlayın:
    ```bash
-   sudo chown -R 1654:1654 /opt/inventory/storage
+   sudo chown -R 1654:1654 /opt/inventory166/storage
    ```
 
 2. **Runner-i quraşdırın.**
@@ -43,7 +46,7 @@ Fərqlidirsə, öz yolunuzu yazın.
    Runner *Runners* siyahısında `Idle` görünməlidir.
 
 3. **Repo dəyişənləri.** *Settings → Secrets and variables → Actions → Variables* bölməsinə bunları əlavə edin:
-   - `DEPLOY_DIR` = `/opt/inventory`
+   - `DEPLOY_DIR` = `/opt/inventory166`
    - `CD_ENABLED` = `true` (yalnız MIGRATION.md bitdikdən sonra)
 
    Secret lazım deyil. Image-i workflow-un öz `GITHUB_TOKEN`-i ilə push və pull edir.
@@ -53,7 +56,7 @@ Fərqlidirsə, öz yolunuzu yazın.
 ## Gündəlik iş
 
 - PR → CI yaşıl → merge. Deploy özü başlayır. Nəticəyə *Actions → CD*-dən baxın.
-- Deploy tarixçəsi serverdə `/opt/inventory/deploy-history.log` faylındadır (vaxt + image).
+- Deploy tarixçəsi serverdə `/opt/inventory166/deploy-history.log` faylındadır (vaxt + image).
 - CD-ni müvəqqəti dayandırmaq üçün `CD_ENABLED` dəyərini `false` edin.
 
 ## Serverə məxsus dəyişikliklər
@@ -76,20 +79,20 @@ Sirlər həmişə `.env`-də qalır.
   - Tag-i `deploy-history.log` faylından və ya repo-nun *Packages* bölməsindən götürmək olar.
 - **Əl ilə, serverdən (GitHub olmadan):**
   ```bash
-  cd /opt/inventory
+  cd /opt/inventory166
   docker login ghcr.io   # image private-dırsa; read:packages icazəli token ilə
-  DEPLOY_DIR=/opt/inventory deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<commit>
+  DEPLOY_DIR=/opt/inventory166 deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<commit>
   ```
 
 Image-i geri qaytarmaq bazanı geri qaytarmır. Migration-lar startda işləyir. Adətən köhnə versiya
 yeni sxemlə də işləyir (migration-lar əlavə xarakterlidir). Problem migration-dadırsa, bazanı
 deploy-dan əvvəlki nüsxədən bərpa edin:
 ```bash
-cd /opt/inventory
+cd /opt/inventory166
 docker compose stop app
 docker exec -i inventory_postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d inventory --clean --if-exists' \
   < backups/pre-deploy-YYYYMMDD-HHMMSS.dump
-DEPLOY_DIR=/opt/inventory deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<əvvəlki commit>
+DEPLOY_DIR=/opt/inventory166 deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<əvvəlki commit>
 ```
 Bərpa həmin nüsxədən sonra daxil edilmiş datanı silir. Bunu yalnız zəruri olanda edin.
 
