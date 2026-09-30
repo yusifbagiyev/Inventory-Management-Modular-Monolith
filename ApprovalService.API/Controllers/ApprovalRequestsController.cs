@@ -26,7 +26,8 @@ namespace ApprovalService.API.Controllers
             _mediator = mediator;
         }
 
-        private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        // 0 for callers whose id is not a user id (API-key clients such as ServiceDesk), never a 500.
+        private int CurrentUserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
         private string CurrentUserName => User.Identity?.Name ?? "Unknown";
 

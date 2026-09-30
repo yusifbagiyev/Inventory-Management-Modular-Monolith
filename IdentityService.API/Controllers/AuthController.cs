@@ -108,7 +108,7 @@ namespace IdentityService.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsedId) ? parsedId : 0;
                 if (userId == 0)
                     return Unauthorized(new { message = "Invalid user token" });
 
@@ -346,7 +346,7 @@ namespace IdentityService.API.Controllers
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var userId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var parsedId) ? parsedId : 0;
                 if (userId == 0)
                     return Unauthorized(new { message = "Invalid user token" });
 
