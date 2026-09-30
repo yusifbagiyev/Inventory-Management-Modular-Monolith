@@ -1168,5 +1168,12 @@
   "Thursday": "Cümə axşamı",
   "Friday": "Cümə",
   "Saturday": "Şənbə",
-  "Sunday": "Bazar"
+  "Sunday": "Bazar",
+  "Equipment records, transfers and approvals in one place.": "Avadanlıq uçotu, transfer və təsdiqlər bir yerdə.",
+  "For internal use. No account yet? Ask the IT department.": "Daxili istifadə üçün. Hesabınız yoxdursa, İT şöbəsinə müraciət edin.",
+  "With the username and password of your work account": "İş hesabınızın istifadəçi adı və şifrəsi ilə",
+  "Show password": "Şifrəni göstər",
+  "Hide password": "Şifrəni gizlət",
+  "Remember me": "Məni xatırla",
+  "Please sign in": "Daxil olun"
 }

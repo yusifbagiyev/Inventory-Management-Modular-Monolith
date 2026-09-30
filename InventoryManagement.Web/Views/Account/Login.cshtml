@@ -10,11 +10,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@L["Sign in"] - Inventory Pro</title>
 
-    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
-    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
-
     @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
-       site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
+       site.js (Theme) owns the toggle on the other pages; keep the storage key in sync with it. *@
     <script>
         (function () {
             var t = null;
@@ -23,289 +20,123 @@
             document.documentElement.setAttribute('data-bs-theme', t);
         })();
     </script>
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
     <style>
-        /* Palette from tokens.css (light + dark). */
-        :root {
-            --ground: var(--ip-bg);
-            --surface: var(--ip-surface);
-            --surface-2: var(--ip-sunken);
-            --ink: var(--ip-text-1);
-            --ink-2: var(--ip-text-2);
-            --ink-3: var(--ip-text-3);
-            --line: var(--ip-border);
-            --line-2: var(--ip-border-strong);
-            --accent: var(--ip-accent);
-            --accent-2: var(--ip-accent-text);
-            --accent-weak: var(--ip-accent-soft);
-            --crit: var(--ip-danger-text);
-            --crit-weak: var(--ip-danger-soft);
-            --font-mono: var(--ip-font-mono);
-        }
-
-        [data-bs-theme="dark"] { color-scheme: dark; }
-
         * { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: var(--ground);
-            color: var(--ink);
-            font-family: var(--ip-font-sans);
-            font-size: 14.5px;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .login-card {
-            width: 100%;
-            max-width: 380px;
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            box-shadow: var(--ip-shadow-sm);
-            padding: 30px 28px 26px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 22px;
-        }
-
-        .brand-mark {
-            width: 34px;
-            height: 34px;
-            border-radius: var(--ip-radius-lg);
-            background: var(--ip-brand);
-            color: var(--ip-on-brand);
-            display: grid;
-            place-items: center;
-            font-size: 15px;
-            flex: none;
-        }
-
-        .brand-name {
-            font-size: 16px;
-            font-weight: 660;
-            letter-spacing: -.01em;
-            line-height: 1.2;
-        }
-
-        .brand-sub {
-            font-family: var(--font-mono);
-            font-size: 10px;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            color: var(--ink-3);
-        }
-
-        h1 {
-            font-size: 19px;
-            font-weight: 640;
-            letter-spacing: -.015em;
-            margin: 0 0 3px;
-        }
-
-        .lead {
-            margin: 0 0 20px;
-            color: var(--ink-3);
-            font-size: 13.5px;
-        }
-
-        .form-group { margin-bottom: 14px; }
-
-        .form-label {
-            display: block;
-            font-size: 12.5px;
-            font-weight: 600;
-            color: var(--ink-2);
-            margin-bottom: 5px;
-        }
-
-        .input-wrapper { position: relative; }
-
-        .input-icon {
-            position: absolute;
-            left: 11px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--ink-3);
-            font-size: 13px;
-            pointer-events: none;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 9px 12px 9px 33px;
-            border: 1px solid var(--line-2);
-            border-radius: 6px;
-            background: var(--surface);
-            color: var(--ink);
-            font: inherit;
-            font-size: 14px;
-            transition: border-color .15s ease, box-shadow .15s ease;
-        }
-
-        .form-input::placeholder { color: var(--ink-3); }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-weak);
-        }
-
-        .form-check {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 16px 0 20px;
-        }
-
-        .form-check-input {
-            width: 15px;
-            height: 15px;
-            accent-color: var(--accent);
-            margin: 0;
-            cursor: pointer;
-        }
-
-        .form-check-label {
-            font-size: 13px;
-            color: var(--ink-2);
-            cursor: pointer;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 10px 14px;
-            border: 0;
-            border-radius: 6px;
-            background: var(--accent);
-            color: var(--ip-on-accent);
-            font: inherit;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background .15s ease;
-        }
-
-        .login-btn:hover { background: var(--ip-accent-hover); }
-
-        .login-btn:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
-
-        .alert {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            background: var(--crit-weak);
-            color: var(--crit);
-            border-radius: 6px;
-            padding: 9px 11px;
-            font-size: 13px;
-            margin-bottom: 16px;
-        }
-
-        .text-danger {
-            display: block;
-            color: var(--crit);
-            font-size: 12.5px;
-            margin-top: 4px;
-        }
-
-        .foot {
-            margin-top: 20px;
-            padding-top: 14px;
-            border-top: 1px solid var(--line);
-            font-size: 12px;
-            color: var(--ink-3);
-            text-align: center;
-        }
-
-        .brand .lang-switch { margin-left: auto; }
-        .brand .lang-switch button {
-            border: 1px solid var(--line-2);
-            background: none;
-            color: var(--ink-2);
-            border-radius: 6px;
-            padding: 3px 9px;
-            font: 600 11px/1.4 var(--font-mono);
-            letter-spacing: .06em;
-            cursor: pointer;
-        }
-        .brand .lang-switch button:hover { color: var(--accent-2); border-color: var(--accent); }
-
-        @@media (prefers-reduced-motion: reduce) {
-            * { transition: none !important; }
+        body { margin: 0; background: var(--ip-surface); }
+        [data-bs-theme="dark"] { color-scheme: dark; }
+        .ip-login-side .brand { display: flex; align-items: center; gap: 12px; font-size: var(--ip-fs-md); font-weight: 600; }
+        .ip-login-side .brand .ip-logo { width: 36px; height: 36px; font-size: 16px; }
+        .ip-login-side .note { margin-top: 16px; max-width: 440px; color: var(--ip-text-2); }
+        .ip-login-main .top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+        .ip-login-main .top form { margin: 0; }
+        .ip-login-form h1 { margin-bottom: 4px; }
+        .pw-wrap { position: relative; }
+        .pw-wrap .ip-input { padding-right: 48px; }
+        .pw-wrap .ip-btn-icon { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+        .remember { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .ip-login-form .ip-btn-primary { width: 100%; }
+        .ip-login-form .mobile-brand { display: none; align-items: center; gap: 10px; font-weight: 600; }
+        @@media (max-width: 900px) {
+            .ip-login-main { padding: 20px 24px; }
+            .ip-login-form .mobile-brand { display: flex; }
         }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="brand">
-            <div class="brand-mark"><i class="fas fa-boxes-stacked"></i></div>
+    <div class="ip-login">
+        @* Left panel (design: 01 Login): dark in both themes. *@
+        <aside class="ip-login-side" data-bs-theme="dark">
+            <div class="brand">
+                <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
+                <span>Inventory Pro</span>
+            </div>
             <div>
-                <div class="brand-name">Inventory Pro</div>
-                <div class="brand-sub">166</div>
+                <div class="claim">@L["Equipment records, transfers and approvals in one place."]</div>
+                <p class="note">@L["For internal use. No account yet? Ask the IT department."]</p>
             </div>
-            <form method="post" asp-controller="Language" asp-action="Set" class="lang-switch">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="culture" value="@(JsonStringLocalizer.IsAzerbaijani ? "en-US" : "az-Latn-AZ")" />
-                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                <button type="submit" title="@L["Switch language"]">@(JsonStringLocalizer.IsAzerbaijani ? "EN" : "AZ")</button>
-            </form>
-        </div>
+            <div class="ip-faint">© @DateTime.Today.Year</div>
+        </aside>
 
-        <h1>@L["Sign in"]</h1>
-        <p class="lead">@L["Use your work account to continue."]</p>
-
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div class="alert">
-                <i class="fas fa-circle-exclamation" style="margin-top:2px"></i>
-                <div>
-                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        <main class="ip-login-main">
+            <div class="top">
+                <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" role="group" aria-label="@L["Switch language"]">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    @if (JsonStringLocalizer.IsAzerbaijani)
                     {
-                        <div>@error.ErrorMessage</div>
+                        <button type="button" class="active" aria-pressed="true">AZ</button>
+                        <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
                     }
+                    else
+                    {
+                        <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
+                        <button type="button" class="active" aria-pressed="true">EN</button>
+                    }
+                </form>
+                <button type="button" class="ip-btn-icon lg" id="themeToggle" aria-label="@L["Toggle dark mode"]" title="@L["Dark mode"]">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+
+            <div class="ip-login-form">
+                <div class="mobile-brand">
+                    <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
+                    <span>Inventory Pro</span>
                 </div>
-            </div>
-        }
-
-        <form asp-action="Login" method="post">
-            <div class="form-group">
-                <label asp-for="Username" class="form-label">@L["Username"]</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-user input-icon"></i>
-                    <input asp-for="Username" class="form-input" placeholder="@L["Your username"]" autocomplete="username" autofocus>
+                <div>
+                    <h1>@L["Please sign in"]</h1>
+                    <div class="ip-muted">@L["With the username and password of your work account"]</div>
                 </div>
-                <span asp-validation-for="Username" class="text-danger"></span>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="ip-banner ip-banner-danger" role="alert">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <div>
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <div>@error.ErrorMessage</div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <form asp-action="Login" method="post" style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="ip-field">
+                        <label asp-for="Username" class="ip-label">@L["Username"]</label>
+                        <input asp-for="Username" class="ip-input" autocomplete="username" autofocus>
+                        <span asp-validation-for="Username" class="ip-error"></span>
+                    </div>
+
+                    <div class="ip-field">
+                        <label asp-for="Password" class="ip-label">@L["Password"]</label>
+                        <div class="pw-wrap">
+                            <input asp-for="Password" class="ip-input" type="password" autocomplete="current-password">
+                            <button type="button" class="ip-btn-icon" id="togglePassword" aria-pressed="false"
+                                    aria-label="@L["Show password"]" title="@L["Show password"]"
+                                    data-label-show="@L["Show password"]" data-label-hide="@L["Hide password"]">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="Password" class="ip-error"></span>
+                    </div>
+
+                    <label class="remember">
+                        <input asp-for="RememberMe" class="ip-check" type="checkbox">
+                        <span>@L["Remember me"]</span>
+                    </label>
+
+                    <button type="submit" class="ip-btn ip-btn-primary ip-btn-lg">
+                        <span>@L["Sign in"]</span><i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="ip-hint">@L["Trouble signing in? Contact your system administrator."]</div>
             </div>
-
-            <div class="form-group">
-                <label asp-for="Password" class="form-label">@L["Password"]</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-lock input-icon"></i>
-                    <input asp-for="Password" class="form-input" type="password" placeholder="@L["Your password"]" autocomplete="current-password">
-                </div>
-                <span asp-validation-for="Password" class="text-danger"></span>
-            </div>
-
-            <div class="form-check">
-                <input asp-for="RememberMe" class="form-check-input" type="checkbox">
-                <label asp-for="RememberMe" class="form-check-label">@L["Keep me signed in for 30 days"]</label>
-            </div>
-
-            <button type="submit" class="login-btn">@L["Sign in"]</button>
-        </form>
-
-        <div class="foot">@L["Trouble signing in? Contact your system administrator."]</div>
+        </main>
     </div>
 
     <script>
@@ -319,6 +150,33 @@
                 if (remember) remember.checked = true;
                 if (pass) pass.focus();
             }
+
+            // Show / hide the password.
+            var toggle = document.getElementById('togglePassword');
+            toggle.addEventListener('click', function () {
+                var field = document.getElementById('Password');
+                var show = field.type === 'password';
+                field.type = show ? 'text' : 'password';
+                toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+                var label = show ? toggle.dataset.labelHide : toggle.dataset.labelShow;
+                toggle.setAttribute('aria-label', label);
+                toggle.title = label;
+                toggle.querySelector('i').className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+            });
+
+            // Theme toggle (same storage key as site.js).
+            var root = document.documentElement;
+            var themeButton = document.getElementById('themeToggle');
+            function syncTheme() {
+                themeButton.querySelector('i').className = root.getAttribute('data-bs-theme') === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            }
+            themeButton.addEventListener('click', function () {
+                var next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-bs-theme', next);
+                try { localStorage.setItem('theme', next); } catch (e) { }
+                syncTheme();
+            });
+            syncTheme();
         });
 
         function getCookie(name) {
