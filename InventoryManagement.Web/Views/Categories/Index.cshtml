@@ -121,7 +121,7 @@
                                         <div class="cell-text">
                                             @if (string.IsNullOrEmpty(category.Description))
                                             {
-                                                <span class="cell-sub text-muted">No description</span>
+                                                <span class="cell-sub text-muted pdf-omit">No description</span>
                                             }
                                             else
                                             {
@@ -183,7 +183,7 @@
             }
         </div>
         <div class="card-footer">
-            <partial name="_CategoryPagination" model="Model" />
+            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
         </div>
     </div>
 </div>
