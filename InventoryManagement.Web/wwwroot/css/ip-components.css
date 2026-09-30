@@ -428,3 +428,18 @@ tr.ip-clickable { cursor: pointer; }
 .ip-list-link .ip-bar { max-width: 50%; }
 .ip-kpi-grid { margin-bottom: var(--ip-space-8); }
 .ip-page-head .ip-tabs.border-0 { border-bottom: 0; }
+
+/* ---------- toolbar code finder ---------- */
+.ip-toolbar-search { position: relative; }
+.ip-finder-go { border: 0; background: transparent; padding: 0; color: var(--ip-text-3); cursor: pointer; display: grid; place-items: center; }
+.ip-finder-go:hover { color: var(--ip-text-1); }
+.ip-finder-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 1060; background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); overflow: hidden; }
+.ip-finder-menu[hidden] { display: none; }
+.ip-finder-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; color: var(--ip-text-1); text-decoration: none; }
+.ip-finder-item:hover, .ip-finder-item.active { background: var(--ip-surface-hover); color: var(--ip-text-1); text-decoration: none; }
+.ip-finder-item .ip-thumb { width: 32px; height: 32px; font-size: 13px; border-radius: var(--ip-radius-sm); }
+.ip-finder-item .meta { min-width: 0; display: flex; flex-direction: column; line-height: 18px; }
+.ip-finder-item .meta span:last-child { font-size: var(--ip-fs-xs); color: var(--ip-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-finder-empty { padding: 10px 12px; color: var(--ip-text-3); font-size: var(--ip-fs-sm); }
+.ip-finder-all { display: block; padding: 8px 12px; border-top: 1px solid var(--ip-border); font-size: var(--ip-fs-sm); color: var(--ip-accent-text); }
+.ip-finder-all:hover, .ip-finder-all.active { background: var(--ip-surface-hover); text-decoration: none; }

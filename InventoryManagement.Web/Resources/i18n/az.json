@@ -1175,5 +1175,7 @@
   "Show password": "Şifrəni göstər",
   "Hide password": "Şifrəni gizlət",
   "Remember me": "Məni xatırla",
-  "Please sign in": "Daxil olun"
+  "Please sign in": "Daxil olun",
+  "No product matches this code or name": "Bu kod və ya adla məhsul yoxdur",
+  "Search all products for \"{0}\"": "Bütün məhsullarda axtar: \"{0}\""
 }

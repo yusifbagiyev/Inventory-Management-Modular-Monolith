@@ -486,3 +486,86 @@ function loadApprovalDetails(url, modalEl) {
         return null;
     });
 }
+
+/**
+ * The toolbar's "find by code" (_Layout, [data-code-finder]). Typing shows up to six matching
+ * products (Products/Suggest) with a last row that searches the whole list; arrows move, Enter
+ * opens the highlighted one. Enter with nothing highlighted, or the button, submits the form:
+ * an exact inventory code opens that product, anything else the filtered product list.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('[data-code-finder]');
+    if (!form) return;
+    const input = form.querySelector('input[name="code"]');
+    const menu = form.querySelector('.ip-finder-menu');
+    let timer = null, active = -1, lastTerm = '', controller = null;
+
+    function close() {
+        menu.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        active = -1;
+    }
+
+    function render(list, term) {
+        let html = list.map((p, i) => `
+            <a class="ip-finder-item" role="option" id="codeFinder-${i}" href="/Products/Details/${encodeURIComponent(p.id)}">
+                <span class="ip-thumb">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="" />` : '<i class="fa-solid fa-box"></i>'}</span>
+                <span class="meta">
+                    <span><b class="ip-mono">${escapeHtml(String(p.code))}</b> · ${escapeHtml(p.model || '')}</span>
+                    <span>${escapeHtml([p.vendor, p.department].filter(Boolean).join(' · '))}</span>
+                </span>
+            </a>`).join('');
+        if (!list.length) html = `<div class="ip-finder-empty">${escapeHtml(t('No product matches this code or name'))}</div>`;
+        html += `<a class="ip-finder-all" role="option" id="codeFinder-all" href="/Products?search=${encodeURIComponent(term)}">${escapeHtml(t('Search all products for "{0}"', term))}</a>`;
+        menu.innerHTML = html;
+        menu.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        active = -1;
+    }
+
+    async function suggest() {
+        const term = input.value.trim();
+        if (!term) { close(); lastTerm = ''; return; }
+        if (term === lastTerm && !menu.hidden) return;
+        lastTerm = term;
+        if (controller) controller.abort();
+        controller = new AbortController();
+        try {
+            const response = await fetch('/Products/Suggest?term=' + encodeURIComponent(term), {
+                signal: controller.signal,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) return;
+            const list = await response.json();
+            if (input.value.trim() === term) render(list, term);
+        } catch (e) { /* aborted by newer typing, or offline: the form still submits */ }
+    }
+
+    function options() { return Array.from(menu.querySelectorAll('a')); }
+
+    function move(step) {
+        const list = options();
+        if (!list.length) return;
+        active = (active + step + list.length) % list.length;
+        list.forEach((a, i) => a.classList.toggle('active', i === active));
+        input.setAttribute('aria-activedescendant', list[active].id);
+    }
+
+    input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(suggest, 200);
+    });
+    input.addEventListener('focus', function () { if (input.value.trim()) suggest(); });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); if (menu.hidden) suggest(); else move(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+        else if (e.key === 'Escape') { close(); }
+        else if (e.key === 'Enter' && active >= 0 && !menu.hidden) { e.preventDefault(); window.location.href = options()[active].href; }
+    });
+    document.addEventListener('click', function (e) { if (!form.contains(e.target)) close(); });
+    form.addEventListener('submit', function (e) {
+        if (!input.value.trim()) { e.preventDefault(); input.focus(); }
+    });
+});

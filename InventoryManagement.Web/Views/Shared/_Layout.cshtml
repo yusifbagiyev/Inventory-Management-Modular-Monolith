@@ -47,11 +47,16 @@
                         <i class="fa-solid fa-bars"></i>
                     </button>
 
-                    @* Exact inventory code -> that product; anything else -> the filtered product list. *@
-                    <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
+                    @* Suggestions while typing (site.js: CodeFinder); Enter or the button: an exact
+                       inventory code opens that product, anything else the filtered product list. *@
+                    <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search" data-no-ajax data-code-finder>
+                        <button type="submit" class="ip-finder-go" title="@L["Search"]" aria-label="@L["Search"]">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
                         <input type="search" name="code" autocomplete="off" inputmode="search"
+                               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="codeFinderList"
                                placeholder="@L["Find by code, e.g. 1042"]" aria-label="@L["Find by code"]" />
+                        <div class="ip-finder-menu" id="codeFinderList" role="listbox" hidden></div>
                     </form>
                 }
 

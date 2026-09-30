@@ -95,6 +95,30 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index), new { search = code });
         }
 
+        /// <summary>Suggestions under the toolbar's code search: up to six products matching the text.</summary>
+        [HttpGet]
+        public async Task<IActionResult> Suggest(string? term)
+        {
+            term = term?.Trim();
+            if (string.IsNullOrEmpty(term))
+                return Json(Array.Empty<object>());
+
+            var result = await _mediator.Send(new GetAllProductsQuery(1, 6, term));
+            var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result).Items;
+            // An exact code first, so Enter opens the product that was typed.
+            return Json(products
+                .OrderByDescending(p => p.InventoryCode.ToString() == term)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    code = p.InventoryCode,
+                    model = p.Model,
+                    vendor = p.Vendor,
+                    department = p.DepartmentName,
+                    imageUrl = p.ImageUrl
+                }));
+        }
+
         public async Task<IActionResult> Details(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));
