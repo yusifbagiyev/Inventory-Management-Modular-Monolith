@@ -139,13 +139,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 5000);
 
     // Add loading spinner for forms
-    const forms = document.querySelectorAll('form:not(.no-spinner)');
+    // Layout forms (language switch, sign out) navigate at once and keep their button as it is.
+    const forms = document.querySelectorAll('form:not(.no-spinner):not([data-no-ajax])');
     forms.forEach(function (form) {
         form.addEventListener('submit', function () {
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + escapeHtml(t('Processing...'));
             }
         });
     });

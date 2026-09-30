@@ -108,7 +108,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: var(--surface-2);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -143,14 +143,16 @@ body {
     background: var(--surface);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--line);
     z-index: 1050;
 }
 
+    /* Colours come from the theme tokens (modern-ui.css), so light and dark mode both read well. */
     .notification-dropdown .dropdown-header {
-        background-color: #f8f9fa;
+        background-color: var(--surface-2);
+        color: var(--ink);
         padding: 1rem;
-        border-bottom: 1px solid #e9ecef;
+        border-bottom: 1px solid var(--line);
         border-radius: 8px 8px 0 0;
         font-weight: 600;
     }
@@ -163,18 +165,23 @@ body {
 
 .notification-item {
     padding: 1rem;
-    border-bottom: 1px solid #f1f3f5;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
     transition: background-color 0.2s;
     cursor: pointer;
     position: relative;
 }
 
     .notification-item:hover {
-        background-color: #f8f9fa;
+        background-color: var(--surface-2);
     }
 
     .notification-item.unread {
-        background-color: #e3f2fd;
+        background-color: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    }
+
+    .notification-item.unread:hover {
+        background-color: color-mix(in srgb, var(--accent) 18%, var(--surface));
     }
 
         .notification-item.unread::before {
@@ -184,7 +191,7 @@ body {
             top: 0;
             bottom: 0;
             width: 4px;
-            background-color: #2196f3;
+            background-color: var(--accent);
         }
 
 .notification-icon {
@@ -194,13 +201,13 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background-color: #f1f3f5;
+    background-color: var(--surface-2);
     flex-shrink: 0;
 }
 
 .notification-time {
     font-size: 0.75rem;
-    color: #6c757d;
+    color: var(--ink-3);
     display: flex;
     align-items: center;
 }
@@ -208,40 +215,40 @@ body {
 .notification-dot {
     width: 8px;
     height: 8px;
-    background-color: #2196f3;
+    background-color: var(--accent);
     border-radius: 50%;
     margin-left: 8px;
 }
 
 .notification-dropdown .dropdown-footer {
-    background-color: #f8f9fa;
+    background-color: var(--surface-2);
     padding: 0.75rem 1rem;
-    border-top: 1px solid #e9ecef;
+    border-top: 1px solid var(--line);
     border-radius: 0 0 8px 8px;
     text-align: center;
 }
 
     .notification-dropdown .dropdown-footer a {
-        color: #6c757d;
+        color: var(--ink-3);
         font-size: 0.875rem;
         text-decoration: none;
         transition: color 0.2s;
     }
 
         .notification-dropdown .dropdown-footer a:hover {
-            color: #495057;
+            color: var(--ink);
         }
 
 /* Empty State */
 .notification-empty {
     padding: 3rem 1rem;
     text-align: center;
-    color: #6c757d;
+    color: var(--ink-3);
 }
 
     .notification-empty i {
         font-size: 3rem;
-        color: #dee2e6;
+        color: var(--line-2);
         margin-bottom: 1rem;
     }
 
@@ -251,16 +258,16 @@ body {
 }
 
 .notification-list::-webkit-scrollbar-track {
-    background: #f1f3f5;
+    background: var(--surface-2);
 }
 
 .notification-list::-webkit-scrollbar-thumb {
-    background: #dee2e6;
+    background: var(--line-2);
     border-radius: 3px;
 }
 
     .notification-list::-webkit-scrollbar-thumb:hover {
-        background: #ced4da;
+        background: var(--ink-3);
     }
 
 /* User avatar styles */
@@ -317,7 +324,7 @@ body {
 }
 
 .permissions-section {
-    background: #f8f9fa;
+    background: var(--surface-2);
     padding: 1.5rem;
     border-radius: 0.5rem;
     margin-bottom: 1.5rem;
@@ -344,7 +351,7 @@ body {
 
 .role-permission {
     border-left: 4px solid #17a2b8;
-    background: #f8f9fa;
+    background: var(--surface-2);
 }
 
 .available-permission:hover {
@@ -502,7 +509,7 @@ h1, h2, h3, h4, h5, h6 {
 .no-image-placeholder {
     width: 60px;
     height: 60px;
-    background-color: #f8f9fa;
+    background-color: var(--surface-2);
     display: flex;
     align-items: center;
     justify-content: center;

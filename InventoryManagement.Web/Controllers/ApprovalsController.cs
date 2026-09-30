@@ -46,9 +46,19 @@ namespace InventoryManagement.Web.Controllers
             if (!response.IsSuccess)
                 return BadRequest(new { success = false, message = response.Message });
 
-            return response.Data
-                ? Json(new { success = true, message = Tr("Request approved successfully") })
-                : Json(new { success = false, message = Tr("The request was approved but its action failed to execute. The requester has been notified.") });
+            if (response.Data)
+                return Json(new { success = true, message = Tr("Request approved successfully") });
+
+            // Say why: the stored reason ("Execution error: Product with inventory code 1003 already exists").
+            var failed = await _approvalService.GetRequestDetailsAsync(id);
+            var reason = failed?.RejectionReason;
+            return Json(new
+            {
+                success = false,
+                message = string.IsNullOrWhiteSpace(reason)
+                    ? Tr("The request was approved but its action failed to execute. The requester has been notified.")
+                    : string.Format(Tr("The request could not be carried out: {0}. The requester has been notified."), Tr(reason).TrimEnd('.'))
+            });
         }
 
         [HttpPost]

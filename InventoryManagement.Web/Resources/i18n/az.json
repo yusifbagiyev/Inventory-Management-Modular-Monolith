@@ -1054,5 +1054,6 @@
   "JPG or PNG, up to 5 MB each. The star (★) chooses the cover image.": "JPG və ya PNG, hər biri 5 MB-a qədər. Əsas şəkli ulduz (★) ilə seçin.",
   "Photos of the item as handed over. When the transfer is completed they become the product images, and the cover (★) becomes its main image.": "Əşyanın təhvil verildiyi vəziyyətdəki şəkilləri. Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
   "When the transfer is completed these become the product images, and the cover (★) becomes its main image.": "Transfer tamamlandıqda bunlar məhsulun şəkilləri olur, ulduzla (★) seçilən isə məhsulun əsas şəkli olur.",
-  "Optional. Photos make the item easier to identify during transfers. The star (★) chooses the cover image.": "İstəyə bağlı. Şəkillər transfer zamanı əşyanı tanımağı asanlaşdırır. Əsas şəkli ulduz (★) ilə seçin."
+  "Optional. Photos make the item easier to identify during transfers. The star (★) chooses the cover image.": "İstəyə bağlı. Şəkillər transfer zamanı əşyanı tanımağı asanlaşdırır. Əsas şəkli ulduz (★) ilə seçin.",
+  "The request could not be carried out: {0}. The requester has been notified.": "Sorğunu icra etmək mümkün olmadı: {0}. Sorğu sahibinə bildiriş göndərildi."
 }
