@@ -1,0 +1,3 @@
+# Internal inventory system: nothing here is for search engines or crawlers.
+User-agent: *
+Disallow: /
