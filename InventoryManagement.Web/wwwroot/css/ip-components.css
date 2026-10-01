@@ -681,3 +681,11 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 .ip-back:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
 .ip-back:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
 .ip-back i { font-size: 12px; }
+
+/* ---------- native dropdown lists ----------
+   Chromium on Windows paints an open <select> list with the select's own background, and the
+   design's selects are transparent: the list came out white with the light text of the dark
+   theme on it. Options get the theme's colours explicitly. */
+select option, select optgroup { background-color: var(--ip-surface); color: var(--ip-text-1); }
+select option:checked { background-color: var(--ip-surface-active); }
+select option:disabled { color: var(--ip-text-3); }

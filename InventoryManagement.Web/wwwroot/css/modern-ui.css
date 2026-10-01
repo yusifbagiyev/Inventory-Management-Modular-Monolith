@@ -217,17 +217,20 @@ hr { border-color: var(--line); opacity: 1; }
     --bs-link-hover-color: var(--ip-accent-hover);
 }
 
-/* Air Datepicker (date-range.js) in the app palette, both themes. */
-.air-datepicker {
+/* Air Datepicker (date-range.js) in the app palette, both themes. "body" outranks the library's
+   own .air-datepicker variables, whose stylesheet loads later: without it the calendar stayed
+   white with orange day names, in the dark theme too. */
+body .air-datepicker {
     --adp-background-color: var(--surface);
     --adp-border-color: var(--line-2);
     --adp-border-color-inner: var(--line);
     --adp-color: var(--ink);
-    --adp-color-secondary: var(--ink-3);
+    --adp-color-secondary: var(--ip-text-2);
     --adp-color-other-month: var(--ink-3);
-    --adp-color-current-date: var(--accent-2);
+    --adp-color-current-date: var(--ip-accent-text);
     --adp-accent-color: var(--accent);
-    --adp-day-name-color: var(--accent-2);
+    /* Readable in both themes: --accent-2 was 2.1:1 on the dark surface. */
+    --adp-day-name-color: var(--ip-text-3);
     --adp-nav-arrow-color: var(--ink-3);
     --adp-background-color-hover: var(--surface-2);
     --adp-cell-background-color-hover: var(--surface-2);
@@ -236,10 +239,13 @@ hr { border-color: var(--line); opacity: 1; }
     --adp-cell-background-color-in-range: var(--accent-weak);
     --adp-cell-background-color-in-range-hover: var(--accent-weak);
     --adp-background-color-in-range: var(--accent-weak);
-    --adp-btn-color: var(--accent-2);
+    --adp-btn-color: var(--ip-accent-text);
     --adp-btn-background-color-hover: var(--surface-2);
     --adp-font-family: inherit;
 }
+/* The library animates "all" on the calendar body, colour included: after a theme switch the
+   days kept the old theme's colour. Only the month-change animation is kept. */
+body .air-datepicker-body { transition-property: opacity, transform; }
 
 /* Multi-image picker (_ImageManager / image-manager.js) on the design's image tiles
    (.ip-images / .ip-image-tile / .ip-image-add). The first tile is the cover. */
