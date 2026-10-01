@@ -93,7 +93,7 @@ namespace NotificationService.Infrastructure.Services
             string? uploaded = null, lastError = null;
             var otherErrors = 0;
 
-            using var scope = _scopes.CreateScope();
+            await using var scope = _scopes.CreateAsyncScope();
             var whatsApp = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
 
             for (var attempt = 1; attempt <= MaxAttempts; attempt++)
@@ -131,7 +131,7 @@ namespace NotificationService.Infrastructure.Services
             if (job.RouteId is not int routeId) return;
             try
             {
-                using var scope = _scopes.CreateScope();
+                await using var scope = _scopes.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>().SetAsync(routeId, status, error, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
