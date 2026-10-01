@@ -1,4 +1,4 @@
-﻿using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -17,18 +17,13 @@ namespace InventoryManagement.Web.Controllers
             _notificationService = notificationService;
         }
 
-        public async Task<IActionResult> Index(string? status = null, string? type = null)
+        /// <summary>Paged, newest first; the tabs (all / unread) and the type filter are query parameters (ListNav updates the list in place).</summary>
+        public async Task<IActionResult> Index(string? status = null, string? type = null, int pageNumber = 1, int pageSize = 30)
         {
             try
             {
-                var notifications = await _notificationService.GetNotificationsAsync(status == "unread");
-
-                var model = new NotificationListViewModel
-                {
-                    Notifications = notifications
-                        .Where(n => type == null || n.Type == type)
-                        .ToList()
-                };
+                pageSize = Math.Clamp(pageSize, 1, 100);
+                var model = await _notificationService.GetPageAsync(status == "unread", string.IsNullOrEmpty(type) ? null : type, Math.Max(1, pageNumber), pageSize);
 
                 ViewBag.StatusFilter = status;
                 ViewBag.TypeFilter = type;
@@ -107,9 +102,7 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                var notifications = await _notificationService.GetNotificationsAsync(unreadOnly: true);
-                var recentNotifications = notifications.Take(5).ToList();
-                return Json(recentNotifications);
+                return Json(await _notificationService.GetNotificationsAsync(unreadOnly: true, limit: 5));
             }
             catch (Exception ex)
             {

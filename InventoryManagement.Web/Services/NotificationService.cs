@@ -25,9 +25,26 @@ namespace InventoryManagement.Web.Services
         /// Notifications are stored in English (the text is written once, for every recipient); they are
         /// shown in the viewer's language through the same table as the rest of the UI.
         /// </summary>
-        public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false)
-            => ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly))
-                .Select(n => n with
+        public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false, int? limit = null)
+            => Translate(ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly, limit)));
+
+        public async Task<Models.ViewModels.NotificationListViewModel> GetPageAsync(bool unreadOnly, string? type, int pageNumber, int pageSize)
+        {
+            var page = await _inbox.GetPageAsync(UserId, unreadOnly, type, pageNumber, pageSize);
+            return new Models.ViewModels.NotificationListViewModel
+            {
+                Notifications = Translate(ModelMapper.MapList<NotificationDto>(page.Items)),
+                TotalCount = page.TotalCount,
+                AllCount = page.AllCount,
+                UnreadCount = page.UnreadCount,
+                Types = page.Types,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        private static List<NotificationDto> Translate(IEnumerable<NotificationDto> items)
+            => items.Select(n => n with
                 {
                     Title = JsonStringLocalizer.TranslateMessage(n.Title),
                     Message = JsonStringLocalizer.TranslateMessage(n.Message)

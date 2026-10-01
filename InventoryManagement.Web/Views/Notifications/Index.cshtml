@@ -1,17 +1,21 @@
 @model NotificationListViewModel
 @{
     ViewData["Title"] = "Notifications";
-    const int Shown = 200;
-    var items = Model.Notifications.OrderByDescending(n => n.CreatedAt).Take(Shown).ToList();
-    var unread = items.Count(n => !n.IsRead);
-    var types = items.Select(n => n.Type).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().OrderBy(t => t).ToList();
+    var status = ViewBag.StatusFilter as string;
+    var type = ViewBag.TypeFilter as string;
+    var unreadTab = status == "unread";
+    var items = Model.Notifications;
+    // Tab links keep the type filter; the page starts again at 1.
+    string TabUrl(string? s) => Url.Action("Index", new { status = s, type = string.IsNullOrEmpty(type) ? null : type })!;
 }
 
+@* Paged on the server, newest first (30 a page). The tabs, the type filter and the page numbers
+   change the list in place (ListNav): [data-list-tabs] and [data-list-region] are swapped. *@
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
             <h1>@L["Notifications"]</h1>
-            <div class="ip-sub ip-num" id="unreadSummary">@L["{0} unread", unread]</div>
+            <div class="ip-sub ip-num" id="unreadSummary" data-unread="@Model.UnreadCount">@L["{0} unread", Model.UnreadCount]</div>
         </div>
         <div class="ip-page-actions">
             <button type="button" class="ip-btn ip-btn-secondary" onclick="markAllAsRead()">
@@ -20,31 +24,39 @@
         </div>
     </div>
 
-    <nav class="ip-tabs strong align-items-center" aria-label="@L["Notifications"]">
-        <button type="button" class="ip-tab active" data-filter="all">@L["All"] <span class="count">@items.Count</span></button>
-        <button type="button" class="ip-tab" data-filter="unread">@L["Unread"] <span class="count" id="unreadCount">@unread</span></button>
-        @if (types.Count > 1)
+    <nav class="ip-tabs strong align-items-center" aria-label="@L["Notifications"]" data-list-tabs>
+        <a class="ip-tab @(unreadTab ? "" : "active")" href="@TabUrl(null)">@L["All"] <span class="count">@Model.AllCount</span></a>
+        <a class="ip-tab @(unreadTab ? "active" : "")" href="@TabUrl("unread")">@L["Unread"] <span class="count" id="unreadCount">@Model.UnreadCount</span></a>
+        @if (Model.Types.Count > 1)
         {
             <label class="ip-filter ms-auto">
                 <span>@L["Type"]</span>
                 <select id="typeFilter">
                     <option value="">@L["All"]</option>
-                    @foreach (var type in types)
+                    @foreach (var t in Model.Types)
                     {
-                        <option value="@type">@L[TypeLabel(type)]</option>
+                        <option value="@t" selected="@(t == type)">@L[TypeLabel(t)]</option>
                     }
                 </select>
             </label>
         }
     </nav>
 
-    <div id="notificationsList">
+    <div id="notificationsList" data-list-region>
         @if (items.Count == 0)
         {
             <div class="ip-empty">
                 <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
-                <div class="title">@L["No notifications found"]</div>
-                <div class="text">@L["Approval requests, product and route updates will show up here."]</div>
+                @if (unreadTab || !string.IsNullOrEmpty(type))
+                {
+                    <div class="title">@L["Nothing found"]</div>
+                    <div class="text">@L["No notifications match this filter."]</div>
+                }
+                else
+                {
+                    <div class="title">@L["No notifications found"]</div>
+                    <div class="text">@L["Approval requests, product and route updates will show up here."]</div>
+                }
             </div>
         }
         else
@@ -74,59 +86,33 @@
                     }
                 </section>
             }
-            <div class="ip-empty d-none" id="noMatch">
-                <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
-                <div class="title">@L["Nothing found"]</div>
-                <div class="text">@L["No notifications match this filter."]</div>
-            </div>
-            @if (Model.Notifications.Count > Shown)
-            {
-                <p class="ip-faint mt-3">@L["The latest {0} are shown.", Shown]</p>
-            }
+            <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
         }
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Tabs (All / Unread) and the type select filter the list in place; a day heading hides
-        // when none of its notifications is left. Clicking a notification marks it read (_Layout).
-        let filter = 'all';
-
-        function applyFilter() {
-            const type = $('#typeFilter').val() || '';
-            let shown = 0;
-            document.querySelectorAll('#notificationsList [data-day]').forEach(function (day) {
-                let any = false;
-                day.querySelectorAll('.ip-notif-item').forEach(function (item) {
-                    const visible = (filter !== 'unread' || item.classList.contains('unread'))
-                        && (!type || item.dataset.type === type);
-                    item.classList.toggle('d-none', !visible);
-                    any = any || visible;
-                    if (visible) shown++;
-                });
-                day.classList.toggle('d-none', !any);
-            });
-            $('#noMatch').toggleClass('d-none', shown > 0 || !document.querySelector('#notificationsList [data-day]'));
-        }
-
-        function updateUnread() {
-            const count = document.querySelectorAll('#notificationsList .ip-notif-item.unread').length;
-            $('#unreadCount').text(count);
-            $('#unreadSummary').text(t('{0} unread', count));
-        }
-
-        $('.ip-tabs [data-filter]').on('click', function () {
-            $('.ip-tabs [data-filter]').removeClass('active');
-            $(this).addClass('active');
-            filter = this.dataset.filter;
-            applyFilter();
+        // The type filter: same tab, first page (in place).
+        $(document).on('change', '#typeFilter', function () {
+            const params = new URLSearchParams(window.location.search);
+            if (this.value) params.set('type', this.value); else params.delete('type');
+            params.delete('pageNumber');
+            ListNav.go(window.location.pathname + '?' + params.toString());
         });
-        $('#typeFilter').on('change', applyFilter);
 
-        // The layout's handler marks a clicked item read (removes .unread): keep the counts in step.
-        new MutationObserver(updateUnread).observe(document.getElementById('notificationsList'),
-            { subtree: true, attributes: true, attributeFilter: ['class'] });
+        // Clicking a notification marks it read (_Layout removes .unread): count it down here.
+        function unreadNow() { return parseInt($('#unreadSummary').attr('data-unread'), 10) || 0; }
+        function setUnread(n) {
+            $('#unreadSummary').attr('data-unread', n).text(t('{0} unread', n));
+            $('#unreadCount').text(n);
+        }
+        new MutationObserver(function (mutations) {
+            const read = mutations.filter(m => m.target.classList && m.target.classList.contains('ip-notif-item')
+                && (m.oldValue || '').split(' ').includes('unread') && !m.target.classList.contains('unread')).length;
+            if (read) setUnread(Math.max(0, unreadNow() - read));
+        }).observe(document.getElementById('notificationsList'),
+            { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
 
         // Keyboard: Enter on a focused notification works like a click.
         $(document).on('keydown', '#notificationsList .ip-notif-item', function (e) {
@@ -139,9 +125,8 @@
                 type: 'POST',
                 headers: AppConfig.antiforgeryHeaders(),
                 success: function () {
-                    $('#notificationsList .ip-notif-item').removeClass('unread').attr('data-read', 'read');
                     if (window.loadNotificationCount) loadNotificationCount();
-                    applyFilter();
+                    ListNav.reload();   // counts, tabs and the list as the server now has them
                     showToast(t('All notifications marked as read'), 'success');
                 },
                 error: function () {

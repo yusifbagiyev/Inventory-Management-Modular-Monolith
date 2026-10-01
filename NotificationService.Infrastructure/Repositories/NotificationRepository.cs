@@ -36,6 +36,32 @@ namespace NotificationService.Infrastructure.Repositories
             return await query.ToListAsync(cancellationToken);
         }
 
+        public async Task<(List<Notification> Items, int Total)> GetPageAsync(int userId, bool unreadOnly, string? type, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Notifications.AsNoTracking().Where(n => n.UserId == userId);
+            if (unreadOnly)
+                query = query.Where(n => !n.IsRead);
+            if (!string.IsNullOrEmpty(type))
+                query = query.Where(n => n.Type == type);
+
+            var total = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderByDescending(n => n.CreatedAt).ThenByDescending(n => n.Id)
+                .Skip((Math.Max(1, pageNumber) - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+            return (items, total);
+        }
+
+        public Task<int> CountAsync(int userId, CancellationToken cancellationToken = default)
+            => _context.Notifications.CountAsync(n => n.UserId == userId, cancellationToken);
+
+        public Task<List<string>> GetTypesAsync(int userId, CancellationToken cancellationToken = default)
+            => _context.Notifications.AsNoTracking()
+                .Where(n => n.UserId == userId)
+                .Select(n => n.Type).Distinct().OrderBy(t => t)
+                .ToListAsync(cancellationToken);
+
         public async Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken = default)
         {
             await _context.Notifications.AddAsync(notification, cancellationToken);
