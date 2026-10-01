@@ -4,7 +4,6 @@ namespace InventoryManagement.Web.Models.ViewModels
     {
         public int TotalProducts { get; set; }
         public int ActiveProducts { get; set; }
-        public int TotalRoutes { get; set; }
         public int? PendingTransfers { get; set; }
         public int? CompletedTransfers { get; set; }
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
@@ -13,7 +12,6 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         /// <summary>The same numbers for the preceding period of equal length (null for "all time").</summary>
         public int? PreviousTotalProducts { get; set; }
-        public int? PreviousTotalRoutes { get; set; }
         public int? PreviousCompletedTransfers { get; set; }
         public int? PreviousPendingTransfers { get; set; }
 
@@ -24,7 +22,6 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public class DepartmentStats
     {
-        public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }=string.Empty;
         public int ProductCount { get; set; }
         public int ActiveWorkers { get; set; }
@@ -43,6 +40,5 @@ namespace InventoryManagement.Web.Models.ViewModels
     {
         public string CategoryName { get; set; } = string.Empty;
         public int Count { get; set; }
-        public string Color { get; set; } = string.Empty;
     }
 }

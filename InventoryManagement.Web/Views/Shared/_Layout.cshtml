@@ -210,7 +210,7 @@
             });
 
             // Handle individual notification clicks
-            $(document).on('click', '.notification-item, .ip-notif-item', function() {
+            $(document).on('click', '.ip-notif-item', function() {
                 const notificationId = $(this).data('id');
                 if (notificationId) {
                     markNotificationAsRead(notificationId);
@@ -356,7 +356,7 @@
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val()
                 },
                 success: function(response) {
-                    $(`.notification-item[data-id="${notificationId}"], .ip-notif-item[data-id="${notificationId}"]`).removeClass('unread');
+                    $(`.ip-notif-item[data-id="${notificationId}"]`).removeClass('unread');
                     loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
@@ -376,21 +376,13 @@
                 },
                 success: function(response) {
                     // Remove unread class from all items
-                    $('.notification-item, .ip-notif-item').removeClass('unread');
-                    $('.notification-dot').remove();
-
+                    $('.ip-notif-item').removeClass('unread');
                     updateNotificationBadge(0);
 
-                    $('#sidebarUnreadCount').text('0').hide();
-                    $('.sidebar-nav .notification-badge').hide();
-
-                    // FIX: Update any other notification indicators
-                    $('.nav-link[href="/Notifications"] .badge').text('0').hide();
-
-                    // FIXED: Force reload the notification list to get fresh data
+                    // Reload the list and the count from the server
                     setTimeout(function() {
                         loadRecentNotifications();
-                        loadNotificationCount(); // FIX: Also reload the count from server
+                        loadNotificationCount();
                     }, 300);
 
                     showToast(t('All notifications marked as read'), 'success');
@@ -405,14 +397,8 @@
         function updateNotificationBadge(count) {
             count = parseInt(count) || 0;
 
-            // List of all possible notification badge selectors
-            const badgeSelectors = [
-                '#notificationBadge',
-                '#sidebarUnreadCount',
-                '.sidebar-nav .notification-badge',
-                '.nav-link[href="/Notifications"] .badge',
-                '[data-notification-count]'
-            ];
+            // The toolbar bell and the rail's Notifications count
+            const badgeSelectors = ['#notificationBadge', '#sidebarUnreadCount'];
 
             badgeSelectors.forEach(selector => {
                 const $element = $(selector);
@@ -420,11 +406,6 @@
                     if (count > 0) {
                         const displayCount = count > 99 ? '99+' : count;
                         $element.text(displayCount).show();
-
-                        // Use appropriate display style
-                        if ($element.hasClass('badge')) {
-                            $element.css('display', 'inline-flex');
-                        }
                     } else {
                         $element.hide().text('');
                     }

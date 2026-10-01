@@ -33,9 +33,9 @@ namespace InventoryManagement.Web.Services
                 new GetTransferActivityQuery(today.AddDays(-6), today.AddDays(1).AddTicks(-1)),
                 new GetProductCountsQuery(),
                 new GetProductCountsQuery(today.AddDays(-6), today.AddDays(1).AddTicks(-1)),
+                // Lists and their filters
                 new GetCategoryStatsQuery(),
                 new GetDepartmentStatsQuery(),
-                // Lists and their filters
                 new GetAllProductsQuery(),
                 new GetProductFilterFacetsQuery(),
                 new GetAllRoutesQuery(),

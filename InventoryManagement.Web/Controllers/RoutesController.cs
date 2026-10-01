@@ -55,9 +55,6 @@ namespace InventoryManagement.Web.Controllers
             foreach (var r in routes.Items)
                 TranslateNotes(r);
 
-            ViewBag.ShowingStart = ((routes.PageNumber - 1) * routes.PageSize) + 1;
-            ViewBag.ShowingEnd = Math.Min(routes.PageNumber * routes.PageSize, routes.TotalCount);
-            ViewBag.TotalCount = routes.TotalCount;
 
             ViewBag.CurrentFilter = isCompleted;
             ViewBag.StartDate = startDate;

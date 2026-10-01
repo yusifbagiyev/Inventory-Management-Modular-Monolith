@@ -166,11 +166,6 @@ hr { border-color: var(--line); opacity: 1; }
 .spinner-border { color: var(--ink-3); }
 .loader-overlay { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; background: color-mix(in srgb, var(--surface) 60%, transparent); }
 
-#imagePreview {
-    max-width: 260px; max-height: 220px; width: auto; height: auto; object-fit: contain;
-    border: 0; border-radius: var(--ip-radius-lg);
-}
-
 /* inline inventory-code editor: floats above the narrow Code column instead of wrapping */
 .table td { position: relative; }
 .inventory-code-edit {

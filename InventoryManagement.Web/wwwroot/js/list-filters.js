@@ -154,18 +154,6 @@ window.ListFilters = (function () {
             navigate(params);
         }
 
-        /** Removes one word from a multi-word search (its chip's x). */
-        function removeWord(word) {
-            const params = currentParams();
-            const remaining = (params.get('search') || '')
-                .split(/\s+/)
-                .filter(function (w) { return w && w.toLowerCase() !== word.toLowerCase(); });
-            if (remaining.length) params.set('search', remaining.join(' '));
-            else params.delete('search');
-            params.set('pageNumber', '1');
-            navigate(params);
-        }
-
         /** Flips a URL-only flag (e.g. hasImage=false) while keeping every other filter. */
         function toggleFlag(flag) {
             const params = collect();
@@ -193,10 +181,6 @@ window.ListFilters = (function () {
                 if (e.which === 13) apply();
             });
 
-            document.querySelectorAll('.achip-word').forEach(function (chip) {
-                chip.addEventListener('click', function () { removeWord(chip.dataset.word); });
-            });
-
             restore();
             cascadeCategoryOptions();
             cascadeDepartmentOptions();
@@ -206,7 +190,6 @@ window.ListFilters = (function () {
             apply: apply,
             collect: collect,
             remove: remove,
-            removeWord: removeWord,
             toggleFlag: toggleFlag,
             reset: reset,
             onDepartmentChange: onDepartmentChange,

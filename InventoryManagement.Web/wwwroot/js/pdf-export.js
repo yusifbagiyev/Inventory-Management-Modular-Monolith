@@ -161,12 +161,28 @@ function openPrintFrame(html) {
     }, 350);
 }
 
-/** Reads the applied-filter chips above a list so the export states what it was filtered by. */
+/**
+ * Reads the list's filter bar (and its status tab) so the export states what it was filtered by:
+ * "Pending | Search: hp | Department: IT | Created: 01.09.2026 - 30.09.2026 | No image".
+ */
 function currentFilterSummary() {
-    const chips = Array.from(document.querySelectorAll('.filter-applied .achip'))
-        .map(c => c.textContent.replace(/\s*×\s*$/, '').replace(/\s+/g, ' ').trim())
-        .filter(Boolean);
-    return chips.length ? t('Filters:') + ' ' + chips.join('   |   ') : '';
+    const clean = s => (s || '').replace(/\s+/g, ' ').trim();
+    const parts = [];
+    const tab = document.querySelector('[data-list-tabs] .ip-tab.active');
+    if (tab && tab !== document.querySelector('[data-list-tabs] .ip-tab')) {
+        parts.push(clean(tab.firstChild?.textContent));
+    }
+    document.querySelectorAll('.ip-filterbar .ip-filter').forEach(filter => {
+        const label = clean(filter.querySelector(':scope > span')?.textContent);
+        const select = filter.querySelector('select');
+        const input = filter.querySelector('input');
+        let value = '';
+        if (select && select.value) value = clean(select.selectedOptions[0]?.textContent);
+        else if (input && input.value) value = clean(input.value);
+        if (value) parts.push((label || t('Search')) + ': ' + value);
+    });
+    document.querySelectorAll('.ip-filterbar .ip-btn.is-on').forEach(b => parts.push(clean(b.textContent)));
+    return parts.length ? t('Filters:') + ' ' + parts.filter(Boolean).join('   |   ') : '';
 }
 
 /**

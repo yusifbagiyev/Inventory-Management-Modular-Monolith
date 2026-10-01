@@ -52,17 +52,7 @@ function updatePendingApprovalsCount(count) {
     // Ensure count is a valid number
     count = parseInt(count) || 0;
 
-    // Update the main navigation badge
-    const $headerBadge = $('#pendingApprovalsCount');
-    if ($headerBadge.length) {
-        if (count > 0) {
-            $headerBadge.text(count > 99 ? '99+' : count).show();
-        } else {
-            $headerBadge.hide();
-        }
-    }
-
-    // Update the sidebar badge
+    // Update the rail's Approvals count
     const $sidebarBadge = $('#sidebarPendingCount');
     if ($sidebarBadge.length) {
         if (count > 0) {

@@ -129,15 +129,6 @@ document.addEventListener('DOMContentLoaded', function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function () {
-        const alerts = document.querySelectorAll('.alert:not(.alert-permanent):not(#productInfo):not(#errorInfo)');
-        alerts.forEach(function (alert) {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        });
-    }, 5000);
-
     // Add loading spinner for forms
     // Layout forms (language switch, sign out) navigate at once and keep their button as it is.
     const forms = document.querySelectorAll('form:not(.no-spinner):not([data-no-ajax])');
@@ -154,18 +145,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Start session monitoring (only if user is authenticated)
     setupSessionMonitor();
 });
-
-// Image preview for file inputs
-function previewImage(input, previewId) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            document.getElementById(previewId).src = e.target.result;
-            document.getElementById(previewId).style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
 
 // Toast notification (.ip-toast: surface card, bottom right, the icon carries the colour)
 function showToast(message, type = 'info', duration = 4000) {

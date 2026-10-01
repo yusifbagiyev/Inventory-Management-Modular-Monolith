@@ -53,9 +53,6 @@ namespace InventoryManagement.Web.Controllers
             foreach (var p in products.Items)
                 p.PendingRequestId = pending.TryGetValue(p.Id, out var requestId) ? requestId : null;
 
-            ViewBag.ShowingStart = ((products.PageNumber - 1) * products.PageSize) + 1;
-            ViewBag.ShowingEnd = Math.Min(products.PageNumber * products.PageSize, products.TotalCount);
-            ViewBag.TotalCount = products.TotalCount;
 
             ViewBag.PageNumber = pageNumber ?? 1;
             ViewBag.PageSize = pageSize ?? 30;

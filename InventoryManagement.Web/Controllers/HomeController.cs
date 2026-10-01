@@ -15,13 +15,6 @@ namespace InventoryManagement.Web.Controllers
     [Authorize]
     public class HomeController : BaseController
     {
-        private static readonly string[] ChartColors =
-        {
-            "#FF6B6B", "#4ECDC4", "#FFD93D", "#6BCF7F", "#FF8C42",
-            "#A78BFA", "#FF6BB5", "#4DA8FF", "#7FD1AE", "#FFB84D",
-            "#B4A7D6", "#FF8585", "#5DADE2", "#82E0AA", "#F8B739"
-        };
-
         private readonly IMediator _mediator;
 
         public HomeController(IMediator mediator, ILogger<HomeController> logger)
@@ -67,8 +60,6 @@ namespace InventoryManagement.Web.Controllers
             var products = period == "all"
                 ? await _mediator.Send(new GetProductCountsQuery())
                 : await _mediator.Send(new GetProductCountsQuery(startDate, endDate));
-            var categoryStats = await _mediator.Send(new GetCategoryStatsQuery());
-            var departmentStats = await _mediator.Send(new GetDepartmentStatsQuery());
 
             IReadOnlyList<TransferActivity>? previousTransfers = null;
             int? previousProducts = null;
@@ -83,14 +74,12 @@ namespace InventoryManagement.Web.Controllers
             {
                 TotalProducts = products.Total,
                 ActiveProducts = products.Active,
-                TotalRoutes = transfers.Count,
                 CompletedTransfers = transfers.Count(t => t.IsCompleted),
                 PendingTransfers = transfers.Count(t => !t.IsCompleted),
                 DepartmentStats = BuildDepartmentStats(transfers),
                 CategoryDistributions = BuildCategoryDistribution(transfers),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
                 PreviousTotalProducts = previousProducts,
-                PreviousTotalRoutes = previousTransfers?.Count,
                 PreviousCompletedTransfers = previousTransfers?.Count(t => t.IsCompleted),
                 PreviousPendingTransfers = previousTransfers?.Count(t => !t.IsCompleted),
                 PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
@@ -98,15 +87,6 @@ namespace InventoryManagement.Web.Controllers
             };
 
             ViewBag.CurrentPeriod = period;
-            ViewBag.PeriodStartDate = startDate;
-            ViewBag.PeriodEndDate = endDate;
-            ViewBag.TotalDepartments = departmentStats.Active;
-            ViewBag.TotalCategories = categoryStats.Active;
-            ViewBag.ActiveDepartmentsInPeriod = transfers
-                .SelectMany(t => t.FromDepartmentId.HasValue ? new[] { t.FromDepartmentId.Value, t.ToDepartmentId } : new[] { t.ToDepartmentId })
-                .Distinct()
-                .Count();
-            ViewBag.ActiveCategoriesInPeriod = transfers.Select(t => t.CategoryName).Distinct().Count();
 
             // "Needs attention": the current state, whatever the period.
             ViewBag.NotWorking = (period == "all" ? products : await _mediator.Send(new GetProductCountsQuery())).NotWorking;
@@ -123,13 +103,13 @@ namespace InventoryManagement.Web.Controllers
         /// </summary>
         private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers)
         {
-            var byDepartment = new Dictionary<string, (int Id, string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
+            var byDepartment = new Dictionary<string, (string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
 
             void Add(int id, string? name, TransferActivity transfer, string? worker)
             {
                 var key = string.IsNullOrWhiteSpace(name) ? $"#{id}" : name;
                 if (!byDepartment.TryGetValue(key, out var entry))
-                    byDepartment[key] = entry = (id, key, new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                    byDepartment[key] = entry = (key, new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 if (!entry.Transfers.Contains(transfer))
                     entry.Transfers.Add(transfer);
                 if (!string.IsNullOrWhiteSpace(worker))
@@ -146,7 +126,6 @@ namespace InventoryManagement.Web.Controllers
             return byDepartment.Values
                 .Select(d => new DepartmentStats
                 {
-                    DepartmentId = d.Id,
                     DepartmentName = d.Name,
                     ProductCount = d.Transfers.Select(t => t.ProductId).Distinct().Count(),
                     ActiveWorkers = d.Workers.Count,
@@ -165,12 +144,7 @@ namespace InventoryManagement.Web.Controllers
                 .Select(g => (Name: g.Key, Count: g.Select(t => t.ProductId).Distinct().Count()))
                 .OrderByDescending(c => c.Count)
                 .Take(8)
-                .Select((c, index) => new CategoryDistribution
-                {
-                    CategoryName = c.Name,
-                    Count = c.Count,
-                    Color = ChartColors[index % ChartColors.Length]
-                })
+                .Select(c => new CategoryDistribution { CategoryName = c.Name, Count = c.Count })
                 .ToList();
 
         /// <summary>Completed/pending transfer counts per day, week, month or quarter depending on the period.</summary>
