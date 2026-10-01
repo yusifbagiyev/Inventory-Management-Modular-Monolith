@@ -1,8 +1,16 @@
 @model LoginViewModel
+@using System.Reflection
 @{
     Layout = null;
+    var returnUrl = Model.ReturnUrl;
+    // "1.0.0+3f03f1e…" -> "1.0.0 · 3f03f1e"
+    var info = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
+    var plus = info.IndexOf('+');
+    var version = plus < 0 ? info : info[..plus] + " · " + info[(plus + 1)..].Substring(0, Math.Min(7, info.Length - plus - 1));
 }
-
+@* Sign-in (design 2a, CLAUDE_CODE_PROMPT_5): pick one of the accounts that signed in on this
+   browser, then type only the password; "Another account" asks for the username too.
+   AccountController.Login / RecentAccounts. *@
 <!DOCTYPE html>
 <html lang="@(JsonStringLocalizer.IsAzerbaijani ? "az" : "en")">
 <head>
@@ -50,43 +58,28 @@
     <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--ip-surface); }
+        body { margin: 0; background: var(--ip-bg); }
         [data-bs-theme="dark"] { color-scheme: dark; }
-        .ip-login-side .brand { display: flex; align-items: center; gap: 12px; font-size: var(--ip-fs-md); font-weight: 600; }
-        .ip-login-side .brand .ip-logo { width: 36px; height: 36px; font-size: 16px; }
-        .ip-login-side .note { margin-top: 16px; max-width: 440px; color: var(--ip-text-2); }
-        .ip-login-main .top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
-        .ip-login-main .top form { margin: 0; }
-        .ip-login-form h1 { margin-bottom: 4px; }
-        .pw-wrap { position: relative; }
-        .pw-wrap .ip-input { padding-right: 48px; }
-        .pw-wrap .ip-btn-icon { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
-        .remember { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .ip-login-form .ip-btn-primary { width: 100%; }
-        .ip-login-form .mobile-brand { display: none; align-items: center; gap: 10px; font-weight: 600; }
-        @@media (max-width: 900px) {
-            .ip-login-main { padding: 20px 24px; }
-            .ip-login-form .mobile-brand { display: flex; }
-        }
+        .ip-login-head form { margin: 0; }
+        .ip-account-wrap { position: relative; }
+        .ip-account-wrap .ip-account { width: 100%; padding-right: 48px; }
+        /* "Remove from this list": shown on hover / focus, always on touch screens */
+        .ip-account-forget { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); margin: 0; }
+        .ip-account-forget button { width: 32px; height: 32px; border: 0; border-radius: var(--ip-radius-md); background: transparent; color: var(--ip-text-3); cursor: pointer; opacity: 0; }
+        .ip-account-wrap:hover .ip-account-forget button, .ip-account-forget button:focus-visible { opacity: 1; }
+        .ip-account-forget button:hover { background: var(--ip-surface-active); color: var(--ip-text-1); }
+        @@media (hover: none) { .ip-account-forget button { opacity: 1; } }
+        .ip-account-wrap:hover .ip-account > i { visibility: hidden; }
     </style>
 </head>
 <body>
     <div class="ip-login">
-        @* Left panel (design: 01 Login): dark in both themes. *@
-        <aside class="ip-login-side" data-bs-theme="dark">
-            <div class="brand">
+        <header class="ip-login-head">
+            <div class="d-flex align-items-center gap-2" style="display: flex; align-items: center; gap: 8px;">
                 <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
-                <span>Inventory Pro</span>
+                <strong>Inventory Pro</strong>
             </div>
-            <div>
-                <div class="claim">@L["Equipment records, transfers and approvals in one place."]</div>
-                <p class="note">@L["For internal use. No account yet? Ask the IT department."]</p>
-            </div>
-            <div class="ip-faint">© @DateTime.Today.Year</div>
-        </aside>
-
-        <main class="ip-login-main">
-            <div class="top">
+            <div style="display: flex; align-items: center; gap: 8px;">
                 <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" role="group" aria-label="@L["Switch language"]">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
@@ -105,80 +98,113 @@
                     <i class="fa-solid fa-moon"></i>
                 </button>
             </div>
+        </header>
 
-            <div class="ip-login-form">
-                <div class="mobile-brand">
-                    <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
-                    <span>Inventory Pro</span>
+        <main class="ip-login-main">
+            @if (Model.ShowPicker)
+            {
+                <div class="ip-account-pick">
+                    <div>
+                        <h1>@L["Who is signing in?"]</h1>
+                        <div class="ip-muted">@L["Recent sign-ins on this computer"]</div>
+                    </div>
+                    <div class="ip-account-grid">
+                        @foreach (var a in Model.Recent)
+                        {
+                            <div class="ip-account-wrap">
+                                <a class="ip-account" href="@Url.Action("Login", new { user = a.Login, returnUrl })">
+                                    <span class="ip-avatar" aria-hidden="true">@a.Initials</span>
+                                    <span class="who"><b>@a.Name</b><small>@a.RoleLabel · @a.LastAtText</small></span>
+                                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                                </a>
+                                <form class="ip-account-forget" method="post" asp-action="ForgetAccount">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="login" value="@a.Login" />
+                                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                    <button type="submit" title="@L["Remove from this list"]" aria-label="@L["Remove {0} from this list", a.Name]">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        }
+                    </div>
+                    <a class="ip-account-other" href="@Url.Action("Login", new { other = 1, returnUrl })">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i>@L["Use another account"]
+                    </a>
                 </div>
-                <div>
-                    <h1>@L["Please sign in"]</h1>
-                    <div class="ip-muted">@L["With the username and password of your work account"]</div>
-                </div>
-
-                @if (!ViewData.ModelState.IsValid)
-                {
-                    <div class="ip-banner ip-banner-danger" role="alert">
-                        <i class="fa-solid fa-circle-exclamation"></i>
+            }
+            else
+            {
+                <form class="ip-login-form" method="post" asp-action="Login" novalidate>
+                    @if (Model.Recent.Any())
+                    {
+                        <a class="back" href="@Url.Action("Login", new { returnUrl })"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>@L["Change account"]</a>
+                    }
+                    <div class="identity">
+                        <span class="ip-avatar" aria-hidden="true">@Model.Initials</span>
                         <div>
-                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-                            {
-                                <div>@error.ErrorMessage</div>
-                            }
+                            <div class="name">@Model.DisplayName</div>
+                            <div class="login">@Model.LoginHint</div>
                         </div>
                     </div>
-                }
 
-                <form asp-action="Login" method="post" style="display: flex; flex-direction: column; gap: 20px;">
-                    <div class="ip-field">
-                        <label asp-for="Username" class="ip-label">@L["Username"]</label>
-                        <input asp-for="Username" class="ip-input" autocomplete="username" autofocus>
-                        <span asp-validation-for="Username" class="ip-error"></span>
-                    </div>
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="ip-banner ip-banner-danger" role="alert">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <div>
+                                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Distinct())
+                                {
+                                    <div>@error</div>
+                                }
+                            </div>
+                        </div>
+                    }
 
+                    <input type="hidden" asp-for="Mode" />
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    @if (Model.AskUsername)
+                    {
+                        <div class="ip-field">
+                            <label asp-for="Username" class="ip-label">@L["Username"]</label>
+                            <input asp-for="Username" class="ip-input" autocomplete="username" autofocus>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="Username" />
+                    }
                     <div class="ip-field">
                         <label asp-for="Password" class="ip-label">@L["Password"]</label>
-                        <div class="pw-wrap">
-                            <input asp-for="Password" class="ip-input" type="password" autocomplete="current-password">
+                        <div class="ip-pw-wrap">
+                            <input asp-for="Password" class="ip-input" type="password" autocomplete="current-password" autofocus="@(!Model.AskUsername)">
                             <button type="button" class="ip-btn-icon" id="togglePassword" aria-pressed="false"
                                     aria-label="@L["Show password"]" title="@L["Show password"]"
                                     data-label-show="@L["Show password"]" data-label-hide="@L["Hide password"]">
                                 <i class="fa-regular fa-eye"></i>
                             </button>
                         </div>
-                        <span asp-validation-for="Password" class="ip-error"></span>
                     </div>
-
-                    <label class="remember">
-                        <input asp-for="RememberMe" class="ip-check" type="checkbox">
-                        <span>@L["Remember me"]</span>
-                    </label>
-
-                    <button type="submit" class="ip-btn ip-btn-primary ip-btn-lg">
-                        <span>@L["Sign in"]</span><i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                    <button type="submit" class="ip-btn ip-btn-primary">@L["Sign in"]</button>
+                    <div class="ip-faint">@L["Forgot your password? The IT department resets it."]</div>
                 </form>
-
-                <div class="ip-hint">@L["Trouble signing in? Contact your system administrator."]</div>
-            </div>
+            }
         </main>
+
+        <footer class="ip-login-foot">
+            <span>@L["Internal system"]</span>
+            @if (version.Length > 0)
+            {
+                <span class="ip-num">v@(version)</span>
+            }
+        </footer>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var remembered = getCookie('username');
-            if (remembered) {
-                var user = document.getElementById('Username');
-                var remember = document.getElementById('RememberMe');
-                var pass = document.getElementById('Password');
-                if (user) user.value = remembered;
-                if (remember) remember.checked = true;
-                if (pass) pass.focus();
-            }
-
             // Show / hide the password.
             var toggle = document.getElementById('togglePassword');
-            toggle.addEventListener('click', function () {
+            if (toggle) toggle.addEventListener('click', function () {
                 var field = document.getElementById('Password');
                 var show = field.type === 'password';
                 field.type = show ? 'text' : 'password';
@@ -203,13 +229,6 @@
             });
             syncTheme();
         });
-
-        function getCookie(name) {
-            var value = '; ' + document.cookie;
-            var parts = value.split('; ' + name + '=');
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-            return null;
-        }
     </script>
 </body>
 </html>

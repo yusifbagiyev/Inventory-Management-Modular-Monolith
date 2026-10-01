@@ -16,8 +16,8 @@ namespace InventoryManagement.Web.Controllers
 {
     public class AccountController : Controller
     {
-        /// <summary>Non-HttpOnly convenience cookie the login page uses to prefill the username.</summary>
-        private const string RememberedUsernameCookie = "username";
+        /// <summary>The old prefill cookie of the "Remember me" box; deleted at sign-in (the account picker replaced it).</summary>
+        private const string OldUsernameCookie = "username";
 
         private readonly IdentityAuth _identity;
         private readonly IUserManagementService _userManagementService;
@@ -62,15 +62,72 @@ namespace InventoryManagement.Web.Controllers
             => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
                 reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
+        /// <summary>
+        /// The sign-in page in two steps: the accounts that signed in on this browser
+        /// (<see cref="RecentAccounts"/>), then the password. ?user= picks one, ?other=1 asks for
+        /// the username too; with no remembered accounts the page starts there.
+        /// </summary>
         [AllowAnonymous]
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public IActionResult Login(string? returnUrl = null, string? user = null, int? other = null)
         {
             if (User.Identity?.IsAuthenticated == true)
                 return RedirectToAction("Index", "Home");
 
-            ViewData["ReturnUrl"] = returnUrl;
-            return View();
+            var model = new LoginViewModel { ReturnUrl = returnUrl };
+            var recent = RecentAccounts.Read(Request);
+            if (user != null && recent.Any(a => string.Equals(a.Login, user, StringComparison.OrdinalIgnoreCase)))
+            {
+                model.Mode = "user";
+                model.Username = recent.First(a => string.Equals(a.Login, user, StringComparison.OrdinalIgnoreCase)).Login;
+            }
+            else if (user != null || other == 1 || recent.Count == 0)
+                model.Mode = "other";
+            else
+                model.ShowPicker = true;
+
+            return View(Prepare(model));
+        }
+
+        /// <summary>Fills the page's display parts (account list, the chosen account's name) for any step.</summary>
+        private LoginViewModel Prepare(LoginViewModel model)
+        {
+            ViewData["ReturnUrl"] = model.ReturnUrl;
+            var recent = RecentAccounts.Read(Request);
+            model.Recent = recent.Select(a => new RecentAccountView(a.Login, a.Name,
+                JsonStringLocalizer.TranslateMessage(a.Role == SharedServices.Identity.AllRoles.Admin ? "Administrator" : "User"),
+                RecentAccounts.LastAtText(a.LastAt), RecentAccounts.Initials(a.Name))).ToList();
+
+            var chosen = model.Mode == "user"
+                ? recent.FirstOrDefault(a => string.Equals(a.Login, model.Username, StringComparison.OrdinalIgnoreCase))
+                : null;
+            if (model.Mode == "user" && chosen == null)
+                model.Mode = "other";   // removed from the list meanwhile: ask for the username
+
+            if (chosen != null)
+            {
+                model.DisplayName = chosen.Name;
+                model.LoginHint = chosen.Login;
+                model.Initials = RecentAccounts.Initials(chosen.Name);
+            }
+            else if (!model.ShowPicker)
+            {
+                model.Mode = "other";
+                model.DisplayName = JsonStringLocalizer.TranslateMessage("Another account");
+                model.LoginHint = JsonStringLocalizer.TranslateMessage("Enter your username");
+                model.Initials = "?";
+            }
+            return model;
+        }
+
+        /// <summary>Removes an account from this browser's list (shared computers).</summary>
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ForgetAccount(string login, string? returnUrl = null)
+        {
+            RecentAccounts.Forget(HttpContext, login);
+            return RedirectToAction(nameof(Login), new { returnUrl });
         }
 
         [AllowAnonymous]
@@ -79,36 +136,31 @@ namespace InventoryManagement.Web.Controllers
         [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
-            ViewData["ReturnUrl"] = returnUrl;
+            model.ReturnUrl ??= returnUrl;
+            returnUrl = model.ReturnUrl;
             if (!ModelState.IsValid)
-                return View(model);
+                return View(Prepare(model));
 
             var address = HttpContext.Connection.RemoteIpAddress?.ToString();
             if (_throttle.RetryAfter(address) is { } wait)
             {
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
                     $"Too many failed sign-ins from your network. Try again in {(int)Math.Ceiling(wait.TotalMinutes)} minutes."));
-                return View(model);
+                return View(Prepare(model));
             }
 
             try
             {
                 var user = await _identity.ValidateCredentialsAsync(model.Username, model.Password);
-                await SignInAsync(user, model.RememberMe);
-
-                if (model.RememberMe)
-                {
-                    Response.Cookies.Append(RememberedUsernameCookie, model.Username, new CookieOptions
-                    {
-                        Secure = Request.IsHttps,
-                        SameSite = SameSiteMode.Strict,
-                        Expires = DateTimeOffset.UtcNow.AddDays(365)
-                    });
-                }
-                else
-                {
-                    Response.Cookies.Delete(RememberedUsernameCookie);
-                }
+                // A session cookie (ends with the browser), as the unticked "Remember me" was; the
+                // account itself is remembered in the picker list.
+                await SignInAsync(user, persistent: false);
+                var displayName = $"{user.FirstName} {user.LastName}".Trim();
+                RecentAccounts.Remember(HttpContext, new RecentAccounts.Entry(user.Username,
+                    displayName.Length > 0 ? displayName : user.Username,
+                    user.Roles.Contains(SharedServices.Identity.AllRoles.Admin) ? SharedServices.Identity.AllRoles.Admin : SharedServices.Identity.AllRoles.User,
+                    DateTime.UtcNow));
+                Response.Cookies.Delete(OldUsernameCookie);
 
                 _logger.LogInformation("User {Username} signed in from {Ip}", model.Username, HttpContext.Connection.RemoteIpAddress);
                 var fullName = $"{user.FirstName} {user.LastName}".Trim();
@@ -129,7 +181,7 @@ namespace InventoryManagement.Web.Controllers
                 // it cannot be used to find usernames.
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
                     "Invalid username or password. After repeated wrong attempts, sign-in is paused for 15 minutes."));
-                return View(model);
+                return View(Prepare(model));
             }
         }
 

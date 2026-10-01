@@ -5,7 +5,7 @@ body { font-family: var(--ip-font-sans); font-size: var(--ip-fs-base); line-heig
 a { color: var(--ip-accent-text); text-decoration: none; }
 a:hover { color: var(--ip-accent-active); text-decoration: underline; }
 :focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
-h1, .ip-h1 { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+h1, .ip-h1 { font-size: 24px; line-height: 30px; font-weight: 600; margin: 0; }
 h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weight: 600; margin: 0; }
 .ip-num { font-variant-numeric: tabular-nums; }
 .ip-mono { font-family: var(--ip-font-mono); }
@@ -250,7 +250,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-notif-item.unread .title { font-weight: 600; color: var(--ip-text-1); }
 .ip-notif-item .text { font-size: var(--ip-fs-sm); color: var(--ip-text-2); text-wrap: pretty; }
 .ip-notif-item .time { font-size: var(--ip-fs-xs); color: var(--ip-text-3); white-space: nowrap; }
-.ip-notif-icon { width: 32px; height: 32px; flex: none; border-radius: var(--ip-radius-lg); background: var(--ip-sunken); color: var(--ip-text-2); display: grid; place-items: center; font-size: 13px; }
+.ip-notif-icon { display: none; }
 .ip-day-head { padding: 20px 0 8px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-text-2); }
 
 /* ---------- toast (Bootstrap override) ---------- */
@@ -278,18 +278,189 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 @media (max-width: 1200px) { .ip-form-foot { margin: 0 calc(-1 * var(--ip-space-6)); padding-left: var(--ip-space-6); padding-right: var(--ip-space-6); } }
 
 /* ---------- login ---------- */
-.ip-login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
-.ip-login-side { background: var(--ip-sunken); color: var(--ip-text-1); padding: 48px 56px; display: flex; flex-direction: column; justify-content: space-between; gap: 48px; }
-.ip-login-side .claim { border-top: var(--ip-rule-width) solid var(--ip-rule); padding-top: 20px; max-width: 440px; font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.01em; text-wrap: pretty; }
-.ip-login-main { display: flex; flex-direction: column; padding: 32px 56px; }
-.ip-login-form { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; margin: auto 0; }
-@media (max-width: 900px) { .ip-login { grid-template-columns: 1fr; } .ip-login-side { display: none; } }
+.ip-login { min-height: 100vh; display: flex; flex-direction: column; background: var(--ip-bg); }
+.ip-login-head { height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+.ip-login-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--ip-space-6); }
+.ip-login-foot { padding: var(--ip-space-4) 28px; font-size: var(--ip-fs-sm); color: var(--ip-text-3); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+/* step 1: account picker */
+.ip-account-pick { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: var(--ip-space-5); }
+.ip-account-pick h1 { font-size: 24px; line-height: 30px; }
+.ip-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ip-space-3); }
+.ip-account { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); background: var(--ip-surface); color: var(--ip-text-1); font: inherit; text-align: left; cursor: pointer; text-decoration: none; }
+.ip-account:hover { border-color: var(--ip-border-strong); background: var(--ip-surface-hover); color: var(--ip-text-1); text-decoration: none; }
+.ip-account .ip-avatar { width: 40px; height: 40px; font-size: 15px; }
+.ip-account .who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 18px; }
+.ip-account .who b { font-weight: 600; }
+.ip-account .who small { font-size: var(--ip-fs-sm); color: var(--ip-text-3); }
+.ip-account > i { font-size: 11px; color: var(--ip-text-3); }
+.ip-account-other { align-self: flex-start; height: 36px; padding: 0; border: 0; background: transparent; color: var(--ip-accent-text); font: inherit; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ip-account-other:hover { color: var(--ip-accent-active); }
+/* step 2: password */
+.ip-login-form { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: var(--ip-space-5); }
+.ip-login-form .back { align-self: flex-start; height: 32px; padding: 0; border: 0; background: transparent; color: var(--ip-text-2); font: inherit; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.ip-login-form .back:hover { color: var(--ip-text-1); text-decoration: none; }
+.ip-login-form .identity { display: flex; align-items: center; gap: 14px; }
+.ip-login-form .identity .ip-avatar { width: 48px; height: 48px; font-size: 18px; }
+.ip-login-form .identity .name { font-size: var(--ip-fs-lg); line-height: var(--ip-lh-lg); font-weight: 600; }
+.ip-login-form .identity .login { font-size: var(--ip-fs-sm); color: var(--ip-text-3); }
+.ip-login-form .ip-input { height: var(--ip-control-lg); font-size: 15px; padding-left: 14px; }
+.ip-login-form .ip-btn-primary { height: var(--ip-control-lg); font-size: 15px; justify-content: flex-start; min-width: 0; }
+.ip-pw-wrap { position: relative; display: flex; }
+.ip-pw-wrap .ip-input { padding-right: 44px; }
+.ip-pw-wrap .ip-btn-icon { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; color: var(--ip-text-3); }
 
 /* ---------- Bootstrap neutralisation ---------- */
 .badge.bg-primary, .badge.bg-info, .badge.bg-warning, .badge.bg-danger { background: var(--ip-neutral-soft) !important; color: var(--ip-neutral-text) !important; }
 .card { background: var(--ip-surface); border-color: var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: none; }
 .form-control, .form-select { border-radius: var(--ip-radius-md); border-color: var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); }
 .form-control:focus, .form-select:focus { border-color: var(--ip-accent); box-shadow: 0 0 0 3px var(--ip-focus-ring); }
+
+/* =====================================================================
+   Responsive layer — tablet 768–1024, phone ≤767
+   ===================================================================== */
+
+/* ---------- phone app bar + drawer ---------- */
+.ip-appbar { display: none; }
+.ip-rail-backdrop { display: none; }
+@media (max-width: 767px) {
+  .ip-app { display: block; }
+  .ip-appbar { position: sticky; top: 0; z-index: 1030; height: 56px; display: flex; align-items: center; gap: var(--ip-space-2); padding: 0 var(--ip-space-2) 0 var(--ip-space-1); background: var(--ip-surface); border-bottom: 1px solid var(--ip-border); }
+  .ip-appbar .title { flex: 1; min-width: 0; font-weight: 600; font-size: var(--ip-fs-md); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ip-appbar .title small { display: block; font-size: var(--ip-fs-xs); font-weight: 400; color: var(--ip-text-3); font-family: var(--ip-font-mono); line-height: 14px; }
+  .ip-appbar .ip-btn-icon { width: 44px; height: 44px; font-size: 17px; }
+  /* rail becomes a left drawer */
+  .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { position: fixed; top: 0; bottom: 0; left: 0; z-index: 1045; width: 300px; max-width: 86vw; height: auto; transform: translateX(-100%); transition: transform .22s ease; box-shadow: var(--ip-shadow-lg); }
+  .ip-rail.open { transform: translateX(0); }
+  .ip-rail.collapsed .ip-rail-brand span, .ip-rail.collapsed .ip-rail-title, .ip-rail.collapsed .ip-rail-link span, .ip-rail.collapsed .ip-rail-count, .ip-rail.collapsed .ip-rail-user > :not(.ip-avatar) { display: initial; }
+  .ip-rail.collapsed .ip-rail-link { justify-content: flex-start; }
+  .ip-rail.collapsed .ip-rail-group + .ip-rail-group { border-top: 0; padding-top: 0; }
+  .ip-rail-link { min-height: 44px; font-size: 15px; }
+  .ip-rail-toggle { display: none; }
+  .ip-rail-close { display: grid; }
+  .ip-rail-foot .ip-seg { display: flex; }
+  .ip-rail-backdrop { display: block; position: fixed; inset: 0; z-index: 1040; background: var(--ip-backdrop); opacity: 0; pointer-events: none; transition: opacity .22s; }
+  .ip-rail-backdrop.show { opacity: 1; pointer-events: auto; }
+  body.ip-drawer-open { overflow: hidden; }
+  /* desktop toolbar hides; its controls live in the drawer footer and app bar */
+  .ip-toolbar { display: none; }
+  .ip-main { padding: 0 var(--ip-space-5) 96px; }
+  .ip-page-head { margin: var(--ip-space-4) 0; }
+  .ip-page-head h1, .ip-h1 { font-size: 24px; line-height: 30px; }
+}
+.ip-rail-close { display: none; width: 44px; height: 44px; margin-left: auto; place-items: center; border: 0; border-radius: var(--ip-radius-md); background: transparent; color: var(--ip-text-2); font-size: 16px; cursor: pointer; }
+.ip-rail-foot .ip-seg { display: none; }
+
+/* ---------- tablet ---------- */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ip-main { padding: var(--ip-space-5) var(--ip-space-6) var(--ip-space-10); }
+  .ip-toolbar-search { width: 240px; }
+  .ip-filterbar .ip-filter:nth-child(n+3):not(.search) { display: none; }   /* extra filters go behind "Daha çox" */
+  .ip-filter-more { display: flex; }
+  .ip-table-wrap { position: relative; }
+  .ip-table-wrap::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 48px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--ip-surface)); }
+  .ip-table-wrap.scrolled-end::after { display: none; }
+}
+.ip-filter-more { display: none; }
+
+/* ---------- phone: tables → row cards ---------- */
+@media (max-width: 767px) {
+  .ip-filterbar { border-top: 0; padding: var(--ip-space-3) 0; gap: var(--ip-space-2); flex-wrap: nowrap; }
+  .ip-filterbar .ip-filter:not(.search) { display: none; }
+  .ip-filter.search { height: var(--ip-control-lg); }
+  .ip-filter-more { display: flex; height: var(--ip-control-lg); align-items: center; gap: var(--ip-space-2); padding: 0 14px; border: 0; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-1); font: inherit; font-weight: 500; cursor: pointer; }
+  .ip-filter-more .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-size: var(--ip-fs-xs); font-weight: 600; line-height: 20px; text-align: center; }
+  .ip-filter-more .count:empty { display: none; }
+
+  .ip-table-wrap { overflow: visible; }
+  .ip-table, .ip-table tbody, .ip-table tr, .ip-table td { display: block; }
+  .ip-table thead { display: none; }
+  .ip-table tr { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--ip-space-3); padding: var(--ip-space-3) 0; border-top: 1px solid var(--ip-border); }
+  .ip-table td { padding: 0; border: 0; grid-column: 2; }
+  .ip-table td.thumb { grid-column: 1; grid-row: 1 / span 10; }
+  .ip-table td.thumb .ip-thumb { width: 44px; height: 44px; }
+  .ip-table td.code { position: absolute; top: var(--ip-space-3); right: 0; font-size: var(--ip-fs-sm); color: var(--ip-text-2); }
+  .ip-table td.title { padding-right: 72px; }
+  .ip-table td.title .primary { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ip-table td.meta { font-size: var(--ip-fs-sm); color: var(--ip-text-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ip-table td.meta .sub { display: inline; }
+  .ip-table td.meta .sub::before { content: " · "; }
+  .ip-table td.state { display: flex; gap: var(--ip-space-2); align-items: center; flex-wrap: wrap; margin-top: 6px; }
+  .ip-table td.date { position: absolute; right: 0; bottom: var(--ip-space-3); font-size: var(--ip-fs-xs); color: var(--ip-text-3); }
+  .ip-table td.num { text-align: left; }
+  .ip-table td.actions, .ip-table td.hide-sm { display: none; }    /* row actions live on the details page */
+  .ip-table tbody tr:hover { background: transparent; }
+  .ip-table td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ip-fs-xs); color: var(--ip-text-3); }
+
+  .ip-table-foot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1020; margin: 0; padding: var(--ip-space-3) var(--ip-space-5) calc(var(--ip-space-3) + env(safe-area-inset-bottom)); background: var(--ip-surface); border-top: var(--ip-rule-width) solid var(--ip-rule); flex-wrap: nowrap; }
+  .ip-table-foot .range, .ip-table-foot .page-size { display: none; }
+  .ip-pagination a, .ip-pagination span { min-width: 40px; height: 40px; }
+  .ip-page-head .ip-btn-primary { position: fixed; right: var(--ip-space-5); bottom: calc(var(--ip-space-3) + env(safe-area-inset-bottom)); z-index: 1021; min-width: 0; height: var(--ip-control-lg); }
+
+  /* forms + sticky footer */
+  .ip-form-grid { grid-template-columns: 1fr; gap: var(--ip-space-4); }
+  .ip-input, .ip-select, .ip-btn { min-height: var(--ip-control-lg); }
+  .ip-form-foot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1020; margin: 0; padding: var(--ip-space-3) var(--ip-space-5) calc(var(--ip-space-3) + env(safe-area-inset-bottom)); flex-wrap: nowrap; }
+  .ip-form-foot .note { display: none; }
+  .ip-form-foot .ip-btn { flex: 1; min-width: 0; }
+  .ip-form-foot .ip-btn-primary { flex: 2; }
+  .ip-form-foot .ip-btn-danger-ghost, .ip-form-foot .ip-btn-ghost { flex: none; width: 44px; padding: 0; justify-content: center; }
+  .ip-form-foot .ip-btn-danger-ghost span, .ip-form-foot .ip-btn-ghost span { display: none; }
+
+  /* details */
+  .ip-dl > div { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
+  .ip-dl dt { font-size: var(--ip-fs-xs); }
+  .ip-gallery { margin: 0 calc(-1 * var(--ip-space-5)); border-radius: 0; }
+  .ip-gallery .nav { display: none; }                 /* swipe + dots instead */
+  .ip-gallery-dots { display: flex; gap: 6px; position: absolute; left: var(--ip-space-5); bottom: 12px; }
+  .ip-gallery-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--ip-border-strong); }
+  .ip-gallery-dots i.active { background: var(--ip-text-1); }
+  .ip-gallery-thumbs { display: none; }
+
+  /* dashboard */
+  .ip-kpi-grid { grid-template-columns: 1fr 1fr; gap: var(--ip-space-4); }
+  .ip-kpi .value { font-size: 30px; line-height: 36px; }
+  .ip-kpi .label { font-size: var(--ip-fs-sm); }
+  .ip-legend { gap: var(--ip-space-3); font-size: var(--ip-fs-xs); }
+
+  /* tabs scroll instead of wrapping */
+  .ip-tabs { overflow-x: auto; scrollbar-width: none; gap: var(--ip-space-5); }
+  .ip-tabs .ip-tab { flex: none; }
+
+  /* login */
+  .ip-login-head, .ip-login-foot { padding-left: var(--ip-space-5); padding-right: var(--ip-space-5); }
+  .ip-login-main { align-items: flex-start; padding: var(--ip-space-8) var(--ip-space-5); }
+  .ip-account-grid { grid-template-columns: 1fr; }
+  .ip-account { min-height: 64px; }
+
+  /* modal → bottom sheet */
+  .ip-modal .modal-dialog { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; max-width: none; max-height: 88vh; display: flex; }
+  .ip-modal .modal-content { border-radius: 16px 16px 0 0; max-height: 88vh; }
+  .ip-modal .modal-content::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--ip-border-strong); margin: 8px auto 0; }
+  .ip-modal .modal-header { padding: 8px 20px 12px; }
+  .ip-modal .modal-body { overflow-y: auto; padding: 4px 20px 8px; }
+  .ip-modal .modal-footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: var(--ip-rule-width) solid var(--ip-rule); flex-wrap: nowrap; }
+  .ip-modal .modal-footer .ip-btn { flex: 1; min-width: 0; }
+  .ip-modal .modal-footer .ip-btn-primary { flex: 2; }
+  .ip-modal.fade .modal-dialog { transform: translateY(100%); transition: transform .22s ease; }
+  .ip-modal.show .modal-dialog { transform: none; }
+  .ip-diff thead { display: none; }
+  .ip-diff tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--ip-border); }
+  .ip-diff td { display: inline; padding: 0; border: 0; }
+  .ip-diff td.field { display: block; font-size: var(--ip-fs-xs); color: var(--ip-text-3); margin-bottom: 4px; }
+  .ip-diff td.arrow { padding: 0 8px; color: var(--ip-text-3); }
+
+  /* filter sheet chips */
+  .ip-chips { display: flex; flex-wrap: wrap; gap: var(--ip-space-2); }
+  .ip-chip { min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: var(--ip-radius-md); border: 1px solid var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); font: inherit; cursor: pointer; }
+  .ip-chip.active { background: var(--ip-text-1); border-color: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
+
+  /* toast */
+  .toast-container { left: var(--ip-space-4); right: var(--ip-space-4); bottom: calc(80px + env(safe-area-inset-bottom)); top: auto !important; }
+  .ip-toast.toast { width: 100%; }
+
+  /* notifications dropdown becomes a page link; hide the dropdown on phone */
+  .ip-notif-menu { display: none !important; }
+}
 
 /* ==========================================================================
    Additions for this app. Everything above is design/ip-components.css unchanged;

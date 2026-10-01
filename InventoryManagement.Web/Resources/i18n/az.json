@@ -1386,5 +1386,16 @@
   "This is your own request: another approver has to approve it.": "Bu sizin öz sorğunuzdur: onu başqa təsdiqləyici təsdiqləməlidir.",
   "Only a message that failed can be sent again.": "Yalnız göndərilməmiş mesaj yenidən göndərilə bilər.",
   "Only an administrator can change this account: it is an administrator or holds permissions you do not have.": "Bu hesabı yalnız administrator dəyişə bilər: o, administratordur və ya sizdə olmayan icazələrə malikdir.",
-  "Invalid image. Allowed: JPG, JPEG, PNG photos up to 50 megapixels.": "Yanlış şəkil. İcazə verilir: 50 meqapikselədək JPG, JPEG, PNG şəkillər."
+  "Invalid image. Allowed: JPG, JPEG, PNG photos up to 50 megapixels.": "Yanlış şəkil. İcazə verilir: 50 meqapikselədək JPG, JPEG, PNG şəkillər.",
+  "Who is signing in?": "Kim daxil olur?",
+  "Recent sign-ins on this computer": "Bu kompüterdən son girişlər",
+  "Use another account": "Başqa hesabla daxil ol",
+  "Change account": "Hesabı dəyiş",
+  "Another account": "Başqa hesab",
+  "Enter your username": "İstifadəçi adını daxil edin",
+  "Forgot your password? The IT department resets it.": "Şifrəni unutmusunuz? İT şöbəsi sıfırlayır.",
+  "Internal system": "Daxili sistem",
+  "Administrator": "Administrator",
+  "Remove from this list": "Siyahıdan sil",
+  "Remove {0} from this list": "{0} hesabını siyahıdan sil"
 }

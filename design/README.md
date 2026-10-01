@@ -8,6 +8,8 @@ Claude Code-a göndəriləcək qovluq. Reponun `design/` qovluğuna kopyalayın.
 | `CLAUDE_CODE_HANDOFF.md` | Qaydalar, ekran → Razor view xəritəsi, Chart.js konfiqurasiyası, yeni .resx açarları, iş ardıcıllığı |
 | `tokens.css` | İşıqlı + qaranlıq tokenlər, Bootstrap 5.3 dəyişənlərinə map. Olduğu kimi `wwwroot/css/` -ə |
 | `ip-components.css` | `.ip-*` komponent sinifləri (rail, toolbar, düymə, sahə, cədvəl, nişan, tab, KPI, şəkil seçici, modal, toast, boş vəziyyət, skeleton, login). Olduğu kimi `wwwroot/css/` -ə |
+| `CLAUDE_CODE_PROMPT_3.md` | Responsiv (planşet + telefon) tətbiq promptu — `ip-components.css`-in sonundakı "Responsive layer" bölməsi ilə birlikdə |
+| `screens/10-mobile.png` | Mobil/planşet referans: çekmece, idarə paneli, sətir kartları, filtr vərəqi, məhsul, transfer, təsdiq alt vərəqi, planşet |
 | `screens/` | Hər ekranın referans şəkli. `01-*` qaranlıq, `02-*` işıqlı (design-system və edit/transfer üçün əlavə kadrlar) |
 
 Yükləmə sırası `_Layout.cshtml`-də: `bootstrap.min.css` → `tokens.css` → `ip-components.css` → `site.css`.
