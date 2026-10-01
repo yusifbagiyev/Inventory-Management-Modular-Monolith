@@ -1368,5 +1368,13 @@
   "Is Deleted": "Silinib",
   "Deleted At": "Silinmə tarixi",
   "Cannot delete department '{0}': {1} deleted product(s) still keep it in their record. Deactivate the department instead.": "'{0}' şöbəsini silmək mümkün deyil: {1} silinmiş məhsulun qeydində hələ də bu şöbə var. Əvəzinə şöbəni deaktiv edin.",
-  "Cannot delete category '{0}': {1} deleted product(s) still keep it in their record. Deactivate the category instead.": "'{0}' kateqoriyasını silmək mümkün deyil: {1} silinmiş məhsulun qeydində hələ də bu kateqoriya var. Əvəzinə kateqoriyanı deaktiv edin."
+  "Cannot delete category '{0}': {1} deleted product(s) still keep it in their record. Deactivate the category instead.": "'{0}' kateqoriyasını silmək mümkün deyil: {1} silinmiş məhsulun qeydində hələ də bu kateqoriya var. Əvəzinə kateqoriyanı deaktiv edin.",
+  "WhatsApp not sent": "WhatsApp göndərilmədi",
+  "Send again": "Yenidən göndər",
+  "WhatsApp queued": "WhatsApp növbədə",
+  "Sent {0}": "Göndərilib {0}",
+  "Only a completed transfer has a WhatsApp message.": "WhatsApp mesajı yalnız tamamlanmış transfer üçündür.",
+  "WhatsApp is not configured.": "WhatsApp qurulmayıb.",
+  "The WhatsApp message is queued and will be sent in a few seconds.": "WhatsApp mesajı növbəyə qoyuldu, bir neçə saniyəyə göndəriləcək.",
+  "Queued": "Növbədə"
 }

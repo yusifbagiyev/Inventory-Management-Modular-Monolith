@@ -785,3 +785,27 @@ window.MobileLayout = (function () {
 
     return { apply: apply };
 })();
+
+// A transfer's failed WhatsApp message: "Send again" (Views/Routes/_WhatsAppStatus) queues it once
+// more; the route then shows "queued" and, a few seconds later, the outcome (live updates).
+document.addEventListener('click', async function (e) {
+    const button = e.target.closest('[data-wa-resend]');
+    if (!button) return;
+    e.preventDefault();
+    e.stopPropagation();
+    button.disabled = true;
+    try {
+        const response = await fetch('/Routes/ResendWhatsApp/' + encodeURIComponent(button.dataset.waResend), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, AppConfig.antiforgeryHeaders())
+        });
+        const body = await response.json().catch(() => ({}));
+        showToast(body.message || (response.ok ? t('Queued') : t('Failed')), body.isSuccess ? 'success' : 'error');
+        if (body.isSuccess) ListNav.reload();
+        else button.disabled = false;
+    } catch (err) {
+        showToast(t('Failed'), 'error');
+        button.disabled = false;
+    }
+});

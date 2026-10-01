@@ -1,4 +1,4 @@
-﻿using RouteService.Domain.Enums;
+using RouteService.Domain.Enums;
 
 namespace RouteService.Application.DTOs
 {
@@ -25,5 +25,8 @@ namespace RouteService.Application.DTOs
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public string? WhatsAppStatus { get; set; }
+        public string? WhatsAppError { get; set; }
+        public DateTime? WhatsAppAt { get; set; }
     }
 }

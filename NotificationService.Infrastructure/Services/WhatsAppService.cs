@@ -178,6 +178,61 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
+        /// <summary>
+        /// One attempt to post a group message, with the image when there is one (uploaded once:
+        /// pass <paramref name="uploadedImageUrl"/> back in on a retry). Reports a rate limit
+        /// (HTTP 429, "1 message every 5 seconds") with the wait the service asks for, so the
+        /// outbox can retry instead of losing the message.
+        /// </summary>
+        public async Task<WhatsAppSendResult> SendAsync(string groupId, string message, byte[]? imageData, string fileName,
+            string? uploadedImageUrl = null, CancellationToken cancellationToken = default)
+        {
+            if (!groupId.EndsWith("@g.us"))
+                groupId = $"{groupId}@g.us";
+            if (message.Length > 2048)
+                message = message[..2045] + "...";
+
+            var imageUrl = uploadedImageUrl;
+            if (imageUrl == null && imageData is { Length: > 0 } && imageData.Length <= 5 * 1024 * 1024)
+                imageUrl = await UploadImageToWaSender(imageData, fileName);   // null: send the text alone
+
+            object payload = imageUrl == null ? new { to = groupId, text = message } : new { to = groupId, text = message, imageUrl };
+            try
+            {
+                using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                using var response = await _httpClient.PostAsync("send-message", content, cancellationToken);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("WhatsApp message sent to group {Group}", groupId);
+                    return new WhatsAppSendResult(true, false, null, null, imageUrl);
+                }
+
+                var error = $"{(int)response.StatusCode} {response.StatusCode}: {(body.Length > 300 ? body[..300] : body)}";
+                if ((int)response.StatusCode == 429)
+                {
+                    TimeSpan? retryAfter = response.Headers.RetryAfter?.Delta;
+                    try
+                    {
+                        using var json = JsonDocument.Parse(body);
+                        if (json.RootElement.TryGetProperty("retry_after", out var seconds) && seconds.TryGetDouble(out var value))
+                            retryAfter = TimeSpan.FromSeconds(value);
+                    }
+                    catch (JsonException) { }
+                    _logger.LogWarning("WhatsApp rate limit, retrying after {Wait}: {Body}", retryAfter, body);
+                    return new WhatsAppSendResult(false, true, retryAfter, error, imageUrl);
+                }
+
+                _logger.LogError("WhatsApp message failed: {Error}", error);
+                return new WhatsAppSendResult(false, false, null, error, imageUrl);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                _logger.LogError(ex, "WhatsApp message to group {Group} failed", groupId);
+                return new WhatsAppSendResult(false, false, null, ex.Message, imageUrl);
+            }
+        }
+
         private async Task<string?> UploadImageToWaSender(byte[] imageData, string fileName)
         {
             try

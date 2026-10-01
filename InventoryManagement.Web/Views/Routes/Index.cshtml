@@ -197,6 +197,10 @@
                                     {
                                         <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
                                     }
+                                    @if (!string.IsNullOrEmpty(route.WhatsAppStatus))
+                                    {
+                                        <div class="mt-1" data-no-row-link><partial name="_WhatsAppStatus" model="route" /></div>
+                                    }
                                 </td>
                                 <td data-no-row-link>
                                     <div class="actions align-items-center">

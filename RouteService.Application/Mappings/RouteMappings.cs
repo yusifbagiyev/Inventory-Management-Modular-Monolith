@@ -25,7 +25,10 @@ namespace RouteService.Application.Mappings
             Notes = route.Notes,
             IsCompleted = route.IsCompleted,
             CreatedAt = route.CreatedAt,
-            CompletedAt = route.CompletedAt
+            CompletedAt = route.CompletedAt,
+            WhatsAppStatus = route.WhatsAppStatus,
+            WhatsAppError = route.WhatsAppError,
+            WhatsAppAt = route.WhatsAppAt
         };
     }
 }

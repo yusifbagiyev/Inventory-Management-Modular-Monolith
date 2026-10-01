@@ -17,6 +17,7 @@ namespace RouteService.Infrastructure
 
             services.AddScoped<IInventoryRouteRepository, InventoryRouteRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<SharedServices.Contracts.IRouteWhatsAppStatus, Services.RouteWhatsAppStatus>();
 
             return services;
         }

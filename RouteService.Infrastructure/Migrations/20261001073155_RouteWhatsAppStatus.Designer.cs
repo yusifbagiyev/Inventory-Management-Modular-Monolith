@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using RouteService.Infrastructure.Data;
@@ -12,9 +13,11 @@ using RouteService.Infrastructure.Data;
 namespace RouteService.Infrastructure.Migrations
 {
     [DbContext(typeof(RouteDbContext))]
-    partial class RouteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261001073155_RouteWhatsAppStatus")]
+    partial class RouteWhatsAppStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

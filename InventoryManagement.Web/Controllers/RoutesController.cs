@@ -199,6 +199,44 @@ namespace InventoryManagement.Web.Controllers
             return HandleApiResponse(response, nameof(Index));
         }
 
+        /// <summary>
+        /// Sends a completed transfer's WhatsApp message again (after it failed): queued in the
+        /// WhatsApp outbox, which records the outcome on the route.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.RouteComplete)]
+        public async Task<IActionResult> ResendWhatsApp(int id,
+            [FromServices] SharedServices.Contracts.IWhatsAppRouteNotifier whatsApp,
+            [FromServices] SharedServices.Contracts.IRouteWhatsAppStatus status)
+        {
+            var route = await _mediator.Send(new GetRouteByIdQuery(id));
+            if (route == null || !route.IsCompleted || route.RouteType != RouteService.Domain.Enums.RouteType.Transfer)
+                return Json(new { isSuccess = false, message = Tr("Only a completed transfer has a WhatsApp message.") });
+            if (!whatsApp.Enabled)
+                return Json(new { isSuccess = false, message = Tr("WhatsApp is not configured.") });
+
+            await status.SetAsync(id, SharedServices.Contracts.WhatsAppStatus.Queued, null);
+            await whatsApp.QueueRouteCompletedAsync(new SharedServices.Events.RouteCompletedEvent
+            {
+                RouteId = route.Id,
+                ProductId = route.ProductId,
+                InventoryCode = route.InventoryCode,
+                Model = route.Model,
+                Vendor = route.Vendor,
+                CategoryName = route.CategoryName,
+                FromDepartmentName = route.FromDepartmentName ?? string.Empty,
+                FromWorker = route.FromWorker,
+                ToDepartmentId = route.ToDepartmentId,
+                ToDepartmentName = route.ToDepartmentName,
+                ToWorker = route.ToWorker,
+                Notes = route.Notes,
+                ImageUrl = route.ImageUrl,
+                CompletedAt = route.CompletedAt ?? DateTime.Now
+            });
+            return Json(new { isSuccess = true, message = Tr("The WhatsApp message is queued and will be sent in a few seconds.") });
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

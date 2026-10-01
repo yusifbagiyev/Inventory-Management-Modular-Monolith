@@ -41,6 +41,9 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.Notes).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");
+                entity.Property(e => e.WhatsAppStatus).HasMaxLength(20);
+                entity.Property(e => e.WhatsAppError).HasMaxLength(500);
+                entity.Property(e => e.WhatsAppAt).HasColumnType("timestamp without time zone");
                 entity.Property(e => e.CompletedAt)
                       .HasColumnType("timestamp without time zone");
 

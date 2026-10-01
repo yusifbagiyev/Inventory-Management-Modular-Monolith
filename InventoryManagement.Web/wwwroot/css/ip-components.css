@@ -649,3 +649,9 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 /* A dashboard figure without a link (no permission for the list): not clickable-looking. */
 a.ip-kpi:not([href]), a.ip-list-link:not([href]) { cursor: default; }
 a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
+
+/* A transfer's WhatsApp message state (Views/Routes/_WhatsAppStatus). */
+.ip-wa { display: inline-flex; align-items: center; gap: 6px; font-size: var(--ip-fs-sm); color: var(--ip-text-2); white-space: nowrap; }
+.ip-wa-failed { color: var(--ip-danger-text); font-weight: 600; cursor: help; }
+.ip-wa-queued { color: var(--ip-text-3); }
+.ip-wa-resend { height: 26px; padding: 0 8px; gap: 6px; }

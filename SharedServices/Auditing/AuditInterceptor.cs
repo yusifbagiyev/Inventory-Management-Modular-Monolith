@@ -27,7 +27,8 @@ namespace SharedServices.Auditing
         private static readonly HashSet<string> IgnoredProperties =
         [
             "ConcurrencyStamp", "SecurityStamp", "LastLoginAt", "NormalizedUserName", "NormalizedEmail",
-            "NormalizedName", "AccessFailedCount", "xmin", "UpdatedAt", "PasswordHash"
+            "NormalizedName", "AccessFailedCount", "xmin", "UpdatedAt", "PasswordHash",
+            "WhatsAppStatus", "WhatsAppError", "WhatsAppAt"
         ];
 
         /// <summary>Recorded as changed, never with their value.</summary>

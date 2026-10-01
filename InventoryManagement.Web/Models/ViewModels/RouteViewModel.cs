@@ -30,6 +30,10 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? FullImageUrl => string.IsNullOrEmpty(ImageUrl) ? null : ImageUrl;
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
+        /// <summary>The transfer's WhatsApp message: Queued, Sent, Failed, or null (none).</summary>
+        public string? WhatsAppStatus { get; set; }
+        public string? WhatsAppError { get; set; }
+        public DateTime? WhatsAppAt { get; set; }
     }
 
     public record TransferViewModel

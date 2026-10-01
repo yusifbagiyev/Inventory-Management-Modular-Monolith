@@ -20,9 +20,7 @@ namespace NotificationService.Infrastructure.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUserDirectory _users;
         private readonly IHubContext<NotificationHub> _hub;
-        private readonly IWhatsAppService _whatsApp;
-        private readonly ImageStorage _images;
-        private readonly IConfiguration _configuration;
+        private readonly WhatsAppRouteNotifier _whatsApp;
         private readonly ILogger<NotificationDispatcher> _logger;
 
         public NotificationDispatcher(
@@ -30,9 +28,7 @@ namespace NotificationService.Infrastructure.Services
             IUnitOfWork unitOfWork,
             IUserDirectory users,
             IHubContext<NotificationHub> hub,
-            IWhatsAppService whatsApp,
-            ImageStorage images,
-            IConfiguration configuration,
+            WhatsAppRouteNotifier whatsApp,
             ILogger<NotificationDispatcher> logger)
         {
             _repository = repository;
@@ -40,8 +36,6 @@ namespace NotificationService.Infrastructure.Services
             _users = users;
             _hub = hub;
             _whatsApp = whatsApp;
-            _images = images;
-            _configuration = configuration;
             _logger = logger;
         }
 
@@ -152,22 +146,8 @@ namespace NotificationService.Infrastructure.Services
                 $"Product {e.Model} (Code: {e.InventoryCode}) transfer to {e.ToDepartmentName} has been completed",
                 data)), cancellationToken);
 
-            await SendWhatsAppAsync(new WhatsAppProductNotification
-            {
-                ProductId = e.ProductId,
-                InventoryCode = e.InventoryCode,
-                Model = e.Model,
-                Vendor = e.Vendor,
-                CategoryName = e.CategoryName,
-                FromDepartmentName = e.FromDepartmentName,
-                FromWorker = e.FromWorker,
-                ToDepartmentName = e.ToDepartmentName,
-                ToWorker = e.ToWorker,
-                CreatedAt = e.CompletedAt,
-                Notes = e.Notes,
-                NotificationType = "transferred",
-                ImageUrl = e.ImageUrl
-            }, $"route_{e.InventoryCode}.jpg", cancellationToken);
+            // Queued in the WhatsApp outbox (paced, retried); the outcome is stored on the route.
+            await _whatsApp.QueueRouteCompletedAsync(e, cancellationToken);
         }
 
         /// <summary>Active users who may see the record (<paramref name="permission"/>), except the actor.</summary>
@@ -198,35 +178,11 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        private async Task SendWhatsAppAsync(WhatsAppProductNotification notification, string fallbackFileName, CancellationToken cancellationToken)
+        /// <summary>Queues a WhatsApp group message (WhatsAppOutbox sends them paced and retries).</summary>
+        private Task SendWhatsAppAsync(WhatsAppProductNotification notification, string fallbackFileName, CancellationToken cancellationToken)
         {
-            if (!_configuration.GetValue("WhatsApp:Enabled", true))
-                return;
-
-            var groupId = _configuration["WhatsApp:DefaultGroupId"];
-            if (string.IsNullOrEmpty(groupId))
-            {
-                _logger.LogWarning("WhatsApp:DefaultGroupId is not configured; skipping WhatsApp notification");
-                return;
-            }
-
-            try
-            {
-                var message = _whatsApp.FormatNotification(notification);
-                var image = await _images.ReadAsync(notification.ImageUrl, cancellationToken);
-
-                var sent = image != null
-                    ? await _whatsApp.SendGroupMessageWithImageDataAsync(
-                        groupId, message, image, Path.GetFileName(notification.ImageUrl) ?? fallbackFileName)
-                    : await _whatsApp.SendGroupMessageAsync(groupId, message);
-
-                if (!sent)
-                    _logger.LogWarning("WhatsApp notification for inventory code {Code} was not delivered", notification.InventoryCode);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "WhatsApp notification for inventory code {Code} failed", notification.InventoryCode);
-            }
+            _whatsApp.Queue(notification, fallbackFileName, routeId: null);
+            return Task.CompletedTask;
         }
 
         private static string Json(object value) => JsonSerializer.Serialize(value);

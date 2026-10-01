@@ -114,6 +114,26 @@
                 {
                     <div><dt>@L["Notes"]</dt><dd>@Model.Notes</dd></div>
                 }
+                @if (!string.IsNullOrEmpty(Model.WhatsAppStatus))
+                {
+                    <div>
+                        <dt>WhatsApp</dt>
+                        <dd class="d-flex flex-wrap align-items-center gap-2">
+                            @if (Model.WhatsAppStatus == "Sent")
+                            {
+                                <span class="ip-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Sent {0}", Model.WhatsAppAt?.ToString("dd.MM.yyyy HH:mm") ?? ""]</span></span>
+                            }
+                            else
+                            {
+                                <partial name="_WhatsAppStatus" model="Model" />
+                                @if (Model.WhatsAppStatus == "Failed" && !string.IsNullOrWhiteSpace(Model.WhatsAppError))
+                                {
+                                    <div class="ip-hint w-100">@Model.WhatsAppError</div>
+                                }
+                            }
+                        </dd>
+                    </div>
+                }
             </dl>
         </div>
         @if (Model.ImageUrls.Count > 0)

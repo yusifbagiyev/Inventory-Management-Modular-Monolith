@@ -23,6 +23,11 @@ namespace RouteService.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime CompletedAt { get;private set; }
 
+        /// <summary>The transfer's WhatsApp group message: Queued, Sent or Failed (null: none sent).</summary>
+        public string? WhatsAppStatus { get; private set; }
+        public string? WhatsAppError { get; private set; }
+        public DateTime? WhatsAppAt { get; private set; }
+
         //For EF Core
         protected InventoryRoute() { }
 
@@ -160,6 +165,13 @@ namespace RouteService.Domain.Entities
                 Notes = notes,
                 CreatedAt = DateTime.Now
             };
+        }
+
+        public void SetWhatsAppStatus(string status, string? error)
+        {
+            WhatsAppStatus = status;
+            WhatsAppError = error is { Length: > 500 } ? error[..500] : error;
+            WhatsAppAt = DateTime.Now;
         }
 
         public void Complete()
