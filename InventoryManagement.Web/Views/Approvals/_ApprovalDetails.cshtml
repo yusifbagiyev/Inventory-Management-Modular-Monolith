@@ -1,4 +1,5 @@
 @model ApprovalRequestDto
+@inject MediatR.IMediator Mediator
 @* The decision dialog's content (design: 08 Approvals), used by Approvals and My Requests.
    [data-approval-head] is moved into the modal header by loadApprovalDetails() (site.js); the
    rest is the body: what changes as a Field / Current / -> / Proposed table. *@
@@ -8,6 +9,19 @@
     var (addedImages, removedImages) = view.ImageCounts();
 
     string Value(string? value, bool localize) => string.IsNullOrWhiteSpace(value) ? "" : localize ? L[value].Value : value;
+    var pending = Model.Status == "Pending";
+
+    // The request only records the new specifications; while it is pending, the product's
+    // current ones are shown beside them (not after a decision: by then they have changed).
+    string? currentSpecifications = null;
+    if (pending && Model.RequestType == "product.update" && Model.EntityId is int productId
+        && view.Changes.Any(c => c.Field == "Specifications"))
+    {
+        var product = await Mediator.Send(new ProductService.Application.Features.Products.Queries.GetProductByIdQuery(productId));
+        currentSpecifications = product?.Specifications is { Count: > 0 } specs
+            ? string.Join("; ", specs.Select(s => $"{s.Name}: {s.Value}".TrimEnd(' ', ':')))
+            : null;
+    }
 
     var newImageNames = new List<string>();
     if (images != null)
@@ -111,12 +125,23 @@ else if (view.Changes.Count > 0)
                         }
                         else
                         {
-                            <td class="old">@(string.IsNullOrWhiteSpace(change.Current) ? "—" : Value(change.Current, change.Localize))</td>
+                            var current = change.Field == "Specifications" && string.IsNullOrWhiteSpace(change.Current) ? currentSpecifications : change.Current;
+                            <td class="old">
+                                @if (string.IsNullOrWhiteSpace(current))
+                                {
+                                    @* Empty values in words, never a bare dash. *@
+                                    <span class="ip-empty-value">@L[change.Field == "Specifications" ? "None" : "Not set"]</span>
+                                }
+                                else
+                                {
+                                    @Value(current, change.Localize)
+                                }
+                            </td>
                             <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                             <td>
                                 @if (string.IsNullOrWhiteSpace(change.Proposed))
                                 {
-                                    <span class="ip-muted">—</span>
+                                    <span class="ip-removed-value">@L[change.Field == "Specifications" ? (pending ? "All will be removed" : "All removed") : (pending ? "Will be removed" : "Removed")]</span>
                                 }
                                 else
                                 {

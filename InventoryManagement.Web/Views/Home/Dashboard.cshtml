@@ -20,6 +20,11 @@
     string PeriodQuery() => Model.PeriodStart is null ? "" : $"&startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
     var transfersUrl = "/Routes?routeType=Transfer" + PeriodQuery();
     var productsUrl = Model.PeriodStart is null ? "/Products" : $"/Products?startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
+    // Figures link to the lists only for someone who may open them (null: Razor drops the href).
+    var canProducts = User.HasPermission("product.view");
+    var canRoutes = User.HasPermission("route.view");
+    string? ProductLink(string url) => canProducts ? url : null;
+    string? RouteLink(string url) => canRoutes ? url : null;
     var categoryTotal = Model.CategoryDistributions.Sum(c => c.Count);
     var maxDepartment = Math.Max(1, Model.DepartmentStats.Select(d => d.PeriodTransfers).DefaultIfEmpty(0).Max());
     var today = DateTime.Today;
@@ -54,7 +59,7 @@
     </div>
 
     <div class="ip-kpi-grid" id="dashboardStats">
-        <a class="ip-kpi" href="@productsUrl">
+        <a class="ip-kpi" href="@ProductLink(productsUrl)">
             <span class="label">@(allTime ? L["Total products"] : L["New products"])</span>
             <span class="value">@Model.TotalProducts.ToString("N0")</span>
             @if (!allTime && TrendOf(Model.TotalProducts, Model.PreviousTotalProducts) is { } t1)
@@ -62,12 +67,12 @@
                 <span class="trend"><b class="@t1.Css"><i class="fa-solid @t1.Icon"></i> @t1.Text</b> @comparedWith</span>
             }
         </a>
-        <a class="ip-kpi" href="@(productsUrl)@(Model.PeriodStart is null ? "?" : "&")availability=true">
+        <a class="ip-kpi" href="@ProductLink(productsUrl + (Model.PeriodStart is null ? "?" : "&") + "availability=true")">
             <span class="label">@(allTime ? L["Active products"] : L["Of them active"])</span>
             <span class="value">@Model.ActiveProducts.ToString("N0")</span>
             <span class="trend">@L["{0} not working in total", notWorking]</span>
         </a>
-        <a class="ip-kpi" href="@(transfersUrl)&isCompleted=true">
+        <a class="ip-kpi" href="@RouteLink(transfersUrl + "&isCompleted=true")">
             <span class="label">@L["Completed transfers"]</span>
             <span class="value">@((Model.CompletedTransfers ?? 0).ToString("N0"))</span>
             @if (!allTime && TrendOf(Model.CompletedTransfers ?? 0, Model.PreviousCompletedTransfers) is { } t3)
@@ -75,7 +80,7 @@
                 <span class="trend"><b class="@t3.Css"><i class="fa-solid @t3.Icon"></i> @t3.Text</b> @comparedWith</span>
             }
         </a>
-        <a class="ip-kpi" href="@(transfersUrl)&isCompleted=false">
+        <a class="ip-kpi" href="@RouteLink(transfersUrl + "&isCompleted=false")">
             <span class="label">@L["Pending transfers"]</span>
             <span class="value">@((Model.PendingTransfers ?? 0).ToString("N0"))</span>
             @if (!allTime && TrendOf(Model.PendingTransfers ?? 0, Model.PreviousPendingTransfers, upIsBad: true) is { } t4)
@@ -99,7 +104,7 @@
                 {
                     <div style="position: relative; height: 280px;">
                         <canvas id="transferChart" role="img" aria-label="@L["Transfer Activity"]"
-                                data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="/Routes?routeType=Transfer"></canvas>
+                                data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="@RouteLink("/Routes?routeType=Transfer")"></canvas>
                     </div>
                     <p class="ip-hint mt-2 mb-0">@L["Click a bar to open those transfers."]</p>
                 }
@@ -120,11 +125,11 @@
                         <b class="ip-num @(approvals > 0 ? "ip-status-text warning fs-6" : "")">@approvals</b>
                     </a>
                 }
-                <a class="ip-list-link" href="/Routes?isCompleted=false">
+                <a class="ip-list-link" href="@RouteLink("/Routes?isCompleted=false")">
                     <span>@L["Unfinished transfers"]</span>
                     <b class="ip-num @(openTransfers > 0 ? "ip-status-text warning fs-6" : "")">@openTransfers</b>
                 </a>
-                <a class="ip-list-link" href="/Products?status=false">
+                <a class="ip-list-link" href="@ProductLink("/Products?status=false")">
                     <span>@L["Broken devices"]</span>
                     <b class="ip-num @(notWorking > 0 ? "text-danger" : "")">@notWorking</b>
                 </a>
@@ -139,13 +144,13 @@
                     <div class="d-flex gap-4 align-items-center flex-wrap">
                         <div style="position: relative; width: 168px; height: 168px;">
                             <canvas id="categoryChart" role="img" aria-label="@L["Categories in Transfers"]"
-                                    data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@transfersUrl"></canvas>
+                                    data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@RouteLink(transfersUrl)"></canvas>
                         </div>
                         <div class="flex-grow-1" style="min-width: 200px">
                             @for (var i = 0; i < Model.CategoryDistributions.Count; i++)
                             {
                                 var category = Model.CategoryDistributions[i];
-                                <a class="ip-list-link" href="@(transfersUrl)&categoryName=@Uri.EscapeDataString(category.CategoryName)">
+                                <a class="ip-list-link" href="@RouteLink(transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
                                     <span class="d-flex align-items-center gap-2" style="min-width: 0">
                                         <i class="ip-swatch" style="background: var(--ip-chart-@(i % 5 + 1))"></i>
                                         <span class="text-truncate">@category.CategoryName</span>
@@ -170,7 +175,7 @@
                 {
                     @foreach (var dept in Model.DepartmentStats)
                     {
-                        <a class="ip-list-link" href="@(transfersUrl)&departmentName=@Uri.EscapeDataString(dept.DepartmentName)">
+                        <a class="ip-list-link" href="@RouteLink(transfersUrl + "&departmentName=" + Uri.EscapeDataString(dept.DepartmentName))">
                             <span class="text-truncate" style="width: 30%">@dept.DepartmentName</span>
                             <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
                             <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">
@@ -219,8 +224,9 @@
             afterRefresh: initializeCharts
         });
 
+        // Bars and slices open the routes list - only for someone who may see it (data-link set).
         function pointerOnHover(event, elements) {
-            event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            event.native.target.style.cursor = elements.length && event.native.target.dataset.link ? 'pointer' : 'default';
         }
 
         function tooltip() {
@@ -254,7 +260,7 @@
                     },
                     onHover: pointerOnHover,
                     onClick: function (event, elements) {
-                        if (!elements.length) return;
+                        if (!elements.length || !ctx.dataset.link) return;
                         const i = elements[0].index;
                         const status = elements.length === 1 ? (elements[0].datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false') : '';
                         window.location.href = ctx.dataset.link + '&startDate=' + data.bucketStarts[i] + '&endDate=' + data.bucketEnds[i] + status;
@@ -288,7 +294,7 @@
                     plugins: { legend: { display: false }, tooltip: tooltip() },
                     onHover: pointerOnHover,
                     onClick: function (event, elements) {
-                        if (!elements.length) return;
+                        if (!elements.length || !ctx.dataset.link) return;
                         window.location.href = ctx.dataset.link + '&categoryName=' + encodeURIComponent(data[elements[0].index].categoryName);
                     }
                 }

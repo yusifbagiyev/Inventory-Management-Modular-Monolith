@@ -65,7 +65,14 @@
                 <div>
                     <dt>@L["Product"]</dt>
                     <dd>
-                        <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId">@Or(Model.Model, L["N/A"].Value)</a>
+                        @if (User.HasPermission("product.view"))
+                        {
+                            <a asp-controller="Products" asp-action="Details" asp-route-id="@Model.ProductId">@Or(Model.Model, L["N/A"].Value)</a>
+                        }
+                        else
+                        {
+                            @Or(Model.Model, L["N/A"].Value)
+                        }
                         <div class="ip-faint">@Or(Model.Vendor, "-") · @Or(Model.CategoryName, "-")</div>
                     </dd>
                 </div>

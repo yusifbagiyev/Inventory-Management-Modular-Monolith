@@ -135,7 +135,7 @@
             <div class="ip-empty">
                 <span class="icon"><i class="fa-solid fa-inbox"></i></span>
                 <div class="title">@L["You have not submitted any requests"]</div>
-                <div class="text">@L["Actions that need an administrator's approval show up here with their status."]</div>
+                <div class="text">@L["Actions that need approval show up here with their status."]</div>
             </div>
         }
     </div>
@@ -248,9 +248,7 @@
 
                         if (isSuccess) {
                             showToast(message, 'success');
-                            setTimeout(function() {
-                                window.location.reload();
-                            }, 1500);
+                            ListNav.reload();
                         } else {
                             showToast(message || t('Failed to cancel request'), 'error');
                             $cancelButton.prop('disabled', false).html(originalButtonText);

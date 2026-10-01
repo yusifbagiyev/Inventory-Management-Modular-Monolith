@@ -22,7 +22,7 @@
         var completedCount = (int)(ViewBag.CompletedCount ?? 0);
         var canComplete = User.HasPermission("route.complete");
         var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
-        var canDelete = User.HasPermission("route.delete");
+        var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
 
         // Tab link: the current filters with another completion state, back to page 1.
         string TabUrl(bool? completed)
@@ -291,7 +291,7 @@
                     },
                     success: function() {
                         showToast(t('Route completed'), 'success');
-                        setTimeout(function() { window.location.reload(); }, 1200);
+                        ListNav.reload();
                     },
                     error: function(xhr) {
                         const errorMsg = ErrorHandler.parseErrorMessage(xhr, t('Failed to complete route'));

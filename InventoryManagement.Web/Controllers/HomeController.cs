@@ -38,6 +38,7 @@ namespace InventoryManagement.Web.Controllers
                 (AllPermissions.ProductView, "/Products"),
                 (AllPermissions.RouteView, "/Routes"),
                 (AllPermissions.ApprovalView, "/Approvals"),
+                (AllPermissions.ApprovalDecide, "/Approvals"),
                 (AllPermissions.CategoryView, "/Categories"),
                 (AllPermissions.DepartmentView, "/Departments"),
                 (AllPermissions.UserView, "/UserManagement"),

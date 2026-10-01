@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using SharedServices.Authorization;
+using SharedServices.Identity;
 
 namespace IdentityService.API.Controllers
 {
@@ -67,12 +69,15 @@ namespace IdentityService.API.Controllers
         }
 
 
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserManage)]
         [HttpPost("register-by-admin")]
         public async Task<ActionResult<TokenDto>> RegisterByAdmin(RegisterDto dto)
         {
             try
             {
+                // Only Admins choose the role (as on the Users page).
+                if (!User.IsInRole(AllRoles.Admin))
+                    dto = dto with { SelectedRole = AllRoles.User };
                 var result = await _authService.RegisterAsync(dto);
                 return Ok(result);
             }
@@ -126,7 +131,7 @@ namespace IdentityService.API.Controllers
 
 
         [HttpGet("users")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserView)]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetAllUsers()
         {
             try
@@ -142,7 +147,7 @@ namespace IdentityService.API.Controllers
 
 
         [HttpGet("users/{id}")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserView)]
         public async Task<ActionResult<UserDto>> GetUser(int id)
         {
             try
@@ -160,11 +165,13 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPut("users/{id}")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserManage)]
         public async Task<IActionResult> UpdateUser(int id, UpdateUserDto dto)
         {
             try
             {
+                if (await IsProtectedAsync(id))
+                    return Forbid();
                 if (id != dto.Id)
                     return BadRequest(new { message = "User ID mismatch" });
 
@@ -182,11 +189,13 @@ namespace IdentityService.API.Controllers
 
 
         [HttpDelete("users/{id}")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserManage)]
         public async Task<IActionResult> DeleteUser(int id)
         {
             try
             {
+                if (await IsProtectedAsync(id))
+                    return Forbid();
                 var result = await _authService.DeleteUserAsync(id);
                 if (!result)
                     return BadRequest(new { message = "Failed to delete user" });
@@ -201,11 +210,13 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPost("users/{id}/toggle-status")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserManage)]
         public async Task<IActionResult> ToggleUserStatus(int id)
         {
             try
             {
+                if (await IsProtectedAsync(id))
+                    return Forbid();
                 var result = await _authService.ToggleUserStatusAsync(id);
                 if (!result)
                     return BadRequest(new { message = "Failed to toggle user status" });
@@ -220,11 +231,13 @@ namespace IdentityService.API.Controllers
 
 
         [HttpPost("users/{id}/reset-password")]
-        [Authorize(Roles = "Admin")]
+        [Permission(AllPermissions.UserManage)]
         public async Task<IActionResult> ResetPassword(int id, ResetPasswordDto dto)
         {
             try
             {
+                if (await IsProtectedAsync(id))
+                    return Forbid();
                 var result = await _authService.ResetPasswordAsync(id, dto.NewPassword);
                 if (!result)
                     return BadRequest(new { message = "Failed to reset password" });
@@ -414,5 +427,9 @@ namespace IdentityService.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>Admin accounts are changed by Admins only (a user.manage holder must not reset an Admin's password).</summary>
+        private async Task<bool> IsProtectedAsync(int userId)
+            => !User.IsInRole(AllRoles.Admin) && (await _authService.GetUserAsync(userId))?.Roles.Contains(AllRoles.Admin) == true;
     }
 }

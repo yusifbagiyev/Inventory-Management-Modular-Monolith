@@ -1,5 +1,6 @@
 @model List<RouteViewModel>
 @{
+    var canProducts = User.HasPermission("product.view");
     ViewData["Title"] = "Transfer Timeline";
     var productId = ViewBag.ProductId;
     var ordered = Model.OrderByDescending(r => r.CreatedAt).ToList();
@@ -28,8 +29,11 @@
     <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">@L["Products"]</a></li>
-                @if (product != null)
+                @if (canProducts)
+                {
+                    <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Index">@L["Products"]</a></li>
+                }
+                @if (product != null && canProducts)
                 {
                     <li class="breadcrumb-item"><a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-mono">@product.InventoryCode</a></li>
                 }
@@ -49,9 +53,12 @@
     </div>
 
     <div class="ip-page-actions mb-4">
-        <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-btn ip-btn-secondary">
-            <i class="fa-solid fa-box"></i><span>@L["View Product"]</span>
-        </a>
+        @if (canProducts)
+        {
+            <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-btn ip-btn-secondary">
+                <i class="fa-solid fa-box"></i><span>@L["View Product"]</span>
+            </a>
+        }
         @if (ordered.Any() && User.HasPermission("route.export"))
         {
             <button type="button" class="ip-btn ip-btn-secondary" onclick="exportTimelineToPDF()">

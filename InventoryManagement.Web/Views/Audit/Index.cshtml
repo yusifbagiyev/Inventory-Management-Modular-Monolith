@@ -2,7 +2,7 @@
 @model AuditLogPage
 @{
     ViewData["Title"] = "Audit log";
-    var facets = ViewBag.Facets as AuditFacets ?? new AuditFacets([], []);
+    var facets = ViewBag.Facets as AuditFacets ?? new AuditFacets(Array.Empty<AuditUserOption>(), Array.Empty<string>());
     var query = Context.Request.Query;
     string? Q(string key) => string.IsNullOrWhiteSpace(query[key]) ? null : query[key].ToString();
     var hasFilters = new[] { "search", "userId", "entityType", "operation", "startDate", "entityId" }.Any(k => Q(k) != null);
@@ -27,11 +27,11 @@
     // The record's own page, while it still exists.
     string? RecordUrl(AuditEntryDto e) => e.Operation == "Deleted" || !int.TryParse(e.EntityId, out var id) ? null : e.EntityType switch
     {
-        "Product" => $"/Products/Details/{id}",
-        "InventoryRoute" => $"/Routes/Details/{id}",
-        "Category" => $"/Categories/Details/{id}",
-        "Department" => $"/Departments/Details/{id}",
-        "User" => $"/UserManagement/Details/{id}",
+        "Product" when User.HasPermission("product.view") => $"/Products/Details/{id}",
+        "InventoryRoute" when User.HasPermission("route.view") => $"/Routes/Details/{id}",
+        "Category" when User.HasPermission("category.view") => $"/Categories/Details/{id}",
+        "Department" when User.HasPermission("department.view") => $"/Departments/Details/{id}",
+        "User" when User.HasPermission("user.view") => $"/UserManagement/Details/{id}",
         _ => null
     };
     string OperationBadge(string op) => op switch
@@ -70,13 +70,14 @@
         if (field.EndsWith("CategoryId")) return categoryNames.TryGetValue(id, out var c) ? c : null;
         return null;
     }
+    static bool IsEmpty(string? value) => string.IsNullOrWhiteSpace(value) || value == "[]" || value.StartsWith("01.01.0001");
     static bool IsImageField(string field) => field.EndsWith("ImageUrl") || field.EndsWith("ImageUrls");
     static IEnumerable<string> ImageUrls(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return [];
-        if (!value.StartsWith('[')) return [value];
+        if (string.IsNullOrWhiteSpace(value)) return Enumerable.Empty<string>();
+        if (!value.StartsWith('[')) return new[] { value };
         try { return Newtonsoft.Json.Linq.JArray.Parse(value).Select(v => v.ToString()).Where(v => v.Length > 0); }
-        catch (Newtonsoft.Json.JsonException) { return [value]; }
+        catch (Newtonsoft.Json.JsonException) { return new[] { value }; }
     }
 
     string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
@@ -229,22 +230,41 @@
                                                     <span class="ip-faint ip-mono">#@entry.EntityId</span>
                                                 }
                                             </div>
-                                            @if (entry.Changes.Count > 0)
+                                            @{
+                                                // Skipped: the cover (ImageUrl) repeats the first of ImageUrls; "ApprovedById" repeats "ApprovedByName".
+                                                var shownChanges = entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))
+                                                    && !(c.Field.EndsWith("ById") && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))).ToList();
+                                            }
+                                            @if (shownChanges.Count > 0)
                                             {
-                                                <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && entry.Changes.Count <= 6)">
-                                                    <summary class="ip-faint">@L["{0} fields", entry.Changes.Count]</summary>
+                                                <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && shownChanges.Count <= 6)">
+                                                    <summary class="ip-faint">@L["{0} fields", shownChanges.Count]</summary>
                                                     <dl>
-                                                        @* The cover (ImageUrl) repeats the first of ImageUrls: one is enough. *@
-                                                        @foreach (var change in entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))))
+                                                        @foreach (var change in shownChanges)
                                                         {
                                                             <div>
                                                                 <dt title="@change.Field">@L[FieldLabel(change.Field)]</dt>
                                                                 <dd>
                                                                     @if (entry.Operation == "Updated")
                                                                     {
-                                                                        <span class="old">@{ RenderValue(change.Field, change.Old); }</span>
+                                                                        @* Empty before: "Not set"; emptied: "Removed" - never a bare dash. *@
+                                                                        if (IsEmpty(change.Old))
+                                                                        {
+                                                                            <span class="ip-empty-value">@L["Not set"]</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="old">@{ RenderValue(change.Field, change.Old); }</span>
+                                                                        }
                                                                         <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
-                                                                        <span class="new">@{ RenderValue(change.Field, change.New); }</span>
+                                                                        if (IsEmpty(change.New))
+                                                                        {
+                                                                            <span class="ip-removed-value">@L["Removed"]</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="new">@{ RenderValue(change.Field, change.New); }</span>
+                                                                        }
                                                                     }
                                                                     else
                                                                     {

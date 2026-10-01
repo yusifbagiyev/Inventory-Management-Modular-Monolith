@@ -179,20 +179,12 @@ window.NotificationManager = (function () {
     function setupMessageHandlers() {
         // The layout loads the list on page load; after a reconnect it may be stale.
         let connectedBefore = false;
-        let pendingReceived = 0;
 
         // Connection established confirmation
         connection.on("ConnectionEstablished", function (data) {
             connectionState = 'connected';
             connectionRetryCount = 0;
 
-            // Store connection info for debugging
-            window.notificationInfo = {
-                userId: data.userId,
-                userName: data.userName,
-                userGroup: data.userGroup,
-                roleGroups: data.roleGroups
-            };
 
 
             if (connectedBefore) {
@@ -213,22 +205,6 @@ window.NotificationManager = (function () {
 
             // Handle the notification
             handleIncomingNotification(notification);
-        });
-
-        // Handle pending notifications (sent when connecting)
-        connection.on("ReceivePendingNotification", function (notification) {
-            // For pending notifications, we don't want to show individual toasts;
-            // the list is reloaded once when they are all in.
-            pendingReceived++;
-        });
-
-        // Pending notifications complete
-        connection.on("PendingNotificationsComplete", function (data) {
-            // Reload the notification list (and count) once, only if something arrived
-            if (pendingReceived > 0) {
-                pendingReceived = 0;
-                setTimeout(() => window.loadRecentNotifications(), 100);
-            }
         });
 
         // Handle approval refresh (for admins) with rate limiting
@@ -391,8 +367,6 @@ window.NotificationManager = (function () {
         // Handle special notification types
         handleSpecialNotifications(notification);
 
-        // Trigger custom event for other parts of the application
-        $(document).trigger('notification:received', [notification]);
     }
 
 

@@ -21,7 +21,7 @@ namespace InventoryManagement.Web.Controllers
         private const int DecidedPageSize = 50;
 
         /// <param name="status">The tab: pending (default), approved or rejected.</param>
-        [PermissionAuthorize(AllPermissions.ApprovalView)]
+        [PermissionAuthorize(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Index(string? status = null)
         {
             var tab = status is "approved" or "rejected" ? status : "pending";
@@ -41,7 +41,7 @@ namespace InventoryManagement.Web.Controllers
             });
         }
 
-        [PermissionAuthorize(AllPermissions.ApprovalView)]
+        [PermissionAuthorize(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Details(int id)
         {
             var request = await _approvalService.GetRequestDetailsAsync(id);

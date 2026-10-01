@@ -2,7 +2,7 @@
 //
 // The filter panel shared by the Products and Routes lists: search (Enter applies), a date range
 // picker, dropdowns mapped to query parameters, the department <-> category cascade, removable
-// chips and reset (paging is changePage in site.js). Every change reloads the page with the filters in the query string;
+// chips and reset (paging: _Pagination links). Every change updates the list in place (ListNav) with the filters in the query string;
 // the server does the filtering.
 //
 //   const filters = ListFilters.init({

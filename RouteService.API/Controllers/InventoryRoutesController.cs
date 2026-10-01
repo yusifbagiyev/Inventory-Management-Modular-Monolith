@@ -58,8 +58,9 @@ namespace RouteService.API.Controllers
         }
 
 
+        // Also for the Transfer page, which checks for a pending transfer of the product.
         [HttpGet("product/{productId}")]
-        [Permission(AllPermissions.RouteView)]
+        [Permission(AllPermissions.RouteView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<IEnumerable<InventoryRouteDto>>> GetInventoryByProductId(int productId)
         {
             var result = await _mediator.Send(new GetRoutesByProductQuery(productId));

@@ -121,7 +121,7 @@
             <span class="note">
                 @if (!direct)
                 {
-                    <i class="fa-solid fa-circle-info me-1"></i>@L["Operator changes are applied after an administrator approves them."]
+                    <i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]
                 }
             </span>
             @if (canDelete && !Model.IsCompleted)
@@ -215,25 +215,8 @@
                         return true; // Allow submission to proceed
                     },
 
+                    // Approval-required responses are handled by AjaxHandler before onSuccess runs.
                     onSuccess: function(response) {
-                        // Check if this is an approval request
-                        if (response.isApprovalRequest ||
-                            response.status === 'PendingApproval' ||
-                            response.approvalRequestId) {
-                            showToast(
-                                response.message || t('Update submitted for approval'),
-                                'info'
-                            );
-
-                            // Redirect after showing the message
-                            setTimeout(() => {
-                                window.location.href = '/Routes';
-                            }, 2000);
-
-                            return false; // Prevent default redirect
-                        }
-
-                        // For direct updates (admin users)
                         showToast(t('Route updated successfully!'), 'success');
                         setTimeout(() => {
                             window.location.href = '/Routes';
@@ -287,10 +270,11 @@
                             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                         },
                         success: function(response) {
-                            showToast(
-                                t('Route deleted successfully. Product has been reverted to previous state.'),
-                                'success'
-                            );
+                            // Without route.delete.direct the deletion waits for approval.
+                            showToast(response && response.isApprovalRequest
+                                ? (response.message || t('Delete request submitted for approval'))
+                                : t('Route deleted successfully. Product has been reverted to previous state.'),
+                                response && response.isApprovalRequest ? 'info' : 'success');
                             setTimeout(() => {
                                 window.location.href = '/Routes';
                             }, 2000);

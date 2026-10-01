@@ -66,7 +66,7 @@
 
         <div class="ip-rail-group">
             <div class="ip-rail-title">@L["Oversight"]</div>
-            @if (Can("approval.view"))
+            @if (Can("approval.view") || Can("approval.decide"))
             {
                 <a href="/Approvals" class="@Active(controller == "Approvals")" title="@L["Approvals"]">
                     <i class="fa-solid fa-clipboard-check"></i><span>@L["Approvals"]</span>

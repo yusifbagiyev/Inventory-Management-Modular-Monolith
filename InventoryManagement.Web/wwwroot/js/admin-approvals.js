@@ -1,88 +1,44 @@
+// InventoryManagement.Web/wwwroot/js/admin-approvals.js
+//
+// The pending-approvals count on the rail's Approvals link (#sidebarPendingCount), for whoever
+// may see the approvals page. Loaded on start, and again whenever a request is created,
+// decided or cancelled (live updates) or a new-request notification arrives.
+
 let isLoadingApprovals = false;
-async function loadPendingApprovalsCount() {
-    if (isLoadingApprovals) {
-        return;
-    }
 
+function loadPendingApprovalsCount() {
+    if (isLoadingApprovals) return;
     isLoadingApprovals = true;
-    const apiUrl = AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1');
-
-    setTimeout(async () => {
-        try {
-            $.ajax({
-                url: apiUrl,
-                type: 'GET',
-                timeout: 10000,
-                success: function (data) {
-                    const count = data.totalCount || 0;
-                    updatePendingApprovalsCount(count);
-                },
-                error: function (xhr, status, error) {
-                    console.error('❌ Failed to load pending approvals:', {
-                        status: xhr.status,
-                        error: error,
-                        responseText: xhr.responseText
-                    });
-
-                    if (xhr.status === 401) {
-                        console.warn('Authentication expired, user needs to login');
-                    } else if (xhr.status === 403) {
-                        console.warn('User does not have permission to view approvals');
-                    } else if (xhr.status === 0 || status === 'timeout') {
-                        console.error('Network error or timeout occurred');
-                    }
-                },
-                complete: function () {
-                    isLoadingApprovals = false;
-                }
-            });
-        } catch (error) {
-            console.error('Failed to get token:', error);
-            isLoadingApprovals = false;
-
-            // If token fetch fails, user likely needs to re-authenticate
-            if (error.message.includes('Unauthorized')) {
-                window.location.href = '/Account/Login';
-            }
-        }
-    }, 250);
+    $.ajax({
+        url: AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1'),
+        type: 'GET',
+        timeout: 10000,
+        success: data => updatePendingApprovalsCount(data.totalCount || 0),
+        error: xhr => console.warn('Pending approvals count unavailable', xhr.status),
+        complete: () => { isLoadingApprovals = false; }
+    });
 }
 
 function updatePendingApprovalsCount(count) {
-    // Ensure count is a valid number
     count = parseInt(count) || 0;
-
-    // Update the rail's Approvals count
-    const $sidebarBadge = $('#sidebarPendingCount');
-    if ($sidebarBadge.length) {
-        if (count > 0) {
-            $sidebarBadge.text(count > 99 ? '99+' : count).show();
-        } else {
-            $sidebarBadge.hide();
-        }
-    }
-
-    // Store the count for reference
-    window.currentApprovalsCount = count;
-
-    // Trigger a custom event that other parts of the app can listen to
-    $(document).trigger('approvals:count-updated', [count]);
+    const $badge = $('#sidebarPendingCount');
+    if (count > 0) $badge.text(count > 99 ? '99+' : count).show();
+    else $badge.hide();
 }
 
-// Debounced version for frequent calls
+// Several changes in a row (a batch of approvals) load the count once.
 function debouncedLoadPendingApprovalsCount() {
-    // Clear any existing timeout
-    if (window.approvalsLoadTimeout) {
-        clearTimeout(window.approvalsLoadTimeout);
-    }
-
-    // Set a new timeout
-    window.approvalsLoadTimeout = setTimeout(() => {
-        loadPendingApprovalsCount();
-    }, 500); // Wait 500ms before actually loading
+    clearTimeout(window.approvalsLoadTimeout);
+    window.approvalsLoadTimeout = setTimeout(loadPendingApprovalsCount, 500);
 }
 
-// Export the functions for use by other modules
 window.loadPendingApprovalsCount = loadPendingApprovalsCount;
 window.debouncedLoadPendingApprovalsCount = debouncedLoadPendingApprovalsCount;
-window.updatePendingApprovalsCount = updatePendingApprovalsCount;
+
+// Any decided, cancelled or new request changes the pending count.
+window.addEventListener('live:changed', function (e) {
+    const changes = (e.detail && e.detail.changes) || [];
+    if (changes.some(c => c.entity === 'approval')) debouncedLoadPendingApprovalsCount();
+});
+
+$(loadPendingApprovalsCount);

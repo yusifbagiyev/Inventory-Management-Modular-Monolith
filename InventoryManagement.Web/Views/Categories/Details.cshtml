@@ -1,5 +1,6 @@
 @model CategoryViewModel
 @{
+    var canProducts = User.HasPermission("product.view");
     ViewData["Title"] = "Category Details";
     var products = ViewBag.Products as List<ProductViewModel> ?? new List<ProductViewModel>();
 }
@@ -80,7 +81,7 @@
                     <tbody>
                         @foreach (var product in products)
                         {
-                            <tr data-href="@Url.Action("Details", "Products", new { id = product.Id })">
+                            <tr data-href="@(canProducts ? Url.Action("Details", "Products", new { id = product.Id }) : null)">
                                 <td class="ip-mono" data-order="@product.InventoryCode">@product.InventoryCode</td>
                                 <td>
                                     <div class="cell-text">
@@ -106,9 +107,12 @@
                                 </td>
                                 <td data-no-row-link>
                                     <div class="actions">
+                                        @if (canProducts)
+                                        {
                                         <a asp-controller="Products" asp-action="Details" asp-route-id="@product.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
                                         </a>
+                                        }
                                     </div>
                                 </td>
                             </tr>

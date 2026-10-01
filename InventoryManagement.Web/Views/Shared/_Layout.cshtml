@@ -201,27 +201,22 @@
     <script src="~/js/image-manager.js" asp-append-version="true"></script>
 
     @* The pending-approvals count: for whoever may see the approvals page. *@
-    @if (User.HasPermission("approval.view"))
+    @if (User.HasPermission("approval.view") || User.HasPermission("approval.decide"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
     <script>
         $(document).ready(function() {
-                // Pass the admin status to the notification manager
-                const isAdmin = @(User.HasPermission("approval.view") ? "true" : "false");   // sees the approvals page
-
-                    // Initialize the notification system
-                NotificationManager.initialize(isAdmin);
+                // Whoever may see the approvals page also follows the pending-approvals count.
+                const canSeeApprovals = @(User.HasPermission("approval.view") || User.HasPermission("approval.decide") ? "true" : "false");
+                NotificationManager.initialize(canSeeApprovals);
 
                 // Set up UI handlers for notifications
                 setupNotificationUIHandlers();
 
-                // Load initial data (the list request also refreshes the count)
+                // Load initial data (the list request also refreshes the count; admin-approvals.js
+                // loads the pending-approvals count itself)
                 loadRecentNotifications();
-
-                if (isAdmin) {
-                    loadPendingApprovalsCountFromAPI();
-                }
         });
 
         // Notification UI Handlers (separated from the manager)
@@ -282,12 +277,7 @@
             });
         };
 
-        window.loadPendingApprovalsCountFromAPI = function() {
-         // This function calls the actual implementation from admin-approvals.js
-            if (typeof loadPendingApprovalsCount === 'function') {
-            loadPendingApprovalsCount();
-            }
-        };
+
 
          window.incrementNotificationCount = function() {
             $.ajax({

@@ -1,5 +1,6 @@
 @model ApprovalDashboardViewModel
 @{
+    var canDecide = User.HasPermission("approval.decide");
     ViewData["Title"] = "Approvals";
     var pendingTab = Model.Tab == "pending";
 }
@@ -91,7 +92,7 @@
                                 </td>
                                 <td class="text-end">
                                     <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" onclick="event.stopPropagation(); viewDetails(@request.Id)">
-                                        @(pendingTab ? L["Review and decide"] : L["View"])
+                                        @(pendingTab && canDecide ? L["Review and decide"] : L["View"])
                                     </button>
                                 </td>
                             </tr>
@@ -163,13 +164,15 @@
             if (mode === 'reject') setTimeout(() => $('#rejectionReason').trigger('focus'), 50);
         }
 
+        const canDecide = @(User.HasPermission("approval.decide") ? "true" : "false");
+
         function viewDetails(requestId) {
             currentRequestId = requestId;
             $('#rejectionReason').val('').removeClass('is-invalid');
             $('#rejectionError').addClass('d-none');
             setMode('view');
             loadApprovalDetails(`/Approvals/Details/${requestId}`, modalEl).then(function (head) {
-                setMode(head && head.dataset.status === 'Pending' ? 'decide' : 'view');
+                setMode(canDecide && head && head.dataset.status === 'Pending' ? 'decide' : 'view');
             });
         }
 
@@ -191,7 +194,7 @@
         function decided(message, type) {
             bootstrap.Modal.getOrCreateInstance(modalEl).hide();
             showToast(message, type);
-            setTimeout(() => location.reload(), 900);
+            ListNav.reload();   // in place; live updates then skip the same change
         }
 
         $('#modalApproveBtn').on('click', function () {

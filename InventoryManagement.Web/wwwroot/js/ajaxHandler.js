@@ -142,7 +142,7 @@
                         const contentType = xhr.getResponseHeader('content-type') || '';
 
                         if (contentType.indexOf('text/html') > -1) {
-                            handleHtmlResponse(response, form, settings);
+                            handleHtmlResponse(response);
                         } else {
                             handleSuccess(response, form, settings);
                         }
@@ -292,26 +292,14 @@
         }
     }
 
-    function handleHtmlResponse(html, form, settings) {
-        // Replace form with server response (for server-side validation)
-        const $container = $(form).closest('.card-body');
-        if ($container.length) {
-            $container.html(html);
-            // Re-attach handler to new form
-            const $newForm = $container.find('form');
-            if ($newForm.length) {
-                // Use a more specific selector for the new form
-                const formId = $newForm.attr('id');
-                if (formId) {
-                    AjaxHandler.handleForm('#' + formId, settings);
-                } else {
-                    // Add a unique identifier to the form
-                    const uniqueId = 'form-' + Date.now();
-                    $newForm.attr('id', uniqueId);
-                    AjaxHandler.handleForm('#' + uniqueId, settings);
-                }
-            }
+    // A page instead of JSON: the session expired (the login page came back) or the server
+    // failed in an unexpected way. Never leave the user with a silently restored button.
+    function handleHtmlResponse(html) {
+        if (/action="\/Account\/Login/i.test(html)) {
+            window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(location.pathname + location.search);
+            return;
         }
+        showToast(t('Unexpected response from the server. Please reload the page.'), 'error');
     }
 
     // Public API

@@ -231,16 +231,6 @@ function escapeHtml(value) {
 }
 
 
-function showLoader() {
-    if (!$('.loader-overlay').length) {
-        $('body').append('<div class="loader-overlay"><div class="spinner-border text-primary" role="status"></div></div>');
-    }
-}
-
-function hideLoader() {
-    $('.loader-overlay').remove();
-}
-
 function setupSessionMonitor() {
     const isUserAuthenticated = document.getElementById('ipRail') !== null;
 
@@ -304,6 +294,7 @@ window.ListNav = (function () {
 
     const SWAPPED = ['[data-list-region]', '[data-list-tabs]', '.ip-page-head .ip-sub'];
     let pending = null;
+    let loadedAt = 0;
 
     function available() { return !!document.querySelector('[data-list-region]'); }
 
@@ -342,6 +333,7 @@ window.ListNav = (function () {
         }
         if (request !== pending) return;
         pending = null;
+        loadedAt = Date.now();
 
         if (window.LiveUpdates) LiveUpdates.beforeSwap();
         const swapped = new Set();
@@ -428,14 +420,15 @@ window.ListNav = (function () {
         if (e.state && e.state.listNav && available()) load({});
     });
 
-    return { go: go, reload: () => load({ quiet: true }) };
+    return {
+        go: go,
+        /** After this page's own change (approve, complete, cancel...): refresh the list in place. */
+        reload: () => load({ quiet: true }),
+        /** For LiveUpdates: a load is running, or one finished within <ms> (nothing left to refresh). */
+        busy: () => pending !== null,
+        freshWithin: ms => Date.now() - loadedAt < ms
+    };
 })();
-
-function changePage(page) {
-    const params = new URLSearchParams(window.location.search);
-    params.set('pageNumber', page);
-    ListNav.go(window.location.pathname + '?' + params.toString());
-}
 
 /** Rows per page (the select in _Pagination): back to the first page with the new size. */
 function changePageSize(size) {

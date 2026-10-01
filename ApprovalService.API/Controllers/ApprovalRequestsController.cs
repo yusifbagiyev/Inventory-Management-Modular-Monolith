@@ -34,7 +34,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpGet]
-        [Permission(AllPermissions.ApprovalView)]
+        [Permission(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
         public async Task<ActionResult<PagedResultDto<ApprovalRequestDto>>> GetPending(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 20)
@@ -59,7 +59,8 @@ namespace ApprovalService.API.Controllers
 
             // Only the requester or an approval.view holder may read a request (NotFound avoids an
             // existence oracle).
-            var canViewAll = User.IsInRole(AllRoles.Admin) || User.HasClaim("permission", AllPermissions.ApprovalView);
+            var canViewAll = User.IsInRole(AllRoles.Admin) || User.HasClaim("permission", AllPermissions.ApprovalView)
+                || User.HasClaim("permission", AllPermissions.ApprovalDecide);
             if (approvalRequest == null || (!canViewAll && approvalRequest.RequestedById != CurrentUserId))
                 return NotFound();
 
@@ -86,7 +87,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpGet("all")]
-        [Permission(AllPermissions.ApprovalView)]
+        [Permission(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
         public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetAllRequests()
         {
             var result = await _mediator.Send(new GetAllRequests.Query());

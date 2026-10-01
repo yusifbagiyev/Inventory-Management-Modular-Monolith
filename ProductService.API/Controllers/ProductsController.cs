@@ -78,8 +78,9 @@ namespace ProductService.API.Controllers
         }
 
 
+        // Also for the Transfer page: whoever may transfer must be able to find the product.
         [HttpGet("search/inventory-code/{inventoryCode}")]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)
         {
             var product = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));

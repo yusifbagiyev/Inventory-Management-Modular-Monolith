@@ -1347,5 +1347,12 @@
   "Viewing permission was granted too.": "Baxış icazəsi də verildi.",
   "The role's permissions, plus those granted below.": "Rolun icazələri və aşağıda verilən əlavələr.",
   "Changed a role's permissions": "Rolun icazələrini dəyişdi",
-  "From Department": "Haradan (şöbə)"
+  "From Department": "Haradan (şöbə)",
+  "Will be removed": "Silinəcək",
+  "Removed": "Silindi",
+  "All will be removed": "Hamısı silinəcək",
+  "All removed": "Hamısı silindi",
+  "Your changes are applied after they are approved.": "Dəyişiklikləriniz təsdiqləndikdən sonra tətbiq olunur.",
+  "Actions that need approval show up here with their status.": "Təsdiq tələb edən əməliyyatlar statusları ilə burada görünür.",
+  "Unexpected response from the server. Please reload the page.": "Serverdən gözlənilməz cavab gəldi. Səhifəni yeniləyin."
 }

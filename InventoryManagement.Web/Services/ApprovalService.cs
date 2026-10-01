@@ -39,7 +39,8 @@ namespace InventoryManagement.Web.Services
         public async Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id)
         {
             var request = await _mediator.Send(new GetRequestById.Query(id));
-            if (request == null || (!User.HasPermission(AllPermissions.ApprovalView) && request.RequestedById != UserId))
+            var canSeeAll = User.HasPermission(AllPermissions.ApprovalView) || User.HasPermission(AllPermissions.ApprovalDecide);
+            if (request == null || (!canSeeAll && request.RequestedById != UserId))
                 return null;
             return ModelMapper.Map<ApprovalRequestDto>(request);
         }

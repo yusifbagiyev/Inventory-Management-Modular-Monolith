@@ -88,6 +88,7 @@ window.LiveUpdates = (function () {
 
     function isBusy(w) {
         if (document.hidden) return true;
+        if (window.ListNav && ListNav.busy()) return true;
         if (document.querySelector('.modal.show, .dropdown-menu.show')) return true;
 
         const active = document.activeElement;
@@ -114,6 +115,9 @@ window.LiveUpdates = (function () {
     async function refresh(w) {
         const update = w.pending;
         w.pending = null;
+        // The page has just reloaded these regions itself (its own action, a filter): the change
+        // that brought us here is already on screen - one refresh, not two.
+        if (window.ListNav && ListNav.freshWithin(3000)) return;
 
         let doc;
         try {
