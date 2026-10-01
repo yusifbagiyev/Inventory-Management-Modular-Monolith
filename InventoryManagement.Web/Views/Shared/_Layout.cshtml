@@ -8,6 +8,27 @@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
+    @* Page transitions (ip-components.css): name the rail and toolbar only while a view
+       transition captures them. Must run before the first render, hence inline in the head. *@
+    <script>
+        (function () {
+            var root = document.documentElement;
+            if (!('onpagereveal' in window)) { root.classList.add('no-vt'); return; }
+            function name(on) {
+                var rail = document.querySelector('.ip-rail'), bar = document.querySelector('.ip-toolbar');
+                if (rail) rail.style.viewTransitionName = on ? 'ip-rail' : '';
+                if (bar) bar.style.viewTransitionName = on ? 'ip-toolbar' : '';
+            }
+            window.addEventListener('pageswap', function (e) { if (e.viewTransition) name(true); });
+            window.addEventListener('pagereveal', function (e) {
+                if (!e.viewTransition) return;
+                name(true);
+                e.viewTransition.finished.finally(function () { name(false); });
+            });
+            // Back to a page kept in the back/forward cache: drop the names its swap left.
+            window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
+        })();
+    </script>
     @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
        site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
     <script>

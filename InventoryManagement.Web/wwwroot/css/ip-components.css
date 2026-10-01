@@ -510,8 +510,28 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 @media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
 
 /* Icon buttons center their glyph whatever the element: <button> does it by itself, an <a> did
-   not (the icon sat at the top of the 34px square). */
-.ip-btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
+   not (the icon sat at the top of the 34px square). :where() keeps this at zero specificity, so
+   rules that hide a particular button (.ip-rail-open on wide screens, d-none) still win. */
+:where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
 
 /* Text areas can be dragged taller or back, never below about three lines (or off the page). */
 .ip-textarea { min-height: 88px; max-height: 60vh; }
+
+/* Page transitions. Same-origin navigations cross-fade (View Transitions, Chromium): the rail and
+   the toolbar stay put (names set only during the swap, by the inline script in the page heads,
+   so they never create stacking contexts that would trap dropdowns or modals); the content
+   fades out quickly and the new page rises in. Browsers without it get the rise-in on load
+   (html.no-vt). Nothing moves with reduced motion. */
+@view-transition { navigation: auto; }
+@keyframes ip-page-out { to { opacity: 0; } }
+@keyframes ip-page-in { from { opacity: 0; transform: translateY(8px); } }
+::view-transition-old(root) { animation: ip-page-out 90ms ease-in both; }
+::view-transition-new(root) { animation: ip-page-in 220ms cubic-bezier(.2, .7, .2, 1) 40ms both; }
+::view-transition-group(ip-rail), ::view-transition-group(ip-toolbar) { animation: none; }
+::view-transition-old(ip-rail), ::view-transition-old(ip-toolbar) { display: none; }
+::view-transition-new(ip-rail), ::view-transition-new(ip-toolbar) { animation: none; }
+.no-vt .ip-main > :not(.ip-toolbar), .no-vt .ip-login-main { animation: ip-page-in 220ms cubic-bezier(.2, .7, .2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  .no-vt .ip-main > :not(.ip-toolbar), .no-vt .ip-login-main { animation: none; }
+}

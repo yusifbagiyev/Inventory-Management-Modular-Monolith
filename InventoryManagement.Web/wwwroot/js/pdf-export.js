@@ -101,8 +101,10 @@ function renderPrintDocument({ title, headers, rows, filters }) {
   th { background: #EFEFEC; text-align: left; font-size: 7.5pt; text-transform: uppercase;
        letter-spacing: .04em; color: #4F5358; padding: 5px 6px; border-bottom: 1.2px solid #CFCFCB;
        white-space: nowrap; }
+  /* overflow-wrap only breaks a word that cannot fit at all; word-break: break-word let the
+     table squeeze short columns until words split ("Tamamlan|ıb"). */
   td { padding: 4px 6px; border-bottom: .8px solid #E4E4E1; vertical-align: top;
-       word-break: break-word; }
+       overflow-wrap: break-word; hyphens: none; }
   tbody tr { page-break-inside: avoid; }
   tbody tr:nth-child(even) td { background: #FAFAF9; }
   .empty { color: #6B6F75; }

@@ -88,7 +88,7 @@ namespace InventoryManagement.Web.Localization
 
         /// <summary>One level down: exact keys and patterns for each ", "-separated part (no further nesting).</summary>
         private static string TranslateParts(string value)
-            => string.Join(", ", value.Split(", ").Select(part =>
+            => string.Join(", ", SplitItems(value).Select(part =>
             {
                 if (Azerbaijani.Value.TryGetValue(part, out var exact) || Azerbaijani.Value.TryGetValue(part.Trim(), out exact))
                     return exact;
@@ -96,10 +96,36 @@ namespace InventoryManagement.Web.Localization
                 {
                     var m = pattern.Match(part);
                     if (m.Success)
-                        return string.Format(CultureInfo.CurrentCulture, template, m.Groups.Cast<Group>().Skip(1).Select(g => (object)g.Value).ToArray());
+                        return string.Format(CultureInfo.CurrentCulture, template, m.Groups.Cast<Group>().Skip(1).Select(g => (object)Value(g.Value)).ToArray());
                 }
                 return part;
             }));
+
+        /// <summary>
+        /// Splits a ", "-joined change list into its items. A piece that is not a known message on
+        /// its own belongs to the item before it: values contain commas too ("Description: a, b → c").
+        /// </summary>
+        private static List<string> SplitItems(string value)
+        {
+            var items = new List<string>();
+            foreach (var piece in value.Split(", "))
+            {
+                var known = Azerbaijani.Value.ContainsKey(piece.Trim()) || Patterns.Value.Any(p => p.Pattern.IsMatch(piece))
+                    || StartsItem.IsMatch(piece);
+                if (items.Count > 0 && !known)
+                    items[^1] += ", " + piece;
+                else
+                    items.Add(piece);
+            }
+            return items;
+        }
+
+        /// <summary>"Worker: ...", "Description: ..." - the start of a "Field: old → new" item.</summary>
+        private static readonly Regex StartsItem = new(@"^[A-Z][A-Za-z ]{1,30}: ", RegexOptions.Compiled);
+
+        /// <summary>A value inside a change: only the "None" placeholder for an empty value is translated.</summary>
+        private static string Value(string value)
+            => value == "None" && Azerbaijani.Value.TryGetValue("None", out var none) ? none : value;
 
         private static bool TryGet(string name, out string value)
         {
