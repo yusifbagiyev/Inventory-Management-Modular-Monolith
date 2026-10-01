@@ -673,3 +673,11 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
   --ip-cat-1: #6FB3CB; --ip-cat-2: #EDA94F; --ip-cat-3: #A68BEA; --ip-cat-4: #4F8BFF;
   --ip-cat-5: #EB86BE; --ip-cat-6: #A5C25A; --ip-cat-7: #E08A5F; --ip-cat-8: #A9B3BD;
 }
+
+/* ---------- back button before the breadcrumb (site.js) ---------- */
+.ip-crumbs { display: flex; align-items: center; gap: var(--ip-space-3); flex-wrap: wrap; margin-bottom: var(--ip-space-2); }
+.ip-crumbs .breadcrumb { margin-bottom: 0; }
+.ip-back { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-md); color: var(--ip-text-1); font-size: var(--ip-fs-sm); font-weight: 500; text-decoration: none; }
+.ip-back:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
+.ip-back:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
+.ip-back i { font-size: 12px; }

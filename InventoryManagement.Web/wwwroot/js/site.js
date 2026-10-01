@@ -809,3 +809,43 @@ document.addEventListener('click', async function (e) {
         button.disabled = false;
     }
 });
+
+/*
+ * Back button on every page with a breadcrumb (details, timelines, forms): "← Back" before the
+ * crumbs. It returns to the parent list as the user left it (filters, page, scroll) when they
+ * came from it - history.back() - and otherwise opens the parent crumb's page.
+ */
+(function () {
+    function addBackButtons() {
+        document.querySelectorAll('.ip-page-head ol.breadcrumb').forEach(function (crumbs) {
+            if (crumbs.parentElement.classList.contains('ip-crumbs')) return;
+            const links = crumbs.querySelectorAll('.breadcrumb-item a[href]');
+            if (!links.length) return;
+
+            const back = document.createElement('a');
+            back.className = 'ip-back';
+            back.href = links[links.length - 1].getAttribute('href');
+            back.setAttribute('data-no-prefetch', '');
+            back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span></span>';
+            back.querySelector('span').textContent = t('Back');
+            back.addEventListener('click', function (e) {
+                if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                let from = null;
+                try { from = document.referrer ? new URL(document.referrer) : null; } catch { from = null; }
+                const target = new URL(back.href, location.href);
+                if (from && from.origin === location.origin && history.length > 1
+                    && from.pathname.toLowerCase() === target.pathname.toLowerCase()) {
+                    e.preventDefault();
+                    history.back();
+                }
+            });
+
+            const row = document.createElement('div');
+            row.className = 'ip-crumbs';
+            crumbs.parentNode.insertBefore(row, crumbs);
+            row.append(back, crumbs);
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackButtons);
+    else addBackButtons();
+})();
