@@ -6,7 +6,7 @@ TLS (sertifikat) Cloudflare-dədir.
 
 ```
 istifadəçi ─https─> Cloudflare (inventory.az) ─tunel─> cloudflared ─http─> nginx:8080 ─> app
-LAN:        ─https─> nginx:443 (inventory166.az, 10.0.1.60) ─> app            (dəyişmir)
+LAN:        ─https─> nginx:443 (10.0.1.60) ─> app       (internet olmayanda ehtiyat giriş)
 ```
 
 - `nginx:8080` yalnız tunel üçündür, hosta publish olunmur. Ziyarətçinin IP-si Cloudflare-in
@@ -85,7 +85,9 @@ Proqram artıq internetdən görünür:
 
 ## Qeydlər
 
-- `inventory.az` və `inventory166.az` ayrı domenlərdir: istifadəçi hər birində ayrıca daxil olur.
+- Köhnə ünvan `inventory166.az` (və `www.`) ləğv olunub: `https://inventory.az`-a yönləndirir (yol saxlanılır).
+  `www.inventory.az` da `inventory.az`-a yönləndirir. Serverin IP-si (`https://10.0.1.60`) LAN-da işləyir —
+  internet və ya Cloudflare olmayanda ehtiyat giriş (sertifikat IP-ni göstərmədiyi üçün brauzer xəbərdarlıq edir).
 - WhatsApp mesajları dəyişmir (şəkil faylın özü göndərilir, link yox).
 - Tuneli söndürmək: `.env`-dən `COMPOSE_PROFILES=tunnel`-i silin və
   `docker compose stop cloudflared && docker compose rm -f cloudflared`. Tamamilə ləğv: Zero Trust-da tuneli silin.
