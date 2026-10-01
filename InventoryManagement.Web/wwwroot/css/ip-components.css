@@ -660,3 +660,16 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 .ip-wa-failed { color: var(--ip-danger-text); font-weight: 600; cursor: help; }
 .ip-wa-queued { color: var(--ip-text-3); }
 .ip-wa-resend { height: 26px; padding: 0 8px; gap: 6px; }
+
+/* ---------- category colours (dashboard donut and its legend) ----------
+   Eight clearly different hues for categorical data; the design's --ip-chart-1..5 are close
+   blue-grey shades meant for one series, and repeated after five, so neighbouring slices looked
+   alike. Brighter versions for the dark theme. Not status colours: no plain red or green. */
+:root, [data-bs-theme="light"] {
+  --ip-cat-1: #1D6A85; --ip-cat-2: #D98E2B; --ip-cat-3: #7B5CC4; --ip-cat-4: #2563EB;
+  --ip-cat-5: #D0579A; --ip-cat-6: #6E8F2E; --ip-cat-7: #B4562F; --ip-cat-8: #5E6873;
+}
+[data-bs-theme="dark"] {
+  --ip-cat-1: #6FB3CB; --ip-cat-2: #EDA94F; --ip-cat-3: #A68BEA; --ip-cat-4: #4F8BFF;
+  --ip-cat-5: #EB86BE; --ip-cat-6: #A5C25A; --ip-cat-7: #E08A5F; --ip-cat-8: #A9B3BD;
+}
