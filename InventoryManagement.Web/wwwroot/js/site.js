@@ -570,3 +570,85 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!input.value.trim()) { e.preventDefault(); input.focus(); }
     });
 });
+
+/**
+ * Phones (CSS below 768px, ip-components.css "phones"): every .ip-table is shown as cards, one per
+ * row, each cell as "Header: value". This labels the cells from the table's headers and marks
+ * the photo, actions and empty cells. Filter bars get a "Filters (n)" button that folds all but
+ * the search away. Re-applied when live updates or list refreshes swap content in.
+ */
+window.MobileLayout = (function () {
+    'use strict';
+
+    function labelTable(table) {
+        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.replace(/\s+/g, ' ').trim());
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+            Array.from(tr.children).forEach(function (td, i) {
+                if (td.tagName !== 'TD') return;
+                const label = headers[i] || '';
+                // By content, not header: their headers are visually hidden texts ("Image", "Actions").
+                const media = !!td.querySelector('img, .ip-thumb') && !td.textContent.trim();
+                const onlyControls = td.children.length > 0 && Array.from(td.children).every(c => c.matches('a.ip-btn, a.ip-btn-icon, button, form'));
+                const actions = !media && (!!td.querySelector('.actions') || onlyControls || (!label && !!td.querySelector('a, button')));
+                if (label && td.colSpan === 1 && !media && !actions) td.dataset.label = label; else delete td.dataset.label;
+                td.classList.toggle('cell-media', media);
+                td.classList.toggle('cell-actions', actions);
+                // No text and nothing to use (an arrow between "from" and "to", an empty cell).
+                td.classList.toggle('cell-empty', !media && !td.textContent.trim() && !td.querySelector('img, input, button, select, a[href]'));
+            });
+        });
+    }
+
+    function activeFilters(bar) {
+        let n = 0;
+        bar.querySelectorAll('.ip-filter:not(.search) select').forEach(function (s) { if (s.value) n++; });
+        bar.querySelectorAll('.ip-filter:not(.search) input:not([type=hidden])').forEach(function (i) { if (i.value) n++; });
+        return n + bar.querySelectorAll('.ip-btn.is-on').length;
+    }
+
+    function addFilterToggle(bar) {
+        if (bar.querySelector(':scope > .ip-filter-toggle')) return;
+        const controls = Array.from(bar.children).filter(function (el) { return !el.classList.contains('search') && el.type !== 'hidden'; });
+        if (controls.length < 2) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ip-btn ip-btn-secondary ip-filter-toggle';
+        const n = activeFilters(bar);
+        button.innerHTML = '<i class="fa-solid fa-sliders"></i><span>' + escapeHtml(t('Filters')) + '</span>'
+            + (n ? '<span class="count">' + n + '</span>' : '');
+        button.setAttribute('aria-expanded', 'false');
+        button.addEventListener('click', function () {
+            const open = bar.classList.toggle('open');
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        const search = bar.querySelector(':scope > .search');
+        if (search) search.after(button); else bar.prepend(button);
+        bar.classList.add('has-toggle');
+    }
+
+    function apply(root) {
+        (root || document).querySelectorAll('table.ip-table').forEach(labelTable);
+        (root || document).querySelectorAll('.ip-filterbar').forEach(addFilterToggle);
+    }
+
+    let pending = 0;
+    function schedule() {
+        if (pending) return;
+        pending = requestAnimationFrame(function () { pending = 0; apply(document); });
+    }
+
+    function touchesLists(node) {
+        return node.nodeType === 1 && (node.matches('table, tbody, tr, .ip-filterbar') || !!node.querySelector('table, .ip-filterbar'));
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        apply(document);
+        // Live updates and list refreshes replace regions: label the new rows too.
+        new MutationObserver(function (mutations) {
+            if (mutations.some(function (m) { return Array.from(m.addedNodes).some(touchesLists); }))
+                schedule();
+        }).observe(document.body, { childList: true, subtree: true });
+    });
+
+    return { apply: apply };
+})();

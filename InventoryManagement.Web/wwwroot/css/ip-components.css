@@ -535,3 +535,61 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   @view-transition { navigation: none; }
   .no-vt .ip-main > :not(.ip-toolbar), .no-vt .ip-login-main { animation: none; }
 }
+
+/* ---------- phones (< 768px) ----------
+   Lists: each table row is a card of "Header: value" lines (cells labelled by site.js
+   MobileLayout), the photo floated right, the actions along the bottom. Filters fold behind a
+   "Filters (n)" button. KPIs two by two, page buttons share the width, tabs scroll. */
+.ip-filter-toggle { display: none; }
+.ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--ip-accent); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
+@media (max-width: 767.98px) {
+  .ip-table-wrap { overflow: visible; border: 0; }
+  .ip-table, .ip-table tbody, .ip-table tr { display: block; width: 100%; }
+  .ip-table thead { display: none; }
+  .ip-table tbody tr { position: relative; margin-bottom: var(--ip-space-3); padding: 12px 14px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); background: var(--ip-surface); }
+  .ip-table tbody tr:hover, .ip-table tbody tr:hover > td { background: var(--ip-surface); }
+  .ip-table tbody tr[data-href]:active { background: var(--ip-surface-hover); }
+  /* The label sits in a fixed column; the value (text, a second line, a badge...) flows beside it. */
+  .ip-table td { display: block; position: relative; min-height: 28px; padding: 4px 0 4px calc(7.25rem + 10px) !important; border: 0 !important; background: transparent !important; text-align: left !important; white-space: normal; width: auto !important; }
+  .ip-table td::before { content: attr(data-label); position: absolute; left: 0; top: 4px; width: 7.25rem; color: var(--ip-text-3); font-size: var(--ip-fs-sm); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ip-table td:not([data-label]) { padding-left: 0 !important; }
+  .ip-table td:not([data-label])::before { content: none; }
+  .ip-table td.cell-empty { display: none; }
+  .ip-table td.cell-media { float: right; margin: 0 0 6px 12px; padding: 0 !important; }
+  .ip-table td.cell-media .ip-thumb { width: 56px; height: 56px; }
+  .ip-table td.cell-actions { clear: both; margin-top: 8px; padding-top: 8px !important; border-top: 1px solid var(--ip-border) !important; }
+  .ip-table td.cell-actions .actions { justify-content: flex-end; gap: 6px; }
+  .ip-table td .sub, .ip-table td .cell-sub { display: block; }
+  .ip-table-foot { justify-content: center; }
+  .ip-table-foot > .ip-num { width: 100%; text-align: center; }
+
+  .ip-filterbar { gap: var(--ip-space-2); }
+  .ip-filterbar > .search { flex: 1 1 0; min-width: 0; }
+  .ip-filter-toggle { display: inline-flex; flex: none; gap: 8px; justify-content: center; }
+  .ip-filterbar.has-toggle:not(.open) > :not(.search):not(.ip-filter-toggle) { display: none !important; }
+  .ip-filterbar.has-toggle.open > :not(.search):not(.ip-filter-toggle):not([type="hidden"]) { flex: 1 1 100%; }
+  .ip-filterbar.open .ip-filter select, .ip-filterbar.open .ip-filter input { flex: 1; min-width: 0; }
+
+  .ip-page-head { align-items: stretch; }
+  .ip-page-actions { width: 100%; flex-wrap: wrap; }
+  .ip-page-actions > .ip-btn { flex: 1 1 auto; justify-content: center; }
+  .ip-tabs { overflow-x: auto; scrollbar-width: none; gap: var(--ip-space-5); }
+  .ip-tabs::-webkit-scrollbar { display: none; }
+  .ip-tab { white-space: nowrap; }
+
+  .ip-kpi-grid { grid-template-columns: 1fr 1fr; gap: var(--ip-space-5) var(--ip-space-4); margin-bottom: var(--ip-space-4); }
+  .ip-kpi .value { font-size: 30px; line-height: 36px; }
+  .ip-kpi .trend { font-size: 12px; }
+
+  .ip-dl > div, .ip-dl-wide > div { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--ip-space-3); }
+  .ip-form-grid { grid-template-columns: 1fr; }
+  /* The sticky save bar: Cancel and Save side by side, sharing the width. */
+  .ip-form-foot { flex-wrap: nowrap; gap: var(--ip-space-2); }
+  .ip-form-foot > .note { flex: 0 1 auto; min-width: 0; }   /* often only whitespace: no :empty */
+  .ip-form-foot > .ip-btn { flex: 1 1 0; justify-content: center; }
+  .modal-dialog { margin: var(--ip-space-2); }
+}
+/* Fingers need bigger targets than a mouse. */
+@media (pointer: coarse) {
+  .ip-btn-icon:not(.lg) { width: 40px; height: 40px; }
+}
