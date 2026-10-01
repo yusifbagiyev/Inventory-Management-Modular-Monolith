@@ -86,7 +86,9 @@ namespace SharedServices.Storage
                 case SKEncodedOrigin.RightBottom:
                     canvas.Translate(0, result.Height); canvas.RotateDegrees(270); break;
             }
-            canvas.DrawBitmap(bitmap, 0, 0);
+            // Quarter turns and mirrors land on whole pixels, so the default sampling copies them exactly.
+            using var source = SKImage.FromBitmap(bitmap);
+            canvas.DrawImage(source, 0, 0, SKSamplingOptions.Default);
             return result;
         }
 
