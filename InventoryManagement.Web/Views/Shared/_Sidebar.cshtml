@@ -130,20 +130,7 @@
     <div class="ip-rail-foot">
         @* Phones: the toolbar is hidden, so language and theme live here (hidden on wider screens). *@
         <div class="ip-rail-prefs">
-            <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax role="group" aria-label="@L["Switch language"]">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                @if (JsonStringLocalizer.IsAzerbaijani)
-                {
-                    <button type="button" class="active" aria-pressed="true">AZ</button>
-                    <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
-                }
-                else
-                {
-                    <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
-                    <button type="button" class="active" aria-pressed="true">EN</button>
-                }
-            </form>
+            <partial name="_LanguageSwitch" />
             <button type="button" class="ip-btn-icon lg" data-theme-toggle title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
                 <i class="fas fa-moon"></i>
             </button>

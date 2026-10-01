@@ -10,27 +10,47 @@ namespace InventoryManagement.Web.Localization
     public sealed class SharedResource;
 
     /// <summary>
-    /// UI translations. The English text is the key; <c>Resources/i18n/az.json</c> (embedded) maps it to
-    /// Azerbaijani. The same table is handed to the browser (<c>window.I18n</c>) so views and scripts
-    /// translate from one file. Anything missing falls back to the English key.
+    /// UI translations. The English text is the key; <c>Resources/i18n/{language}.json</c> (embedded:
+    /// az, ru) maps it to that language. The same table is handed to the browser (<c>window.I18n</c>)
+    /// so views and scripts translate from one file. Anything missing falls back to the English key.
     /// </summary>
     public sealed partial class JsonStringLocalizer : IStringLocalizer
     {
-        private static readonly Lazy<Dictionary<string, string>> Azerbaijani = new(() => Load("i18n.az.json"));
+        /// <summary>One table per translated language (English needs none: the keys are English).</summary>
+        private static readonly Dictionary<string, Lazy<Dictionary<string, string>>> Tables = new()
+        {
+            ["az"] = new(() => Load("i18n.az.json")),
+            ["ru"] = new(() => Load("i18n.ru.json")),
+        };
 
-        /// <summary>Keys with {0}-style placeholders turned into regexes, for translating runtime messages.</summary>
-        private static readonly Lazy<List<(Regex Pattern, string Template)>> Patterns = new(BuildPatterns);
+        /// <summary>Per language: keys with {0}-style placeholders turned into regexes, for translating runtime messages.</summary>
+        private static readonly Dictionary<string, Lazy<List<(Regex Pattern, string Template)>>> PatternsByLanguage =
+            Tables.ToDictionary(t => t.Key, t => new Lazy<List<(Regex Pattern, string Template)>>(() => BuildPatterns(t.Value.Value)));
 
-        public static bool IsAzerbaijani => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "az";
+        /// <summary>The interface language: "az", "ru" or "en".</summary>
+        public static string Language => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
-        public static IReadOnlyDictionary<string, string> CurrentTable
-            => IsAzerbaijani ? Azerbaijani.Value : new Dictionary<string, string>();
+        public static bool IsAzerbaijani => Language == "az";
+        public static bool IsRussian => Language == "ru";
 
-        /// <summary>Changes whenever the translation file does; cache-busts the script that ships it to the browser.</summary>
+        /// <summary>The current language's table; null for English.</summary>
+        private static Dictionary<string, string>? Table => Tables.TryGetValue(Language, out var t) ? t.Value : null;
+
+        private static List<(Regex Pattern, string Template)> Patterns
+            => PatternsByLanguage.TryGetValue(Language, out var p) ? p.Value : [];
+
+        public static IReadOnlyDictionary<string, string> CurrentTable => TableFor(Language);
+
+        /// <summary>A language's table ("az", "ru"); empty for English or an unknown code.</summary>
+        public static IReadOnlyDictionary<string, string> TableFor(string? language)
+            => language != null && Tables.TryGetValue(language, out var t) ? t.Value : new Dictionary<string, string>();
+
+        /// <summary>Changes whenever a translation file does; cache-busts the script that ships it to the browser.</summary>
         public static string Version => VersionHash.Value;
 
         private static readonly Lazy<string> VersionHash = new(() => Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(Azerbaijani.Value)))[..12].ToLowerInvariant());
+            System.Security.Cryptography.SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(
+                Tables.OrderBy(t => t.Key).Select(t => t.Value.Value).ToList())))[..12].ToLowerInvariant());
 
         public LocalizedString this[string name]
         {
@@ -62,17 +82,18 @@ namespace InventoryManagement.Web.Localization
         /// </summary>
         public static string TranslateMessage(string? message)
         {
-            if (string.IsNullOrEmpty(message) || !IsAzerbaijani)
+            var table = Table;
+            if (string.IsNullOrEmpty(message) || table == null)
                 return message ?? string.Empty;
 
-            if (Azerbaijani.Value.TryGetValue(message, out var exact))
+            if (table.TryGetValue(message, out var exact))
                 return exact;
 
             // Several messages joined by "; " (validation errors).
             if (message.Contains("; "))
                 return string.Join("; ", message.Split("; ").Select(TranslateMessage));
 
-            foreach (var (pattern, template) in Patterns.Value)
+            foreach (var (pattern, template) in Patterns)
             {
                 var match = pattern.Match(message);
                 if (!match.Success)
@@ -90,9 +111,10 @@ namespace InventoryManagement.Web.Localization
         private static string TranslateParts(string value)
             => string.Join(", ", SplitItems(value).Select(part =>
             {
-                if (Azerbaijani.Value.TryGetValue(part, out var exact) || Azerbaijani.Value.TryGetValue(part.Trim(), out exact))
+                var table = Table!;
+                if (table.TryGetValue(part, out var exact) || table.TryGetValue(part.Trim(), out exact))
                     return exact;
-                foreach (var (pattern, template) in Patterns.Value)
+                foreach (var (pattern, template) in Patterns)
                 {
                     var m = pattern.Match(part);
                     if (m.Success)
@@ -110,7 +132,7 @@ namespace InventoryManagement.Web.Localization
             var items = new List<string>();
             foreach (var piece in value.Split(", "))
             {
-                var known = Azerbaijani.Value.ContainsKey(piece.Trim()) || Patterns.Value.Any(p => p.Pattern.IsMatch(piece))
+                var known = (Table?.ContainsKey(piece.Trim()) ?? false) || Patterns.Any(p => p.Pattern.IsMatch(piece))
                     || StartsItem.IsMatch(piece);
                 if (items.Count > 0 && !known)
                     items[^1] += ", " + piece;
@@ -125,11 +147,11 @@ namespace InventoryManagement.Web.Localization
 
         /// <summary>A value inside a change: only the "None" placeholder for an empty value is translated.</summary>
         private static string Value(string value)
-            => value == "None" && Azerbaijani.Value.TryGetValue("None", out var none) ? none : value;
+            => value == "None" && Table is { } table && table.TryGetValue("None", out var none) ? none : value;
 
         private static bool TryGet(string name, out string value)
         {
-            if (IsAzerbaijani && Azerbaijani.Value.TryGetValue(name, out var translated))
+            if (Table is { } table && table.TryGetValue(name, out var translated))
             {
                 value = translated;
                 return true;
@@ -149,10 +171,10 @@ namespace InventoryManagement.Web.Localization
             }) ?? [];
         }
 
-        private static List<(Regex, string)> BuildPatterns()
+        private static List<(Regex Pattern, string Template)> BuildPatterns(Dictionary<string, string> table)
         {
-            var list = new List<(Regex, string)>();
-            foreach (var (key, value) in Azerbaijani.Value)
+            var list = new List<(Regex Pattern, string Template)>();
+            foreach (var (key, value) in table)
             {
                 // A pattern needs real words around its placeholders, or it would match unrelated text.
                 // The "Field: old → new" change lines are specific through the arrow, so short

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="@(JsonStringLocalizer.IsAzerbaijani ? "az" : "en")">
+<html lang="@JsonStringLocalizer.Language">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -115,21 +115,7 @@
                 }
 
                 @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
-                <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax
-                      role="group" aria-label="@L["Switch language"]">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                    @if (JsonStringLocalizer.IsAzerbaijani)
-                    {
-                        <button type="button" class="active" aria-pressed="true">AZ</button>
-                        <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
-                    }
-                    else
-                    {
-                        <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
-                        <button type="button" class="active" aria-pressed="true">EN</button>
-                    }
-                </form>
+                <partial name="_LanguageSwitch" />
 
                 @if (signedIn)
                 {
@@ -216,9 +202,11 @@
     <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
 
     @* Translations for scripts: t('English text') in site.js looks them up here (absent = English). *@
-    @if (JsonStringLocalizer.IsAzerbaijani)
+    @* The language is in the URL too: the script is cached for good, and switching the language
+       must not keep the previous one's table. *@
+    @if (JsonStringLocalizer.Language != "en")
     {
-        <script src="/Language/Strings?v=@JsonStringLocalizer.Version"></script>
+        <script src="/Language/Strings?lang=@JsonStringLocalizer.Language&amp;v=@JsonStringLocalizer.Version"></script>
     }
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/app-config.js" asp-append-version="true"></script>

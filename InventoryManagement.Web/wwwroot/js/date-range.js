@@ -33,6 +33,20 @@ window.DateRange = (function () {
         firstDay: 1
     };
 
+    const localeRu = {
+        days: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
+        daysShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        daysMin: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+        months: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август',
+            'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+        monthsShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+        today: 'Сегодня',
+        clear: 'Очистить',
+        dateFormat: 'dd.MM.yyyy',
+        timeFormat: 'HH:mm',
+        firstDay: 1
+    };
+
     const localeEn = {
         days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
@@ -64,7 +78,7 @@ window.DateRange = (function () {
         input.classList.add('date-range-input');
 
         const picker = new AirDatepicker(input, {
-            locale: document.documentElement.lang === 'az' ? localeAz : localeEn,
+            locale: ({ az: localeAz, ru: localeRu })[document.documentElement.lang] || localeEn,
             range: true,
             multipleDatesSeparator: SEPARATOR,
             autoClose: true,

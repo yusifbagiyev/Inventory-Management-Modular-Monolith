@@ -15,7 +15,7 @@ function t(key, ...args) {
 
 /** The locale for Intl / toLocale*String: follows the interface language. */
 function uiLocale() {
-    return document.documentElement.lang === 'az' ? 'az-Latn-AZ' : 'en-US';
+    return ({ az: 'az-Latn-AZ', ru: 'ru-RU' })[document.documentElement.lang] || 'en-US';
 }
 
 /** dd.MM.yyyy (and HH:mm when withTime): the one date format used across the UI. */

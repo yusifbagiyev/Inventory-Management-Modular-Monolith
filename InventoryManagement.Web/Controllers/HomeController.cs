@@ -218,20 +218,26 @@ namespace InventoryManagement.Web.Controllers
         // Chart labels in the interface language (the formatting culture stays en-US).
         private static readonly string[] AzMonths = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
         private static readonly string[] AzDays = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
+        private static readonly string[] RuMonths = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+        private static readonly string[] RuDays = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
         private static readonly string[] Roman = ["I", "II", "III", "IV"];
 
         private static string MonthName(DateTime date)
-            => JsonStringLocalizer.IsAzerbaijani ? AzMonths[date.Month - 1] : date.ToString("MMM");
+            => JsonStringLocalizer.IsAzerbaijani ? AzMonths[date.Month - 1]
+             : JsonStringLocalizer.IsRussian ? RuMonths[date.Month - 1]
+             : date.ToString("MMM");
 
         private static string DayName(DateTime date)
-            => JsonStringLocalizer.IsAzerbaijani
-                ? $"{AzDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
-                : date.ToString("ddd, MMM dd");
+            => JsonStringLocalizer.IsAzerbaijani ? $"{AzDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
+             : JsonStringLocalizer.IsRussian ? $"{RuDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
+             : date.ToString("ddd, MMM dd");
 
         private static string QuarterName(DateTime quarterStart)
         {
             var q = (quarterStart.Month - 1) / 3;
-            return JsonStringLocalizer.IsAzerbaijani ? $"{Roman[q]} rüb {quarterStart.Year}" : $"Q{q + 1} {quarterStart.Year}";
+            return JsonStringLocalizer.IsAzerbaijani ? $"{Roman[q]} rüb {quarterStart.Year}"
+                 : JsonStringLocalizer.IsRussian ? $"{Roman[q]} кв. {quarterStart.Year}"
+                 : $"Q{q + 1} {quarterStart.Year}";
         }
 
         [AllowAnonymous]

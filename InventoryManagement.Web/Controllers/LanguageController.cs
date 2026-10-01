@@ -33,14 +33,16 @@ namespace InventoryManagement.Web.Controllers
 
         /// <summary>
         /// The translation table for scripts (<c>t()</c> in site.js), as <c>window.I18n</c>. The layout
-        /// requests it with <c>?v=</c> the table's hash, so it can be cached for good.
+        /// requests it with <c>?lang=</c> and <c>?v=</c> the tables' hash, so it can be cached for good: the
+        /// table follows <c>lang</c> (not the culture cookie), so a cached copy always matches its URL.
         /// </summary>
         [HttpGet]
         [ResponseCache(Duration = 31536000, Location = ResponseCacheLocation.Any)]
-        public IActionResult Strings()
+        public IActionResult Strings(string? lang)
         {
             // Served as its own script file (never inlined in HTML), so readable UTF-8 is safe and much smaller.
-            var json = System.Text.Json.JsonSerializer.Serialize(JsonStringLocalizer.CurrentTable,
+            var table = lang == null ? JsonStringLocalizer.CurrentTable : JsonStringLocalizer.TableFor(lang);
+            var json = System.Text.Json.JsonSerializer.Serialize(table,
                 new System.Text.Json.JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             return Content($"window.I18n = {json};", "text/javascript; charset=utf-8");
         }

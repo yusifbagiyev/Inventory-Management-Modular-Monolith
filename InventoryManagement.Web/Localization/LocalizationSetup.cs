@@ -13,7 +13,10 @@ namespace InventoryManagement.Web.Localization
     {
         public const string DefaultUiCulture = "az-Latn-AZ";
         public const string FormattingCulture = "en-US";
-        public static readonly string[] UiCultures = [DefaultUiCulture, "en-US"];
+        public static readonly string[] UiCultures = [DefaultUiCulture, "en-US", "ru-RU"];
+
+        /// <summary>The language switch: each culture and its short label, in display order.</summary>
+        public static readonly (string Culture, string Label)[] Languages = [(DefaultUiCulture, "AZ"), ("en-US", "EN"), ("ru-RU", "RU")];
 
         public static string CookieValue(string uiCulture)
             => CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(FormattingCulture, uiCulture));

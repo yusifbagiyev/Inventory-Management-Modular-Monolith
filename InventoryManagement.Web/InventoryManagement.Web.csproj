@@ -22,6 +22,7 @@
   <ItemGroup>
     <!-- UI translations (English text -> Azerbaijani), read by Localization/JsonStringLocalizer. -->
     <EmbeddedResource Include="Resources\i18n\az.json" LogicalName="i18n.az.json" />
+    <EmbeddedResource Include="Resources\i18n\ru.json" LogicalName="i18n.ru.json" />
   </ItemGroup>
 
   <ItemGroup>

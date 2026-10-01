@@ -1,0 +1,20 @@
+@using InventoryManagement.Web.Localization
+@* The interface language (AZ / EN / RU): posts to LanguageController.Set, which stores the cookie
+   and returns to this page. Used by the toolbar, the phone drawer and the sign-in page. *@
+<form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax role="group" aria-label="@L["Switch language"]">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+    @foreach (var (culture, label) in LocalizationSetup.Languages)
+    {
+        var current = string.Equals(System.Globalization.CultureInfo.CurrentUICulture.Name, culture, StringComparison.OrdinalIgnoreCase)
+                      || System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == culture[..2];
+        if (current)
+        {
+            <button type="button" class="active" aria-pressed="true" lang="@culture[..2]">@label</button>
+        }
+        else
+        {
+            <button type="submit" name="culture" value="@culture" aria-pressed="false" lang="@culture[..2]">@label</button>
+        }
+    }
+</form>

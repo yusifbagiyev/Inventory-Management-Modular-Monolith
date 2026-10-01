@@ -12,7 +12,7 @@
    browser, then type only the password; "Another account" asks for the username too.
    AccountController.Login / RecentAccounts. *@
 <!DOCTYPE html>
-<html lang="@(JsonStringLocalizer.IsAzerbaijani ? "az" : "en")">
+<html lang="@JsonStringLocalizer.Language">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -80,20 +80,7 @@
                 <strong>Inventory Pro</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" role="group" aria-label="@L["Switch language"]">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-                    @if (JsonStringLocalizer.IsAzerbaijani)
-                    {
-                        <button type="button" class="active" aria-pressed="true">AZ</button>
-                        <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
-                    }
-                    else
-                    {
-                        <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
-                        <button type="button" class="active" aria-pressed="true">EN</button>
-                    }
-                </form>
+                <partial name="_LanguageSwitch" />
                 <button type="button" class="ip-btn-icon lg" id="themeToggle" aria-label="@L["Toggle dark mode"]" title="@L["Dark mode"]">
                     <i class="fa-solid fa-moon"></i>
                 </button>
