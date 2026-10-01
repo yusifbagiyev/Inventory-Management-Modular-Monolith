@@ -73,6 +73,7 @@ The stack runs:
 | `app` | the application | — |
 | `nginx` | reverse proxy | 80 / 443; 5001 for API-key clients (product API only) |
 | `seq` | logs | 5342 |
+| `cloudflared` | optional public access through a Cloudflare Tunnel (`COMPOSE_PROFILES=tunnel`) | — (outbound only) |
 
 - Uploaded images go to `./storage/images` and data-protection keys to `./storage/keys`. Both must be writable by the container user (uid 1654).
 - Without the keys folder, every redeploy signs everyone out.

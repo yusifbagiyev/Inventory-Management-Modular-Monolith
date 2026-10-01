@@ -101,11 +101,29 @@ services:
       - "5001:5001"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/app.conf:/etc/nginx/app.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro
     depends_on:
       - app
+    networks:
+      - frontend
+    restart: always
+
+  # Public access (https://inventory.az) through a Cloudflare Tunnel: an outbound connection to
+  # Cloudflare, so no port is opened on the server or the firewall. It reaches nginx's tunnel entry
+  # (nginx:8080, not published). Runs only with COMPOSE_PROFILES=tunnel and the tunnel's token in
+  # .env; setup in deploy/CLOUDFLARE.md.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    container_name: inventory_cloudflared
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
     networks:
       - frontend
     restart: always
