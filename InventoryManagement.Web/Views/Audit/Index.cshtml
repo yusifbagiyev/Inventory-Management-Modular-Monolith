@@ -41,6 +41,28 @@
         "Updated" => "ip-badge-info",
         _ => "ip-badge-neutral"
     };
+    // Request types ("product.update"), yes/no and status words in their readable, translated form.
+    string Shown(string field, string? value)
+    {
+        if (value == null) return "—";
+        if (AuditLabels.IsRequestType(value)) return L[AuditLabels.RequestType(value)].Value;
+        if (value is "true" or "false") return L[value == "true" ? "Yes" : "No"].Value;
+        // Lists are stored as JSON: specifications as "Name: value; ...", other lists one per line.
+        if (value.StartsWith('[') && value.EndsWith(']'))
+        {
+            try
+            {
+                var items = Newtonsoft.Json.Linq.JArray.Parse(value);
+                return items.Count == 0 ? "—" : string.Join(items.All(i => i is Newtonsoft.Json.Linq.JObject) ? "; " : ", ", items.Select(i => i is Newtonsoft.Json.Linq.JObject o
+                    ? $"{o.GetValue("Name", StringComparison.OrdinalIgnoreCase)}: {o.GetValue("Value", StringComparison.OrdinalIgnoreCase)}".TrimEnd(' ', ':')
+                    : i.ToString()));
+            }
+            catch (Newtonsoft.Json.JsonException) { }
+        }
+        return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
+    }
+    string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
+
     // "ProductSnapshot.InventoryCode" -> "Inventory Code"; field names double as text keys.
     string FieldLabel(string field)
     {
@@ -141,7 +163,7 @@
                                     }
                                 </td>
                                 <td>
-                                    <div class="ip-faint ip-mono small mb-1" title="@L["Action"]">@action.Action</div>
+                                    <div class="fw-semibold mb-1" title="@action.Action">@L[AuditLabels.Action(action.Action)]</div>
                                     @foreach (var entry in action.Entries)
                                     {
                                         <div class="ip-audit-entry">
@@ -153,11 +175,11 @@
                                                     var url = RecordUrl(entry);
                                                     if (url != null)
                                                     {
-                                                        <a href="@url">@entry.Label</a>
+                                                        <a href="@url">@LabelText(entry.Label)</a>
                                                     }
                                                     else
                                                     {
-                                                        <span>@entry.Label</span>
+                                                        <span>@LabelText(entry.Label)</span>
                                                     }
                                                 }
                                                 @if (!string.IsNullOrEmpty(entry.EntityId) && entry.EntityType != "Session")
@@ -177,14 +199,13 @@
                                                                 <dd>
                                                                     @if (entry.Operation == "Updated")
                                                                     {
-                                                                        <span class="old">@(change.Old ?? "—")</span>
+                                                                        <span class="old">@Shown(change.Field, change.Old)</span>
                                                                         <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
-                                                                        <span class="new">@(change.New ?? "—")</span>
+                                                                        <span class="new">@Shown(change.Field, change.New)</span>
                                                                     }
                                                                     else
                                                                     {
-                                                                        @* Sign-in failure reasons are server messages (text keys). *@
-                                                                        <span>@(entry.EntityType == "Session" ? L[change.New ?? ""].Value : change.New ?? change.Old ?? "—")</span>
+                                                                        <span>@Shown(change.Field, change.New ?? change.Old)</span>
                                                                     }
                                                                 </dd>
                                                             </div>
