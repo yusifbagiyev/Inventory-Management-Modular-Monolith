@@ -67,44 +67,31 @@ namespace InventoryManagement.Web.Controllers
                 "all" => DateTime.MinValue,
                 _ => now.Date.AddDays(-6)
             };
-            // The preceding period of the same length, for the trend arrows.
-            DateTime? previousStart = period switch
-            {
-                "last30days" => startDate.AddDays(-30),
-                "last90days" => startDate.AddDays(-90),
-                "last6months" => startDate.AddMonths(-6),
-                "all" => null,
-                _ => startDate.AddDays(-7)
-            };
             if (period is not ("last30days" or "last90days" or "last6months" or "all"))
                 period = "last7days";
 
             var transfers = await _mediator.Send(new GetTransferActivityQuery(startDate, endDate));
-            var products = period == "all"
-                ? await _mediator.Send(new GetProductCountsQuery())
-                : await _mediator.Send(new GetProductCountsQuery(startDate, endDate));
-
-            IReadOnlyList<TransferActivity>? previousTransfers = null;
-            int? previousProducts = null;
-            if (previousStart.HasValue)
-            {
-                var previousEnd = startDate.AddTicks(-1);
-                previousTransfers = await _mediator.Send(new GetTransferActivityQuery(previousStart.Value, previousEnd));
-                previousProducts = (await _mediator.Send(new GetProductCountsQuery(previousStart.Value, previousEnd))).Total;
-            }
+            // The product tiles and "needs attention" show the current state, whatever the period.
+            var products = await _mediator.Send(new GetProductCountsQuery());
+            var faulty = products.NotWorking > 0
+                ? (await _mediator.Send(new GetAllProductsQuery(1, 2, status: false))).Items
+                    .Select(p => string.IsNullOrWhiteSpace(p.Model) ? $"#{p.InventoryCode}" : p.Model!).ToList()
+                : [];
+            var pending = await _mediator.Send(new GetAllRoutesQuery(1, 1000, IsCompleted: false));
+            var oldestPending = pending.Items.Select(r => (DateTime?)r.CreatedAt).Min();
 
             var model = new DashboardViewModel
             {
                 TotalProducts = products.Total,
                 ActiveProducts = products.Active,
+                NotWorking = products.NotWorking,
+                NotWorkingNames = faulty,
                 CompletedTransfers = transfers.Count(t => t.IsCompleted),
-                PendingTransfers = transfers.Count(t => !t.IsCompleted),
+                PendingTransfers = pending.TotalCount,
+                OldestPendingDays = oldestPending is { } oldest ? (int)(now.Date - oldest.Date).TotalDays : null,
                 DepartmentStats = BuildDepartmentStats(transfers),
                 CategoryDistributions = BuildCategoryDistribution(transfers),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
-                PreviousTotalProducts = previousProducts,
-                PreviousCompletedTransfers = previousTransfers?.Count(t => t.IsCompleted),
-                PreviousPendingTransfers = previousTransfers?.Count(t => !t.IsCompleted),
                 PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
                 PeriodEnd = period == "all" ? null : endDate.ToString("yyyy-MM-dd")
             };
@@ -112,8 +99,8 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentPeriod = period;
 
             // "Needs attention": the current state, whatever the period.
-            ViewBag.NotWorking = (period == "all" ? products : await _mediator.Send(new GetProductCountsQuery())).NotWorking;
-            ViewBag.OpenTransfers = (await _mediator.Send(new GetAllRoutesQuery(1, 1, IsCompleted: false))).TotalCount;
+            ViewBag.NotWorking = products.NotWorking;
+            ViewBag.OpenTransfers = pending.TotalCount;
             if (User.HasPermission(AllPermissions.ApprovalView))
                 ViewBag.PendingApprovals = (await _mediator.Send(new ApprovalService.Application.Features.Queries.GetApprovalStatistics.Query())).Pending;
 

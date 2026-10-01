@@ -367,7 +367,6 @@
             return `
                 <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}" role="button" tabindex="0">
                     <span class="unread-dot" aria-hidden="true"></span>
-                    <span class="ip-notif-icon"><i class="${getNotificationIcon(notification.type)}"></i></span>
                     <div class="flex-grow-1" style="min-width: 0">
                         <div class="d-flex justify-content-between align-items-baseline gap-2">
                             <span class="title">${escapeHtml(notification.title)}</span>
@@ -444,20 +443,6 @@
                     }
                 }
             });
-        }
-
-
-        function getNotificationIcon(type) {
-            const icons = {
-                'ApprovalRequest': 'fas fa-clock',
-                'ApprovalResponse': 'fas fa-check-circle',
-                'ProductUpdate': 'fas fa-box',
-                'RouteUpdate': 'fas fa-route',
-                'RouteCompleted': 'fas fa-check-double',
-                'TransferCompleted': 'fas fa-exchange-alt',
-                'System': 'fas fa-info-circle'
-            };
-            return icons[type] || 'fas fa-bell';
         }
 
 

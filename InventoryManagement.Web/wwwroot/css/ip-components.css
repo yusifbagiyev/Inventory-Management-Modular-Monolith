@@ -860,3 +860,12 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 select option, select optgroup { background-color: var(--ip-surface); color: var(--ip-text-1); }
 select option:checked { background-color: var(--ip-surface-active); }
 select option:disabled { color: var(--ip-text-3); }
+
+/* ---------- transfer: the found product as a plain row (design prompt 4) ---------- */
+.ip-found.ip-found-row { padding: 14px 0; border-radius: 0; background: none; border-top: 1px solid var(--ip-border); border-bottom: 1px solid var(--ip-border); }
+.ip-found-row .ip-found-thumb { width: 44px; height: 44px; background: var(--ip-sunken); font-size: 16px; }
+
+/* A destructive action as plain text (product details: "Delete product"). */
+.ip-link-danger { padding: 0; border: 0; background: none; font: inherit; font-size: var(--ip-fs-sm); color: var(--ip-danger-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ip-link-danger:hover { color: var(--ip-danger-solid); }
+.ip-link-danger:disabled { opacity: .6; cursor: default; }

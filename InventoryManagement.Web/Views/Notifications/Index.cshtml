@@ -59,7 +59,6 @@
                         <div class="ip-notif-item @(notification.IsRead ? "" : "unread")" role="button" tabindex="0"
                              data-id="@notification.Id" data-type="@notification.Type" data-read="@(notification.IsRead ? "read" : "unread")">
                             <span class="unread-dot" aria-hidden="true"></span>
-                            <span class="ip-notif-icon" aria-hidden="true"><i class="fa-solid @TypeIcon(notification.Type)"></i></span>
                             <div class="flex-grow-1" style="min-width: 0">
                                 <div class="d-flex justify-content-between align-items-baseline gap-3">
                                     <span class="title">@notification.Title</span>
@@ -193,18 +192,6 @@
         catch (Newtonsoft.Json.JsonException) { }
         return null;
     }
-
-    string TypeIcon(string type) => type switch
-    {
-        "ApprovalRequest" => "fa-clipboard-check",
-        "ApprovalResponse" => "fa-circle-check",
-        "RouteCompleted" => "fa-check-double",
-        "TransferCompleted" => "fa-arrow-right-arrow-left",
-        "ProductUpdate" => "fa-box",
-        "RouteUpdate" => "fa-route",
-        "System" => "fa-circle-info",
-        _ => "fa-bell"
-    };
 
     string TypeLabel(string type) => type switch
     {

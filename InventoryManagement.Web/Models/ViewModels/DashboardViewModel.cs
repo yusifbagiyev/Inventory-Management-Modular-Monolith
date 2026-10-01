@@ -2,18 +2,21 @@ namespace InventoryManagement.Web.Models.ViewModels
 {
     public class DashboardViewModel
     {
+        /// <summary>All products now (not the period): total, active, inactive, not working.</summary>
         public int TotalProducts { get; set; }
         public int ActiveProducts { get; set; }
-        public int? PendingTransfers { get; set; }
+        public int InactiveProducts => TotalProducts - ActiveProducts;
+        public int NotWorking { get; set; }
+        /// <summary>Up to two not-working products, by model, for the tile's second line.</summary>
+        public List<string> NotWorkingNames { get; set; } = [];
+        /// <summary>Transfers completed in the period.</summary>
         public int? CompletedTransfers { get; set; }
+        /// <summary>Transfers waiting now (any age) and how many days the oldest has waited.</summary>
+        public int PendingTransfers { get; set; }
+        public int? OldestPendingDays { get; set; }
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];
         public TransferActivityData TransferActivityData { get; set; } = new();
-
-        /// <summary>The same numbers for the preceding period of equal length (null for "all time").</summary>
-        public int? PreviousTotalProducts { get; set; }
-        public int? PreviousCompletedTransfers { get; set; }
-        public int? PreviousPendingTransfers { get; set; }
 
         /// <summary>Period bounds as yyyy-MM-dd for links to the filtered lists (null for "all time").</summary>
         public string? PeriodStart { get; set; }

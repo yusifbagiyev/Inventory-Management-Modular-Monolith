@@ -7,13 +7,14 @@
     var openTransfers = (int)(ViewBag.OpenTransfers ?? 0);
     var pendingApprovals = ViewBag.PendingApprovals as int?;
 
-    // "compared with the previous 30 days" etc.
-    var comparedWith = currentPeriod switch
+    // "in the last 30 days" under the completed-transfers figure.
+    var periodText = currentPeriod switch
     {
-        "last30days" => L["vs the previous 30 days"].Value,
-        "last90days" => L["vs the previous 90 days"].Value,
-        "last6months" => L["vs the previous 6 months"].Value,
-        _ => L["vs the previous 7 days"].Value
+        "last30days" => L["in the last {0} days", 30].Value,
+        "last90days" => L["in the last {0} days", 90].Value,
+        "last6months" => L["in the last 6 months"].Value,
+        "all" => L["over all time"].Value,
+        _ => L["in the last {0} days", 7].Value
     };
 
     // Links into the filtered lists for this period (figures, chart bars, rows).
@@ -27,27 +28,11 @@
     string? RouteLink(string url) => canRoutes ? url : null;
     var categoryTotal = Model.CategoryDistributions.Sum(c => c.Count);
     var maxDepartment = Math.Max(1, Model.DepartmentStats.Select(d => d.PeriodTransfers).DefaultIfEmpty(0).Max());
-    var today = DateTime.Today;
-}
-
-@functions {
-    /// <summary>Change against the previous period, coloured by meaning (fewer pending is good).</summary>
-    private (string Icon, string Css, string Text)? TrendOf(int current, int? previous, bool upIsBad = false)
-    {
-        if (previous is not { } prev)
-            return null;
-        var delta = current - prev;
-        if (delta == 0)
-            return ("fa-minus", "", "0");
-        var up = delta > 0;
-        return (up ? "fa-arrow-trend-up" : "fa-arrow-trend-down", up == upIsBad ? "bad" : "good", (up ? "+" : "−") + Math.Abs(delta));
-    }
 }
 
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
-            <div class="ip-faint mb-1">@L[today.DayOfWeek.ToString()], @today.ToString("dd.MM.yyyy")</div>
             <h1>@L["Dashboard"]</h1>
         </div>
         <nav class="ip-tabs ink border-0" aria-label="@L["Period"]">
@@ -59,34 +44,32 @@
     </div>
 
     <div class="ip-kpi-grid" id="dashboardStats">
-        <a class="ip-kpi" href="@ProductLink(productsUrl)">
-            <span class="label">@(allTime ? L["Total products"] : L["New products"])</span>
+        @* Design prompt 4: label / figure / one plain line - no trend arrows. Products and pending
+           transfers are the current state; completed transfers follow the period. *@
+        <a class="ip-kpi" href="@ProductLink("/Products")">
+            <span class="label">@L["Total products"]</span>
             <span class="value">@Model.TotalProducts.ToString("N0")</span>
-            @if (!allTime && TrendOf(Model.TotalProducts, Model.PreviousTotalProducts) is { } t1)
-            {
-                <span class="trend"><b class="@t1.Css"><i class="fa-solid @t1.Icon"></i> @t1.Text</b> @comparedWith</span>
-            }
+            <span class="trend">@L["{0} active · {1} inactive", Model.ActiveProducts.ToString("N0"), Model.InactiveProducts.ToString("N0")]</span>
         </a>
-        <a class="ip-kpi" href="@ProductLink(productsUrl + (Model.PeriodStart is null ? "?" : "&") + "availability=true")">
-            <span class="label">@(allTime ? L["Active products"] : L["Of them active"])</span>
-            <span class="value">@Model.ActiveProducts.ToString("N0")</span>
-            <span class="trend">@L["{0} not working in total", notWorking]</span>
+        <a class="ip-kpi" href="@ProductLink("/Products?status=false")">
+            <span class="label">@L["Faulty"]</span>
+            <span class="value">@Model.NotWorking.ToString("N0")</span>
+            <span class="trend text-truncate">@(Model.NotWorkingNames.Count > 0 ? string.Join(", ", Model.NotWorkingNames) : L["None"].Value)</span>
         </a>
         <a class="ip-kpi" href="@RouteLink(transfersUrl + "&isCompleted=true")">
             <span class="label">@L["Completed transfers"]</span>
             <span class="value">@((Model.CompletedTransfers ?? 0).ToString("N0"))</span>
-            @if (!allTime && TrendOf(Model.CompletedTransfers ?? 0, Model.PreviousCompletedTransfers) is { } t3)
-            {
-                <span class="trend"><b class="@t3.Css"><i class="fa-solid @t3.Icon"></i> @t3.Text</b> @comparedWith</span>
-            }
+            <span class="trend">@periodText</span>
         </a>
-        <a class="ip-kpi" href="@RouteLink(transfersUrl + "&isCompleted=false")">
+        <a class="ip-kpi" href="@RouteLink("/Routes?routeType=Transfer&isCompleted=false")">
             <span class="label">@L["Pending transfers"]</span>
-            <span class="value">@((Model.PendingTransfers ?? 0).ToString("N0"))</span>
-            @if (!allTime && TrendOf(Model.PendingTransfers ?? 0, Model.PreviousPendingTransfers, upIsBad: true) is { } t4)
+            <span class="value">@Model.PendingTransfers.ToString("N0")</span>
+            <span class="trend">@(Model.OldestPendingDays switch
             {
-                <span class="trend"><b class="@t4.Css"><i class="fa-solid @t4.Icon"></i> @t4.Text</b> @comparedWith</span>
-            }
+                null => L["None waiting"].Value,
+                0 => L["the oldest is from today"].Value,
+                var days => L["the oldest has waited {0} days", days].Value
+            })</span>
         </a>
     </div>
 

@@ -27,7 +27,10 @@
                 {
                     <span class="ip-badge ip-badge-danger">@L["Not working"]</span>
                 }
-                <span class="ip-tag-plain">@(Model.IsActive ? L["Active"] : L["Inactive"])</span>
+                @if (!Model.IsActive)
+                {
+                    <span class="ip-tag-plain">@L["Inactive"]</span>
+                }
                 @if (Model.IsNewItem)
                 {
                     <span class="ip-tag-plain">@L["New"]</span>
@@ -37,12 +40,6 @@
     </div>
 
     <div class="ip-page-actions mb-4">
-        @if (canDelete)
-        {
-            <button type="button" class="ip-btn ip-btn-danger-ghost" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">
-                <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
-            </button>
-        }
         @if (canUpdate)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
@@ -52,7 +49,7 @@
         @if (canTransfer && Model.IsActive)
         {
             <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary">
-                <span>@L["Transfer"]</span><i class="fa-solid fa-arrow-right"></i>
+                <span>@L["Transfer"]</span>
             </a>
         }
     </div>
@@ -96,6 +93,11 @@
                     <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
                 }
             </dl>
+            @* Delete is a quiet text action under the details, not a header button (design prompt 4). *@
+            @if (canDelete)
+            {
+                <button type="button" class="ip-link-danger mt-3" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">@L["Delete product"]</button>
+            }
         </div>
     </div>
 
@@ -183,7 +185,7 @@
         function confirmDelete(productId) {
             confirmAction({
                 title: t('Delete product'),
-                message: t('Delete this product? This cannot be undone.'),
+                message: t('Delete this product? It is kept on the Deleted products page.'),
                 okText: t('Delete'),
                 danger: true
             }, function () {

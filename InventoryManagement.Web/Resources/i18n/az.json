@@ -1397,5 +1397,14 @@
   "Internal system": "Daxili sistem",
   "Administrator": "Administrator",
   "Remove from this list": "Siyahıdan sil",
-  "Remove {0} from this list": "{0} hesabını siyahıdan sil"
+  "Remove {0} from this list": "{0} hesabını siyahıdan sil",
+  "{0} active · {1} inactive": "{0} aktiv · {1} deaktiv",
+  "Faulty": "Nasaz",
+  "in the last {0} days": "son {0} gündə",
+  "in the last 6 months": "son 6 ayda",
+  "over all time": "bütün dövrdə",
+  "None waiting": "Gözləyən yoxdur",
+  "the oldest is from today": "ən köhnəsi bu gündəndir",
+  "the oldest has waited {0} days": "ən köhnəsi {0} gündür gözləyir",
+  "Delete this product? It is kept on the Deleted products page.": "Məhsul silinsin? O, Silinmiş məhsullar səhifəsində saxlanılır."
 }
