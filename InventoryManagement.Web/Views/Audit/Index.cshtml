@@ -44,7 +44,7 @@
     // Request types ("product.update"), yes/no and status words in their readable, translated form.
     string Shown(string field, string? value)
     {
-        if (value == null) return "—";
+        if (value == null || value.StartsWith("01.01.0001")) return "—";   // older rows stored "not set" dates
         if (AuditLabels.IsRequestType(value)) return L[AuditLabels.RequestType(value)].Value;
         if (value is "true" or "false") return L[value == "true" ? "Yes" : "No"].Value;
         // Lists are stored as JSON: specifications as "Name: value; ...", other lists one per line.
@@ -61,13 +61,55 @@
         }
         return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
     }
+    var departmentNames = ViewBag.DepartmentNames as Dictionary<int, string> ?? new();
+    var categoryNames = ViewBag.CategoryNames as Dictionary<int, string> ?? new();
+    string? IdName(string field, string? value)
+    {
+        if (!int.TryParse(value, out var id)) return null;
+        if (field.EndsWith("DepartmentId")) return departmentNames.TryGetValue(id, out var d) ? d : null;
+        if (field.EndsWith("CategoryId")) return categoryNames.TryGetValue(id, out var c) ? c : null;
+        return null;
+    }
+    static bool IsImageField(string field) => field.EndsWith("ImageUrl") || field.EndsWith("ImageUrls");
+    static IEnumerable<string> ImageUrls(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return [];
+        if (!value.StartsWith('[')) return [value];
+        try { return Newtonsoft.Json.Linq.JArray.Parse(value).Select(v => v.ToString()).Where(v => v.Length > 0); }
+        catch (Newtonsoft.Json.JsonException) { return [value]; }
+    }
+
     string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
 
     // "ProductSnapshot.InventoryCode" -> "Inventory Code"; field names double as text keys.
     string FieldLabel(string field)
     {
         var name = field.Contains('.') ? field[(field.LastIndexOf('.') + 1)..] : field;
+        // Department/category ids are shown by name, so the label drops the "Id".
+        if (name.EndsWith("DepartmentId") || name.EndsWith("CategoryId")) name = name[..^2];
         return System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])(?=[A-Z])", " ");
+    }
+}
+
+@{
+    // A changed value: images as thumbnails, department/category ids by name, the rest as text.
+    void RenderValue(string field, string? value)
+    {
+        if (IsImageField(field) && value != null && !value.StartsWith("01.01.0001"))
+        {
+            var urls = ImageUrls(value).ToList();
+            if (urls.Count == 0) { <text>—</text> return; }
+            <span class="ip-audit-thumbs">
+                @foreach (var url in urls)
+                {
+                    <a href="@url" target="_blank" rel="noopener" title="@url"><img src="@url" alt="" loading="lazy" /></a>
+                }
+            </span>
+            return;
+        }
+        var name = IdName(field, value);
+        if (name != null) { <span title="#@value">@name</span> return; }
+        <text>@Shown(field, value)</text>
     }
 }
 
@@ -192,20 +234,21 @@
                                                 <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && entry.Changes.Count <= 6)">
                                                     <summary class="ip-faint">@L["{0} fields", entry.Changes.Count]</summary>
                                                     <dl>
-                                                        @foreach (var change in entry.Changes)
+                                                        @* The cover (ImageUrl) repeats the first of ImageUrls: one is enough. *@
+                                                        @foreach (var change in entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))))
                                                         {
                                                             <div>
                                                                 <dt title="@change.Field">@L[FieldLabel(change.Field)]</dt>
                                                                 <dd>
                                                                     @if (entry.Operation == "Updated")
                                                                     {
-                                                                        <span class="old">@Shown(change.Field, change.Old)</span>
+                                                                        <span class="old">@{ RenderValue(change.Field, change.Old); }</span>
                                                                         <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
-                                                                        <span class="new">@Shown(change.Field, change.New)</span>
+                                                                        <span class="new">@{ RenderValue(change.Field, change.New); }</span>
                                                                     }
                                                                     else
                                                                     {
-                                                                        <span>@Shown(change.Field, change.New ?? change.Old)</span>
+                                                                        <span>@{ RenderValue(change.Field, change.New ?? change.Old); }</span>
                                                                     }
                                                                 </dd>
                                                             </div>

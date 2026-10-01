@@ -1346,5 +1346,6 @@
   "Changes save at once and reach signed-in users within 5 minutes. Administrators hold every permission.": "Dəyişikliklər dərhal yadda saxlanılır, daxil olmuş istifadəçilərə ən geci 5 dəqiqəyə çatır. Administratorların bütün icazələri var.",
   "Viewing permission was granted too.": "Baxış icazəsi də verildi.",
   "The role's permissions, plus those granted below.": "Rolun icazələri və aşağıda verilən əlavələr.",
-  "Changed a role's permissions": "Rolun icazələrini dəyişdi"
+  "Changed a role's permissions": "Rolun icazələrini dəyişdi",
+  "From Department": "Haradan (şöbə)"
 }

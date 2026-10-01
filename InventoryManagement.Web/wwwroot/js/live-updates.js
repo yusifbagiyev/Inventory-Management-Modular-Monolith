@@ -231,5 +231,11 @@ window.LiveUpdates = (function () {
         notice.replaceChildren(message, reload);
     }
 
-    return { watch };
+    // For ListNav (site.js), which swaps the same regions when a list's filters, tab or page change.
+    function refreshing() { return watchers.filter(w => w.mode !== 'warn'); }
+    function regions() { return refreshing().flatMap(w => w.regions); }
+    function beforeSwap() { refreshing().forEach(w => { if (typeof w.beforeRefresh === 'function') w.beforeRefresh(); }); }
+    function afterSwap() { refreshing().forEach(w => { if (typeof w.afterRefresh === 'function') w.afterRefresh(); }); }
+
+    return { watch, regions, beforeSwap, afterSwap };
 })();

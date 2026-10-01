@@ -50,9 +50,9 @@ window.ListFilters = (function () {
             return value ? toCategoryKey(value) : null;
         }
 
-        function navigate(params) {
-            if (window.showListSkeleton) showListSkeleton();
-            window.location.href = config.basePath + '?' + params.toString();
+        // In place (ListNav swaps the list, tabs and counts); the URL keeps the filters.
+        function navigate(params, options) {
+            ListNav.go(config.basePath + '?' + params.toString(), options);
         }
 
         function currentParams() {
@@ -94,13 +94,18 @@ window.ListFilters = (function () {
             const params = currentParams();
 
             const search = params.get('search');
-            if (search) $('#searchInput').val(search);
+            const input = document.getElementById('searchInput');
+            // Never under the cursor of someone typing (live search reloads the list as they type).
+            if (input && document.activeElement !== input) input.value = search || '';
 
-            DateRange.set('#dateRange', DateRange.fromIso(params.get('startDate')), DateRange.fromIso(params.get('endDate')));
+            if (params.get('startDate') && params.get('endDate'))
+                DateRange.set('#dateRange', DateRange.fromIso(params.get('startDate')), DateRange.fromIso(params.get('endDate')));
+            else
+                DateRange.clear('#dateRange');
 
+            // Absent from the URL = "All" (Back can return to a state without it).
             Object.keys(config.fields).forEach(function (param) {
-                const value = params.get(param);
-                if (value !== null) $(config.fields[param]).val(value);
+                $(config.fields[param]).val(params.get(param) || '');
             });
         }
 
@@ -184,6 +189,13 @@ window.ListFilters = (function () {
             restore();
             cascadeCategoryOptions();
             cascadeDepartmentOptions();
+
+            // A tab, page or the back button changed the URL in place: show its filters.
+            document.addEventListener('listnav:loaded', function () {
+                restore();
+                cascadeCategoryOptions();
+                cascadeDepartmentOptions();
+            });
         });
 
         return {

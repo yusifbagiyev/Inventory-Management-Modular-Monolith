@@ -291,12 +291,12 @@
             params.append('pageSize', '@Model.PageSize');
             params.append('pageNumber', '1');
 
-            window.location.href = window.location.pathname + '?' + params.toString();
+            ListNav.go(window.location.pathname + '?' + params.toString());
         }
 
         function resetFilters() {
             $('#searchInput').val('');
-            window.location.href = window.location.pathname;
+            ListNav.go(window.location.pathname);
         }
 
         // Search on Enter

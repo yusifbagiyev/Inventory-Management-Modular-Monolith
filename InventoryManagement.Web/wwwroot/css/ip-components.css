@@ -620,3 +620,8 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-perm-row:has(.ip-seg) { flex-direction: column; align-items: stretch; gap: var(--ip-space-2); }
   .ip-perm-row .ip-seg-sm > * { flex: 1; justify-content: center; }
 }
+
+/* ListNav (site.js): the list while a live search loads - dimmed, not replaced by a skeleton. */
+[data-list-region].is-loading { opacity: .55; pointer-events: none; transition: opacity .15s; }
+.ip-audit-thumbs { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+.ip-audit-thumbs img { width: 36px; height: 36px; object-fit: cover; border-radius: var(--ip-radius-sm); border: 1px solid var(--ip-border); background: var(--ip-sunken); }

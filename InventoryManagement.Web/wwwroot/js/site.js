@@ -288,26 +288,161 @@ function showListSkeleton() {
     region.innerHTML = `<div role="status"><span class="visually-hidden">${escapeHtml(t('Loading...'))}</span>${rows}</div>`;
 }
 
-// Page numbers and status tabs of a list are plain links: show the skeleton while they load.
-document.addEventListener('click', function (e) {
-    const link = e.target.closest('.ip-table-foot a[href], [data-list-tabs] a[href]');
-    if (link && e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) showListSkeleton();
-});
+/**
+ * Lists change in place: a status tab, a page number, rows per page, a filter or a search fetch
+ * the new page and swap only the list ([data-list-region]), its tabs, the count under the title,
+ * the regions the page gave LiveUpdates.watch and the filter bar's buttons (quick filters,
+ * Reset) - the filter controls themselves stay, so typing and open pickers are not disturbed.
+ * The URL follows (Back/Forward work); pages without a list region simply navigate.
+ *
+ *   ListNav.go(url)                                   // tabs, pages, filters
+ *   ListNav.go(url, { replace: true, quiet: true })   // live search: no history entry per letter
+ * Fires 'listnav:loaded' on document afterwards (list-filters.js re-reads the URL).
+ */
+window.ListNav = (function () {
+    'use strict';
+
+    const SWAPPED = ['[data-list-region]', '[data-list-tabs]', '.ip-page-head .ip-sub'];
+    let pending = null;
+
+    function available() { return !!document.querySelector('[data-list-region]'); }
+
+    function go(url, options) {
+        options = options || {};
+        const target = new URL(url, window.location.href);
+        if (!available() || target.pathname !== window.location.pathname) {
+            window.location.href = target.href;
+            return;
+        }
+        if (target.href === window.location.href && !options.force) return;
+        history[options.replace ? 'replaceState' : 'pushState']({ listNav: true }, '', target.href);
+        load(options);
+    }
+
+    async function load(options) {
+        options = options || {};
+        if (pending) pending.abort();
+        const request = pending = new AbortController();
+        const region = document.querySelector('[data-list-region]');
+        if (options.quiet) region?.classList.add('is-loading'); else showListSkeleton();
+
+        let doc;
+        try {
+            const response = await fetch(window.location.href, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'text/html' },
+                signal: request.signal
+            });
+            // Redirected (signed out, no access) or failed: let the browser show the real page.
+            if (!response.ok || new URL(response.url).pathname !== window.location.pathname) throw new Error('reload');
+            doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        } catch (e) {
+            if (e.name !== 'AbortError') window.location.reload();
+            return;
+        }
+        if (request !== pending) return;
+        pending = null;
+
+        if (window.LiveUpdates) LiveUpdates.beforeSwap();
+        const swapped = new Set();
+        const selectors = SWAPPED.concat(window.LiveUpdates ? LiveUpdates.regions() : []);
+        selectors.forEach(function (selector) {
+            const fresh = doc.querySelectorAll(selector);
+            document.querySelectorAll(selector).forEach(function (current, i) {
+                if (swapped.has(current) || !fresh[i]) return;
+                const node = document.importNode(fresh[i], true);
+                current.replaceWith(node);
+                swapped.add(node);
+            });
+        });
+        syncFilterButtons(doc);
+        document.title = doc.title;
+        if (window.LiveUpdates) LiveUpdates.afterSwap();
+        document.dispatchEvent(new CustomEvent('listnav:loaded'));
+
+        // A new page of results starts at the top of the list, not wherever the old one was scrolled.
+        const list = document.querySelector('[data-list-region]');
+        if (!options.quiet && list && list.getBoundingClientRect().top < 0)
+            list.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+
+    // Quick filters (on/off) and Reset come and go with the filters: take them from the new page,
+    // keep the controls (and the phone "Filters" button) as they are.
+    function syncFilterButtons(doc) {
+        const fresh = doc.querySelectorAll('.ip-filterbar');
+        document.querySelectorAll('.ip-filterbar').forEach(function (bar, i) {
+            if (!fresh[i]) return;
+            const isButton = el => el.matches('a.ip-btn, button.ip-btn') && !el.classList.contains('ip-filter-toggle');
+            Array.from(bar.children).filter(isButton).forEach(el => el.remove());
+            Array.from(fresh[i].children).filter(isButton).forEach(el => bar.appendChild(document.importNode(el, true)));
+        });
+    }
+
+    // Tabs, page numbers, Reset/clear links in the bar or the empty state: same page, new query.
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('.ip-table-foot a[href], [data-list-tabs] a[href], .ip-filterbar a[href], [data-list-region] .ip-empty a[href]');
+        if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || link.target) return;
+        if (new URL(link.href, window.location.href).pathname !== window.location.pathname || !available()) return;
+        e.preventDefault();
+        go(link.href);
+    });
+
+    // GET filter forms (the audit log): submit in place.
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!form.matches('form.ip-filterbar') || (form.method || 'get').toLowerCase() !== 'get' || !available()) return;
+        e.preventDefault();
+        const params = new URLSearchParams(new FormData(form));
+        Array.from(params.keys()).forEach(k => { if (!params.get(k)) params.delete(k); });
+        go(window.location.pathname + '?' + params.toString());
+    });
+
+    // Search as you type: the list follows 350 ms after the last key (Enter: at once).
+    let typing = null;
+    function searchNow(input) {
+        clearTimeout(typing);
+        const params = new URLSearchParams(window.location.search);
+        const term = input.value.trim();
+        if ((params.get('search') || '') === term) return;
+        if (term) params.set('search', term); else params.delete('search');
+        params.set('pageNumber', '1');
+        go(window.location.pathname + '?' + params.toString(), { replace: true, quiet: true });
+    }
+    document.addEventListener('input', function (e) {
+        const input = e.target.closest('.ip-filterbar .search input[type="search"]');
+        if (!input || !available()) return;
+        clearTimeout(typing);
+        typing = setTimeout(() => searchNow(input), 350);
+    });
+    document.addEventListener('keydown', function (e) {
+        const input = e.target.closest('.ip-filterbar .search input[type="search"]');
+        if (!input || e.key !== 'Enter' || !available()) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        searchNow(input);
+    }, true);
+
+    // Back / Forward between list states of this page.
+    history.replaceState(Object.assign({}, history.state, { listNav: true }), '');
+    window.addEventListener('popstate', function (e) {
+        if (e.state && e.state.listNav && available()) load({});
+    });
+
+    return { go: go, reload: () => load({ quiet: true }) };
+})();
 
 function changePage(page) {
-    showListSkeleton();
     const params = new URLSearchParams(window.location.search);
     params.set('pageNumber', page);
-    window.location.href = window.location.pathname + '?' + params.toString();
+    ListNav.go(window.location.pathname + '?' + params.toString());
 }
 
 /** Rows per page (the select in _Pagination): back to the first page with the new size. */
 function changePageSize(size) {
-    showListSkeleton();
     const params = new URLSearchParams(window.location.search);
     params.set('pageSize', size);
     params.set('pageNumber', '1');
-    window.location.href = window.location.pathname + '?' + params.toString();
+    ListNav.go(window.location.pathname + '?' + params.toString());
 }
 
 // A table row with data-href opens that page (design: the whole row is clickable). Links,

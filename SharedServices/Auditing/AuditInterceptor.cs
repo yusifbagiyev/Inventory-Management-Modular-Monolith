@@ -260,6 +260,7 @@ namespace SharedServices.Auditing
             {
                 null => null,
                 string s => s,
+                DateTime d when d == DateTime.MinValue => null,   // "not set" (e.g. CompletedAt before completion)
                 DateTime d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 DateTimeOffset d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 bool b => b ? "true" : "false",

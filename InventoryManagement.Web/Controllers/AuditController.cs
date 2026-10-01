@@ -1,6 +1,7 @@
 using AuditService.Queries;
 using InventoryManagement.Web.Filters;
 using MediatR;
+using ProductService.Application.Features.Lookups;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedServices.Identity;
@@ -28,6 +29,10 @@ namespace InventoryManagement.Web.Controllers
                 pageNumber, pageSize, search, userId, entityType, operation,
                 startDate?.Date, endDate?.Date.AddDays(1).AddTicks(-1), entityId));
             ViewBag.Facets = await _mediator.Send(new GetAuditFacetsQuery());
+            // Department and category ids in the changes are shown by name.
+            var lookups = await _mediator.Send(new GetLookupsQuery());
+            ViewBag.DepartmentNames = lookups.Departments.ToDictionary(d => d.Id, d => d.Name);
+            ViewBag.CategoryNames = lookups.Categories.ToDictionary(c => c.Id, c => c.Name);
             return View(page);
         }
     }
