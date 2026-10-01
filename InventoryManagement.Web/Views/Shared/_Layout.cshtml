@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - Inventory Pro" : "Inventory Pro")</title>
+    @* Tab icon: the rail logo (favicon.svg); .ico for older browsers, PNG for iOS home screens. *@
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
+    <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
+    <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
     @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
        site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
     <script>

@@ -508,3 +508,10 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-audit-changes dd { margin: 0; overflow-wrap: anywhere; }
 .ip-audit-changes .old { color: var(--ip-text-2); text-decoration: line-through; text-decoration-color: var(--ip-border-strong, currentColor); }
 @media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
+
+/* Icon buttons center their glyph whatever the element: <button> does it by itself, an <a> did
+   not (the icon sat at the top of the 34px square). */
+.ip-btn-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
+
+/* Text areas can be dragged taller or back, never below about three lines (or off the page). */
+.ip-textarea { min-height: 88px; max-height: 60vh; }
