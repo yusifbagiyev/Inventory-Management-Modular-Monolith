@@ -17,7 +17,8 @@
             }
             else
             {
-                <input asp-for="InventoryCode" class="ip-input mono" min="1" max="9999" data-code-check />
+                <input asp-for="InventoryCode" class="ip-input mono" min="1" max="9999" data-code-check inputmode="numeric"
+                       value="@(Model.InventoryCode > 0 ? Model.InventoryCode.ToString() : "")" placeholder="1042" />
                 <span class="ip-error d-none" data-code-taken></span>
                 <span class="ip-hint">@L["Must be unique, between 1 and 9999."]</span>
             }

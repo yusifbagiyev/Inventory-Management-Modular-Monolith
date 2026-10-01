@@ -50,7 +50,7 @@
                         @foreach (var product in Model)
                         {
                             <tr data-href="@Url.Action("Deleted", new { id = product.Id })">
-                                <td>
+                                <td class="thumb">
                                     <span class="ip-thumb">
                                         @if (!string.IsNullOrEmpty(product.ImageUrl))
                                         {
@@ -62,16 +62,16 @@
                                         }
                                     </span>
                                 </td>
-                                <td class="ip-mono">@product.InventoryCode</td>
-                                <td>
+                                <td class="code ip-mono">@product.InventoryCode</td>
+                                <td class="title">
                                     <div class="cell-title">@product.Model</div>
                                     <div class="cell-sub">@product.Vendor · @product.CategoryName</div>
                                 </td>
-                                <td>
+                                <td class="meta">
                                     <div class="cell-title">@product.DepartmentName</div>
                                     <div class="cell-sub">@(string.IsNullOrWhiteSpace(product.Worker) ? L["Not Assigned"].Value : product.Worker)</div>
                                 </td>
-                                <td class="ip-num text-nowrap" data-order="@product.DeletedAt?.ToString("yyyy-MM-dd HH:mm")">
+                                <td class="date ip-num text-nowrap" data-order="@product.DeletedAt?.ToString("yyyy-MM-dd HH:mm")">
                                     @product.DeletedAt?.ToString("dd.MM.yyyy")
                                     <div class="sub">@product.DeletedAt?.ToString("HH:mm")</div>
                                 </td>

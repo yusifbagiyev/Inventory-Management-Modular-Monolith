@@ -158,11 +158,11 @@
                         @foreach (var route in transfers)
                         {
                             <tr data-href="@Url.Action("Details", "Routes", new { id = route.Id })">
-                                <td class="ip-num text-nowrap">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
-                                <td>@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
-                                <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
-                                <td>@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
-                                <td>
+                                <td class="date ip-num text-nowrap">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
+                                <td class="meta route-from">@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
+                                <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                                <td class="meta route-to">@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
+                                <td class="state">
                                     @if (route.IsCompleted)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Completed"]</span>
