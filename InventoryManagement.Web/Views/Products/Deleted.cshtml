@@ -54,7 +54,7 @@
                                     <span class="ip-thumb">
                                         @if (!string.IsNullOrEmpty(product.ImageUrl))
                                         {
-                                            <img src="@product.FullImageUrl" alt="" loading="lazy" />
+                                            <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(product.FullImageUrl)" alt="" loading="lazy" />
                                         }
                                         else
                                         {

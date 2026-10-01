@@ -16,6 +16,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddHostedService<StartupWarmup>();
             services.AddMemoryCache();
             services.AddScoped<RailCounts>();
+            services.AddSingleton<ImageThumbnails>();
             return services;
         }
 

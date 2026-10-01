@@ -17,7 +17,7 @@
         {
             <div class="im-tile" data-im-existing="@url">
                 <div class="ip-image-tile">
-                    <img src="@url" alt="" loading="lazy" data-src="@url" data-title="@L["Image"]" onclick="showImageModal(this.dataset.src, this.dataset.title)" />
+                    <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(url, 480)" alt="" loading="lazy" data-src="@url" data-title="@L["Image"]" onclick="showImageModal(this.dataset.src, this.dataset.title)" />
                     <button type="button" class="ctl star" data-im-cover title="@L["Make cover"]" aria-label="@L["Make cover"]"><i class="fa-solid fa-star"></i></button>
                     <button type="button" class="ctl remove" data-im-remove title="@L["Remove"]" aria-label="@L["Remove"]"><i class="fa-solid fa-xmark"></i></button>
                 </div>

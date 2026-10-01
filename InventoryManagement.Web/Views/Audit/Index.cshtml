@@ -103,7 +103,7 @@
             <span class="ip-audit-thumbs">
                 @foreach (var url in urls)
                 {
-                    <a href="@url" target="_blank" rel="noopener" title="@url"><img src="@url" alt="" loading="lazy" /></a>
+                    <a href="@url" target="_blank" rel="noopener" title="@url"><img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(url)" alt="" loading="lazy" /></a>
                 }
             </span>
             return;

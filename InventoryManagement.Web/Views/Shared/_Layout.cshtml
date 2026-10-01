@@ -8,6 +8,20 @@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
+    @* Hovering a link (about 200 ms) fetches its page in the background, so the click opens it at
+       once (Speculation Rules, Chromium). Only plain pages: nothing with a side effect or a file. *@
+    <script type="speculationrules">
+        {
+            "prefetch": [{
+                "where": { "and": [
+                    { "href_matches": "/*" },
+                    { "not": { "href_matches": ["/Account/*", "/Language/*", "/*/ExportToWord*", "/images/*", "/thumbs/*", "/api/*", "/notificationHub*"] } },
+                    { "not": { "selector_matches": "[download], [target=_blank], [data-no-prefetch]" } }
+                ] },
+                "eagerness": "moderate"
+            }]
+        }
+    </script>
     @* Page transitions (ip-components.css): name the rail and toolbar only while a view
        transition captures them. Must run before the first render, hence inline in the head. *@
     <script>

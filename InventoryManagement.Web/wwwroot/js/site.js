@@ -147,6 +147,11 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Toast notification (.ip-toast: surface card, bottom right, the icon carries the colour)
+/** The small copy of an uploaded photo for lists (ImageThumbnails on the server); other URLs unchanged. */
+function thumbUrl(url, width) {
+    return typeof url === 'string' && url.startsWith('/images/') ? '/thumbs/' + (width || 160) + url : url;
+}
+
 function showToast(message, type = 'info', duration = 4000) {
     message = typeof message === 'string' ? t(message) : message;
     // Ensure we have a valid type
@@ -639,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function render(list, term) {
         let html = list.map((p, i) => `
             <a class="ip-finder-item" role="option" id="codeFinder-${i}" href="/Products/Details/${encodeURIComponent(p.id)}">
-                <span class="ip-thumb">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="" />` : '<i class="fa-solid fa-box"></i>'}</span>
+                <span class="ip-thumb">${p.imageUrl ? `<img src="${escapeHtml(thumbUrl(p.imageUrl))}" alt="" />` : '<i class="fa-solid fa-box"></i>'}</span>
                 <span class="meta">
                     <span><b class="ip-mono">${escapeHtml(String(p.code))}</b> · ${escapeHtml(p.model || '')}</span>
                     <span>${escapeHtml([p.vendor, p.department].filter(Boolean).join(' · '))}</span>

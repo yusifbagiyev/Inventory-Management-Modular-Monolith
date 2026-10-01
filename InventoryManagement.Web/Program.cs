@@ -60,7 +60,18 @@ try
         app.UseDeveloperExceptionPage();
     }
 
-    app.UseStaticFiles();
+    // Versioned files (asp-append-version adds ?v=<hash>) never change under that URL: the browser
+    // keeps them for a year instead of asking again on every page. The rest (fonts, images
+    // referenced from CSS) for a day.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        OnPrepareResponse = context =>
+        {
+            context.Context.Response.Headers.CacheControl = context.Context.Request.Query.ContainsKey("v")
+                ? "public, max-age=31536000, immutable"
+                : "public, max-age=86400";
+        }
+    });
 
     // One line per request with its duration ("HTTP GET /Products responded 200 in 12.3 ms"), after
     // static files so those are not logged; the container healthcheck stays out of the log.
@@ -86,6 +97,14 @@ try
     app.UseModules();
     app.MapControllers();
     app.MapHealthChecks("/health").AllowAnonymous();
+    // List thumbnails of uploaded photos (as public as the photos themselves, which nginx serves).
+    app.MapGet("/thumbs/{width:int}/images/{**path}", async (int width, string path, InventoryManagement.Web.Services.ImageThumbnails thumbnails, HttpContext http, CancellationToken cancellationToken) =>
+    {
+        var file = await thumbnails.GetAsync(width, path, cancellationToken);
+        if (file == null) return Results.NotFound();
+        http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        return Results.File(file, "image/jpeg");
+    }).AllowAnonymous();
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");

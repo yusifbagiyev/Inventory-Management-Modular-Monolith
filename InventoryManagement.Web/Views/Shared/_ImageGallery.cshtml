@@ -31,7 +31,7 @@ else
                 {
                     <button type="button" class="@(i == 0 ? "active" : "")" data-ig-thumb="@Model.Images[i]" data-ig-index="@(i + 1)"
                             aria-label="@L["Image {0}", i + 1]">
-                        <img src="@Model.Images[i]" alt="" loading="lazy" />
+                        <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(Model.Images[i])" alt="" loading="lazy" />
                     </button>
                 }
             </div>

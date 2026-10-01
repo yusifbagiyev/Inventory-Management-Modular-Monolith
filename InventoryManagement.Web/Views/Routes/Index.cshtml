@@ -154,7 +154,7 @@
                                         <span class="ip-thumb">
                                             @if (!string.IsNullOrEmpty(route.ImageUrl))
                                             {
-                                                <img src="@route.FullImageUrl" alt="" loading="lazy" />
+                                                <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(route.FullImageUrl)" alt="" loading="lazy" />
                                             }
                                             else
                                             {

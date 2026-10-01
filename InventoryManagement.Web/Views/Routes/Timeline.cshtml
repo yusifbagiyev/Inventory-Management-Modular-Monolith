@@ -135,7 +135,7 @@
                                 {
                                     <button type="button" class="ip-thumb" data-src="@route.ImageUrls[i]" data-title="@L["Transfer image"]"
                                             aria-label="@L["Image {0}", i + 1]" onclick="showImageModal(this.dataset.src, this.dataset.title)">
-                                        <img src="@route.ImageUrls[i]" alt="" loading="lazy" />
+                                        <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(route.ImageUrls[i])" alt="" loading="lazy" />
                                     </button>
                                 }
                             </div>

@@ -175,7 +175,7 @@ else
         {
             <div class="d-flex align-items-center gap-2 mb-2">
                 <i class="fa-solid fa-star" style="color: var(--ip-brand)"></i><span class="ip-faint">@L["New cover image"]:</span>
-                <span class="ip-thumb"><img src="@cover" alt="" /></span>
+                <span class="ip-thumb"><img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(cover)" alt="" /></span>
             </div>
         }
         @if (removedUrls.Count > 0)
@@ -184,7 +184,7 @@ else
             <div class="d-flex gap-2 flex-wrap">
                 @foreach (var url in removedUrls)
                 {
-                    <span class="ip-thumb" style="opacity: .6"><img src="@url" alt="" /></span>
+                    <span class="ip-thumb" style="opacity: .6"><img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(url)" alt="" /></span>
                 }
             </div>
         }

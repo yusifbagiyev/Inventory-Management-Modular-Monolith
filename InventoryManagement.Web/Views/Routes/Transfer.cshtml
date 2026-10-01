@@ -232,7 +232,7 @@
                     : `<span class="ip-badge ip-badge-danger">${escapeHtml(t('Not working'))}</span>`);
                 const thumb = document.getElementById('productThumb');
                 thumb.innerHTML = product.imageUrl
-                    ? `<img src="${escapeHtml(product.imageUrl)}" alt="" />`
+                    ? `<img src="${escapeHtml(thumbUrl(product.imageUrl, 480))}" alt="" />`
                     : '<i class="fa-solid fa-box"></i>';
                 $('#ProductId').val(product.id);
                 $('#productInfoContainer').show();
