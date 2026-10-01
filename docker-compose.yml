@@ -53,8 +53,9 @@ services:
       # Persisted so sign-in cookies and antiforgery tokens survive container restarts.
       - DataProtection__KeysPath=/app/keys
     volumes:
-      - ./storage/images/products:/app/wwwroot/images/products:rw
-      - ./storage/images/routes:/app/wwwroot/images/routes:rw
+      # The whole images folder: products/, routes/ and _thumbs/ (thumbnails and the photo
+      # cleanup marker), which lived in the container and were made again after every deploy.
+      - ./storage/images:/app/wwwroot/images:rw
       - ./storage/keys:/app/keys:rw
     # Healthy once migrations ran and the database answers. deploy/deploy.sh waits on this.
     healthcheck:
