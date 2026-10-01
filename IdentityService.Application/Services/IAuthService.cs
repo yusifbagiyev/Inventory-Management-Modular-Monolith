@@ -17,6 +17,8 @@ namespace IdentityService.Application.Services
 
         // User management methods
         Task<UserDto?> GetUserAsync(int userId);
+        /// <summary>Changes when the user's sessions must end (password change or reset, deactivation); null for an inactive or missing user.</summary>
+        Task<string?> GetSessionStampAsync(int userId);
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
         Task<bool> UpdateUserAsync(UpdateUserDto dto);
         Task<bool> DeleteUserAsync(int userId);

@@ -6,6 +6,8 @@ using AuditService.Data;
 using IdentityService.API;
 using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +19,7 @@ using RouteService.API;
 using RouteService.Infrastructure.Data;
 using ApprovalService.Infrastructure.Data;
 using SharedServices;
+using SharedServices.Identity;
 using SharedServices.Web;
 
 namespace InventoryManagement.Web.Extensions
@@ -81,6 +84,9 @@ namespace InventoryManagement.Web.Extensions
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                // A coarse brake on sign-in requests per address, successful ones included. It is
+                // generous because a whole office signs in from one public address; failed sign-ins
+                // are limited by LoginThrottle, accounts by the identity lockout.
                 // Keyed on RemoteIpAddress, which UseForwardedHeaders sets from the proxy-appended
                 // X-Forwarded-For entry; the header itself is client-controlled.
                 options.AddPolicy(IdentityModule.LoginRateLimitPolicy, context =>
@@ -88,11 +94,18 @@ namespace InventoryManagement.Web.Extensions
                         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 5,
-                            Window = TimeSpan.FromMinutes(10),
+                            PermitLimit = 30,
+                            Window = TimeSpan.FromMinutes(1),
                             QueueLimit = 0
                         }));
             });
+            services.AddSingleton<LoginThrottle>();
+
+            // Every endpoint needs a signed-in user unless it says [AllowAnonymous] (sign-in,
+            // error pages, language, /health, thumbnails), so a controller that forgets its
+            // [Authorize] is not open to the internet.
+            services.Configure<AuthorizationOptions>(options =>
+                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -167,8 +180,10 @@ namespace InventoryManagement.Web.Extensions
         {
             var method = context.Request.Method;
             var safe = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
-            var usesCredentialHeader = context.Request.Headers.Authorization.Count > 0
-                || context.Request.Headers.ContainsKey(AuthenticationExtensions.ApiKeyHeader);
+            // Exactly the requests the scheme selector sends to JWT or the API key; any other
+            // Authorization header (e.g. "Basic x") still authenticates with the cookie, so it
+            // must not skip the check.
+            var usesCredentialHeader = AuthenticationExtensions.SelectScheme(context) != CookieAuthenticationDefaults.AuthenticationScheme;
 
             if (!safe && !usesCredentialHeader && context.User.Identity?.IsAuthenticated == true)
             {

@@ -86,6 +86,24 @@ namespace ProductService.Application.Services
             var existing = await _mediator.Send(new GetProductByIdQuery(productId), cancellationToken)
                 ?? throw new NotFoundException($"Product with ID {productId} not found");
 
+            // Requests that list their changed fields apply only those, on top of the product as
+            // it is now (it may have been transferred or edited while the request waited). Older
+            // requests carry no list and apply every field, as before.
+            if (data.Has("changed"))
+            {
+                var changed = data.GetStrings("changed").ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (!changed.Contains("model")) dto.Model = existing.Model;
+                if (!changed.Contains("vendor")) dto.Vendor = existing.Vendor;
+                if (!changed.Contains("worker")) dto.Worker = existing.Worker;
+                if (!changed.Contains("description")) dto.Description = existing.Description;
+                if (!changed.Contains("categoryId")) dto.CategoryId = existing.CategoryId;
+                if (!changed.Contains("departmentId")) dto.DepartmentId = existing.DepartmentId;
+                if (!changed.Contains("isWorking")) dto.IsWorking = existing.IsWorking;
+                if (!changed.Contains("isActive")) dto.IsActive = existing.IsActive;
+                if (!changed.Contains("isNewItem")) dto.IsNewItem = existing.IsNewItem;
+                if (!changed.Contains("details")) dto.ReplaceDetails = false;
+            }
+
             var changes = await _productManagement.TrackWhatChanges(existing, dto);
             if (changes.Count > 0)
                 await _mediator.Send(new UpdateProduct.Command(productId, dto, changes), cancellationToken);

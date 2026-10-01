@@ -34,7 +34,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string LastName { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(100, MinimumLength = 6)]
+        [StringLength(100, MinimumLength = SharedServices.Identity.PasswordRules.MinLength, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
@@ -87,7 +87,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(100, MinimumLength = 6)]
+        [StringLength(100, MinimumLength = SharedServices.Identity.PasswordRules.MinLength, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
         [DataType(DataType.Password)]
         public string NewPassword { get; set; } = string.Empty;
 

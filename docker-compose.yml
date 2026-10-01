@@ -101,7 +101,8 @@ services:
       - "5001:5001"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./deploy/nginx/app.conf:/etc/nginx/app.conf:ro
+      # app.conf (locations) and headers.conf, included by nginx.conf.
+      - ./deploy/nginx:/etc/nginx/inventory:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./storage/images/products:/app/storage/images/products:ro
       - ./storage/images/routes:/app/storage/images/routes:ro

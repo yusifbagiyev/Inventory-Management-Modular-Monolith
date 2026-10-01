@@ -46,7 +46,7 @@ namespace InventoryManagement.Web.Services
         }
 
         public Task<bool> ApproveRequestAsync(int id)
-            => _mediator.Send(new ApproveRequest.Command(id, UserId, UserName));
+            => _mediator.Send(new ApproveRequest.Command(id, UserId, UserName, User.IsInRole(AllRoles.Admin)));
 
         public Task RejectRequestAsync(int id, string reason)
             => _mediator.Send(new RejectRequest.Command(id, UserId, UserName, reason));

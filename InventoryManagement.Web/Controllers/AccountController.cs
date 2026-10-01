@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SharedServices.Auditing;
+using SharedServices.Identity;
 using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Controllers
@@ -23,19 +24,37 @@ namespace InventoryManagement.Web.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly AuditContext _audit;
         private readonly IAuditSink _auditLog;
+        private readonly LoginThrottle _throttle;
 
         public AccountController(
             IdentityAuth identity,
             IUserManagementService userManagementService,
             ILogger<AccountController> logger,
             AuditContext audit,
-            IAuditSink auditLog)
+            IAuditSink auditLog,
+            LoginThrottle throttle)
         {
             _identity = identity;
             _userManagementService = userManagementService;
             _logger = logger;
             _audit = audit;
             _auditLog = auditLog;
+            _throttle = throttle;
+        }
+
+        /// <summary>Issues the auth cookie; also after a password change, whose new stamp would otherwise end this session too.</summary>
+        private async Task SignInAsync(IdentityService.Application.DTOs.UserDto user, bool persistent, DateTimeOffset? signedInAt = null)
+        {
+            var stamp = await _identity.GetSessionStampAsync(user.Id);
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                UserPrincipalFactory.Create(user, stamp, signedInAt ?? DateTimeOffset.UtcNow),
+                new AuthenticationProperties
+                {
+                    IsPersistent = persistent,
+                    ExpiresUtc = persistent ? DateTimeOffset.UtcNow.AddDays(30) : null,
+                    AllowRefresh = true
+                });
         }
 
         /// <summary>Sign-in events in the audit log ("Session" rows).</summary>
@@ -43,6 +62,7 @@ namespace InventoryManagement.Web.Controllers
             => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
                 reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
@@ -53,6 +73,7 @@ namespace InventoryManagement.Web.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
@@ -62,19 +83,18 @@ namespace InventoryManagement.Web.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            var address = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (_throttle.RetryAfter(address) is { } wait)
+            {
+                ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
+                    $"Too many failed sign-ins from your network. Try again in {(int)Math.Ceiling(wait.TotalMinutes)} minutes."));
+                return View(model);
+            }
+
             try
             {
                 var user = await _identity.ValidateCredentialsAsync(model.Username, model.Password);
-
-                await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    UserPrincipalFactory.Create(user),
-                    new AuthenticationProperties
-                    {
-                        IsPersistent = model.RememberMe,
-                        ExpiresUtc = model.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : null,
-                        AllowRefresh = true
-                    });
+                await SignInAsync(user, model.RememberMe);
 
                 if (model.RememberMe)
                 {
@@ -101,26 +121,34 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _throttle.RecordFailure(address);
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
                 await AuditSessionAsync(AuditOperations.SignInFailed, null, model.Username, model.Username, ex.Message);
-                ModelState.AddModelError(string.Empty, ex.Message.StartsWith("Account is locked")
-                    ? JsonStringLocalizer.TranslateMessage(ex.Message)
-                    : JsonStringLocalizer.TranslateMessage("Invalid username or password."));
+                // One answer for every failure (unknown user, wrong password, locked account), so
+                // it cannot be used to find usernames.
+                ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
+                    "Invalid username or password. After repeated wrong attempts, sign-in is paused for 15 minutes."));
                 return View(model);
             }
         }
 
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
-            await AuditSessionAsync(AuditOperations.SignedOut, _audit.UserId, _audit.UserName, User.Identity?.Name);
+            // Recorded only for a signed-in user: anyone can post here, and each call wrote a row.
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
+                await AuditSessionAsync(AuditOperations.SignedOut, _audit.UserId, _audit.UserName, User.Identity?.Name);
+            }
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction(nameof(Login));
         }
 
+        [AllowAnonymous]
         public IActionResult AccessDenied() => View();
 
         /// <summary>Session check for the client-side monitor: 200 while signed in, 401 otherwise.</summary>
@@ -154,6 +182,14 @@ namespace InventoryManagement.Web.Controllers
             var (success, error) = await _userManagementService.ChangePasswordAsync(model.CurrentPassword, model.NewPassword);
             if (success)
             {
+                // The new password ends the user's other sessions (security stamp); this one is
+                // issued again so it stays.
+                var auth = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                var me = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var myId)
+                    ? await _identity.GetUserAsync(myId) : null;
+                if (me != null)
+                    await SignInAsync(me, auth.Properties?.IsPersistent == true, UserPrincipalFactory.SignedInAt(User));
+
                 TempData["Success"] = JsonStringLocalizer.TranslateMessage("Your password has been changed.");
                 return RedirectToAction(nameof(Profile));
             }

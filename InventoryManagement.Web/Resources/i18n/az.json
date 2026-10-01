@@ -1376,5 +1376,15 @@
   "Only a completed transfer has a WhatsApp message.": "WhatsApp mesajı yalnız tamamlanmış transfer üçündür.",
   "WhatsApp is not configured.": "WhatsApp qurulmayıb.",
   "The WhatsApp message is queued and will be sent in a few seconds.": "WhatsApp mesajı növbəyə qoyuldu, bir neçə saniyəyə göndəriləcək.",
-  "Queued": "Növbədə"
+  "Queued": "Növbədə",
+  "Invalid username or password. After repeated wrong attempts, sign-in is paused for 15 minutes.": "İstifadəçi adı və ya şifrə yanlışdır. Təkrar səhv cəhdlərdən sonra giriş 15 dəqiqəlik dayandırılır.",
+  "Too many failed sign-ins from your network. Try again in {0} minutes.": "Şəbəkənizdən çoxlu uğursuz giriş cəhdi olub. {0} dəqiqə sonra yenidən cəhd edin.",
+  "Too many wrong attempts. Try again in 15 minutes.": "Çoxlu səhv cəhd. 15 dəqiqə sonra yenidən cəhd edin.",
+  "The current password is incorrect.": "Hazırkı şifrə yanlışdır.",
+  "Password must be at least 10 characters long, with an uppercase letter, a lowercase letter and a digit.": "Şifrə ən azı 10 simvoldan ibarət olmalı, böyük hərf, kiçik hərf və rəqəm daxil etməlidir.",
+  "You cannot approve your own request. Another approver has to decide it.": "Öz sorğunuzu təsdiqləyə bilməzsiniz. Onu başqa təsdiqləyici qərarlaşdırmalıdır.",
+  "This is your own request: another approver has to approve it.": "Bu sizin öz sorğunuzdur: onu başqa təsdiqləyici təsdiqləməlidir.",
+  "Only a message that failed can be sent again.": "Yalnız göndərilməmiş mesaj yenidən göndərilə bilər.",
+  "Only an administrator can change this account: it is an administrator or holds permissions you do not have.": "Bu hesabı yalnız administrator dəyişə bilər: o, administratordur və ya sizdə olmayan icazələrə malikdir.",
+  "Invalid image. Allowed: JPG, JPEG, PNG photos up to 50 megapixels.": "Yanlış şəkil. İcazə verilir: 50 meqapikselədək JPG, JPEG, PNG şəkillər."
 }

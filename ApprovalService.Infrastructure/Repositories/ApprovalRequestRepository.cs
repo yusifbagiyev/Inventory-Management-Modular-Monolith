@@ -23,6 +23,8 @@ namespace ApprovalService.Infrastructure.Repositories
 
         public async Task<IEnumerable<ApprovalRequest>> GetPendingAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default)
         {
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, 200);
             return await _context.ApprovalRequests
                 .Where(r => r.Status == ApprovalStatus.Pending)
                 .OrderByDescending(r => r.CreatedAt)

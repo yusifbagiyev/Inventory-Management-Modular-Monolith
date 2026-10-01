@@ -67,9 +67,10 @@ namespace SharedServices.Web
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, new { error = exception.Message }),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict,
                 new { error = "The record was changed by someone else. Reload and try again." }),
-            // Domain rule violations ("route is already completed", "request is not pending").
+            // Domain rule violations ("route is already completed", "request is not pending"); the
+            // same types from the framework or the database driver keep their text in the log.
             ArgumentException or InvalidOperationException
-                => (StatusCodes.Status400BadRequest, new { error = exception.Message }),
+                => (StatusCodes.Status400BadRequest, new { error = UserFacingErrors.MessageOf(exception) }),
             _ => (StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" })
         };
     }

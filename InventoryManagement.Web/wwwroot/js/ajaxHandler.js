@@ -1,4 +1,4 @@
-﻿window.AjaxHandler = (function () {
+window.AjaxHandler = (function () {
     'use strict';
 
     // Add a registry to track form submission states
@@ -279,14 +279,13 @@
 
         if (typeof errors === 'object') {
             for (const field in errors) {
-                const $field = $(form).find(`[name="${field}"]`);
+                // Messages can echo what was typed ("The value '<...>' is not valid"): text, never HTML.
+                const $field = $(form).find(`[name="${CSS.escape(field)}"]`);
                 if ($field.length) {
                     $field.addClass('is-invalid');
                     const messages = Array.isArray(errors[field]) ?
                         errors[field] : [errors[field]];
-                    const errorHtml = `<span class="text-danger validation-message">
-                                        ${messages.join(', ')}</span>`;
-                    $field.after(errorHtml);
+                    $field.after($('<span class="text-danger validation-message"></span>').text(messages.join(', ')));
                 }
             }
         }

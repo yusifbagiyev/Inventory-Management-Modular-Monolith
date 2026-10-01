@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
@@ -282,16 +283,22 @@ namespace InventoryManagement.Web.Controllers
         /// Admin accounts can be changed by Admins only: a user.manage holder must not be able to
         /// reset an Admin's password or deactivate them.
         /// </summary>
+        /// <summary>
+        /// Accounts a non-admin with user.manage may not change: Admins, and anyone holding a
+        /// permission the actor lacks - resetting such a user's password would hand the actor
+        /// that permission.
+        /// </summary>
         private async Task<bool> IsProtectedAsync(int userId)
         {
             if (User.IsInRole(AllRoles.Admin))
                 return false;
             var target = await _identity.GetUserAsync(userId);
-            return target?.Roles.Contains(AllRoles.Admin) == true;
+            return target != null
+                && (target.Roles.Contains(AllRoles.Admin) || target.Permissions.Any(p => !User.HasPermission(p)));
         }
 
         private IActionResult Forbidden() => IsAjaxRequest()
-            ? StatusCode(StatusCodes.Status403Forbidden, new { isSuccess = false, success = false, message = Tr("Only an administrator can change an administrator account.") })
+            ? StatusCode(StatusCodes.Status403Forbidden, new { isSuccess = false, success = false, message = Tr("Only an administrator can change this account: it is an administrator or holds permissions you do not have.") })
             : RedirectToAction("AccessDenied", "Account");
 
         private async Task LoadRoles(CreateUserViewModel model)

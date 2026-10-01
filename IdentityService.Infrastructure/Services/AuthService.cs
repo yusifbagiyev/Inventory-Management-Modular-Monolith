@@ -41,19 +41,27 @@ namespace IdentityService.Infrastructure.Services
 
         #region Authentication Methods
 
+        /// <summary>A hash of a random password, verified for unknown and locked accounts so they take as long as real ones.</summary>
+        private static string? _dummyHash;
+
         public async Task<UserDto> ValidateCredentialsAsync(string username, string password)
         {
+            // Every failure gives the same answer in about the same time - unknown user, inactive,
+            // locked out or wrong password - so the response does not tell which usernames exist.
+            // A lockout is only logged; the sign-in page says sign-in pauses after repeated failures.
             var user = await _userManager.FindByNameAsync(username);
             if (user == null || !user.IsActive)
+            {
+                SpendPasswordCheck(password);
                 throw new UnauthorizedAccessException("Invalid credentials");
+            }
 
-            // The password is checked before revealing lockout, so the lockout message cannot be
-            // used to probe which usernames exist.
             var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
             if (result.IsLockedOut)
             {
-                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
-                throw new UnauthorizedAccessException($"Account is locked until {lockoutEnd:g}");
+                SpendPasswordCheck(password);   // a locked account answers without hashing
+                _logger.LogWarning("Sign-in to locked-out account {Username}", user.UserName);
+                throw new UnauthorizedAccessException("Invalid credentials");
             }
             if (!result.Succeeded)
                 throw new UnauthorizedAccessException("Invalid credentials");
@@ -63,6 +71,28 @@ namespace IdentityService.Infrastructure.Services
 
             return (await GetUserAsync(user.Id))!;
         }
+
+        private void SpendPasswordCheck(string password)
+        {
+            _dummyHash ??= _userManager.PasswordHasher.HashPassword(new User(), Guid.NewGuid().ToString());
+            _userManager.PasswordHasher.VerifyHashedPassword(new User(), _dummyHash, password);
+        }
+
+        public async Task<string?> GetSessionStampAsync(int userId)
+        {
+            var stamp = await _userManager.Users.AsNoTracking()
+                .Where(u => u.Id == userId && u.IsActive)
+                .Select(u => u.SecurityStamp)
+                .FirstOrDefaultAsync();
+            return stamp == null ? null : SessionStamp(stamp);
+        }
+
+        /// <summary>
+        /// What sessions carry instead of the security stamp itself. It changes with the stamp
+        /// (password change or reset, deactivation), which ends the user's other sessions.
+        /// </summary>
+        internal static string SessionStamp(string securityStamp)
+            => Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(securityStamp)), 0, 16);
 
         public async Task<TokenDto> LoginAsync(LoginDto dto)
         {
@@ -104,8 +134,19 @@ namespace IdentityService.Infrastructure.Services
         {
             // Validate the refresh token first - this is the primary authentication proof
             var refreshToken = await _tokenService.GetRefreshTokenAsync(dto.RefreshToken);
-            if (refreshToken == null || !refreshToken.IsActive)
+            if (refreshToken == null)
                 throw new UnauthorizedAccessException("Invalid refresh token");
+            if (!refreshToken.IsActive)
+            {
+                // A token that was already exchanged is used again: it was copied. End all of that
+                // user's tokens, the copier's included.
+                if (refreshToken.ReplacedByToken != null)
+                {
+                    _logger.LogWarning("Reused refresh token for user {UserId}; all their tokens are revoked", refreshToken.UserId);
+                    await RevokeAllUserRefreshTokensAsync(refreshToken.UserId);
+                }
+                throw new UnauthorizedAccessException("Invalid refresh token");
+            }
 
             // Get user from the refresh token
             var user = refreshToken.User;
@@ -116,27 +157,21 @@ namespace IdentityService.Infrastructure.Services
             // But we don't require it - the refresh token alone is sufficient proof of identity
             if (!string.IsNullOrEmpty(dto.AccessToken))
             {
+                string? tokenUserId = null;
                 try
                 {
-                    // Try to get the user ID from the access token to verify it matches
                     var principal = _tokenService.GetPrincipalFromExpiredToken(dto.AccessToken);
-                    var tokenUserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                    // If the token has a user ID, verify it matches the refresh token's user
-                    if (!string.IsNullOrEmpty(tokenUserId) && int.TryParse(tokenUserId, out int parsedUserId))
-                    {
-                        if (parsedUserId != user.Id)
-                        {
-                            throw new UnauthorizedAccessException("Token user mismatch");
-                        }
-                    }
+                    tokenUserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 }
                 catch (Exception ex)
                 {
-                    // If access token validation fails, we log it but continue
-                    // The refresh token is the source of truth here
+                    // An unreadable access token is ignored: the refresh token is the proof.
                     _logger?.LogWarning(ex, "Access token validation failed during refresh, but continuing with valid refresh token");
                 }
+
+                // Someone else's access token next to this refresh token: refuse.
+                if (int.TryParse(tokenUserId, out var parsedUserId) && parsedUserId != user.Id)
+                    throw new UnauthorizedAccessException("Token user mismatch");
             }
             else
             {
@@ -295,6 +330,8 @@ namespace IdentityService.Infrastructure.Services
 
             user.IsActive = !user.IsActive;
             var result = await _userManager.UpdateAsync(user);
+            if (!user.IsActive)
+                await _userManager.UpdateSecurityStampAsync(user);
 
             // If user is deactivated, revoke all refresh tokens
             if (!user.IsActive)
@@ -332,6 +369,14 @@ namespace IdentityService.Infrastructure.Services
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 return (false, "User not found");
+
+            // A wrong current password counts toward the lockout, as at sign-in, so a session left
+            // open cannot be used to guess the password.
+            var check = await _signInManager.CheckPasswordSignInAsync(user, currentPassword, lockoutOnFailure: true);
+            if (!check.Succeeded)
+                return (false, check.IsLockedOut
+                    ? "Too many wrong attempts. Try again in 15 minutes."
+                    : "The current password is incorrect.");
 
             var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
             if (!result.Succeeded)

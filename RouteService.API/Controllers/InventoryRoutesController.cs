@@ -33,6 +33,7 @@ namespace RouteService.API.Controllers
         /// <summary>Direct with route.create.direct, otherwise queued for approval (202).</summary>
         [HttpPost("transfer")]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<IActionResult> TransferInventory([FromForm] TransferInventoryDto dto)
         {
             var result = await _routeManagementService.TransferInventoryWithApprovalAsync(
@@ -46,6 +47,7 @@ namespace RouteService.API.Controllers
 
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.RouteUpdate, AllPermissions.RouteUpdateDirect)]
         public async Task<IActionResult> UpdateRoute(int id, [FromForm] UpdateRouteDto dto)
         {
             await _routeManagementService.UpdateRouteWithApprovalAsync(
@@ -122,6 +124,7 @@ namespace RouteService.API.Controllers
 
 
         [HttpDelete("{id}")]
+        [Permission(AllPermissions.RouteDelete, AllPermissions.RouteDeleteDirect)]
         public async Task<IActionResult> DeleteRoute(int id)
         {
             await _routeManagementService.DeleteRouteWithApprovalAsync(

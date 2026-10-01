@@ -29,12 +29,13 @@ namespace IdentityService.Infrastructure
             services.AddIdentityCore<User>(options =>
                 {
                     options.Password.RequireDigit = true;
-                    options.Password.RequiredLength = 6;
+                    options.Password.RequiredLength = SharedServices.Identity.PasswordRules.MinLength;
                     options.Password.RequireNonAlphanumeric = false;
                     options.User.RequireUniqueEmail = true;
 
                     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-                    options.Lockout.MaxFailedAccessAttempts = 5;
+                    // Not lower: anyone can make wrong guesses at someone else's account.
+                    options.Lockout.MaxFailedAccessAttempts = 10;
                     options.Lockout.AllowedForNewUsers = true;
 
                     options.SignIn.RequireConfirmedAccount = false;

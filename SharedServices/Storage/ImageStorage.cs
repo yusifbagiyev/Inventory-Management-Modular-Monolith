@@ -12,7 +12,7 @@ namespace SharedServices.Storage
         public const string Products = "products";
         public const string Routes = "routes";
 
-        private const long MaxBytes = 5 * 1024 * 1024;
+        public const long MaxBytes = 5 * 1024 * 1024;
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
 
         private readonly string _root;
@@ -32,13 +32,26 @@ namespace SharedServices.Storage
             if (content.CanSeek && content.Length > MaxBytes)
                 throw new ArgumentException("Image size exceeds 5MB limit");
 
+            // Read at most one byte over the limit: a stream that cannot tell its length is checked too.
+            using var buffer = new MemoryStream();
+            var chunk = new byte[81920];
+            int read;
+            while ((read = await content.ReadAsync(chunk, cancellationToken)) > 0)
+            {
+                buffer.Write(chunk, 0, read);
+                if (buffer.Length > MaxBytes)
+                    throw new ArgumentException("Image size exceeds 5MB limit");
+            }
+            // A real JPEG/PNG of sane size, without location and other metadata (ImageSanitizer).
+            var clean = ImageSanitizer.Clean(buffer.ToArray());
+
             var folder = Path.Combine(_root, category, inventoryCode.ToString());
             Directory.CreateDirectory(folder);
 
             // Unique per upload: the old tick-based names could collide and overwrite each other.
-            var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{Path.GetExtension(fileName).ToLowerInvariant()}";
-            await using (var file = new FileStream(Path.Combine(folder, storedName), FileMode.CreateNew))
-                await content.CopyToAsync(file, cancellationToken);
+            // The extension follows the content, not the uploaded name.
+            var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{clean.Extension}";
+            await File.WriteAllBytesAsync(Path.Combine(folder, storedName), clean.Data, cancellationToken);
 
             return $"/images/{category}/{inventoryCode}/{storedName}";
         }

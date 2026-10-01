@@ -12,7 +12,8 @@ namespace ApprovalService.Application.Features.Commands
 {
     public class ApproveRequest
     {
-        public record Command(int RequestId, int UserId, string UserName) : IRequest<bool>, ITransactionalRequest;
+        /// <param name="ApproverIsAdmin">Admins may approve their own requests; others may not (a second person decides).</param>
+        public record Command(int RequestId, int UserId, string UserName, bool ApproverIsAdmin = false) : IRequest<bool>, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command, bool>
         {
@@ -49,6 +50,11 @@ namespace ApprovalService.Application.Features.Commands
 
                 if (approvalRequest.Status != ApprovalStatus.Pending)
                     throw new InvalidOperationException($"Request is no longer pending. Current status: {approvalRequest.Status}");
+
+                // Someone holding both the approval-level permission and approval.decide would
+                // otherwise have the direct permission in effect, with nobody else involved.
+                if (approvalRequest.RequestedById == request.UserId && !request.ApproverIsAdmin)
+                    throw new InsufficientPermissionsException("You cannot approve your own request. Another approver has to decide it.");
 
                 approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);

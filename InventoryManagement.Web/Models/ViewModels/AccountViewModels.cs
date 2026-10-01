@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
@@ -33,7 +33,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string CurrentPassword { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "New password is required")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+        [StringLength(100, MinimumLength = SharedServices.Identity.PasswordRules.MinLength, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
         [DataType(DataType.Password)]
         [Display(Name = "New Password")]
         public string NewPassword { get; set; } = string.Empty;

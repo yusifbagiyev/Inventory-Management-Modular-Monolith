@@ -65,7 +65,11 @@ namespace InventoryManagement.Web.Controllers
                                           or InsufficientPermissionsException or InvalidOperationException
                                           or ArgumentException or UnauthorizedAccessException)
             {
-                return Failure<T>(Tr(ex.Message));
+                // Framework and database exceptions of these types carry internal text: logged, not shown.
+                if (!SharedServices.Web.UserFacingErrors.IsUserFacing(ex))
+                    HttpContext.RequestServices.GetRequiredService<ILogger<BaseController>>()
+                        .LogWarning(ex, "Request failed: {Message}", ex.Message);
+                return Failure<T>(Tr(SharedServices.Web.UserFacingErrors.MessageOf(ex)));
             }
         }
 

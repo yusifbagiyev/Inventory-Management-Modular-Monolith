@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -39,7 +39,10 @@ namespace IdentityService.Infrastructure.Services
                 new(ClaimTypes.Name, user.UserName!),
                 new(ClaimTypes.Email, user.Email!),
                 new("FirstName", user.FirstName),
-                new("LastName", user.LastName)
+                new("LastName", user.LastName),
+                // Checked on every use (host's JwtBearer OnTokenValidated): a password change or
+                // deactivation ends the token before it expires.
+                new("SessionStamp", AuthService.SessionStamp(user.SecurityStamp ?? string.Empty))
             };
 
             // Add roles
@@ -121,7 +124,7 @@ namespace IdentityService.Infrastructure.Services
         {
             var refreshToken = new RefreshToken
             {
-                Token = token,
+                Token = Hash(token),
                 UserId = userId,
                 CreatedAt = DateTime.Now,
                 ExpiresAt = DateTime.Now.AddDays(Convert.ToDouble(_configuration["Jwt:RefreshTokenExpirationInDays"] ?? "30"))
@@ -134,10 +137,18 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<RefreshToken?> GetRefreshTokenAsync(string token)
         {
+            var hash = Hash(token);
             return await _dbContext.RefreshTokens
                 .Include(u => u.User)
-                .FirstOrDefaultAsync(rt => rt.Token == token);
+                .FirstOrDefaultAsync(rt => rt.Token == hash);
         }
+
+        /// <summary>
+        /// Refresh tokens are stored as their SHA-256 (hex): a database copy or backup does not
+        /// hand out working tokens. Callers keep passing the token itself.
+        /// </summary>
+        private static string Hash(string token)
+            => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
 
         public async Task RevokeRefreshTokenAsync(string token, string? replacedByToken = null)
         {
@@ -146,7 +157,7 @@ namespace IdentityService.Infrastructure.Services
             {
                 refreshToken.IsRevoked = true;
                 refreshToken.RevokedAt = DateTime.Now;
-                refreshToken.ReplacedByToken = replacedByToken;
+                refreshToken.ReplacedByToken = replacedByToken == null ? null : Hash(replacedByToken);
                 await _dbContext.SaveChangesAsync();
             }
         }

@@ -14,6 +14,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddScoped<IUserManagementService, UserManagementService>();
             services.AddScoped<IWordExportService, WordExportService>();
             services.AddHostedService<StartupWarmup>();
+            services.AddHostedService<PhotoMetadataCleanup>();
             services.AddMemoryCache();
             services.AddScoped<RailCounts>();
             services.AddSingleton<ImageThumbnails>();

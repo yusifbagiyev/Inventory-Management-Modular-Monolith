@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IdentityService.Domain\IdentityService.Domain.csproj" />
+    <ProjectReference Include="..\SharedServices\SharedServices.csproj" />
   </ItemGroup>
 
 </Project>

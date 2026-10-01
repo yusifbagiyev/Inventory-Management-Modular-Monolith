@@ -3,6 +3,7 @@ using InventoryManagement.Web.HealthChecks;
 using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Serilog;
 
 try
@@ -32,7 +33,13 @@ try
 
     builder.Services.AddModules(mvcBuilder);
     builder.Services.AddCustomAuthentication(builder.Configuration);
-    builder.Services.AddAntiforgery(options => options.HeaderName = "RequestVerificationToken");
+    builder.Services.AddAntiforgery(options =>
+    {
+        options.HeaderName = "RequestVerificationToken";
+        // Secure over HTTPS (every request through nginx is), like the auth cookie; the framework
+        // default never set it.
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    });
 
     // Keys protect the auth cookie and antiforgery tokens. Persisted outside the container so a
     // redeploy does not sign everybody out.
@@ -50,14 +57,16 @@ try
 
     app.UseForwardedHeaders();
 
-    if (app.Environment.IsProduction())
+    // Error details only on a developer's machine: any other environment name (a mistyped
+    // ENVIRONMENT in .env, "Staging") gets the plain error page, never stack traces.
+    if (app.Environment.IsDevelopment())
     {
-        app.UseExceptionHandler("/Home/Error");
-        app.UseHsts();
+        app.UseDeveloperExceptionPage();
     }
     else
     {
-        app.UseDeveloperExceptionPage();
+        app.UseExceptionHandler("/Home/Error");
+        app.UseHsts();
     }
 
     // Versioned files (asp-append-version adds ?v=<hash>) never change under that URL: the browser
@@ -81,13 +90,17 @@ try
         : Serilog.Events.LogEventLevel.Information);
 
     app.UseUiLocalization();
-    app.UseRouting();
 
     // HTML error pages for page navigations only; /api and AJAX callers keep their status codes
-    // (an AJAX 401 re-executed into an HTML 404 page is useless to the client).
+    // (an AJAX 401 re-executed into an HTML 404 page is useless to the client). Before routing,
+    // so the re-executed request is routed to /NotFound (anonymous) instead of reaching
+    // authorization without an endpoint, where the sign-in-required fallback turned a 404 into a
+    // redirect to the sign-in page.
     app.UseWhen(context => !ModuleHostExtensions.IsApiRequest(context)
                            && context.Request.Headers.XRequestedWith != "XMLHttpRequest",
         ui => ui.UseStatusCodePagesWithReExecute("/NotFound", "?statusCode={0}"));
+
+    app.UseRouting();
 
     app.UseMiddleware<ExceptionHandlerMiddleware>();
     app.UseRateLimiter();

@@ -6,7 +6,7 @@ TLS (sertifikat) Cloudflare-dədir.
 
 ```
 istifadəçi ─https─> Cloudflare (inventory.az) ─tunel─> cloudflared ─http─> nginx:8080 ─> app
-LAN:        ─https─> nginx:443 (10.0.1.60) ─> app       (internet olmayanda ehtiyat giriş)
+LAN:        nginx:80/443 (10.0.1.60, inventory166.az) ─> yalnız https://inventory.az-a yönləndirir
 ```
 
 - `nginx:8080` yalnız tunel üçündür, hosta publish olunmur. Ziyarətçinin IP-si Cloudflare-in
@@ -72,22 +72,38 @@ Zero Trust → Tunnels-də tunel **Healthy** görünməlidir; https://inventory.
 
 ## 5. Təhlükəsizlik
 
-Proqram artıq internetdən görünür:
+Proqram internetdən görünür. Proqramın özündə:
 
-- Bütün hesabların parolu güclü olsun; lazımsız/köhnə hesabları deaktiv edin.
-  Hazırda hamı **Admin**-dir — lazım olmayanları **User** edin.
-- Login həm nginx-də (dəqiqədə 10, IP üzrə), həm proqramda (10 dəqiqədə 5, IP üzrə) məhdudlaşdırılıb.
-  Əlavə olaraq Cloudflare → Security → WAF → *Rate limiting rules* ilə `/Account/Login` üçün qayda qoymaq olar.
-- Daha sərt variant: **Cloudflare Access** (Zero Trust → Access → Applications) — sayta girməzdən
-  əvvəl Cloudflare şirkət e-poçtuna kod göndərir; yalnız icazə verilən ünvanlar keçir.
-- Məhsul şəkilləri (`/images/...`) indi də LAN-da olduğu kimi linklə girişsiz açılır; adları
-  təsadüfidir (tarix + GUID), ona görə tapılmaz, amma link paylaşılarsa açılar.
+- Giriş: səhv cəhdlərin hamısına eyni cavab verilir (istifadəçi adı tapılmır); hesab 10 səhvdən sonra
+  15 dəqiqəlik bağlanır; bir ünvandan 15 dəqiqədə 20 uğursuz cəhddən sonra o ünvan gözləyir
+  (yalnız uğursuzlar sayılır — ofis bir ünvandan girir).
+- Şifrə ən azı 10 simvol, böyük və kiçik hərf, rəqəm. Şifrə dəyişəndə/sıfırlananda və hesab
+  deaktiv olanda istifadəçinin digər sessiyaları 5 dəqiqə ərzində bitir; istənilən sessiya 30 gündən sonra.
+- Şəkillər yüklənəndə yoxlanır (əsl JPG/PNG, ≤50 MP) və içindəki məlumat (telefonun GPS yeri, cihaz)
+  silinir; köhnə şəkillər deploydan bir dəqiqə sonra bir dəfə təmizlənir. Cloudflare köhnə şəkilləri
+  keşləyibsə: **Caching → Configuration → Purge Everything** (bir dəfə, təmizlikdən sonra).
+- ServiceDesk açarı yalnız LAN-da (5001) və yalnız məhsul API-sində işləyir.
+
+### Cloudflare Access (əlavə qat: sayta girməzdən əvvəl e-poçt kodu)
+
+Zero Trust → **Access → Applications → Add an application → Self-hosted**:
+
+1. Application name: `Inventory`; **Public hostname**: `inventory.az` (istəsəniz ikinci: `www.inventory.az`).
+2. Session duration: `1 month` (telefonda hər gün kod istəməsin).
+3. **Policy** əlavə edin: Action **Allow**, Include → **Emails ending in** → `@166.az`
+   (və ya yalnız konkret ünvanlar: **Emails** → siyahı).
+4. Login methods: **One-time PIN** (e-poçta kod gəlir; əlavə quraşdırma lazım deyil).
+5. Saxlayın. İndi `inventory.az` açılanda əvvəl Cloudflare e-poçt soruşur, gələn kodu yazdıqdan sonra
+   proqramın öz giriş səhifəsi açılır.
+
+Qeyd: Access yalnız `inventory.az`-a aiddir; ServiceDesk (LAN, 5001) təsirlənmir. Free plan 50 istifadəçiyə qədərdir.
+Problem olsa, tətbiqi Access-də silmək kifayətdir — proqram əvvəlki kimi açılır.
 
 ## Qeydlər
 
-- Köhnə ünvan `inventory166.az` (və `www.`) ləğv olunub: `https://inventory.az`-a yönləndirir (yol saxlanılır).
-  `www.inventory.az` da `inventory.az`-a yönləndirir. Serverin IP-si (`https://10.0.1.60`) LAN-da işləyir —
-  internet və ya Cloudflare olmayanda ehtiyat giriş (sertifikat IP-ni göstərmədiyi üçün brauzer xəbərdarlıq edir).
+- Proqrama yalnız `https://inventory.az` ilə girilir. Köhnə `inventory166.az` (və `www.`) və serverin IP-si
+  (`10.0.1.60`) LAN-da da yalnız `https://inventory.az`-a yönləndirir (yol saxlanılır); `www.inventory.az` da
+  `inventory.az`-a. İnternet və ya Cloudflare olmayanda proqram açılmır. ServiceDesk (5001) dəyişmir.
 - WhatsApp mesajları dəyişmir (şəkil faylın özü göndərilir, link yox).
 - Tuneli söndürmək: `.env`-dən `COMPOSE_PROFILES=tunnel`-i silin və
   `docker compose stop cloudflared && docker compose rm -f cloudflared`. Tamamilə ləğv: Zero Trust-da tuneli silin.

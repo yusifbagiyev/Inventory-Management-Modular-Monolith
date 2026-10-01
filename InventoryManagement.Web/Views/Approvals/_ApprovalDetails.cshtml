@@ -39,7 +39,12 @@
         ? newImageNames[coverIndex] : null;
 }
 
-<div data-approval-head data-status="@Model.Status" data-request-id="@Model.Id">
+@{
+    // Only another approver decides a request (Admins excepted): ApproveRequest refuses it too.
+    var ownRequest = Model.RequestedById.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                     && !User.IsInRole(SharedServices.Identity.AllRoles.Admin);
+}
+<div data-approval-head data-status="@Model.Status" data-request-id="@Model.Id" data-own="@(ownRequest ? "true" : "false")">
     <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
         <span class="ip-mono ip-faint">@L["Request"] #@Model.Id</span>
         @switch (Model.Status)

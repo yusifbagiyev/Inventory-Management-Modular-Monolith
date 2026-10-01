@@ -15,14 +15,17 @@ namespace IdentityService.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        private readonly LoginThrottle _throttle;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, LoginThrottle throttle)
         {
             _authService = authService;
             _logger = logger;
+            _throttle = throttle;
         }
 
 
+        [AllowAnonymous]
         [HttpPost("login")]
         [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
@@ -30,6 +33,11 @@ namespace IdentityService.API.Controllers
             // RemoteIpAddress is the real client once the host's forwarded-headers middleware has
             // processed X-Forwarded-For from the trusted proxy; the raw header is client-controlled.
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (_throttle.RetryAfter(ipAddress) is { } wait)
+            {
+                Response.Headers.RetryAfter = ((int)Math.Ceiling(wait.TotalSeconds)).ToString();
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many failed sign-ins. Try again later." });
+            }
 
             _logger.LogInformation(
                 "Login attempt for user {Username} from IP {IpAddress}",
@@ -49,22 +57,24 @@ namespace IdentityService.API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _throttle.RecordFailure(ipAddress);
                 _logger.LogWarning(
                     "Login failed for user {Username} from IP {IpAddress}: {Reason}",
                     dto.Username,
                     ipAddress,
                     ex.Message);
 
-                return Unauthorized(new { message = ex.Message });
+                return Unauthorized(new { message = "Invalid credentials" });
             }
             catch (Exception ex)
             {
+                // Anyone can call this: internal error text stays in the log.
                 _logger.LogError(ex,
                     "Login error for user {Username} from IP {IpAddress}",
                     dto.Username,
                     ipAddress);
 
-                return BadRequest(new { message = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Sign-in failed. Try again later." });
             }
         }
 
@@ -88,6 +98,7 @@ namespace IdentityService.API.Controllers
         }
 
 
+        [AllowAnonymous]
         [HttpPost("refresh")]
         public async Task<ActionResult<TokenDto>> RefreshToken(RefreshTokenDto dto)
         {
@@ -429,7 +440,13 @@ namespace IdentityService.API.Controllers
         }
 
         /// <summary>Admin accounts are changed by Admins only (a user.manage holder must not reset an Admin's password).</summary>
+        /// <summary>Admins, and users holding a permission the (non-admin) caller lacks: see UserManagementController.</summary>
         private async Task<bool> IsProtectedAsync(int userId)
-            => !User.IsInRole(AllRoles.Admin) && (await _authService.GetUserAsync(userId))?.Roles.Contains(AllRoles.Admin) == true;
+        {
+            if (User.IsInRole(AllRoles.Admin)) return false;
+            var target = await _authService.GetUserAsync(userId);
+            var mine = User.FindAll("permission").Select(c => c.Value).ToHashSet();
+            return target != null && (target.Roles.Contains(AllRoles.Admin) || target.Permissions.Any(p => !mine.Contains(p)));
+        }
     }
 }

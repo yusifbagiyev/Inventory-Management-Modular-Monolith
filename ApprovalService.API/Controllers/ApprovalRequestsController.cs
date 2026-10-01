@@ -72,7 +72,7 @@ namespace ApprovalService.API.Controllers
         [Permission(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Approve(int id)
         {
-            await _mediator.Send(new ApproveRequest.Command(id, CurrentUserId, CurrentUserName));
+            await _mediator.Send(new ApproveRequest.Command(id, CurrentUserId, CurrentUserName, User.IsInRole(AllRoles.Admin)));
             return NoContent();
         }
 

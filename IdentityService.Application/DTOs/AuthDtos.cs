@@ -1,13 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace IdentityService.Application.DTOs
 {
     public record LoginDto
     {
         [Required]
+        [StringLength(SharedServices.Identity.PasswordRules.MaxUsernameLength)]
         public string Username { get; init; } = string.Empty;
 
         [Required]
+        [StringLength(SharedServices.Identity.PasswordRules.MaxPasswordLength)]
         public string Password { get; init; } = string.Empty;
     }
 
@@ -35,7 +37,7 @@ namespace IdentityService.Application.DTOs
         public string Email { get; init; } = string.Empty;
 
         [Required]
-        [MinLength(6)]
+        [MinLength(SharedServices.Identity.PasswordRules.MinLength)]
         public string Password { get; init; } = string.Empty;
 
         [Required]

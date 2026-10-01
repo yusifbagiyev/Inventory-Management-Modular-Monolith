@@ -118,7 +118,7 @@ namespace ProductService.Application.Services
             }
 
             // Create the update data and approval request
-            var updateData = await BuildUpdateProductActionData(dto);
+            var updateData = await BuildUpdateProductActionData(dto, existingProduct);
             var approvalRequest = new CreateApprovalRequestDto
             {
                 RequestType = RequestType.UpdateProduct,
@@ -252,7 +252,7 @@ namespace ProductService.Application.Services
 
 
 
-        private async Task<Dictionary<string, object>> BuildUpdateProductActionData(UpdateProductDto dto)
+        private async Task<Dictionary<string, object>> BuildUpdateProductActionData(UpdateProductDto dto, ProductDto existing)
         {
             var updateData = new Dictionary<string, object>
             {
@@ -283,7 +283,33 @@ namespace ProductService.Application.Services
             if (!string.IsNullOrEmpty(dto.CoverImageUrl))
                 updateData["coverImageUrl"] = dto.CoverImageUrl;
 
+            // The fields this request changes. On approval only these are applied, on top of the
+            // product as it is then: approving a description edit must not undo a transfer made
+            // while the request waited (the form sends every field).
+            updateData["changed"] = ChangedFields(existing, dto);
+
             return updateData;
+        }
+
+        /// <summary>Keys (as in the request data) of the fields <paramref name="dto"/> changes; "details" = colour and specifications.</summary>
+        private static List<string> ChangedFields(ProductDto existing, UpdateProductDto dto)
+        {
+            var changed = new List<string>();
+            if (TextDiffers(existing.Model, dto.Model)) changed.Add("model");
+            if (TextDiffers(existing.Vendor, dto.Vendor)) changed.Add("vendor");
+            if (TextDiffers(existing.Worker, dto.Worker)) changed.Add("worker");
+            if (TextDiffers(existing.Description, dto.Description)) changed.Add("description");
+            if (existing.CategoryId != dto.CategoryId) changed.Add("categoryId");
+            if (existing.DepartmentId != dto.DepartmentId) changed.Add("departmentId");
+            if (existing.IsWorking != dto.IsWorking) changed.Add("isWorking");
+            if (existing.IsActive != dto.IsActive) changed.Add("isActive");
+            if (existing.IsNewItem != dto.IsNewItem) changed.Add("isNewItem");
+            if (dto.ReplaceDetails
+                && (TextDiffers(existing.Color, dto.Color)
+                    || !existing.Specifications.Select(s => (s.Name ?? "", s.Value ?? ""))
+                        .SequenceEqual(SpecificationData(dto.Specifications).Select(s => (s["name"], s["value"])))))
+                changed.Add("details");
+            return changed;
         }
 
 

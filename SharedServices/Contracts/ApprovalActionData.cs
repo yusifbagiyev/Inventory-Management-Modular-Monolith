@@ -108,18 +108,32 @@ namespace SharedServices.Contracts
                 : [];
 
         /// <summary>Uploaded files as stored ActionData: [{ imageData (base64), imageFileName, imageSize }].</summary>
+        /// <remarks>
+        /// Checked and cleaned like a stored photo (type, size, count, metadata) before it goes into
+        /// the request: an approval request must not carry what a direct upload would refuse.
+        /// </remarks>
         public static async Task<List<Dictionary<string, object>>> EncodeImagesAsync(IEnumerable<IFormFile> files)
         {
+            var list = files.Where(f => f.Length > 0).ToList();
+            if (list.Count > Storage.ImageSet.MaxImages)
+                throw new ArgumentException($"An item can have at most {Storage.ImageSet.MaxImages} images");
+
             var encoded = new List<Dictionary<string, object>>();
-            foreach (var file in files.Where(f => f.Length > 0))
+            foreach (var file in list)
             {
+                if (!Storage.ImageStorage.IsAllowedFileName(file.FileName))
+                    throw new ArgumentException("Invalid image format. Allowed: JPG, JPEG, PNG");
+                if (file.Length > Storage.ImageStorage.MaxBytes)
+                    throw new ArgumentException("Image size exceeds 5MB limit");
+
                 using var ms = new MemoryStream();
                 await file.CopyToAsync(ms);
+                var clean = Storage.ImageSanitizer.Clean(ms.ToArray());
                 encoded.Add(new Dictionary<string, object>
                 {
-                    ["imageData"] = Convert.ToBase64String(ms.ToArray()),
-                    ["imageFileName"] = file.FileName,
-                    ["imageSize"] = file.Length
+                    ["imageData"] = Convert.ToBase64String(clean.Data),
+                    ["imageFileName"] = Path.ChangeExtension(Path.GetFileName(file.FileName), clean.Extension),
+                    ["imageSize"] = clean.Data.Length
                 });
             }
             return encoded;

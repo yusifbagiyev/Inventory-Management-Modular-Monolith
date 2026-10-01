@@ -91,6 +91,7 @@ namespace ProductService.API.Controllers
         /// <summary>Direct with product.create.direct, otherwise queued for approval (202).</summary>
         [HttpPost]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.ProductCreate, AllPermissions.ProductCreateDirect)]
         public async Task<IActionResult> Create([FromForm] CreateProductDto dto)
         {
             var product = await _productManagementService.CreateProductWithApprovalAsync(
@@ -104,6 +105,7 @@ namespace ProductService.API.Controllers
 
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
+        [Permission(AllPermissions.ProductUpdate, AllPermissions.ProductUpdateDirect)]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDto dto)
         {
             await _productManagementService.UpdateProductWithApprovalAsync(
@@ -117,6 +119,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpDelete("{id}")]
+        [Permission(AllPermissions.ProductDelete, AllPermissions.ProductDeleteDirect)]
         public async Task<IActionResult> Delete(int id)
         {
             await _productManagementService.DeleteProductWithApprovalAsync(

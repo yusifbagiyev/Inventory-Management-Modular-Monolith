@@ -39,6 +39,10 @@ namespace ProductService.Infrastructure.Repositories
             bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
+            // Page 0 or a size of 0 used to give a negative Skip (500). The API caps the size
+            // (200); pages and exports here ask for more on purpose.
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Max(1, pageSize);
             var query = _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Department)

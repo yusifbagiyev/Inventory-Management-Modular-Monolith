@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace IdentityService.Application.DTOs
 {
@@ -26,7 +26,7 @@ namespace IdentityService.Application.DTOs
     public record ResetPasswordDto
     {
         [Required]
-        [MinLength(6)]
+        [MinLength(SharedServices.Identity.PasswordRules.MinLength)]
         public string NewPassword { get; init; } = string.Empty;
     }
 
@@ -60,7 +60,7 @@ namespace IdentityService.Application.DTOs
         public string CurrentPassword { get; init; } = string.Empty;
 
         [Required]
-        [MinLength(6)]
+        [MinLength(SharedServices.Identity.PasswordRules.MinLength)]
         public string NewPassword { get; init; } = string.Empty;
     }
 
