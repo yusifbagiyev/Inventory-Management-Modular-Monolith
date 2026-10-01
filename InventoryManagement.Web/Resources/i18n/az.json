@@ -1355,5 +1355,18 @@
   "Your changes are applied after they are approved.": "Dəyişiklikləriniz təsdiqləndikdən sonra tətbiq olunur.",
   "Actions that need approval show up here with their status.": "Təsdiq tələb edən əməliyyatlar statusları ilə burada görünür.",
   "Unexpected response from the server. Please reload the page.": "Serverdən gözlənilməz cavab gəldi. Səhifəni yeniləyin.",
-  "View in audit log": "Audit jurnalında bax"
+  "View in audit log": "Audit jurnalında bax",
+  "Deleted products": "Silinmiş məhsullar",
+  "{0} deleted products": "{0} silinmiş məhsul",
+  "Deleted by": "Silən",
+  "Deleted product": "Silinmiş məhsul",
+  "No deleted products": "Silinmiş məhsul yoxdur",
+  "Products deleted from now on are kept here.": "Bundan sonra silinən məhsullar burada saxlanılır.",
+  "Deleted on {0} by {1}. This is the product as it was at that moment.": "{0} tarixində {1} tərəfindən silinib. Məhsul o anda olduğu kimi göstərilir.",
+  "View deleted product": "Silinmiş məhsula bax",
+  "View deleted products": "Silinmiş məhsullara baxmaq",
+  "Is Deleted": "Silinib",
+  "Deleted At": "Silinmə tarixi",
+  "Cannot delete department '{0}': {1} deleted product(s) still keep it in their record. Deactivate the department instead.": "'{0}' şöbəsini silmək mümkün deyil: {1} silinmiş məhsulun qeydində hələ də bu şöbə var. Əvəzinə şöbəni deaktiv edin.",
+  "Cannot delete category '{0}': {1} deleted product(s) still keep it in their record. Deactivate the category instead.": "'{0}' kateqoriyasını silmək mümkün deyil: {1} silinmiş məhsulun qeydində hələ də bu kateqoriya var. Əvəzinə kateqoriyanı deaktiv edin."
 }

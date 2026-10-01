@@ -287,5 +287,45 @@ namespace ProductService.Infrastructure.Repositories
         {
             return await _context.Products.CountAsync(p => p.CategoryId == categoryId, cancellationToken);
         }
+
+        private IQueryable<Product> Deleted()
+            => _context.Products.IgnoreQueryFilters().Where(p => p.IsDeleted);
+
+        public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(
+            string? search, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var query = Deleted().AsNoTracking().Include(p => p.Category).Include(p => p.Department).AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                foreach (var term in search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct())
+                {
+                    var t = term;
+                    query = query.Where(p =>
+                        EF.Functions.ILike(p.InventoryCode.ToString(), $"%{t}%") ||
+                        EF.Functions.ILike(p.Model, $"%{t}%") ||
+                        EF.Functions.ILike(p.Vendor, $"%{t}%") ||
+                        EF.Functions.ILike(p.Worker ?? "", $"%{t}%") ||
+                        EF.Functions.ILike(p.DeletedBy ?? "", $"%{t}%") ||
+                        (p.Department != null && EF.Functions.ILike(p.Department.Name, $"%{t}%")));
+                }
+            }
+            var total = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderByDescending(p => p.DeletedAt)
+                .Skip((Math.Max(1, pageNumber) - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+            return (items, total);
+        }
+
+        public Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default)
+            => Deleted().AsNoTracking().Include(p => p.Category).Include(p => p.Department)
+                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+        public Task<int> CountDeletedByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
+            => Deleted().CountAsync(p => p.DepartmentId == departmentId, cancellationToken);
+
+        public Task<int> CountDeletedByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default)
+            => Deleted().CountAsync(p => p.CategoryId == categoryId, cancellationToken);
     }
 }

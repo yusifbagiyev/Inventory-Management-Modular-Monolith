@@ -1,4 +1,4 @@
-﻿namespace ProductService.Domain.Entities
+namespace ProductService.Domain.Entities
 {
     public class Product
     {
@@ -25,6 +25,15 @@
         public Department? Department { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
+
+        /// <summary>
+        /// Deleted products are kept (soft delete): hidden from every list and lookup by the
+        /// DbContext's query filter, shown on the Deleted products page, and their inventory code
+        /// is free for a new product.
+        /// </summary>
+        public bool IsDeleted { get; private set; }
+        public DateTime? DeletedAt { get; private set; }
+        public string? DeletedBy { get; private set; }
 
         // For EF Core
         protected Product() { }
@@ -100,6 +109,13 @@
             ImageUrl = ImageUrls.FirstOrDefault() ?? string.Empty;
             UpdatedAt = DateTime.Now;
         }
+        public void MarkDeleted(string? deletedBy)
+        {
+            IsDeleted = true;
+            DeletedAt = DateTime.Now;
+            DeletedBy = deletedBy;
+        }
+
         public void ChangeInventoryCode(int inventoryCode)
         {
             if (inventoryCode <= 0)

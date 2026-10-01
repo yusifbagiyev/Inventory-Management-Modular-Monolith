@@ -24,7 +24,12 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.InventoryCode).IsUnique();
+                // Deleted products are kept but out of sight everywhere (IgnoreQueryFilters to see
+                // them), and their inventory code can be given to a new product.
+                entity.HasQueryFilter(e => !e.IsDeleted);
+                entity.HasIndex(e => e.InventoryCode).IsUnique().HasFilter("\"IsDeleted\" = false");
+                entity.Property(e => e.DeletedBy).HasMaxLength(200);
+                entity.Property(e => e.DeletedAt).HasColumnType("timestamp without time zone");
                 entity.HasIndex(e => e.CreatedAt);
                 entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);

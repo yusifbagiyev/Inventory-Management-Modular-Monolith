@@ -1,0 +1,84 @@
+@model ProductViewModel
+@{
+    ViewData["Title"] = "Deleted product";
+    string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
+}
+@* A deleted product's last state (kept, not erased): read-only, with who deleted it and links
+   to its history and audit trail. *@
+<div class="container-fluid px-4">
+    <div class="ip-page-head">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Deleted">@L["Deleted products"]</a></li>
+                <li class="breadcrumb-item active ip-mono">@Model.InventoryCode</li>
+            </ol>
+            <h1>@Or(Model.Model, "-")</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2">
+                <span>@Or(Model.Vendor, "-") · @Or(Model.CategoryName, "-")</span>
+                <span class="ip-mono text-body">#@Model.InventoryCode</span>
+                <span class="ip-badge ip-badge-danger">@L["Deleted"]</span>
+            </div>
+        </div>
+        <div class="ip-page-actions">
+            @if (User.HasPermission("route.view"))
+            {
+                <a asp-controller="Routes" asp-action="Timeline" asp-route-productId="@Model.Id" class="ip-btn ip-btn-secondary">
+                    <i class="fa-solid fa-clock-rotate-left"></i><span>@L["Full history"]</span>
+                </a>
+            }
+            @if (User.HasPermission("audit.view"))
+            {
+                <a href="/Audit?entityType=Product&entityId=@Model.Id" class="ip-btn ip-btn-secondary">
+                    <i class="fa-solid fa-clipboard-list"></i><span>@L["Audit log"]</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="ip-banner ip-banner-danger mb-4">
+        <i class="fa-solid fa-trash-can"></i>
+        <span class="flex-grow-1">
+            @L["Deleted on {0} by {1}. This is the product as it was at that moment.",
+                Model.DeletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-", Or(Model.DeletedBy, L["Unknown"].Value)]
+        </span>
+    </div>
+
+    <hr class="ip-rule" />
+
+    <div class="row g-5 pt-4">
+        <div class="col-lg-6">
+            <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = Model.Model ?? "", EmptyText = "No image available" }' />
+        </div>
+        <div class="col-lg-6">
+            <dl class="ip-dl">
+                <div><dt>@L["Inventory Code"]</dt><dd class="ip-mono">@Model.InventoryCode</dd></div>
+                <div><dt>@L["Model"]</dt><dd>@Or(Model.Model, "-")</dd></div>
+                <div><dt>@L["Vendor"]</dt><dd>@Or(Model.Vendor, "-")</dd></div>
+                <div><dt>@L["Category"]</dt><dd>@Or(Model.CategoryName, "-")</dd></div>
+                <div><dt>@L["Color"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.Color) ? "ip-muted" : "")">@Or(Model.Color, L["Not set"].Value)</dd></div>
+                <div><dt>@L["Department"]</dt><dd>@Or(Model.DepartmentName, "-")</dd></div>
+                <div><dt>@L["Assigned Worker"]</dt><dd class="@(string.IsNullOrWhiteSpace(Model.Worker) ? "ip-muted" : "")">@Or(Model.Worker, L["Not Assigned"].Value)</dd></div>
+                <div><dt>@L["Created"]</dt><dd class="ip-num">@(Model.CreatedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
+                <div><dt>@L["Deleted"]</dt><dd class="ip-num">@(Model.DeletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-")</dd></div>
+                <div><dt>@L["Deleted by"]</dt><dd>@Or(Model.DeletedBy, "-")</dd></div>
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
+                }
+            </dl>
+        </div>
+    </div>
+
+    @if (Model.Specifications.Count > 0)
+    {
+        <section class="ip-section mt-5">
+            <h2 class="mb-2">@L["Specifications"]</h2>
+            <dl class="ip-dl ip-dl-wide">
+                @foreach (var spec in Model.Specifications)
+                {
+                    <div><dt>@spec.Name</dt><dd>@(string.IsNullOrWhiteSpace(spec.Value) ? "-" : spec.Value)</dd></div>
+                }
+            </dl>
+        </section>
+    }
+</div>

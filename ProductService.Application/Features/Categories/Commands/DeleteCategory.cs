@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using ProductService.Domain.Repositories;
 using SharedServices.Exceptions;
 
@@ -34,6 +34,12 @@ namespace ProductService.Application.Features.Categories.Commands
                 if (productCount > 0)
                     throw new ConflictException(
                         $"Cannot delete category '{category.Name}': {productCount} product(s) are still assigned to it. Move them to another category first.");
+
+                // Deleted products are kept and still point at their category.
+                var deletedCount = await _productRepository.CountDeletedByCategoryIdAsync(request.Id, cancellationToken);
+                if (deletedCount > 0)
+                    throw new ConflictException(
+                        $"Cannot delete category '{category.Name}': {deletedCount} deleted product(s) still keep it in their record. Deactivate the category instead.");
 
                 await _categoryRepository.DeleteAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

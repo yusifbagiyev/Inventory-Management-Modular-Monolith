@@ -122,12 +122,37 @@ namespace InventoryManagement.Web.Controllers
                 }));
         }
 
+        /// <summary>
+        /// Deleted products (kept, not erased): the list, or one product's last state with id.
+        /// </summary>
+        [PermissionAuthorize(AllPermissions.ProductDeletedView)]
+        public async Task<IActionResult> Deleted(int? id, string? search = null, int pageNumber = 1, int pageSize = 30)
+        {
+            if (id.HasValue)
+            {
+                var product = await _mediator.Send(new GetDeletedProductByIdQuery(id.Value));
+                return product == null ? RedirectToNotFound() : View("DeletedDetails", ModelMapper.Map<ProductViewModel>(product));
+            }
+
+            var page = await _mediator.Send(new GetDeletedProductsQuery(search, pageNumber, pageSize));
+            ViewBag.TotalCount = page.TotalCount;
+            ViewBag.PageNumber = page.PageNumber;
+            ViewBag.PageSize = page.PageSize;
+            return View(ModelMapper.MapList<ProductViewModel>(page.Items));
+        }
+
         [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Details(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));
             if (product == null)
+            {
+                // Old links (notifications, routes) to a product deleted since: its kept record.
+                if (User.HasPermission(AllPermissions.ProductDeletedView)
+                    && await _mediator.Send(new GetDeletedProductByIdQuery(id)) != null)
+                    return RedirectToAction(nameof(Deleted), new { id });
                 return RedirectToNotFound();
+            }
 
             // The transfers below the details (the full history, updates included, is the timeline).
             var routes = User.HasPermission(AllPermissions.RouteView)

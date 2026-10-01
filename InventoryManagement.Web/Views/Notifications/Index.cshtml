@@ -177,11 +177,16 @@
                         L["View request #{0}", requestId].Value);
             if (Id("routeId") is int routeId && User.HasPermission("route.view"))
                 return ($"/Routes/Details/{routeId}", L["View route"].Value);
-            // A deleted product has no page any more: its audit trail shows who deleted it and what it held.
+            // A deleted product is kept on the Deleted products page (else its audit trail).
             if (notification.Title == "Product Deleted" || notification.Title == L["Product Deleted"].Value)   // stored English, shown translated
-                return Id("productId") is int deletedId && User.HasPermission("audit.view")
+            {
+                if (Id("productId") is not int deletedId) return null;
+                if (User.HasPermission("product.deleted.view"))
+                    return ($"/Products/Deleted/{deletedId}", L["View deleted product"].Value);
+                return User.HasPermission("audit.view")
                     ? ($"/Audit?entityType=Product&entityId={deletedId}", L["View in audit log"].Value)
                     : null;
+            }
             if (Id("productId") is int productId && User.HasPermission("product.view"))
                 return ($"/Products/Details/{productId}", L["View product"].Value);
         }

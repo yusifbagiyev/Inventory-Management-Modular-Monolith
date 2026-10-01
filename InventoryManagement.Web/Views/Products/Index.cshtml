@@ -37,6 +37,12 @@
             }
         </div>
         <div class="ip-page-actions">
+            @if (User.HasPermission("product.deleted.view"))
+            {
+                <a href="/Products/Deleted" class="ip-btn ip-btn-ghost">
+                    <i class="fa-solid fa-trash-can"></i><span>@L["Deleted products"]</span>
+                </a>
+            }
             @if (User.HasPermission("product.export"))
             {
                 <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()">

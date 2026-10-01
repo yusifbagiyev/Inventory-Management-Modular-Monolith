@@ -211,7 +211,11 @@
                                     {
                                         <div class="ip-audit-entry">
                                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                                <span class="ip-badge @OperationBadge(entry.Operation)">@L[OperationLabel(entry.Operation)]</span>
+                                                @{
+                                                    // A product deletion keeps the row (soft delete): IsDeleted false -> true reads as "Deleted".
+                                                    var shownOperation = entry.Changes.Any(c => c.Field == "IsDeleted" && c.New == "true") ? "Deleted" : entry.Operation;
+                                                }
+                                                <span class="ip-badge @OperationBadge(shownOperation)">@L[OperationLabel(shownOperation)]</span>
                                                 <span class="fw-medium">@L[TypeLabel(entry.EntityType)]</span>
                                                 @if (!string.IsNullOrEmpty(entry.Label))
                                                 {

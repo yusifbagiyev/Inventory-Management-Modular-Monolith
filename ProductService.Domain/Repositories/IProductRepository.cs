@@ -45,5 +45,11 @@ namespace ProductService.Domain.Repositories
         Task<(int Total, int Active, int NotWorking)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);
         Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
+
+        // Deleted products (soft delete), which every other method leaves out.
+        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(string? search, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+        Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<int> CountDeletedByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
+        Task<int> CountDeletedByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
     }
 }

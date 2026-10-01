@@ -1,0 +1,95 @@
+@model List<ProductViewModel>
+@{
+    ViewData["Title"] = "Deleted products";
+    var total = ViewBag.TotalCount as int? ?? 0;
+    var pageNumber = ViewBag.PageNumber as int? ?? 1;
+    var pageSize = ViewBag.PageSize as int? ?? 30;
+    var search = Context.Request.Query["search"].ToString();
+}
+@* Deleted products are kept (soft delete): their last state, who deleted them and when.
+   Search updates the list in place (ListNav). *@
+<div class="container-fluid px-4">
+    <div class="ip-page-head">
+        <div>
+            <ol class="breadcrumb">
+                @if (User.HasPermission("product.view"))
+                {
+                    <li class="breadcrumb-item"><a asp-action="Index">@L["Products"]</a></li>
+                }
+                <li class="breadcrumb-item active">@L["Deleted products"]</li>
+            </ol>
+            <h1>@L["Deleted products"]</h1>
+            <div class="ip-sub ip-num">@L["{0} deleted products", total]</div>
+        </div>
+    </div>
+
+    <div class="ip-filterbar">
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="searchInput" name="search" value="@search" autocomplete="off"
+                   placeholder="@L["Search code, model, vendor, worker..."]" aria-label="@L["Search"]" />
+        </label>
+    </div>
+
+    <div id="deletedRegion" data-list-region>
+        <div class="ip-table-wrap">
+            @if (Model.Any())
+            {
+                <table class="ip-table">
+                    <thead>
+                        <tr>
+                            <th><span class="visually-hidden">@L["Image"]</span></th>
+                            <th>@L["Code"]</th>
+                            <th>@L["Product"]</th>
+                            <th>@L["Department and worker"]</th>
+                            <th>@L["Deleted"]</th>
+                            <th>@L["Deleted by"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model)
+                        {
+                            <tr data-href="@Url.Action("Deleted", new { id = product.Id })">
+                                <td>
+                                    <span class="ip-thumb">
+                                        @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                        {
+                                            <img src="@product.FullImageUrl" alt="" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-box" aria-hidden="true"></i>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="ip-mono">@product.InventoryCode</td>
+                                <td>
+                                    <div class="cell-title">@product.Model</div>
+                                    <div class="cell-sub">@product.Vendor · @product.CategoryName</div>
+                                </td>
+                                <td>
+                                    <div class="cell-title">@product.DepartmentName</div>
+                                    <div class="cell-sub">@(string.IsNullOrWhiteSpace(product.Worker) ? L["Not Assigned"].Value : product.Worker)</div>
+                                </td>
+                                <td class="ip-num text-nowrap" data-order="@product.DeletedAt?.ToString("yyyy-MM-dd HH:mm")">
+                                    @product.DeletedAt?.ToString("dd.MM.yyyy")
+                                    <div class="sub">@product.DeletedAt?.ToString("HH:mm")</div>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(product.DeletedBy) ? "-" : product.DeletedBy)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="ip-empty">
+                    <span class="icon"><i class="fa-solid fa-trash-can"></i></span>
+                    <div class="title">@(string.IsNullOrEmpty(search) ? L["No deleted products"] : L["Nothing found"])</div>
+                    <div class="text">@(string.IsNullOrEmpty(search) ? L["Products deleted from now on are kept here."] : L["No products match these filters"])</div>
+                </div>
+            }
+        </div>
+        <partial name="_Pagination" model="new PaginationViewModel(pageNumber, pageSize, total)" />
+    </div>
+</div>

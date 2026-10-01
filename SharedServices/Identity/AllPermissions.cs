@@ -32,6 +32,8 @@ namespace SharedServices.Identity
         /// <summary>Change a product's inventory code (immediately; there is no approval step).</summary>
         public const string ProductCodeUpdate = "product.code.update";
         public const string ProductExport = "product.export";
+        /// <summary>The Deleted products page (deleted products are kept, not erased).</summary>
+        public const string ProductDeletedView = "product.deleted.view";
 
         // Categories
         public const string CategoryView = "category.view";

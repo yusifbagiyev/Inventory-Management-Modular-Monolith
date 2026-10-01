@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using ProductService.Domain.Repositories;
 using SharedServices.Exceptions;
 
@@ -37,6 +37,12 @@ namespace ProductService.Application.Features.Departments.Commands
                 if (productCount > 0)
                     throw new ConflictException(
                         $"Cannot delete department '{department.Name}': {productCount} product(s) are still assigned to it. Move them to another department first.");
+
+                // Deleted products are kept and still point at their department.
+                var deletedCount = await _productRepository.CountDeletedByDepartmentIdAsync(request.Id, cancellationToken);
+                if (deletedCount > 0)
+                    throw new ConflictException(
+                        $"Cannot delete department '{department.Name}': {deletedCount} deleted product(s) still keep it in their record. Deactivate the department instead.");
 
                 await _departmentRepository.DeleteAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

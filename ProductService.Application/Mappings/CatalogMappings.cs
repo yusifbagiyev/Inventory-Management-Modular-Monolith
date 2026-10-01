@@ -29,7 +29,9 @@ namespace ProductService.Application.Mappings
                 .Select(s => new ProductSpecificationDto { Name = s.Name, Value = s.Value })
                 .ToList(),
             CreatedAt = product.CreatedAt,
-            UpdatedAt = product.UpdatedAt
+            UpdatedAt = product.UpdatedAt,
+            DeletedAt = product.DeletedAt,
+            DeletedBy = product.DeletedBy
         };
 
         public static CategoryDto ToDto(this Category category, int productCount) => new()

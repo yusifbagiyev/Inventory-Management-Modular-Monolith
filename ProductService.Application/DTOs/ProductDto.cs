@@ -1,4 +1,4 @@
-﻿namespace ProductService.Application.DTOs
+namespace ProductService.Application.DTOs
 {
     public record ProductDto
     {
@@ -22,5 +22,8 @@
         public string? DepartmentName { get; set; }=string.Empty;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        /// <summary>Set for a deleted product (Deleted products page only).</summary>
+        public DateTime? DeletedAt { get; set; }
+        public string? DeletedBy { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Models.ViewModels
@@ -101,5 +101,8 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        /// <summary>Set for a deleted product (Deleted products page).</summary>
+        public DateTime? DeletedAt { get; set; }
+        public string? DeletedBy { get; set; }
     }
 }

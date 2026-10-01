@@ -35,18 +35,24 @@
             </div>
         }
 
-        @if (Can("product.view") || Can("route.view") || Can("route.create") || Can("route.create.direct"))
+        @if (Can("product.view") || Can("product.deleted.view") || Can("route.view") || Can("route.create") || Can("route.create.direct"))
         {
         <div class="ip-rail-group">
             <div class="ip-rail-title">@L["Operations"]</div>
             @if (Can("product.view"))
             {
-            <a href="/Products" class="@Active(controller == "Products")" title="@L["Products"]">
+            <a href="/Products" class="@Active(controller == "Products" && action != "Deleted")" title="@L["Products"]">
                 <i class="fa-solid fa-box"></i><span>@L["Products"]</span>
                 @if (productTotal is int total)
                 {
                     <span class="ip-rail-count">@total</span>
                 }
+            </a>
+            }
+            @if (Can("product.deleted.view"))
+            {
+            <a href="/Products/Deleted" class="@Active(controller == "Products" && action == "Deleted")" title="@L["Deleted products"]">
+                <i class="fa-solid fa-trash-can"></i><span>@L["Deleted products"]</span>
             </a>
             }
             @if (Can("route.view"))
