@@ -363,7 +363,12 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 /* ---------- list pages ---------- */
 .ip-filterbar { margin-bottom: 0; }
 .ip-filter > span { white-space: nowrap; }
-.ip-filter select { appearance: auto; }
+/* A select is as wide as what is chosen ("All"), not its longest option (a long department name
+   pushed the filters onto a second line); a long choice is cut at 24ch. Browsers without
+   field-sizing keep the old width. */
+.ip-filter select { appearance: auto; field-sizing: content; max-width: 24ch; text-overflow: ellipsis; }
+.ip-filter.search { flex-basis: 220px; min-width: 200px; }
+.ip-filterbar > .ip-btn { flex: none; white-space: nowrap; }
 .ip-filter input.date-range-input { cursor: pointer; font-weight: 500; width: 13ch; }
 .ip-filter input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
 .ip-btn.is-on { background: var(--ip-surface-active); color: var(--ip-text-1); font-weight: 600; }
@@ -568,7 +573,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-filter-toggle { display: inline-flex; flex: none; gap: 8px; justify-content: center; }
   .ip-filterbar.has-toggle:not(.open) > :not(.search):not(.ip-filter-toggle) { display: none !important; }
   .ip-filterbar.has-toggle.open > :not(.search):not(.ip-filter-toggle):not([type="hidden"]) { flex: 1 1 100%; }
-  .ip-filterbar.open .ip-filter select, .ip-filterbar.open .ip-filter input { flex: 1; min-width: 0; }
+  .ip-filterbar.open .ip-filter select, .ip-filterbar.open .ip-filter input { flex: 1; min-width: 0; max-width: none; }
 
   .ip-page-head { align-items: stretch; }
   .ip-page-actions { width: 100%; flex-wrap: wrap; }
