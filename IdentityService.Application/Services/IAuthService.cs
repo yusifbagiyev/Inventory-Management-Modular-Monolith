@@ -41,5 +41,9 @@ namespace IdentityService.Application.Services
         Task<bool> RevokePermissionFromUserAsync(int userId, string permissionName);
         Task<List<PermissionDto>> GetUserDirectPermissionsAsync(int userId);
 
+        // Role permissions: everyone in the role holds them, on top of their own.
+        Task<IReadOnlyList<string>> GetRolePermissionsAsync(string roleName);
+        Task<bool> SetRolePermissionAsync(string roleName, string permissionName, bool grant);
+
     }
 }

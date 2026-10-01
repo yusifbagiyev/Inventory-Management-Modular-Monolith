@@ -2,10 +2,6 @@
 @{
     ViewData["Title"] = "My Profile";
     var initials = $"{Model.FirstName.FirstOrDefault()}{Model.LastName.FirstOrDefault()}".Trim();
-    var permissionsByCategory = Model.Permissions
-        .GroupBy(p => p.Category)
-        .OrderBy(g => g.Key)
-        .ToList();
 }
 
 <div class="container-fluid px-4">
@@ -89,41 +85,16 @@
         <div class="col-lg-7">
             <h2 class="mb-3">@L["My Permissions"] <span class="ip-faint ip-num fw-normal ms-1">@Model.Permissions.Count</span></h2>
 
-            @if (permissionsByCategory.Any())
+            @if (User.IsInRole("Admin"))
             {
-                <div class="ip-filterbar">
-                    <label class="ip-filter search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="search" id="permissionSearch" autocomplete="off"
-                               placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
-                    </label>
-                </div>
-
-                @foreach (var category in permissionsByCategory)
-                {
-                    <section class="permission-category pt-4">
-                        <div class="d-flex align-items-baseline gap-2 mb-2">
-                            <span class="fw-semibold">@L[category.Key]</span>
-                            <span class="ip-faint ip-num">@category.Count()</span>
-                        </div>
-                        <ul class="list-unstyled mb-0">
-                            @foreach (var permission in category.OrderBy(p => p.Name))
-                            {
-                                var description = string.IsNullOrEmpty(permission.Description) ? "" : L[permission.Description].Value;
-                                <li class="permission-item py-2 border-top"
-                                    data-permission-name="@($"{permission.Name} {description}".ToLowerInvariant())">
-                                    <div class="ip-mono">@permission.Name</div>
-                                    @if (!string.IsNullOrEmpty(description))
-                                    {
-                                        <div class="ip-faint">@description</div>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    </section>
-                }
-
-                <p class="ip-muted pt-4 mb-0 d-none" id="permissionSearchEmpty">@L["No matching permissions."]</p>
+                <p class="ip-muted mb-0">@L["Administrators hold every permission."]</p>
+            }
+            else if (Model.Permissions.Any())
+            {
+                <partial name="_PermissionEditor" model="@(new PermissionEditorModel(
+                    Model.Permissions.Select(p => p.Name).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                    new HashSet<string>(), null,
+                    Model.Permissions.Where(p => !PermissionCatalog.Known.Contains(p.Name)).Select(p => (p.Name, (string?)p.Description)).ToList()))" />
             }
             else
             {
@@ -136,20 +107,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        // Permission search: hides non-matching permissions and the categories left empty.
-        $('#permissionSearch').on('input', function () {
-            const term = $(this).val().trim().toLowerCase();
-
-            $('.permission-item').each(function () {
-                $(this).toggleClass('d-none', term !== '' && !String($(this).data('permission-name')).includes(term));
-            });
-            $('.permission-category').each(function () {
-                $(this).toggleClass('d-none', $(this).find('.permission-item:not(.d-none)').length === 0);
-            });
-            $('#permissionSearchEmpty').toggleClass('d-none', $('.permission-category:not(.d-none)').length > 0);
-        });
-    </script>
-}

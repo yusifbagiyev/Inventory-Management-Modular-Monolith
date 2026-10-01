@@ -593,3 +593,30 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 @media (pointer: coarse) {
   .ip-btn-icon:not(.lg) { width: 40px; height: 40px; }
 }
+
+/* Permission editor (_PermissionEditor): one card per page, a row per action - its control on
+   the right (switch, or No / With approval / Direct). Two columns of cards on wide screens. */
+.ip-perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--ip-space-4); align-items: start; }
+.ip-perm-area { border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); background: var(--ip-surface); padding: var(--ip-space-2) var(--ip-space-4) var(--ip-space-1); }
+.ip-perm-head { display: flex; align-items: center; gap: var(--ip-space-3); padding: var(--ip-space-2) 0 var(--ip-space-3); border-bottom: 1px solid var(--ip-border); }
+.ip-perm-head .icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-2); font-size: 13px; }
+.ip-perm-head h3 { flex: 1; margin: 0; font-size: var(--ip-fs-base); font-weight: 600; }
+.ip-perm-count { color: var(--ip-text-3); font-size: var(--ip-fs-sm); }
+.ip-perm-row { display: flex; align-items: center; justify-content: space-between; gap: var(--ip-space-4); min-height: 52px; padding: var(--ip-space-2) 0; }
+.ip-perm-row + .ip-perm-row { border-top: 1px solid var(--ip-border); }
+.ip-perm-text { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; min-width: 0; }
+.ip-perm-text .label { color: var(--ip-text-1); }
+.ip-perm-level { color: var(--ip-text-2); font-size: var(--ip-fs-sm); white-space: nowrap; }
+.ip-seg.ip-seg-sm { flex: none; }
+.ip-seg.ip-seg-sm > * { height: 30px; padding: 0 10px; font-size: var(--ip-fs-xs, 12px); }
+.ip-seg.ip-seg-sm > [data-level="none"].active { color: var(--ip-text-2); }
+.ip-seg.ip-seg-sm > [data-level="approval"].active { background: var(--ip-warning-soft); color: var(--ip-warning-text); }
+.ip-seg.ip-seg-sm > [data-level="direct"].active { background: var(--ip-success-soft); color: var(--ip-success-text); }
+.ip-seg.ip-seg-sm > button:disabled { opacity: .45; cursor: not-allowed; }
+.ip-seg.is-saving { opacity: .6; pointer-events: none; }
+.ip-switch:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 575.98px) {
+  .ip-perm-grid { grid-template-columns: 1fr; }
+  .ip-perm-row:has(.ip-seg) { flex-direction: column; align-items: stretch; gap: var(--ip-space-2); }
+  .ip-perm-row .ip-seg-sm > * { flex: 1; justify-content: center; }
+}

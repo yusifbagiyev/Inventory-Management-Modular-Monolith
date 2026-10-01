@@ -1,0 +1,102 @@
+@model PermissionEditorModel
+@* Permissions by page, in plain words (PermissionCatalog). Editable: switches, and for two-level
+   actions one choice of No / With approval / Direct; changes save at once (permission-editor.js).
+   What the role already grants is shown locked. Read-only (profile): only what is held. *@
+@{
+    var own = Model.Own.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var role = Model.FromRole.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var held = Model.Effective;
+    string Level(PermissionItem item, ISet<string> set) => PermissionCatalog.State(item, set);
+    int Rank(string level) => level switch { "direct" => 2, "approval" or "on" => 1, _ => 0 };
+}
+
+<div class="ip-perm-editor" data-save-url="@Model.SaveUrl" data-readonly="@(Model.ReadOnly ? "true" : "false")">
+    <div class="ip-perm-grid">
+        @foreach (var area in PermissionCatalog.Areas)
+        {
+            var items = Model.ReadOnly ? area.Items.Where(i => Level(i, held) != "none").ToList() : area.Items.ToList();
+            if (items.Count == 0) continue;
+            var granted = area.Items.Count(i => Level(i, held) != "none");
+            <section class="ip-perm-area" data-area="@area.Key">
+                <header class="ip-perm-head">
+                    <span class="icon"><i class="fa-solid @area.Icon" aria-hidden="true"></i></span>
+                    <h3>@L[area.Title]</h3>
+                    @if (!Model.ReadOnly)
+                    {
+                        <span class="ip-perm-count ip-num" data-count>@granted/@area.Items.Count</span>
+                    }
+                </header>
+                @foreach (var item in items)
+                {
+                    var roleLevel = Level(item, role);
+                    var ownLevel = Level(item, own);
+                    var shown = Rank(roleLevel) >= Rank(ownLevel) ? roleLevel : ownLevel;
+                    var label = L[item.Label].Value;
+                    <div class="ip-perm-row" data-search="@($"{label} {string.Join(' ', item.Names)}".ToLowerInvariant())">
+                        <div class="ip-perm-text">
+                            <span class="label" title="@string.Join(", ", item.Names)">@label</span>
+                            @if (roleLevel != "none")
+                            {
+                                <span class="ip-tag-plain" title="@L["Granted by the role; change it on the role's permissions page."]">@L["From role"]</span>
+                            }
+                        </div>
+                        @if (Model.ReadOnly)
+                        {
+                            <span class="ip-perm-level">@L[shown switch { "direct" => "Direct", "approval" => "With approval", _ => "Allowed" }]</span>
+                        }
+                        else if (item.Direct == null)
+                        {
+                            <input type="checkbox" class="ip-switch" role="switch" aria-label="@label"
+                                   data-perm="@item.Permission" data-view="@(item.IsView ? "true" : "false")"
+                                   data-own="@(ownLevel != "none" ? "true" : "false")"
+                                   checked="@(shown != "none")" disabled="@(roleLevel != "none")" />
+                        }
+                        else
+                        {
+                            <div class="ip-seg ip-seg-sm" role="radiogroup" aria-label="@label"
+                                 data-base="@item.Permission" data-direct="@item.Direct" data-own="@ownLevel">
+                                @foreach (var (level, text) in new[] { ("none", "No"), ("approval", "With approval"), ("direct", "Direct") })
+                                {
+                                    <button type="button" role="radio" data-level="@level"
+                                            class="@(shown == level ? "active" : "")" aria-checked="@(shown == level ? "true" : "false")"
+                                            disabled="@(Rank(level) < Rank(roleLevel))">@L[text]</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+
+        @{
+            var others = Model.ReadOnly ? Model.Others.Where(o => held.Contains(o.Name)).ToList() : Model.Others.ToList();
+        }
+        @if (others.Count > 0)
+        {
+            <section class="ip-perm-area" data-area="other">
+                <header class="ip-perm-head">
+                    <span class="icon"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></span>
+                    <h3>@L["Other"]</h3>
+                </header>
+                @foreach (var other in others)
+                {
+                    var label = string.IsNullOrEmpty(other.Description) ? other.Name : L[other.Description].Value;
+                    <div class="ip-perm-row" data-search="@($"{label} {other.Name}".ToLowerInvariant())">
+                        <div class="ip-perm-text"><span class="label" title="@other.Name">@label</span></div>
+                        @if (Model.ReadOnly)
+                        {
+                            <span class="ip-perm-level">@L["Allowed"]</span>
+                        }
+                        else
+                        {
+                            <input type="checkbox" class="ip-switch" role="switch" aria-label="@label" data-perm="@other.Name" data-view="false"
+                                   data-own="@(own.Contains(other.Name) ? "true" : "false")"
+                                   checked="@held.Contains(other.Name)" disabled="@role.Contains(other.Name)" />
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+    <p class="ip-muted py-3 mb-0 d-none" data-perm-empty>@L["No permissions match"]</p>
+</div>

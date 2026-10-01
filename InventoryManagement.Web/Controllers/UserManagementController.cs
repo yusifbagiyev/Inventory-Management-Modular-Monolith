@@ -79,7 +79,60 @@ namespace InventoryManagement.Web.Controllers
                 return Forbidden();
 
             var user = await _userManagementService.GetUserByIdAsync(id);
-            return user == null ? RedirectToNotFound() : View(user);
+            if (user == null)
+                return RedirectToNotFound();
+
+            // The permission editor: Admins only, and not for Admin accounts (they hold everything).
+            if (User.IsInRole(AllRoles.Admin) && !user.CurrentRoles.Contains(AllRoles.Admin))
+            {
+                var own = (await _identity.GetUserDirectPermissionsAsync(id)).Select(p => p.Name);
+                var fromRole = new List<string>();
+                foreach (var role in user.CurrentRoles)
+                    fromRole.AddRange(await _identity.GetRolePermissionsAsync(role));
+                ViewBag.PermissionEditor = await EditorAsync(own, fromRole, Url.Action(nameof(TogglePermission), new { id })!);
+            }
+            return View(user);
+        }
+
+        /// <summary>
+        /// What everyone with <paramref name="role"/> holds (users add their own on top). Changing a
+        /// user's role changes these for them. The Admin role holds everything and is not edited.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = AllRoles.Admin)]
+        public async Task<IActionResult> RolePermissions(string role = AllRoles.User)
+        {
+            if (role == AllRoles.Admin || !(await _userManagementService.GetAllRolesAsync()).Contains(role))
+                return RedirectToAction(nameof(Index));
+
+            ViewBag.Role = role;
+            ViewBag.UserCount = (await _userManagementService.GetAllUsersAsync()).Count(u => u.Roles.Contains(role));
+            return View(await EditorAsync(await _identity.GetRolePermissionsAsync(role), [],
+                Url.Action(nameof(ToggleRolePermission), new { role })!));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = AllRoles.Admin)]
+        public async Task<JsonResult> ToggleRolePermission(string role, [FromBody] TogglePermissionViewModel model)
+        {
+            var success = role != AllRoles.Admin
+                && await _identity.SetRolePermissionAsync(role, model.PermissionName, model.IsGranting);
+            return Json(success
+                ? new { success = true, message = (string?)null }
+                : new { success = false, message = (string?)Tr("Permission change failed") });
+        }
+
+        private async Task<PermissionEditorModel> EditorAsync(IEnumerable<string> own, IEnumerable<string> fromRole, string saveUrl)
+        {
+            var others = (await _identity.GetAllPermissionsAsync())
+                .Where(p => !PermissionCatalog.Known.Contains(p.Name))
+                .Select(p => (p.Name, (string?)p.Description))
+                .ToList();
+            return new PermissionEditorModel(
+                own.ToHashSet(StringComparer.OrdinalIgnoreCase),
+                fromRole.ToHashSet(StringComparer.OrdinalIgnoreCase),
+                saveUrl, others);
         }
 
 
@@ -206,33 +259,6 @@ namespace InventoryManagement.Web.Controllers
             if (await IsProtectedAsync(id))
                 return Json(new { success = false });
             return Json(new { success = await _userManagementService.ToggleUserStatusAsync(id) });
-        }
-
-
-        /// <summary>
-        /// Every permission with whether the user holds it directly (toggleable here) or only
-        /// through a role (shown, but revoking a direct grant does not remove it).
-        /// </summary>
-        [HttpGet]
-        [PermissionAuthorize(AllPermissions.UserView)]
-        public async Task<JsonResult> GetUserPermissions(int id)
-        {
-            var user = await _identity.GetUserAsync(id);
-            if (user == null)
-                return Json(new { error = Tr("User not found") });
-
-            var direct = (await _identity.GetUserDirectPermissionsAsync(id)).Select(p => p.Name).ToHashSet();
-            var permissions = await _identity.GetAllPermissionsAsync();
-
-            return Json(permissions.Select(p => new
-            {
-                p.Id,
-                p.Name,
-                p.Description,
-                p.Category,
-                IsAssigned = direct.Contains(p.Name),
-                IsFromRole = !direct.Contains(p.Name) && user.Permissions.Contains(p.Name)
-            }));
         }
 
 

@@ -492,6 +492,30 @@ namespace IdentityService.Infrastructure.Services
             return permissions;
         }
 
+        public async Task<IReadOnlyList<string>> GetRolePermissionsAsync(string roleName)
+            => await _context.RolePermissions
+                .Where(rp => rp.Role.Name == roleName)
+                .Select(rp => rp.Permission.Name)
+                .ToListAsync();
+
+        public async Task<bool> SetRolePermissionAsync(string roleName, string permissionName, bool grant)
+        {
+            var role = await _context.Roles.FirstOrDefaultAsync(r => r.Name == roleName);
+            var permission = await _context.Permissions.FirstOrDefaultAsync(p => p.Name == permissionName);
+            if (role == null || permission == null) return false;
+
+            var existing = await _context.RolePermissions
+                .FirstOrDefaultAsync(rp => rp.RoleId == role.Id && rp.PermissionId == permission.Id);
+            if (grant == (existing != null)) return true;
+
+            if (grant)
+                _context.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id, Role = role, Permission = permission });
+            else
+                _context.RolePermissions.Remove(existing!);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private async Task<List<string>> GetUserPermissionsAsync(int userId, IList<string> roles)
         {
             var rolePermissions = await _context.RolePermissions

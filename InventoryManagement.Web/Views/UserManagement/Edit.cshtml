@@ -74,7 +74,7 @@
             <section class="ip-form-section">
                 <h2>@L["Role"]</h2>
                 <div class="d-flex flex-column">
-                    @foreach (var (role, hint) in new[] { ("User", "Only the permissions granted below."), ("Admin", "Every page and action; permissions are not needed.") })
+                    @foreach (var (role, hint) in new[] { ("User", "The role's permissions, plus those granted below."), ("Admin", "Every page and action; permissions are not needed.") })
                     {
                         <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
                             <input type="radio" class="ip-check" name="SelectedRoles" value="@role" id="role_@role"
@@ -104,211 +104,34 @@
             <p class="ip-hint mb-0">@L["Administrators hold every permission."]</p>
         </section>
     }
-    else if (isAdminViewer)
+    else if (isAdminViewer && ViewBag.PermissionEditor is PermissionEditorModel editor)
     {
-    <section class="ip-section ip-form mt-5" id="permissionsSection">
-        <h2 class="mb-1">@L["User Permissions"]</h2>
-        <p class="ip-hint mb-3">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
-        <label class="ip-filter search col-12 col-md-6 mb-3">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="search" id="permissionSearch" autocomplete="off"
-                   placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
-        </label>
-        <div id="permissionsContainer">
-            <partial name="_Skeleton" model="6" />
-        </div>
-    </section>
+        @* Own permissions on top of the role's (shown locked); each change saves at once. *@
+        <section class="ip-section mt-5" id="permissionsSection">
+            <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
+                <div>
+                    <h2 class="mb-1">@L["User Permissions"]</h2>
+                    <p class="ip-hint mb-0">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <label class="ip-filter search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" id="permissionSearch" autocomplete="off"
+                               placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
+                    </label>
+                    <a href="@Url.Action("RolePermissions", new { role = "User" })" class="ip-btn ip-btn-secondary">
+                        <i class="fa-solid fa-user-shield"></i><span>@L["Role permissions"]</span>
+                    </a>
+                </div>
+            </div>
+            <partial name="_PermissionEditor" model="editor" />
+        </section>
     }
 </div>
 
 @section Scripts {
+    <script src="~/js/permission-editor.js" asp-append-version="true"></script>
     <script>
-        $(document).ready(function() {
-            if (!document.getElementById('permissionsContainer')) return;   // Admins only
-            loadUserPermissions();
-
-            $('#permissionSearch').on('input', filterPermissions);
-
-            // Buttons are rendered from data: the permission name travels in a data attribute.
-            $('#permissionsContainer').on('click', '.permission-toggle', function() {
-                togglePermission(this.dataset.permission, this.dataset.grant === 'true');
-            });
-        });
-
-        function filterPermissions() {
-            const searchTerm = ($('#permissionSearch').val() || '').toLowerCase();
-            let visible = 0;
-            $('.permission-item').each(function() {
-                const match = $(this).text().toLowerCase().includes(searchTerm);
-                $(this).toggle(match);
-                if (match) visible++;
-            });
-            // A group whose rows are all filtered out hides its heading too.
-            $('.permission-group').each(function() {
-                const any = $(this).find('.permission-item').filter(function() { return this.style.display !== 'none'; }).length > 0;
-                $(this).toggle(any);
-            });
-            $('#permissionsNoResults').toggle(visible === 0);
-        }
-
-        function showPermissionsError(message) {
-            $('#permissionsContainer').html(
-                `<div class="ip-banner ip-banner-danger"><i class="fa-solid fa-circle-exclamation"></i><span>${escapeHtml(message)}</span></div>`
-            );
-        }
-
-        function loadUserPermissions() {
-            $.ajax({
-                // MVC action on this controller; the cookie authenticates it.
-                url: '/UserManagement/GetUserPermissions?id=@Model.Id',
-                type: 'GET',
-                success: function(data) {
-                    if (data.error) {
-                        showPermissionsError(t('Failed to load permissions'));
-                        return;
-                    }
-                    renderPermissions(data);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Failed to load permissions:', xhr.status, error);
-
-                    let errorMessage = t('Error loading permissions');
-                    if (xhr.status === 401) {
-                        errorMessage = t('Session expired. Please refresh the page.');
-                    } else if (xhr.status === 403) {
-                        errorMessage = t('You do not have permission to view user permissions.');
-                    }
-                    showPermissionsError(errorMessage);
-                }
-            });
-        }
-
-        function renderPermissions(permissions) {
-            // Nothing came back at all - say so instead of leaving a blank section.
-            if (!permissions || permissions.length === 0) {
-                $('#permissionsContainer').html(`<p class="ip-muted py-2 mb-0">${escapeHtml(t('No permissions defined'))}</p>`);
-                return;
-            }
-
-            // Group permissions by category
-            const grouped = {};
-            permissions.forEach(p => {
-                const category = p.category || 'General';
-                if (!grouped[category]) {
-                    grouped[category] = [];
-                }
-                grouped[category].push(p);
-            });
-
-            let html = '';
-
-            // Directly granted permissions first
-            const assignedPerms = permissions.filter(p => p.isAssigned);
-            if (assignedPerms.length > 0) {
-                html += `
-                    <div class="permission-group mb-4">
-                        <h3 class="mb-1">${escapeHtml(t('Current Permissions ({0})', assignedPerms.length))}</h3>
-                        <div class="row row-cols-1 row-cols-md-2 g-0">
-                            ${assignedPerms.map(p => createPermissionItem(p, true)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += `<h3 class="mb-1">${escapeHtml(t('Available Permissions'))}</h3>`;
-
-            for (const [category, perms] of Object.entries(grouped)) {
-                const availableInCategory = perms.filter(p => !p.isAssigned);
-                if (availableInCategory.length === 0) continue;
-
-                html += `
-                    <div class="permission-group mt-3">
-                        <div class="ip-faint fw-medium">${escapeHtml(t(category))}</div>
-                        <div class="row row-cols-1 row-cols-md-2 g-0">
-                            ${availableInCategory.map(p => createPermissionItem(p, false)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Search filters the rendered rows, so it needs its own no-match line.
-            html += `<p id="permissionsNoResults" class="ip-muted py-2 mb-0" style="display: none;">${escapeHtml(t('No permissions match'))}</p>`;
-
-            $('#permissionsContainer').html(html);
-            filterPermissions();
-        }
-
-        function createPermissionItem(permission, isAssigned) {
-            const name = escapeHtml(permission.name);
-            const description = escapeHtml(permission.description ? t(permission.description) : t('No description'));
-            // Held through a role: shown so a missing direct grant is not mistaken for no access.
-            const fromRole = !isAssigned && permission.isFromRole
-                ? `<span class="ip-tag-plain ms-2">${escapeHtml(t('From role'))}</span>`
-                : '';
-            const label = escapeHtml(isAssigned ? t('Remove permission') : t('Add permission'));
-
-            // The wrapper stays a plain block: jQuery .toggle() writes an inline display,
-            // which a Bootstrap d-* display utility would override with !important.
-            return `
-                <div class="permission-item col" data-name="${name}">
-                    <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom me-md-4">
-                        <div class="flex-grow-1">
-                            <div class="fw-medium text-break">${name}${fromRole}</div>
-                            <div class="ip-faint">${description}</div>
-                        </div>
-                        <button type="button" class="ip-btn-icon permission-toggle ${isAssigned ? 'ip-btn-icon-danger' : ''}"
-                                data-permission="${name}" data-grant="${!isAssigned}"
-                                title="${label}" aria-label="${label}">
-                            <i class="fa-solid ${isAssigned ? 'fa-xmark' : 'fa-plus'}"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function togglePermission(permissionName, isGranting) {
-            // Promise wrapper so the shared dialog fits this async flow: resolves only if confirmed.
-            const confirmed = await new Promise(resolve => {
-                confirmAction({
-                    title: isGranting ? t('Grant permission') : t('Remove permission'),
-                    message: isGranting
-                        ? t('Grant the "{0}" permission to this user?', permissionName)
-                        : t('Remove the "{0}" permission from this user?', permissionName),
-                    okText: isGranting ? t('Grant') : t('Remove'),
-                    danger: !isGranting
-                }, () => resolve(true));
-                document.getElementById('globalConfirmModal')
-                    ?.addEventListener('hidden.bs.modal', () => resolve(false), { once: true });
-            });
-
-            if (!confirmed) {
-                return; // User cancelled the action
-            }
-
-            $.ajax({
-                url: '@Url.Action("TogglePermission", new { id = Model.Id })',
-                type: 'POST',
-                data: JSON.stringify({ permissionName: permissionName, isGranting: isGranting }),
-                contentType: 'application/json',
-                headers: AppConfig.antiforgeryHeaders(),
-                success: function(response) {
-                    if (response && response.success) {
-                        showToast(isGranting ? t('Permission granted') : t('Permission removed'), 'success');
-                    } else {
-                        showToast(response?.message || t('Permission change failed'), 'error');
-                    }
-                    loadUserPermissions();
-                },
-                error: function(xhr) {
-                    const errorMsg = xhr.responseJSON?.message ||
-                                   xhr.responseJSON?.error ||
-                                   t('Permission change failed');
-                    showToast(errorMsg, 'error');
-                }
-            });
-        }
-
-
         // Someone else saving or deleting this user while it is open: warn, never touch the form.
         LiveUpdates.watch({
             mode: 'warn',

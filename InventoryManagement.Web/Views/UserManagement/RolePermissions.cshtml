@@ -1,0 +1,31 @@
+@model PermissionEditorModel
+@{
+    ViewData["Title"] = "Role permissions";
+    var role = ViewBag.Role as string ?? "User";
+    var userCount = ViewBag.UserCount as int? ?? 0;
+}
+
+<div class="container-fluid px-4">
+    <div class="ip-page-head">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">@L["Users"]</a></li>
+                <li class="breadcrumb-item active">@L["Role permissions"]</li>
+            </ol>
+            <h1>@L["Role permissions"]: @L[role]</h1>
+            <div class="ip-sub">@L["Everyone with this role holds these permissions; users can be given more on their own page. {0} users have this role.", userCount]</div>
+        </div>
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" id="permissionSearch" autocomplete="off"
+                   placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
+        </label>
+    </div>
+
+    <p class="ip-hint mb-3">@L["Changes save at once and reach signed-in users within 5 minutes. Administrators hold every permission."]</p>
+    <partial name="_PermissionEditor" model="Model" />
+</div>
+
+@section Scripts {
+    <script src="~/js/permission-editor.js" asp-append-version="true"></script>
+}

@@ -49,6 +49,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             ["UserManagement.ResetPassword"] = "Reset a user's password",
             ["Auth.ResetPassword"] = "Reset a user's password",
             ["UserManagement.TogglePermission"] = "Changed a user's permissions",
+            ["UserManagement.ToggleRolePermission"] = "Changed a role's permissions",
             ["Auth.GrantPermission"] = "Changed a user's permissions",
             ["Auth.RevokePermission"] = "Changed a user's permissions",
             ["Auth.AssignRole"] = "Changed a user's role",

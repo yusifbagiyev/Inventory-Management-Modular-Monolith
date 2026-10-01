@@ -18,6 +18,12 @@
             <button type="button" class="ip-btn ip-btn-secondary" onclick="exportUsersToPDF()">
                 <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
+            @if (isAdminViewer)
+            {
+                <a href="@Url.Action("RolePermissions", new { role = "User" })" class="ip-btn ip-btn-secondary">
+                    <span>@L["Role permissions"]</span><i class="fa-solid fa-user-shield"></i>
+                </a>
+            }
             @if (canManage)
             {
                 <a href="@Url.Action("Create")" class="ip-btn ip-btn-primary">
