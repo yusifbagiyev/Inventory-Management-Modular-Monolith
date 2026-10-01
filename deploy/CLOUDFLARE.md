@@ -6,7 +6,7 @@ TLS (sertifikat) Cloudflare-dədir.
 
 ```
 istifadəçi ─https─> Cloudflare (inventory.az) ─tunel─> cloudflared ─http─> nginx:8080 ─> app
-LAN:        nginx:80/443 (10.0.1.60, inventory166.az) ─> yalnız https://inventory.az-a yönləndirir
+LAN:        nginx:80/443 (10.0.1.60) ─> yalnız https://inventory.az-a yönləndirir; inventory166.az açılmır
 ```
 
 - `nginx:8080` yalnız tunel üçündür, hosta publish olunmur. Ziyarətçinin IP-si Cloudflare-in
@@ -101,9 +101,9 @@ Problem olsa, tətbiqi Access-də silmək kifayətdir — proqram əvvəlki kimi
 
 ## Qeydlər
 
-- Proqrama yalnız `https://inventory.az` ilə girilir. Köhnə `inventory166.az` (və `www.`) və serverin IP-si
-  (`10.0.1.60`) LAN-da da yalnız `https://inventory.az`-a yönləndirir (yol saxlanılır); `www.inventory.az` da
-  `inventory.az`-a. İnternet və ya Cloudflare olmayanda proqram açılmır. ServiceDesk (5001) dəyişmir.
+- Proqrama yalnız `https://inventory.az` ilə girilir. Serverin IP-si (`10.0.1.60`) LAN-da yalnız
+  `https://inventory.az`-a yönləndirir (yol saxlanılır); `www.inventory.az` da `inventory.az`-a. Köhnə
+  `inventory166.az` ümumiyyətlə açılmır (nginx bağlantını qəbul etmir); onun DNS qeydini də silmək olar. İnternet və ya Cloudflare olmayanda proqram açılmır. ServiceDesk (5001) dəyişmir.
 - WhatsApp mesajları dəyişmir (şəkil faylın özü göndərilir, link yox).
 - Tuneli söndürmək: `.env`-dən `COMPOSE_PROFILES=tunnel`-i silin və
   `docker compose stop cloudflared && docker compose rm -f cloudflared`. Tamamilə ləğv: Zero Trust-da tuneli silin.
