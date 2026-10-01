@@ -140,13 +140,25 @@
                     {
                         <a class="back" href="@Url.Action("Login", new { returnUrl })"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>@L["Change account"]</a>
                     }
-                    <div class="identity">
-                        <span class="ip-avatar" aria-hidden="true">@Model.Initials</span>
+                    @if (Model.AskUsername)
+                    {
+                        @* Username and password: a plain heading (the design's "?" avatar read oddly on
+                           a computer's first sign-in). *@
                         <div>
-                            <div class="name">@Model.DisplayName</div>
-                            <div class="login">@Model.LoginHint</div>
+                            <h1>@L["Sign in"]</h1>
+                            <div class="ip-muted">@L["With the username and password of your work account"]</div>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <div class="identity">
+                            <span class="ip-avatar" aria-hidden="true">@Model.Initials</span>
+                            <div>
+                                <div class="name">@Model.DisplayName</div>
+                                <div class="login">@Model.LoginHint</div>
+                            </div>
+                        </div>
+                    }
 
                     @if (!ViewData.ModelState.IsValid)
                     {

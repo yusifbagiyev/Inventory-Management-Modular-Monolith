@@ -111,12 +111,7 @@ namespace InventoryManagement.Web.Controllers
                 model.Initials = RecentAccounts.Initials(chosen.Name);
             }
             else if (!model.ShowPicker)
-            {
-                model.Mode = "other";
-                model.DisplayName = JsonStringLocalizer.TranslateMessage("Another account");
-                model.LoginHint = JsonStringLocalizer.TranslateMessage("Enter your username");
-                model.Initials = "?";
-            }
+                model.Mode = "other";   // username and password; the page shows a plain heading
             return model;
         }
 
