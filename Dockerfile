@@ -40,6 +40,7 @@ COPY ["NotificationService.Domain/NotificationService.Domain.csproj", "Notificat
 COPY ["NotificationService.Application/NotificationService.Application.csproj", "NotificationService.Application/"]
 COPY ["NotificationService.Infrastructure/NotificationService.Infrastructure.csproj", "NotificationService.Infrastructure/"]
 COPY ["NotificationService.API/NotificationService.API.csproj", "NotificationService.API/"]
+COPY ["AuditService/AuditService.csproj", "AuditService/"]
 COPY ["InventoryManagement.Web/InventoryManagement.Web.csproj", "InventoryManagement.Web/"]
 RUN dotnet restore "InventoryManagement.Web/InventoryManagement.Web.csproj"
 

@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Threading.RateLimiting;
 using ApprovalService.API;
+using AuditService;
+using AuditService.Data;
 using IdentityService.API;
 using IdentityService.Infrastructure.Data;
 using Microsoft.AspNetCore.Antiforgery;
@@ -28,7 +30,8 @@ namespace InventoryManagement.Web.Extensions
             .. ProductModule.Assemblies,
             .. RouteModule.Assemblies,
             .. ApprovalModule.Assemblies,
-            .. NotificationModule.Assemblies
+            .. NotificationModule.Assemblies,
+            .. AuditModule.Assemblies
         ];
 
         /// <summary>Module DbContexts in migration order.</summary>
@@ -38,7 +41,8 @@ namespace InventoryManagement.Web.Extensions
             typeof(ProductDbContext),
             typeof(RouteDbContext),
             typeof(ApprovalDbContext),
-            typeof(NotificationDbContext)
+            typeof(NotificationDbContext),
+            typeof(AuditDbContext)
         ];
 
         private static readonly string[] ModuleSchemas =
@@ -47,7 +51,8 @@ namespace InventoryManagement.Web.Extensions
             ProductDbContext.Schema,
             RouteDbContext.Schema,
             ApprovalDbContext.Schema,
-            NotificationDbContext.Schema
+            NotificationDbContext.Schema,
+            AuditDbContext.Schema
         ];
 
         public static IServiceCollection AddModules(this IServiceCollection services, IMvcBuilder mvc)
@@ -59,6 +64,7 @@ namespace InventoryManagement.Web.Extensions
             services.AddRouteModule();
             services.AddApprovalModule();
             services.AddNotificationModule();
+            services.AddAuditModule();
 
             foreach (var assembly in ModuleAssemblies.Distinct())
                 mvc.AddApplicationPart(assembly);

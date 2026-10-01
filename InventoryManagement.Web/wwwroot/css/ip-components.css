@@ -494,3 +494,17 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-spec-list:empty { display: none; }
 .ip-dl-wide > div { grid-template-columns: 220px minmax(0, 1fr); }
 @media (max-width: 575.98px) { .ip-spec-row { grid-template-columns: 1fr auto; } .ip-spec-row input:nth-child(2) { grid-column: 1; } .ip-spec-row button { grid-row: 1 / span 2; grid-column: 2; } }
+
+/* Audit log (Views/Audit): one row per action, its records stacked, changed fields as old -> new */
+.ip-audit-table th.when { width: 8.5rem; }
+.ip-audit-table th.who { width: 14rem; }
+.ip-audit-table td { vertical-align: top; }
+.ip-audit-entry + .ip-audit-entry { margin-top: var(--ip-space-2); padding-top: var(--ip-space-2); border-top: 1px dashed var(--ip-border); }
+.ip-audit-changes { margin-top: var(--ip-space-1); }
+.ip-audit-changes summary { cursor: pointer; font-size: var(--ip-text-sm, .8125rem); width: fit-content; }
+.ip-audit-changes dl { margin: var(--ip-space-1) 0 0; }
+.ip-audit-changes dl > div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: var(--ip-space-3); padding: 2px 0; font-size: var(--ip-text-sm, .8125rem); }
+.ip-audit-changes dt { color: var(--ip-text-2); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-audit-changes dd { margin: 0; overflow-wrap: anywhere; }
+.ip-audit-changes .old { color: var(--ip-text-2); text-decoration: line-through; text-decoration-color: var(--ip-border-strong, currentColor); }
+@media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }

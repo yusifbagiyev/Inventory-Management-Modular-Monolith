@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using SharedServices.Auditing;
 using SharedServices.LiveUpdates;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
@@ -13,9 +14,10 @@ namespace SharedServices.Persistence
     {
         /// <summary>
         /// Registers a module DbContext on the scope's shared <see cref="DbSession"/> connection,
-        /// with its migrations history kept in the module's own schema.
+        /// with its migrations history kept in the module's own schema. Its changes are written to
+        /// the audit log (when the Audit module is present) unless <paramref name="audited"/> is false.
         /// </summary>
-        public static IServiceCollection AddModuleDbContext<TContext>(this IServiceCollection services, string schema)
+        public static IServiceCollection AddModuleDbContext<TContext>(this IServiceCollection services, string schema, bool audited = true)
             where TContext : DbContext
         {
             services.AddDbContext<TContext>((sp, options) =>
@@ -29,6 +31,10 @@ namespace SharedServices.Persistence
                 var live = sp.GetService<IOptions<LiveUpdateOptions>>()?.Value;
                 if (live is { Entities.Count: > 0 })
                     options.AddInterceptors(new LiveUpdateInterceptor(session, live, sp.GetService<IHttpContextAccessor>()));
+
+                // Every created, changed and deleted row goes to the audit log (SharedServices.Auditing).
+                if (audited && sp.GetService<IAuditSink>() != null)
+                    options.AddInterceptors(new AuditInterceptor(sp.GetRequiredService<AuditContext>(), session, sp));
             });
             return services;
         }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using SharedServices.Auditing;
 using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Controllers
@@ -20,16 +21,27 @@ namespace InventoryManagement.Web.Controllers
         private readonly IdentityAuth _identity;
         private readonly IUserManagementService _userManagementService;
         private readonly ILogger<AccountController> _logger;
+        private readonly AuditContext _audit;
+        private readonly IAuditSink _auditLog;
 
         public AccountController(
             IdentityAuth identity,
             IUserManagementService userManagementService,
-            ILogger<AccountController> logger)
+            ILogger<AccountController> logger,
+            AuditContext audit,
+            IAuditSink auditLog)
         {
             _identity = identity;
             _userManagementService = userManagementService;
             _logger = logger;
+            _audit = audit;
+            _auditLog = auditLog;
         }
+
+        /// <summary>Sign-in events in the audit log ("Session" rows).</summary>
+        private Task AuditSessionAsync(string operation, int? userId, string? userName, string? username, string? reason = null)
+            => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
+                reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
@@ -79,6 +91,9 @@ namespace InventoryManagement.Web.Controllers
                 }
 
                 _logger.LogInformation("User {Username} signed in from {Ip}", model.Username, HttpContext.Connection.RemoteIpAddress);
+                var fullName = $"{user.FirstName} {user.LastName}".Trim();
+                await AuditSessionAsync(AuditOperations.SignedIn, user.Id,
+                    fullName.Length > 0 ? $"{fullName} ({user.Username})" : user.Username, user.Username);
 
                 return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
                     ? Redirect(returnUrl)
@@ -88,6 +103,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
+                await AuditSessionAsync(AuditOperations.SignInFailed, null, model.Username, model.Username, ex.Message);
                 ModelState.AddModelError(string.Empty, ex.Message.StartsWith("Account is locked")
                     ? JsonStringLocalizer.TranslateMessage(ex.Message)
                     : JsonStringLocalizer.TranslateMessage("Invalid username or password."));
@@ -100,6 +116,7 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Logout()
         {
             _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
+            await AuditSessionAsync(AuditOperations.SignedOut, _audit.UserId, _audit.UserName, User.Identity?.Name);
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction(nameof(Login));
         }

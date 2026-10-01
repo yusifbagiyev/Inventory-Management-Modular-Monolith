@@ -83,6 +83,12 @@
                 <i class="fa-regular fa-bell"></i><span>@L["Notifications"]</span>
                 <span class="ip-rail-count is-alert" id="sidebarUnreadCount" style="display: none;"></span>
             </a>
+            @if (Can("audit.view"))
+            {
+                <a href="/Audit" class="@Active(controller == "Audit")" title="@L["Audit log"]">
+                    <i class="fa-solid fa-clipboard-list"></i><span>@L["Audit log"]</span>
+                </a>
+            }
             @if (Can("user.view"))
             {
                 <a href="/UserManagement" class="@Active(controller == "UserManagement")" title="@L["Users"]">

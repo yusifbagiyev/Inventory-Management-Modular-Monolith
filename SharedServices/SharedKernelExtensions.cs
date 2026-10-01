@@ -2,6 +2,7 @@ using System.Reflection;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using SharedServices.Auditing;
 using SharedServices.Authorization;
 using SharedServices.Background;
 using SharedServices.Behaviors;
@@ -22,12 +23,16 @@ namespace SharedServices
             services.AddSingleton<BackgroundWorkQueue>();
             services.AddHostedService<BackgroundWorkService>();
             services.AddScoped<DbSession>();
+            services.AddHttpContextAccessor();
+            services.AddScoped<AuditContext>();
             services.AddSingleton<ImageStorage>();
 
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssemblies(moduleAssemblies);
-                // Registration order = execution order: validate before opening a transaction.
+                // Registration order = execution order: name the audited action, validate, then
+                // open a transaction.
+                config.AddOpenBehavior(typeof(AuditActionBehavior<,>));
                 config.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 config.AddOpenBehavior(typeof(TransactionBehavior<,>));
             });

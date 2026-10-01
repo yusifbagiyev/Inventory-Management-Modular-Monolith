@@ -1,0 +1,242 @@
+@using AuditService.Queries
+@model AuditLogPage
+@{
+    ViewData["Title"] = "Audit log";
+    var facets = ViewBag.Facets as AuditFacets ?? new AuditFacets([], []);
+    var query = Context.Request.Query;
+    string? Q(string key) => string.IsNullOrWhiteSpace(query[key]) ? null : query[key].ToString();
+    var hasFilters = new[] { "search", "userId", "entityType", "operation", "startDate", "entityId" }.Any(k => Q(k) != null);
+
+    // Record types and operations as English text keys for L[...].
+    string TypeLabel(string type) => type switch
+    {
+        "InventoryRoute" => "Route",
+        "ApprovalRequest" => "Approval request",
+        "UserPermission" => "User permission",
+        "IdentityUserRole" => "User role",
+        "RolePermission" => "Role permission",
+        _ => type
+    };
+    string OperationLabel(string op) => op switch
+    {
+        "SignedIn" => "Signed in",
+        "SignInFailed" => "Sign-in failed",
+        "SignedOut" => "Signed out",
+        _ => op
+    };
+    // The record's own page, while it still exists.
+    string? RecordUrl(AuditEntryDto e) => e.Operation == "Deleted" || !int.TryParse(e.EntityId, out var id) ? null : e.EntityType switch
+    {
+        "Product" => $"/Products/Details/{id}",
+        "InventoryRoute" => $"/Routes/Details/{id}",
+        "Category" => $"/Categories/Details/{id}",
+        "Department" => $"/Departments/Details/{id}",
+        "User" => $"/UserManagement/Details/{id}",
+        _ => null
+    };
+    string OperationBadge(string op) => op switch
+    {
+        "Created" or "SignedIn" => "ip-badge-success",
+        "Deleted" or "SignInFailed" => "ip-badge-danger",
+        "Updated" => "ip-badge-info",
+        _ => "ip-badge-neutral"
+    };
+    // "ProductSnapshot.InventoryCode" -> "Inventory Code"; field names double as text keys.
+    string FieldLabel(string field)
+    {
+        var name = field.Contains('.') ? field[(field.LastIndexOf('.') + 1)..] : field;
+        return System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])(?=[A-Z])", " ");
+    }
+}
+
+<div class="container-fluid px-4">
+    <div class="ip-page-head">
+        <div>
+            <h1>@L["Audit log"]</h1>
+            <div class="ip-sub ip-num">@L["{0} actions", Model.TotalCount]</div>
+        </div>
+    </div>
+
+    @* A plain GET form: every filter reloads the page with the filters in the URL (page 1). *@
+    <form method="get" class="ip-filterbar" id="auditFilters" data-no-ajax>
+        <label class="ip-filter search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" name="search" value="@Q("search")" autocomplete="off"
+                   placeholder="@L["Search record, user, value..."]" aria-label="@L["Search"]" />
+        </label>
+        <label class="ip-filter">
+            <span>@L["User"]</span>
+            <select name="userId" onchange="this.form.requestSubmit()">
+                <option value="">@L["All"]</option>
+                @foreach (var user in facets.Users.Where(u => u.UserId.HasValue))
+                {
+                    <option value="@user.UserId" selected="@(Q("userId") == user.UserId.ToString())">@user.UserName</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Record"]</span>
+            <select name="entityType" onchange="this.form.requestSubmit()">
+                <option value="">@L["All"]</option>
+                @foreach (var type in facets.EntityTypes)
+                {
+                    <option value="@type" selected="@(Q("entityType") == type)">@L[TypeLabel(type)]</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <span>@L["Operation"]</span>
+            <select name="operation" onchange="this.form.requestSubmit()">
+                <option value="">@L["All"]</option>
+                @foreach (var op in new[] { "Created", "Updated", "Deleted", "SignedIn", "SignInFailed", "SignedOut" })
+                {
+                    <option value="@op" selected="@(Q("operation") == op)">@L[OperationLabel(op)]</option>
+                }
+            </select>
+        </label>
+        <label class="ip-filter">
+            <i class="fa-regular fa-calendar"></i>
+            <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" aria-label="@L["Date"]" />
+        </label>
+        <input type="hidden" name="startDate" id="startDate" value="@Q("startDate")" />
+        <input type="hidden" name="endDate" id="endDate" value="@Q("endDate")" />
+        @if (Q("entityId") != null)
+        {
+            <input type="hidden" name="entityId" value="@Q("entityId")" />
+        }
+        <input type="hidden" name="pageSize" value="@Model.PageSize" />
+        @if (hasFilters)
+        {
+            <a href="@Url.Action("Index")" class="ip-btn ip-btn-ghost">
+                <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
+            </a>
+        }
+    </form>
+
+    <div data-list-region>
+        <div class="ip-table-wrap">
+            @if (Model.Items.Any())
+            {
+                <table class="ip-table ip-audit-table">
+                    <thead>
+                        <tr>
+                            <th class="when">@L["When"]</th>
+                            <th class="who">@L["User"]</th>
+                            <th>@L["What"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var action in Model.Items)
+                        {
+                            <tr>
+                                <td class="ip-num text-nowrap">
+                                    @action.At.ToString("dd.MM.yyyy")
+                                    <div class="sub">@action.At.ToString("HH:mm:ss")</div>
+                                </td>
+                                <td>
+                                    <div class="cell-title">@(action.UserName ?? L["System"].Value)</div>
+                                    @if (!string.IsNullOrEmpty(action.IpAddress))
+                                    {
+                                        <div class="cell-sub ip-mono">@action.IpAddress</div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="ip-faint ip-mono small mb-1" title="@L["Action"]">@action.Action</div>
+                                    @foreach (var entry in action.Entries)
+                                    {
+                                        <div class="ip-audit-entry">
+                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                                <span class="ip-badge @OperationBadge(entry.Operation)">@L[OperationLabel(entry.Operation)]</span>
+                                                <span class="fw-medium">@L[TypeLabel(entry.EntityType)]</span>
+                                                @if (!string.IsNullOrEmpty(entry.Label))
+                                                {
+                                                    var url = RecordUrl(entry);
+                                                    if (url != null)
+                                                    {
+                                                        <a href="@url">@entry.Label</a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@entry.Label</span>
+                                                    }
+                                                }
+                                                @if (!string.IsNullOrEmpty(entry.EntityId) && entry.EntityType != "Session")
+                                                {
+                                                    <span class="ip-faint ip-mono">#@entry.EntityId</span>
+                                                }
+                                            </div>
+                                            @if (entry.Changes.Count > 0)
+                                            {
+                                                <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && entry.Changes.Count <= 6)">
+                                                    <summary class="ip-faint">@L["{0} fields", entry.Changes.Count]</summary>
+                                                    <dl>
+                                                        @foreach (var change in entry.Changes)
+                                                        {
+                                                            <div>
+                                                                <dt title="@change.Field">@L[FieldLabel(change.Field)]</dt>
+                                                                <dd>
+                                                                    @if (entry.Operation == "Updated")
+                                                                    {
+                                                                        <span class="old">@(change.Old ?? "—")</span>
+                                                                        <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
+                                                                        <span class="new">@(change.New ?? "—")</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        @* Sign-in failure reasons are server messages (text keys). *@
+                                                                        <span>@(entry.EntityType == "Session" ? L[change.New ?? ""].Value : change.New ?? change.Old ?? "—")</span>
+                                                                    }
+                                                                </dd>
+                                                            </div>
+                                                        }
+                                                    </dl>
+                                                </details>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="ip-empty">
+                    <span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                    <div class="title">@L["Nothing found"]</div>
+                    <div class="text">@L["No actions match these filters"]</div>
+                </div>
+            }
+        </div>
+        <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            const form = document.getElementById('auditFilters');
+            const start = document.getElementById('startDate');
+            const end = document.getElementById('endDate');
+            DateRange.attach('#dateRange', {
+                position: 'bottom right',
+                onApply: function (from, to) {
+                    start.value = DateRange.iso(from);
+                    end.value = DateRange.iso(to);
+                    form.requestSubmit();
+                },
+                onClear: function () {
+                    if (!start.value) return;
+                    start.value = end.value = '';
+                    form.requestSubmit();
+                }
+            });
+            if (start.value && end.value)
+                DateRange.set('#dateRange', DateRange.fromIso(start.value), DateRange.fromIso(end.value));
+        })();
+    </script>
+}

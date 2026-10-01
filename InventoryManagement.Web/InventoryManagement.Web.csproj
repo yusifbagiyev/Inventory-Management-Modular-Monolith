@@ -44,6 +44,7 @@
     <ProjectReference Include="..\NotificationService.API\NotificationService.API.csproj" />
     <ProjectReference Include="..\ProductService.API\ProductService.API.csproj" />
     <ProjectReference Include="..\RouteService.API\RouteService.API.csproj" />
+    <ProjectReference Include="..\AuditService\AuditService.csproj" />
   </ItemGroup>
 
 </Project>

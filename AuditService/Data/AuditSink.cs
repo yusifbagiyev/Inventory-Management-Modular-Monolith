@@ -1,0 +1,50 @@
+using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using SharedServices.Auditing;
+
+namespace AuditService.Data
+{
+    /// <summary>
+    /// Saves audit records through <see cref="AuditDbContext"/>, which shares the request's
+    /// connection and joins its transaction (see AddModuleDbContext).
+    /// </summary>
+    public sealed class AuditSink : IAuditSink
+    {
+        private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+        private readonly IServiceProvider _services;
+
+        // Resolved lazily: module DbContexts ask for the sink while their options are being built.
+        public AuditSink(IServiceProvider services) => _services = services;
+
+        public async Task WriteAsync(IReadOnlyList<AuditRecord> records, CancellationToken cancellationToken = default)
+        {
+            var context = _services.GetRequiredService<AuditDbContext>();
+            context.Entries.AddRange(records.Select(ToEntry));
+            await context.SaveChangesAsync(cancellationToken);
+            context.ChangeTracker.Clear();
+        }
+
+        public void Write(IReadOnlyList<AuditRecord> records)
+        {
+            var context = _services.GetRequiredService<AuditDbContext>();
+            context.Entries.AddRange(records.Select(ToEntry));
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
+        }
+
+        private static AuditEntry ToEntry(AuditRecord r) => new()
+        {
+            At = r.At,
+            CorrelationId = r.CorrelationId,
+            UserId = r.UserId,
+            UserName = r.UserName,
+            IpAddress = r.IpAddress,
+            Action = r.Action,
+            EntityType = r.EntityType,
+            EntityId = r.EntityId,
+            Label = r.Label,
+            Operation = r.Operation,
+            Changes = JsonSerializer.Serialize(r.Changes, Json)
+        };
+    }
+}
