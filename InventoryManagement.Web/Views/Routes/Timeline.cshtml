@@ -5,6 +5,7 @@
     var productId = ViewBag.ProductId;
     var ordered = Model.OrderByDescending(r => r.CreatedAt).ToList();
     var product = ordered.FirstOrDefault();
+    ViewData["Subtitle"] = product?.InventoryCode.ToString();
     var pendingCount = Model.Count(r => !r.IsCompleted);
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
     string Place(string? department, string? worker)

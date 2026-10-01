@@ -117,11 +117,11 @@ else if (view.Changes.Count > 0)
                 @foreach (var change in view.Changes)
                 {
                     <tr>
-                        <td class="text-nowrap">@L[change.Field]</td>
+                        <td class="field text-nowrap">@L[change.Field]</td>
                         @if (change.Field == "Images")
                         {
                             <td class="old">@(view.Kind == "Product update" ? L["Current images"].Value : "—")</td>
-                            <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                            <td class="arrow ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                             <td>
                                 <span class="new">
                                     @L["{0} new", addedImages]@(removedImages > 0 ? ", " + L["{0} removed", removedImages].Value : "")
@@ -142,7 +142,7 @@ else if (view.Changes.Count > 0)
                                     @Value(current, change.Localize)
                                 }
                             </td>
-                            <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                            <td class="arrow ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                             <td>
                                 @if (string.IsNullOrWhiteSpace(change.Proposed))
                                 {

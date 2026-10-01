@@ -85,7 +85,7 @@
                 </div>
                 @if (Model.TransferActivityData.Labels.Any())
                 {
-                    <div style="position: relative; height: 280px;">
+                    <div class="ip-chart">
                         <canvas id="transferChart" role="img" aria-label="@L["Transfer Activity"]"
                                 data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="@RouteLink("/Routes?routeType=Transfer")"></canvas>
                     </div>
@@ -98,7 +98,8 @@
             </section>
         </div>
 
-        <div class="col-xl-4">
+        @* Phones: "needs attention" comes right after the figures (CSS order), before the chart. *@
+        <div class="col-xl-4 ip-dash-attention">
             <section class="ip-section">
                 <h2 class="mb-3">@L["Needs attention"]</h2>
                 @if (pendingApprovals is int approvals)
@@ -238,7 +239,20 @@
                     interaction: { mode: 'index', intersect: false },
                     plugins: { legend: { display: false }, tooltip: tooltip() },
                     scales: {
-                        x: { stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') } },
+                        x: {
+                            stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') },
+                            // Phones: "1–5" for "01–05.09", "30" for "Ç. 30.09" - the labels fit.
+                            ticks: {
+                                callback: function (value) {
+                                    const label = this.getLabelForValue(value);
+                                    if (window.innerWidth >= 768 || typeof label !== 'string') return label;
+                                    const range = /^(\d{2})[–-](\d{2})\.\d{2}$/.exec(label);
+                                    if (range) return (+range[1]) + '–' + (+range[2]);
+                                    const day = /(\d{2})\.\d{2}$/.exec(label);
+                                    return day ? String(+day[1]) : label;
+                                }
+                            }
+                        },
                         y: { stacked: true, beginAtZero: true, grid: { color: v('--ip-border') }, border: { display: false }, ticks: { precision: 0 } }
                     },
                     onHover: pointerOnHover,

@@ -1,6 +1,7 @@
 @model RouteViewModel
 @{
     ViewData["Title"] = "Route Details";
+    ViewData["Subtitle"] = Model.InventoryCode.ToString();
     var canComplete = User.HasPermission("route.complete");
     var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
     var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");

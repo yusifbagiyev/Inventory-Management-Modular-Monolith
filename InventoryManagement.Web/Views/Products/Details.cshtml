@@ -1,6 +1,7 @@
 @model ProductViewModel
 @{
     ViewData["Title"] = "Product Details";
+    ViewData["Subtitle"] = Model.InventoryCode.ToString();   // under the phone app bar's title
     var transfers = ViewBag.Transfers as List<RouteViewModel> ?? new List<RouteViewModel>();
     var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
     var canDelete = User.HasPermission("product.delete") || User.HasPermission("product.delete.direct");
@@ -39,7 +40,8 @@
         </div>
     </div>
 
-    <div class="ip-page-actions mb-4">
+    @* Wider screens: the actions under the title. Phones: the same in the fixed bottom bar (end of page). *@
+    <div class="ip-page-actions mb-4 d-none d-md-flex">
         @if (canUpdate)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
@@ -177,6 +179,19 @@
             </div>
         }
     </section>
+    }
+    @if (canUpdate || (canTransfer && Model.IsActive))
+    {
+        <div class="ip-form-foot d-md-none">
+            @if (canUpdate)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary"><i class="fa-solid fa-pen"></i><span>@L["Edit"]</span></a>
+            }
+            @if (canTransfer && Model.IsActive)
+            {
+                <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary"><span>@L["Transfer"]</span></a>
+            }
+        </div>
     }
 </div>
 

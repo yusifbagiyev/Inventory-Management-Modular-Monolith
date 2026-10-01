@@ -20,9 +20,10 @@
         if (p >= 1 && p <= totalPages) pages.Add(p);
 }
 <div class="ip-table-foot">
-    <span class="ip-num">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
+    @* .range / .page-size: hidden on phones by the design's responsive layer (only the pages stay). *@
+    <span class="ip-num range">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
     <div class="d-flex align-items-center gap-3 flex-wrap">
-        <label class="ip-filter">
+        <label class="ip-filter page-size">
             <span>@L["Rows"]</span>
             <select id="pageSizeFilter" onchange="changePageSize(this.value)">
                 @foreach (var size in new[] { 15, 30, 50, 100 })

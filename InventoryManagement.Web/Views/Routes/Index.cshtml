@@ -145,11 +145,11 @@
                         @foreach (var route in Model.Items)
                         {
                             <tr data-href="@Url.Action("Details", new { id = route.Id })">
-                                <td class="ip-num text-nowrap">
+                                <td class="date ip-num text-nowrap">
                                     @route.CreatedAt.ToString("dd.MM.yyyy")
                                     <div class="sub">@route.CreatedAt.ToString("HH:mm")</div>
                                 </td>
-                                <td>
+                                <td class="title">
                                     <div class="cell-item">
                                         <span class="ip-thumb">
                                             @if (!string.IsNullOrEmpty(route.ImageUrl))
@@ -167,7 +167,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="meta route-from">
                                     <div class="cell-text">
                                         <span class="cell-title fw-normal">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
                                         @if (!string.IsNullOrEmpty(route.FromWorker))
@@ -176,8 +176,8 @@
                                         }
                                     </div>
                                 </td>
-                                <td class="ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
-                                <td>
+                                <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                                <td class="meta route-to">
                                     <div class="cell-text">
                                         <span class="cell-title">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
                                         @if (!string.IsNullOrEmpty(route.ToWorker))
@@ -186,9 +186,9 @@
                                         }
                                     </div>
                                 </td>
-                                <td class="ip-muted">@L[route.RouteTypeLabel]</td>
+                                <td class="meta ip-muted">@L[route.RouteTypeLabel]</td>
                                 <td class="d-none">@route.Notes</td>
-                                <td>
+                                <td class="state">
                                     @if (route.IsCompleted)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Completed"]</span>
@@ -202,7 +202,7 @@
                                         <div class="mt-1" data-no-row-link><partial name="_WhatsAppStatus" model="route" /></div>
                                     }
                                 </td>
-                                <td data-no-row-link>
+                                <td class="actions" data-no-row-link>
                                     <div class="actions align-items-center">
                                         @if (canComplete && !route.IsCompleted)
                                         {
@@ -271,7 +271,8 @@
                 departmentName: '#departmentFilter',
                 categoryName: '#categoryFilter',
                 routeType: '#typeFilter'
-            }
+            },
+            sheet: true
         });
 
         // Names used by the markup's onclick/onchange handlers.

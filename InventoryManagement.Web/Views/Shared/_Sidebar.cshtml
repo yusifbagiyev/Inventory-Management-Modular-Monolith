@@ -20,10 +20,14 @@
    everything inside. Collapsed state: localStorage 'ip-rail', applied by the script below before
    the first paint; the toggle lives in site.js (Rail). Below 768px it is a drawer. *@
 <aside class="ip-rail" id="ipRail" data-bs-theme="dark" aria-label="@L["Main menu"]">
-    <a class="ip-rail-brand text-reset text-decoration-none" href="/">
-        <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
-        <span>Inventory Pro</span>
-    </a>
+    <div class="ip-rail-brand">
+        <a class="ip-rail-home" href="/">
+            <span class="ip-logo" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></span>
+            <span>Inventory Pro</span>
+        </a>
+        @* Phones: closes the drawer. *@
+        <button type="button" class="ip-rail-close" data-rail-close aria-label="@L["Close menu"]"><i class="fa-solid fa-xmark"></i></button>
+    </div>
 
     <nav class="ip-rail-nav">
         @if (Can("dashboard.view"))
@@ -124,6 +128,26 @@
     </nav>
 
     <div class="ip-rail-foot">
+        @* Phones: the toolbar is hidden, so language and theme live here (hidden on wider screens). *@
+        <div class="ip-rail-prefs">
+            <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax role="group" aria-label="@L["Switch language"]">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                @if (JsonStringLocalizer.IsAzerbaijani)
+                {
+                    <button type="button" class="active" aria-pressed="true">AZ</button>
+                    <button type="submit" name="culture" value="en-US" aria-pressed="false">EN</button>
+                }
+                else
+                {
+                    <button type="submit" name="culture" value="az-Latn-AZ" aria-pressed="false">AZ</button>
+                    <button type="button" class="active" aria-pressed="true">EN</button>
+                }
+            </form>
+            <button type="button" class="ip-btn-icon lg" data-theme-toggle title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
         <button type="button" class="ip-rail-link ip-rail-toggle" data-rail-toggle
                 data-label-collapse="@L["Collapse menu"]" data-label-expand="@L["Expand menu"]" title="@L["Collapse menu"]">
             <i class="fa-solid fa-angles-left"></i><span>@L["Collapse menu"]</span>
@@ -156,4 +180,4 @@
         if (window.matchMedia('(min-width: 768px) and (max-width: 1024px)').matches) rail.classList.add('collapsed');
     })();
 </script>
-<div class="ip-rail-backdrop" data-rail-toggle></div>
+<div class="ip-rail-backdrop" data-rail-close></div>

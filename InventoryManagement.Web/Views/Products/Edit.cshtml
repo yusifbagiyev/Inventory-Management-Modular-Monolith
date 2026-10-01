@@ -1,6 +1,7 @@
 @model ProductViewModel
 @{
     ViewData["Title"] = "Edit Product";
+    ViewData["Subtitle"] = Model.InventoryCode.ToString();
     var direct = User.HasPermission("product.update.direct");
 }
 

@@ -211,7 +211,36 @@ window.ImageManager = (function () {
         if (counter) counter.textContent = `${index + 1} / ${thumbs.length}`;
         const cover = gallery.querySelector('[data-ig-cover]');
         if (cover) cover.hidden = index !== 0;
+        gallery.querySelectorAll('.ip-gallery-dots i').forEach((d, i) => d.classList.toggle('active', i === index));
     }
+
+    function currentIndex(gallery) {
+        const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
+        return Math.max(0, thumbs.findIndex(b => b.classList.contains('active')));
+    }
+
+    // Swipe (phones): a horizontal drag of 40px or more shows the next / previous image, and the
+    // tap that ends it does not open the preview.
+    let swipe = null;
+    document.addEventListener('pointerdown', function (e) {
+        const box = e.target.closest('[data-image-gallery] .ip-gallery');
+        swipe = box ? { gallery: box.closest('[data-image-gallery]'), x: e.clientX, y: e.clientY, moved: false } : null;
+    });
+    document.addEventListener('pointerup', function (e) {
+        if (!swipe) return;
+        const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+        if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)) {
+            swipe.moved = true;
+            showGalleryImage(swipe.gallery, currentIndex(swipe.gallery) + (dx < 0 ? 1 : -1));
+        }
+    });
+    document.addEventListener('click', function (e) {
+        if (swipe && swipe.moved && e.target.closest('[data-image-gallery]')) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        swipe = null;
+    }, true);
 
     document.addEventListener('click', function (e) {
         const thumb = e.target.closest('[data-ig-thumb]');
@@ -219,8 +248,7 @@ window.ImageManager = (function () {
         const gallery = (thumb || step) && (thumb || step).closest('[data-image-gallery]');
         if (!gallery) return;
         const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
-        const current = Math.max(0, thumbs.findIndex(b => b.classList.contains('active')));
-        showGalleryImage(gallery, thumb ? thumbs.indexOf(thumb) : current + parseInt(step.dataset.igStep, 10));
+        showGalleryImage(gallery, thumb ? thumbs.indexOf(thumb) : currentIndex(gallery) + parseInt(step.dataset.igStep, 10));
     });
 
     document.addEventListener('DOMContentLoaded', function () { initAll(); });

@@ -82,12 +82,12 @@
                                 data-status="@(category.IsActive ? "active" : "inactive")"
                                 data-products="@category.ProductCount"
                                 data-created="@category.CreatedAt.Ticks">
-                                <td>
+                                <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = category.Id })" title="@category.Name">@category.Name</a>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="meta">
                                     <div class="cell-text">
                                         @if (string.IsNullOrEmpty(category.Description))
                                         {
@@ -102,7 +102,7 @@
                                     </div>
                                 </td>
                                 <td class="ip-num">@category.ProductCount</td>
-                                <td>
+                                <td class="state">
                                     @if (category.IsActive)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Active"]</span>
@@ -112,8 +112,8 @@
                                         <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                     }
                                 </td>
-                                <td class="ip-num text-nowrap">@category.CreatedAt.ToString("dd.MM.yyyy")</td>
-                                <td data-no-row-link>
+                                <td class="date ip-num text-nowrap">@category.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                <td class="actions" data-no-row-link>
                                     <div class="actions">
                                         <a asp-action="Details" asp-route-id="@category.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
@@ -158,7 +158,7 @@
 </div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">

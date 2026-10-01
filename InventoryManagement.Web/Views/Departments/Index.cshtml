@@ -85,12 +85,12 @@
                                 data-products="@department.ProductCount"
                                 data-workers="@department.WorkerCount"
                                 data-created="@department.CreatedAt.Ticks">
-                                <td>
+                                <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = department.Id })">@department.Name</a>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="meta">
                                     @if (!string.IsNullOrEmpty(department.DepartmentHead))
                                     {
                                         @department.DepartmentHead
@@ -100,7 +100,7 @@
                                         <span class="ip-faint pdf-omit">@L["Not assigned"]</span>
                                     }
                                 </td>
-                                <td>
+                                <td class="hide-sm">
                                     @* max-width is what makes the ellipsis work in an auto-layout table *@
                                     <div class="cell-sub text-truncate" style="max-width: 300px;" title="@department.Description">
                                         @if (!string.IsNullOrEmpty(department.Description))
@@ -115,7 +115,7 @@
                                 </td>
                                 <td class="ip-num">@department.ProductCount</td>
                                 <td class="ip-num">@department.WorkerCount</td>
-                                <td>
+                                <td class="state">
                                     @if (department.IsActive)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Active"]</span>
@@ -125,8 +125,8 @@
                                         <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                     }
                                 </td>
-                                <td class="ip-num text-nowrap">@department.CreatedAt.ToString("dd.MM.yyyy")</td>
-                                <td data-no-row-link>
+                                <td class="date ip-num text-nowrap">@department.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                <td class="actions" data-no-row-link>
                                     <div class="actions">
                                         <a asp-action="Details" asp-route-id="@department.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
@@ -175,7 +175,7 @@
 </div>
 
 <!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">

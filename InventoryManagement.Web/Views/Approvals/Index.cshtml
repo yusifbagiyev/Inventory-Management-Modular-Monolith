@@ -54,8 +54,8 @@
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
                             <tr data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
-                                <td class="ip-mono ip-muted">#@request.Id</td>
-                                <td>
+                                <td class="code ip-mono ip-muted">#@request.Id</td>
+                                <td class="title">
                                     <div class="cell-text">
                                         <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
                                         @if (fields.Count > 0)
@@ -64,12 +64,12 @@
                                         }
                                     </div>
                                 </td>
-                                <td>@request.RequestedByName</td>
-                                <td class="ip-num text-nowrap">
+                                <td class="meta">@request.RequestedByName</td>
+                                <td class="date ip-num text-nowrap">
                                     @request.CreatedAt.ToString("dd.MM.yyyy")
                                     <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
                                 </td>
-                                <td>
+                                <td class="state">
                                     @switch (request.Status)
                                     {
                                         case "Pending":
@@ -90,7 +90,7 @@
                                         <div class="sub">@request.ApprovedByName</div>
                                     }
                                 </td>
-                                <td class="text-end">
+                                <td class="actions text-end">
                                     <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" onclick="event.stopPropagation(); viewDetails(@request.Id)">
                                         @(pendingTab && canDecide ? L["Review and decide"] : L["View"])
                                     </button>
@@ -117,7 +117,7 @@
 </div>
 
 @* Decision dialog (design: 08 Approvals). The header and body come from _ApprovalDetails. *@
-<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
+<div class="modal fade ip-modal" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">

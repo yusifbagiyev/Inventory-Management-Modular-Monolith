@@ -73,6 +73,23 @@
     <div class="ip-app" id="wrapper">
         @if (signedIn)
         {
+            @* Phones (design prompt 3): an app bar with the menu, the page title and the bell; the
+               rail becomes a drawer. On pages with a breadcrumb the menu button gives way to a
+               back arrow (site.js, with the breadcrumb's back button). Hidden from 768px. *@
+            <header class="ip-appbar">
+                <button type="button" class="ip-btn-icon" data-rail-open aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
+                <a class="ip-btn-icon ip-appbar-back" href="/" hidden aria-label="@L["Back"]"><i class="fa-solid fa-arrow-left"></i></a>
+                <div class="title">
+                    @L[ViewData["Title"]?.ToString() ?? "Inventory Pro"]
+                    @if (ViewData["Subtitle"] is string subtitle && subtitle.Length > 0)
+                    {
+                        <small>@subtitle</small>
+                    }
+                </div>
+                <a class="ip-btn-icon position-relative" href="/Notifications" aria-label="@L["Notifications"]">
+                    <i class="fa-regular fa-bell"></i><span class="ip-dot" data-unread-dot style="display:none"></span>
+                </a>
+            </header>
             <partial name="_Sidebar" />
         }
 
@@ -81,11 +98,6 @@
             <header class="ip-toolbar">
                 @if (signedIn)
                 {
-                    <button type="button" class="ip-btn-icon lg ip-rail-open" data-rail-toggle
-                            title="@L["Main menu"]" aria-label="@L["Main menu"]">
-                        <i class="fa-solid fa-bars"></i>
-                    </button>
-
                     @* Suggestions while typing (site.js: CodeFinder); Enter or the button: an exact
                        inventory code opens that product, anything else the filtered product list. *@
                     @if (User.HasPermission("product.view"))
@@ -430,7 +442,7 @@
             count = parseInt(count) || 0;
 
             // The toolbar bell and the rail's Notifications count
-            const badgeSelectors = ['#notificationBadge', '#sidebarUnreadCount'];
+            const badgeSelectors = ['#notificationBadge', '#sidebarUnreadCount', '[data-unread-dot]'];
 
             badgeSelectors.forEach(selector => {
                 const $element = $(selector);

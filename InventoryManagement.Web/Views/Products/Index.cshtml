@@ -105,8 +105,8 @@
             <span>@L["Created"]</span>
             <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" />
         </label>
-        <button type="button" class="ip-btn ip-btn-ghost @(curAssigned == false ? "is-on" : "")" aria-pressed="@(curAssigned == false ? "true" : "false")" onclick="quickFilter('unassigned')">@L["Unassigned"]</button>
-        <button type="button" class="ip-btn ip-btn-ghost @(curHasImage == false ? "is-on" : "")" aria-pressed="@(curHasImage == false ? "true" : "false")" onclick="quickFilter('noImage')">@L["No image"]</button>
+        <button type="button" class="ip-btn ip-btn-ghost @(curAssigned == false ? "is-on" : "")" aria-pressed="@(curAssigned == false ? "true" : "false")" data-flag="assigned" onclick="quickFilter('unassigned')">@L["Unassigned"]</button>
+        <button type="button" class="ip-btn ip-btn-ghost @(curHasImage == false ? "is-on" : "")" aria-pressed="@(curHasImage == false ? "true" : "false")" data-flag="hasImage" onclick="quickFilter('noImage')">@L["No image"]</button>
         @if (hasFilters)
         {
             <button type="button" class="ip-btn ip-btn-ghost" onclick="resetProductFilters()">
@@ -136,7 +136,7 @@
                         @foreach (var product in Model.Items)
                         {
                             <tr data-href="@Url.Action("Details", new { id = product.Id })">
-                                <td>
+                                <td class="thumb">
                                     <span class="ip-thumb">
                                         @if (!string.IsNullOrEmpty(product.ImageUrl))
                                         {
@@ -148,7 +148,7 @@
                                         }
                                     </span>
                                 </td>
-                                <td data-no-row-link>
+                                <td class="code" data-no-row-link>
                                     @if (canChangeCode)
                                     {
                                         <span class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Double-click to change the code"]">@product.InventoryCode</span>
@@ -170,7 +170,7 @@
                                         <span class="ip-mono">@product.InventoryCode</span>
                                     }
                                 </td>
-                                <td>
+                                <td class="title">
                                     <div class="cell-text">
                                         <span><a class="cell-title text-reset" href="@Url.Action("Details", new { id = product.Id })">@product.Model</a>@if (product.IsNewItem)
                                             {
@@ -179,7 +179,7 @@
                                         <span class="cell-sub">@product.Vendor · @product.CategoryName</span>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="meta">
                                     <div class="cell-text">
                                         <span class="cell-title fw-normal">@product.DepartmentName</span>
                                         @if (!string.IsNullOrEmpty(product.Worker))
@@ -193,8 +193,8 @@
                                     </div>
                                 </td>
                                 <td class="d-none">@product.Description</td>
-                                <td class="ip-num text-nowrap">@((product.UpdatedAt ?? product.CreatedAt)?.ToString("dd.MM.yyyy") ?? "-")</td>
-                                <td>
+                                <td class="date ip-num text-nowrap">@((product.UpdatedAt ?? product.CreatedAt)?.ToString("dd.MM.yyyy") ?? "-")</td>
+                                <td class="state">
                                     <div class="state-stack flex-column align-items-start">
                                         @if (product.IsWorking)
                                         {
@@ -214,7 +214,7 @@
                                         }
                                     </div>
                                 </td>
-                                <td data-no-row-link>
+                                <td class="actions" data-no-row-link>
                                     <div class="actions">
                                         <a asp-action="Details" asp-route-id="@product.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
@@ -277,7 +277,8 @@
                 departmentId: '#departmentFilter'
             },
             // Server-side quick flags with no control of their own.
-            urlFlags: ['hasImage', 'assigned']
+            urlFlags: ['hasImage', 'assigned'],
+            sheet: true
         });
 
         // Names used by the markup's onclick/onchange handlers.

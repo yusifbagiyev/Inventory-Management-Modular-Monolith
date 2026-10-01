@@ -484,16 +484,21 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-rail.collapsed .ip-rail-logout { display: none; }
 .ip-rail.collapsed .ip-rail-account { justify-content: center; }
 .ip-rail.collapsed .ip-rail-brand { padding: 0 21px; }
-.ip-rail-open, .ip-rail-backdrop { display: none; }
+/* Phones: the drawer and app bar come from the design's responsive layer (above); these are the
+   app's parts of it: the brand is a link plus the close button, language and theme sit in the
+   drawer's foot, the app bar's bell dot carries no number, [hidden] beats the icon buttons'
+   inline-flex, and the breadcrumb's back button gives way to the app bar's arrow. */
+.ip-rail-home { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+.ip-rail-home:hover { color: inherit; }
+.ip-rail-prefs { display: none; }
+.ip-appbar [hidden] { display: none !important; }
+.ip-appbar .ip-dot { font-size: 0; top: 10px; right: 10px; }
 @media (max-width: 767.98px) {
-  .ip-rail, .ip-rail:not(.expanded) { position: fixed; left: 0; top: 0; z-index: 1045; width: 260px; transform: translateX(-100%); transition: transform .2s ease; }
-  body.rail-open .ip-rail { transform: none; }
-  body.rail-open .ip-rail-backdrop { display: block; position: fixed; inset: 0; z-index: 1040; background: var(--ip-backdrop); }
-  .ip-rail-toggle { display: none; }
-  .ip-rail-open { display: inline-flex; margin-right: auto; }
-  .ip-main { padding: var(--ip-space-3) var(--ip-space-4) var(--ip-space-8); }
-  .ip-toolbar { flex-wrap: wrap; }
-  .ip-toolbar-search { order: 10; flex: 1 1 100%; width: auto; max-width: none; }
+  .ip-rail-prefs { display: flex; align-items: center; justify-content: space-between; gap: var(--ip-space-2); padding-bottom: var(--ip-space-2); }
+  .ip-crumbs .ip-back { display: none; }
+  /* The design's base rules hiding these come after its phone rules showing them. */
+  .ip-rail .ip-rail-close { display: grid; }
+  .ip-rail-prefs .ip-seg { display: flex; }
 }
 @media (prefers-reduced-motion: reduce) { .ip-rail { transition: none; } }
 
@@ -562,12 +567,12 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-switch-list .ip-switch-row:last-child { border-bottom: 0; }
 .ip-error:empty, .ip-error.field-validation-valid { display: none; }
 .ip-label { display: flex; gap: 4px; align-items: baseline; margin: 0; }
-.ip-form-foot { z-index: 10; }
+@media (min-width: 768px) { .ip-form-foot { z-index: 10; } }   /* phones: the design's fixed bar (1020) */
 .ip-form-foot .note:empty { visibility: hidden; }
 @media (max-width: 767.98px) {
   .ip-form-foot { margin: 0 calc(-1 * var(--ip-space-4)); padding-left: var(--ip-space-4); padding-right: var(--ip-space-4); }
 }
-.ip-gallery .nav { display: grid; place-items: center; padding: 0; }
+@media (min-width: 768px) { .ip-gallery .nav { display: grid; place-items: center; padding: 0; } }   /* phones: dots + swipe */
 
 /* ---------- routes / transfer (design: 06, 07) ---------- */
 .ip-tabs + .d-none + .ip-filterbar-soft, .ip-filterbar-soft { border-top: 0; }
@@ -668,7 +673,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-spec-list { display: flex; flex-direction: column; gap: var(--ip-space-2); max-width: 760px; }
 .ip-spec-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto; gap: var(--ip-space-2); align-items: center; }
 .ip-spec-list:empty { display: none; }
-.ip-dl-wide > div { grid-template-columns: 220px minmax(0, 1fr); }
+@media (min-width: 768px) { .ip-dl-wide > div { grid-template-columns: 220px minmax(0, 1fr); } }
 @media (max-width: 575.98px) { .ip-spec-row { grid-template-columns: 1fr auto; } .ip-spec-row input:nth-child(2) { grid-column: 1; } .ip-spec-row button { grid-row: 1 / span 2; grid-column: 2; } }
 
 /* Audit log (Views/Audit): one row per action, its records stacked, changed fields as old -> new */
@@ -687,7 +692,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 
 /* Icon buttons center their glyph whatever the element: <button> does it by itself, an <a> did
    not (the icon sat at the top of the 34px square). :where() keeps this at zero specificity, so
-   rules that hide a particular button (.ip-rail-open on wide screens, d-none) still win. */
+   rules that hide a particular button ([hidden], d-none) still win. */
 :where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
 
 /* Text areas can be dragged taller or back, never below about three lines (or off the page). */
@@ -713,57 +718,56 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 }
 
 /* ---------- phones (< 768px) ----------
-   Lists: each table row is a card of "Header: value" lines (cells labelled by site.js
-   MobileLayout), the photo floated right, the actions along the bottom. Filters fold behind a
-   "Filters (n)" button. KPIs two by two, page buttons share the width, tabs scroll. */
+   List rows are cards (the design's responsive layer, above): the list pages mark their cells
+   (td.thumb / code / title / meta / state / date / actions / hide-sm); in any other table
+   site.js MobileLayout labels the plain cells from the headers (td[data-label]) and marks the
+   photo (cell-media), actions (cell-actions) and empty cells. Filter bars without the design's
+   filter sheet fold behind a "Filters (n)" button. */
 .ip-filter-toggle { display: none; }
 .ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--ip-accent); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
+/* Desktop: the actions cell stays a table cell (".ip-table .actions" makes its inner div a flex row). */
+@media (min-width: 768px) { .ip-table td.actions { display: table-cell; } }
 @media (max-width: 767.98px) {
-  .ip-table-wrap { overflow: visible; border: 0; }
-  .ip-table, .ip-table tbody, .ip-table tr { display: block; width: 100%; }
-  .ip-table thead { display: none; }
-  .ip-table tbody tr { position: relative; margin-bottom: var(--ip-space-3); padding: 12px 14px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); background: var(--ip-surface); }
-  .ip-table tbody tr:hover, .ip-table tbody tr:hover > td { background: var(--ip-surface); }
-  .ip-table tbody tr[data-href]:active { background: var(--ip-surface-hover); }
-  /* The label sits in a fixed column; the value (text, a second line, a badge...) flows beside it. */
-  .ip-table td { display: block; position: relative; min-height: 28px; padding: 4px 0 4px calc(7.25rem + 10px) !important; border: 0 !important; background: transparent !important; text-align: left !important; white-space: normal; width: auto !important; }
-  .ip-table td::before { content: attr(data-label); position: absolute; left: 0; top: 4px; width: 7.25rem; color: var(--ip-text-3); font-size: var(--ip-fs-sm); line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ip-table td:not([data-label]) { padding-left: 0 !important; }
-  .ip-table td:not([data-label])::before { content: none; }
+  /* Cards without a photo use the whole width. */
+  .ip-table tbody tr:not(:has(> td.thumb, > td.cell-media)) { grid-template-columns: minmax(0, 1fr); }
+  .ip-table tbody tr:not(:has(> td.thumb, > td.cell-media)) > td { grid-column: 1; }
+  .ip-table tbody tr[data-href], .ip-table tbody tr.ip-clickable { cursor: pointer; }
+  .ip-table tbody tr[data-href]:active, .ip-table tbody tr.ip-clickable:active { background: var(--ip-surface-hover); }
+  .ip-table td.cell-media { grid-column: 1; grid-row: 1 / span 10; }
+  .ip-table td.cell-media .ip-thumb { width: 44px; height: 44px; }
   .ip-table td.cell-empty { display: none; }
-  .ip-table td.cell-media { float: right; margin: 0 0 6px 12px; padding: 0 !important; }
-  .ip-table td.cell-media .ip-thumb { width: 56px; height: 56px; }
-  .ip-table td.cell-actions { clear: both; margin-top: 8px; padding-top: 8px !important; border-top: 1px solid var(--ip-border) !important; }
-  .ip-table td.cell-actions .actions { justify-content: flex-end; gap: 6px; }
-  .ip-table td .sub, .ip-table td .cell-sub { display: block; }
-  .ip-table-foot { justify-content: center; }
-  .ip-table-foot > .ip-num { width: 100%; text-align: center; }
+  .ip-table tr[data-href] td.cell-actions, .ip-table tr.ip-clickable td.cell-actions { display: none; }
+  .ip-table td.cell-actions { margin-top: 8px; }
+  .ip-table td[data-label] { margin-top: 4px; }
+  /* The app's two-line cells (.cell-text: title + sub) inside the design's roles. */
+  .ip-table td.title .cell-title { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
+  .ip-table td.title .cell-sub { display: block; font-size: var(--ip-fs-sm); color: var(--ip-text-3); }
+  .ip-table td.title .cell-item { display: flex; align-items: center; gap: var(--ip-space-3); min-width: 0; }
+  .ip-table td.meta .cell-text, .ip-table td.meta .cell-title { display: inline; font-weight: 400; color: inherit; }
+  .ip-table td.meta .cell-sub { display: inline; }
+  .ip-table td.meta .cell-sub::before { content: " · "; }
+  .ip-table td.state .state-stack { flex-direction: row !important; flex-wrap: wrap; align-items: center !important; gap: 6px; }
+  .ip-table td.date .sub { display: inline; margin-left: 4px; }
 
-  .ip-filterbar { gap: var(--ip-space-2); }
   .ip-filterbar > .search { flex: 1 1 0; min-width: 0; }
-  .ip-filter-toggle { display: inline-flex; flex: none; gap: 8px; justify-content: center; }
+  .ip-filter-toggle { display: inline-flex; flex: none; gap: 8px; justify-content: center; height: var(--ip-control-lg); }
   .ip-filterbar.has-toggle:not(.open) > :not(.search):not(.ip-filter-toggle) { display: none !important; }
-  .ip-filterbar.has-toggle.open > :not(.search):not(.ip-filter-toggle):not([type="hidden"]) { flex: 1 1 100%; }
+  .ip-filterbar.has-toggle.open { flex-wrap: wrap; }
+  .ip-filterbar.has-toggle.open > :not(.search):not(.ip-filter-toggle):not([type="hidden"]) { display: flex !important; flex: 1 1 100%; }
   .ip-filterbar.open .ip-filter select, .ip-filterbar.open .ip-filter input { flex: 1; min-width: 0; max-width: none; }
 
   .ip-page-head { align-items: stretch; }
   .ip-page-actions { width: 100%; flex-wrap: wrap; }
   .ip-page-actions > .ip-btn { flex: 1 1 auto; justify-content: center; }
-  .ip-tabs { overflow-x: auto; scrollbar-width: none; gap: var(--ip-space-5); }
   .ip-tabs::-webkit-scrollbar { display: none; }
   .ip-tab { white-space: nowrap; }
-
-  .ip-kpi-grid { grid-template-columns: 1fr 1fr; gap: var(--ip-space-5) var(--ip-space-4); margin-bottom: var(--ip-space-4); }
-  .ip-kpi .value { font-size: 30px; line-height: 36px; }
   .ip-kpi .trend { font-size: 12px; }
-
-  .ip-dl > div, .ip-dl-wide > div { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--ip-space-3); }
-  .ip-form-grid { grid-template-columns: 1fr; }
-  /* The sticky save bar: Cancel and Save side by side, sharing the width. */
-  .ip-form-foot { flex-wrap: nowrap; gap: var(--ip-space-2); }
-  .ip-form-foot > .note { flex: 0 1 auto; min-width: 0; }   /* often only whitespace: no :empty */
-  .ip-form-foot > .ip-btn { flex: 1 1 0; justify-content: center; }
-  .modal-dialog { margin: var(--ip-space-2); }
+  .modal:not(.ip-modal) .modal-dialog { margin: var(--ip-space-2); }
+}
+/* Tablets: the design hides the bar's third and later filters behind its filter sheet; bars
+   without one keep them all. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ip-filterbar:not(:has(.ip-filter-more)) .ip-filter { display: flex !important; }
 }
 /* Fingers need bigger targets than a mouse. */
 @media (pointer: coarse) {
@@ -805,12 +809,13 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 /* Empty values in change tables (approval dialog, audit log): words, not a bare dash. */
 .ip-empty-value { color: var(--ip-text-3); font-style: italic; }
 .ip-removed-value { color: var(--ip-danger-text); font-style: italic; }
-/* Phones: a change table (approval dialog) reads "Field: old -> new", not three labelled lines. */
+/* Phones: a change table (approval dialog) reads "Field" over "old -> new" (the design's .ip-diff
+   rules; these undo the generic card grid the table would otherwise get). */
 @media (max-width: 767.98px) {
-  .ip-table.ip-diff tbody tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 10px 12px; }
-  .ip-table.ip-diff td, .ip-table.ip-diff td.cell-empty { display: block !important; padding: 0 !important; min-height: 0; }
+  .ip-table.ip-diff tbody tr { display: block; grid-template-columns: none; }
+  .ip-table.ip-diff td { display: inline; grid-column: auto; }
+  .ip-table.ip-diff td.field { display: block; }
   .ip-table.ip-diff td::before { content: none; }
-  .ip-table.ip-diff td:first-child { flex: 1 1 100%; font-weight: 600; }
 }
 /* Phones: an audit card is time and user side by side, the changes full width below. */
 @media (max-width: 767.98px) {
@@ -869,3 +874,50 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-link-danger { padding: 0; border: 0; background: none; font: inherit; font-size: var(--ip-fs-sm); color: var(--ip-danger-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .ip-link-danger:hover { color: var(--ip-danger-solid); }
 .ip-link-danger:disabled { opacity: .6; cursor: default; }
+
+/* The filter sheet's button and chips (list-filters.js) at every width where they show: the
+   design styles them inside its phone block only, but tablets use the sheet too. */
+@media (min-width: 768px) { .ip-filter-more { height: var(--ip-control-md); } }
+.ip-filter-more { align-items: center; gap: var(--ip-space-2); padding: 0 14px; border: 0; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-1); font: inherit; font-weight: 500; cursor: pointer; }
+.ip-filter-more .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-size: var(--ip-fs-xs); font-weight: 600; line-height: 20px; text-align: center; }
+.ip-filter-more .count:empty { display: none; }
+.ip-chips { display: flex; flex-wrap: wrap; gap: var(--ip-space-2); }
+.ip-chip { min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: var(--ip-radius-md); border: 1px solid var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); font: inherit; cursor: pointer; }
+.ip-chip.active { background: var(--ip-text-1); border-color: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
+#filterSheet .modal-title { font-size: var(--ip-fs-lg); font-weight: 600; margin: 0; }
+
+/* Gallery dots: phones only (the design's phone block shows them; a plain rule here would win over it). */
+@media (min-width: 768px) { .ip-gallery-dots { display: none; } }
+.ip-gallery { touch-action: pan-y; }
+
+/* Dashboard (design prompt 3): the activity chart's height, smaller on phones; there the
+   "needs attention" list comes right after the figures. */
+.ip-chart { position: relative; height: 220px; }
+@media (max-width: 767.98px) {
+  .ip-chart { height: 160px; }
+  #dashboardCharts > .ip-dash-attention { order: -1; }
+}
+
+/* Phones: a route card reads "Finance · worker →" / "IT · worker" (routes list). */
+@media (max-width: 767.98px) {
+  .ip-table td.route-from::after { content: " →"; }
+}
+
+/* Phones: a centred dialog (modal-dialog-centered) is a bottom sheet too - Bootstrap's full-height
+   centring would float it mid-screen. */
+@media (max-width: 767.98px) {
+  .ip-modal .modal-dialog-centered { min-height: 0; align-items: flex-end; }
+  /* A scrollable dialog keeps its content's height (the sheet scrolls inside), so a tap above
+     the sheet reaches the backdrop and closes it. */
+  .ip-modal .modal-dialog-scrollable { height: auto; }
+}
+
+/* Tablets, bars with the filter sheet: search and the first two dropdowns stay, the rest are in
+   the sheet, whose button shows. (The design counts children, which the inserted button shifts,
+   and its base ".ip-filter-more { display: none }" comes after its tablet rule.) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(-n+3) { display: flex !important; }
+  .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(n+4) { display: none !important; }
+  .ip-filterbar[data-filter-sheet] > .ip-filter-more { display: flex; }
+  .ip-filterbar[data-filter-sheet] > .ip-btn[data-flag] { display: none; }   /* in the sheet's "Other" */
+}

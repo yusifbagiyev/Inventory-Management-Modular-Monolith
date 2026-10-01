@@ -12,8 +12,15 @@
 //       categoryKey: 'id' | 'name',               // what #categoryFilter option values hold
 //       departmentKey: 'id' | 'name',             // what #departmentFilter option values hold
 //       fields: { status: '#statusFilter', categoryId: '#categoryFilter', ... },  // param -> select
-//       urlFlags: ['hasImage', 'assigned']        // URL-only flags kept across changes when 'false'
+//       urlFlags: ['hasImage', 'assigned'],       // URL-only flags kept across changes when 'false'
+//       sheet: true                               // phones/tablets: the "Filter" sheet (below)
 //   });
+//
+// The sheet (design prompt 3): a "Filter (n)" button after the search opens a bottom sheet with
+// one group of chips per dropdown of the bar, date presets, and the bar's quick-flag buttons
+// ([data-flag]) as on/off chips; "Show" applies them all at once. It is built from the bar, so
+// the bar stays the one place where filters are defined. CSS shows the button on phones, and on
+// tablets where the bar hides its third and later filters.
 //
 // Requires jQuery, air-datepicker.js and date-range.js on the page.
 
@@ -196,6 +203,180 @@ window.ListFilters = (function () {
                 cascadeCategoryOptions();
                 cascadeDepartmentOptions();
             });
+        });
+
+        // ---------- the filter sheet ----------
+        const bar = document.querySelector('.ip-filterbar');
+        let sheetEl = null;
+        // Marked now (init runs before DOMContentLoaded): MobileLayout then leaves this bar to the sheet.
+        if (bar && config.sheet) bar.setAttribute('data-filter-sheet', '');
+
+        function activeCount() {
+            const params = collect();
+            let n = 0;
+            if (params.has('startDate')) n++;
+            Object.keys(config.fields).forEach(function (p) {
+                // Only the filters the bar shows (a status tab is not a "filter" here).
+                if (params.has(p) && bar && bar.querySelector(config.fields[p])) n++;
+            });
+            config.urlFlags.forEach(function (f) { if (params.get(f) === 'false') n++; });
+            return n;
+        }
+
+        function syncMoreButton() {
+            const count = bar && bar.querySelector('.ip-filter-more .count');
+            if (count) { const n = activeCount(); count.textContent = n ? String(n) : ''; }
+        }
+
+        function chip(group, value, text, active) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ip-chip' + (active ? ' active' : '');
+            b.dataset.group = group;
+            b.dataset.value = value;
+            b.textContent = text;
+            return b;
+        }
+
+        function section(title, chips, multi) {
+            const s = document.createElement('section');
+            s.className = 'mb-4';
+            const h = document.createElement('div');
+            h.className = 'ip-label mb-2';
+            h.textContent = title;
+            const wrap = document.createElement('div');
+            wrap.className = 'ip-chips';
+            if (multi) wrap.dataset.multi = '';
+            chips.forEach(function (c) { wrap.appendChild(c); });
+            s.append(h, wrap);
+            return s;
+        }
+
+        const DAY = 86400000;
+        function today() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+        const datePresets = [
+            { key: '', label: function () { return t('Any date'); } },
+            { key: '7', label: function () { return t('Last 7 days'); }, start: function () { return new Date(today() - 6 * DAY); } },
+            { key: '30', label: function () { return t('Last 30 days'); }, start: function () { return new Date(today() - 29 * DAY); } },
+            { key: '90', label: function () { return t('Last 90 days'); }, start: function () { return new Date(today() - 89 * DAY); } },
+            { key: 'year', label: function () { return t('This year'); }, start: function () { return new Date(today().getFullYear(), 0, 1); } }
+        ];
+
+        /** (Re)builds the sheet's chips from the bar's current state. */
+        function fillSheet() {
+            const body = sheetEl.querySelector('.modal-body');
+            body.innerHTML = '';
+            // In the bar's order (config.fields lists them in any order).
+            const inBar = Object.keys(config.fields)
+                .map(function (param) { return { param: param, select: bar.querySelector(config.fields[param]) }; })
+                .filter(function (f) { return f.select; })
+                .sort(function (a, b) { return a.select.compareDocumentPosition(b.select) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1; });
+            inBar.forEach(function (f) {
+                const param = f.param, select = f.select;
+                const label = select.closest('.ip-filter')?.querySelector('span')?.textContent.trim() || param;
+                const chips = Array.from(select.options).map(function (o) {
+                    return chip(param, o.value, o.textContent.trim(), select.value === o.value);
+                });
+                body.appendChild(section(label, chips, false));
+            });
+            if (bar.querySelector('#dateRange')) {
+                const range = DateRange.parse($('#dateRange').val());
+                const chips = datePresets.map(function (p) { return chip('date', p.key, p.label(), !range && p.key === ''); });
+                if (range) chips.push(chip('date', 'custom', $('#dateRange').val(), true));
+                body.appendChild(section(t('Created'), chips, false));
+            }
+            const flagButtons = bar.querySelectorAll('[data-flag]');
+            if (flagButtons.length) {
+                const chips = Array.from(flagButtons).map(function (b) {
+                    return chip('flag', b.dataset.flag, b.textContent.trim(), b.classList.contains('is-on'));
+                });
+                body.appendChild(section(t('Other'), chips, true));
+            }
+        }
+
+        function applySheet() {
+            const pick = function (group) {
+                const c = sheetEl.querySelector('.ip-chip.active[data-group="' + group + '"]');
+                return c ? c.dataset.value : '';
+            };
+            Object.keys(config.fields).forEach(function (param) {
+                const select = bar.querySelector(config.fields[param]);
+                if (select) select.value = pick(param);
+            });
+            // A department/category pair that has no products: keep the department.
+            const dep = selectedDepartment(), cat = selectedCategory();
+            if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) $('#categoryFilter').val('');
+
+            const params = collect();
+            // Dates go straight into the query (the picker shows them after the list reloads,
+            // restore()); "custom" keeps the range picked in the bar.
+            const date = pick('date');
+            const preset = datePresets.find(function (p) { return p.key === date; });
+            if (preset && preset.start) {
+                params.set('startDate', DateRange.iso(preset.start()));
+                params.set('endDate', DateRange.iso(today()));
+            } else if (date === '') {
+                params.delete('startDate');
+                params.delete('endDate');
+            }
+            config.urlFlags.forEach(function (flag) {
+                const on = !!sheetEl.querySelector('.ip-chip.active[data-group="flag"][data-value="' + flag + '"]');
+                if (on) params.set(flag, 'false'); else params.delete(flag);
+            });
+            bootstrap.Modal.getOrCreateInstance(sheetEl).hide();
+            navigate(params);
+        }
+
+        function buildSheet() {
+            if (!bar || !config.sheet || bar.querySelector('.ip-filter-more')) return;
+            const more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'ip-filter-more';
+            more.innerHTML = '<i class="fa-solid fa-sliders" aria-hidden="true"></i><span></span><span class="count"></span>';
+            more.querySelector('span').textContent = t('Filter');
+            const search = bar.querySelector(':scope > .search');
+            if (search) search.after(more); else bar.prepend(more);
+
+            sheetEl = document.createElement('div');
+            sheetEl.className = 'modal fade ip-modal';
+            sheetEl.id = 'filterSheet';
+            sheetEl.tabIndex = -1;
+            sheetEl.setAttribute('aria-hidden', 'true');
+            sheetEl.innerHTML =
+                '<div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">' +
+                '<div class="modal-header"><h2 class="modal-title flex-grow-1"></h2>' +
+                '<button type="button" class="ip-btn ip-btn-ghost ip-btn-sm" data-filter-reset></button></div>' +
+                '<div class="modal-body"></div>' +
+                '<div class="modal-footer"><button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal"></button>' +
+                '<button type="button" class="ip-btn ip-btn-primary" data-filter-apply></button></div>' +
+                '</div></div>';
+            sheetEl.querySelector('.modal-title').textContent = t('Filters');
+            sheetEl.querySelector('[data-filter-reset]').textContent = t('Reset');
+            sheetEl.querySelector('[data-bs-dismiss]').textContent = t('Close');
+            sheetEl.querySelector('[data-filter-apply]').textContent = t('Show results');
+            document.body.appendChild(sheetEl);
+
+            more.addEventListener('click', function () {
+                fillSheet();
+                bootstrap.Modal.getOrCreateInstance(sheetEl).show();
+            });
+            sheetEl.addEventListener('click', function (e) {
+                const c = e.target.closest('.ip-chip');
+                if (c) {
+                    const group = c.parentElement;
+                    if (group.hasAttribute('data-multi')) c.classList.toggle('active');
+                    else group.querySelectorAll('.ip-chip').forEach(function (o) { o.classList.toggle('active', o === c); });
+                    return;
+                }
+                if (e.target.closest('[data-filter-apply]')) applySheet();
+                if (e.target.closest('[data-filter-reset]')) { bootstrap.Modal.getOrCreateInstance(sheetEl).hide(); reset(); }
+            });
+            syncMoreButton();
+        }
+
+        $(function () {
+            buildSheet();
+            document.addEventListener('listnav:loaded', syncMoreButton);
         });
 
         return {

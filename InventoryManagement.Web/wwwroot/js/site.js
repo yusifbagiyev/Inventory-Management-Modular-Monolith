@@ -526,7 +526,9 @@ window.Theme = (function () {
 /**
  * The sidebar rail (_Sidebar.cshtml). Wide screens: expanded or collapsed to icons, the choice
  * kept in localStorage 'ip-rail' (the inline script in _Sidebar applies it before first paint).
- * 768-1024px: collapsed by default, the toggle opens it for the moment. Phones: a drawer.
+ * 768-1024px: collapsed by default, the toggle opens it for the moment. Phones: a drawer opened
+ * from the app bar ([data-rail-open]), closed by its X, the backdrop, Escape or following a link;
+ * never remembered.
  */
 window.Rail = (function () {
     const KEY = 'ip-rail';
@@ -546,13 +548,30 @@ window.Rail = (function () {
         if (span) span.textContent = label;
     }
 
+    function backdrop() { return document.querySelector('.ip-rail-backdrop'); }
+
+    function openDrawer() {
+        const r = rail();
+        if (!r) return;
+        r.classList.add('open');
+        backdrop()?.classList.add('show');
+        document.body.classList.add('ip-drawer-open');
+        r.querySelector('.ip-rail-close')?.focus();
+    }
+
+    function closeDrawer() {
+        rail()?.classList.remove('open');
+        backdrop()?.classList.remove('show');
+        document.body.classList.remove('ip-drawer-open');
+    }
+
     function layout() {
         const r = rail();
         if (!r) return;
         if (phone.matches) {
             r.classList.remove('collapsed', 'expanded');
         } else {
-            document.body.classList.remove('rail-open');
+            closeDrawer();
             if (narrow.matches) {
                 r.classList.toggle('collapsed', !r.classList.contains('expanded'));
             } else {
@@ -569,7 +588,7 @@ window.Rail = (function () {
         const r = rail();
         if (!r) return;
         if (phone.matches) {
-            document.body.classList.toggle('rail-open');
+            if (r.classList.contains('open')) closeDrawer(); else openDrawer();
         } else if (narrow.matches) {
             r.classList.toggle('expanded');
             layout();
@@ -581,16 +600,19 @@ window.Rail = (function () {
     }
 
     document.addEventListener('click', function (e) {
-        if (e.target.closest('[data-rail-toggle]')) toggle();
+        if (e.target.closest('[data-rail-open]')) openDrawer();
+        else if (e.target.closest('[data-rail-close]')) closeDrawer();
+        else if (e.target.closest('[data-rail-toggle]')) toggle();
+        else if (phone.matches && e.target.closest('#ipRail a[href]')) closeDrawer();
     });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && document.body.classList.contains('rail-open')) document.body.classList.remove('rail-open');
+        if (e.key === 'Escape' && rail()?.classList.contains('open')) closeDrawer();
     });
     phone.addEventListener('change', layout);
     narrow.addEventListener('change', layout);
     document.addEventListener('DOMContentLoaded', layout);
 
-    return { toggle: toggle };
+    return { toggle: toggle, open: openDrawer, close: closeDrawer };
 })();
 
 /**
@@ -705,19 +727,24 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 /**
- * Phones (CSS below 768px, ip-components.css "phones"): every .ip-table is shown as cards, one per
- * row, each cell as "Header: value". This labels the cells from the table's headers and marks
- * the photo, actions and empty cells. Filter bars get a "Filters (n)" button that folds all but
- * the search away. Re-applied when live updates or list refreshes swap content in.
+ * Phones (CSS below 768px): every .ip-table is shown as cards, one per row. Cells with a design
+ * role (td.thumb, .code, .title, .meta, .state, .date, .actions, .hide-sm - the list pages) are
+ * placed by the CSS; this labels the other cells from the table's headers ("Header" over the
+ * value) and marks photo, actions and empty cells. Filter bars without the design's filter sheet
+ * (.ip-filter-more) get a "Filters (n)" button that folds all but the search away. Re-applied
+ * when live updates or list refreshes swap content in.
  */
 window.MobileLayout = (function () {
     'use strict';
+
+    const ROLES = ['thumb', 'code', 'title', 'meta', 'state', 'date', 'actions', 'hide-sm', 'field', 'old', 'arrow'];
 
     function labelTable(table) {
         const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.replace(/\s+/g, ' ').trim());
         table.querySelectorAll('tbody tr').forEach(function (tr) {
             Array.from(tr.children).forEach(function (td, i) {
                 if (td.tagName !== 'TD') return;
+                if (ROLES.some(function (r) { return td.classList.contains(r); })) { delete td.dataset.label; return; }
                 const label = headers[i] || '';
                 // By content, not header: their headers are visually hidden texts ("Image", "Actions").
                 const media = !!td.querySelector('img, .ip-thumb') && !td.textContent.trim();
@@ -740,7 +767,7 @@ window.MobileLayout = (function () {
     }
 
     function addFilterToggle(bar) {
-        if (bar.querySelector(':scope > .ip-filter-toggle')) return;
+        if (bar.hasAttribute('data-filter-sheet') || bar.querySelector(':scope > .ip-filter-toggle, :scope > .ip-filter-more')) return;
         const controls = Array.from(bar.children).filter(function (el) { return !el.classList.contains('search') && el.type !== 'hidden'; });
         if (controls.length < 2) return;
         const button = document.createElement('button');
@@ -828,7 +855,7 @@ document.addEventListener('click', async function (e) {
             back.setAttribute('data-no-prefetch', '');
             back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span></span>';
             back.querySelector('span').textContent = t('Back');
-            back.addEventListener('click', function (e) {
+            function onBack(e) {
                 if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
                 let from = null;
                 try { from = document.referrer ? new URL(document.referrer) : null; } catch { from = null; }
@@ -838,12 +865,22 @@ document.addEventListener('click', async function (e) {
                     e.preventDefault();
                     history.back();
                 }
-            });
+            }
+            back.addEventListener('click', onBack);
 
             const row = document.createElement('div');
             row.className = 'ip-crumbs';
             crumbs.parentNode.insertBefore(row, crumbs);
             row.append(back, crumbs);
+
+            // Phones: the app bar shows a back arrow instead of the menu button.
+            const appBack = document.querySelector('.ip-appbar-back');
+            if (appBack) {
+                appBack.href = back.href;
+                appBack.hidden = false;
+                appBack.addEventListener('click', onBack);
+                document.querySelector('.ip-appbar [data-rail-open]')?.setAttribute('hidden', '');
+            }
         });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackButtons);

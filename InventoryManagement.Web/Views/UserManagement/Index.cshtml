@@ -94,7 +94,7 @@
                             data-roles="@string.Join("|", user.Roles)"
                             data-active="@user.IsActive.ToString().ToLower()"
                             data-ever-logged-in="@everLoggedIn.ToString().ToLower()">
-                            <td>
+                            <td class="title">
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="ip-avatar pdf-omit" aria-hidden="true">@user.Username.Substring(0, 1).ToUpper()</span>
                                     <div class="cell-text">
@@ -103,7 +103,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>@user.Email</td>
+                            <td class="meta">@user.Email</td>
                             <td>
                                 @if (user.Roles.Any())
                                 {
@@ -114,7 +114,7 @@
                                     <span class="ip-faint">-</span>
                                 }
                             </td>
-                            <td>
+                            <td class="state">
                                 @if (user.IsActive)
                                 {
                                     <span class="ip-badge ip-badge-success">@L["Active"]</span>
@@ -124,8 +124,8 @@
                                     <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                 }
                             </td>
-                            <td class="ip-num text-nowrap">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
-                            <td class="ip-num text-nowrap">
+                            <td class="hide-sm ip-num text-nowrap">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
+                            <td class="date ip-num text-nowrap">
                                 @if (everLoggedIn)
                                 {
                                     @(user.LastLoginAt.GetValueOrDefault().ToString("dd.MM.yyyy")) <div class="sub">@(user.LastLoginAt.GetValueOrDefault().ToString("HH:mm"))</div>
@@ -135,7 +135,7 @@
                                     <span class="ip-faint">@L["Never"]</span>
                                 }
                             </td>
-                            <td data-no-row-link>
+                            <td class="actions" data-no-row-link>
                                 <div class="actions">
                                     <a href="@Url.Action("Details", new { id = user.Id })" class="ip-btn-icon"
                                        title="@L["View Details"]" aria-label="@L["View Details"]">
@@ -183,7 +183,7 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
+<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">

@@ -1406,5 +1406,12 @@
   "None waiting": "Gözləyən yoxdur",
   "the oldest is from today": "ən köhnəsi bu gündəndir",
   "the oldest has waited {0} days": "ən köhnəsi {0} gündür gözləyir",
-  "Delete this product? It is kept on the Deleted products page.": "Məhsul silinsin? O, Silinmiş məhsullar səhifəsində saxlanılır."
+  "Delete this product? It is kept on the Deleted products page.": "Məhsul silinsin? O, Silinmiş məhsullar səhifəsində saxlanılır.",
+  "Filter": "Filtr",
+  "Show results": "Nəticələri göstər",
+  "Last 7 days": "Son 7 gün",
+  "Last 30 days": "Son 30 gün",
+  "Last 90 days": "Son 90 gün",
+  "This year": "Bu il",
+  "Close menu": "Menyunu bağla"
 }

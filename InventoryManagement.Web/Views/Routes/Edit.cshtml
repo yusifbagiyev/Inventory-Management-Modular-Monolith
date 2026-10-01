@@ -2,6 +2,7 @@
 @model RouteViewModel
 @{
     ViewData["Title"] = "Edit Route";
+    ViewData["Subtitle"] = Model.InventoryCode.ToString();
     var direct = User.HasPermission("route.update.direct");
     var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
