@@ -102,9 +102,9 @@
             <span>@L["Type"]</span>
             <select id="typeFilter" onchange="applyRouteFilters()">
                 <option value="">@L["All"]</option>
-                @foreach (var type in new[] { "New", "Existing", "Update", "Transfer", "Removal" })
+                @foreach (var (type, label) in new[] { ("New", "New"), ("Existing", "Existing"), ("Update", "Update"), ("CodeChange", "Code change"), ("Transfer", "Transfer"), ("Removal", "Removal") })
                 {
-                    <option value="@type" selected="@(type == curRouteType)">@L[type]</option>
+                    <option value="@type" selected="@(type == curRouteType)">@L[label]</option>
                 }
             </select>
         </label>
@@ -183,7 +183,7 @@
                                         }
                                     </div>
                                 </td>
-                                <td class="ip-muted">@L[route.RouteTypeName ?? ""]</td>
+                                <td class="ip-muted">@L[route.RouteTypeLabel]</td>
                                 <td class="d-none">@route.Notes</td>
                                 <td>
                                     @if (route.IsCompleted)

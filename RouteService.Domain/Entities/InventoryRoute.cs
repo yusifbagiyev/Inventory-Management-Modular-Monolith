@@ -1,4 +1,4 @@
-﻿using RouteService.Domain.Enums;
+using RouteService.Domain.Enums;
 using RouteService.Domain.ValueObjects;
 
 namespace RouteService.Domain.Entities
@@ -134,6 +134,29 @@ namespace RouteService.Domain.Entities
                 ToWorker = worker,
                 ImageUrl = imageUrl,
                 ImageUrls = string.IsNullOrEmpty(imageUrl) ? [] : [imageUrl],
+                Notes = notes,
+                CreatedAt = DateTime.Now
+            };
+        }
+
+        /// <summary>
+        /// A change of the product's inventory code. The snapshot holds the new code; the old one is
+        /// in the notes. The product stays where it is, so there is no "from" place.
+        /// </summary>
+        public static InventoryRoute CreateCodeChange(
+            ProductSnapshot productSnapshot,
+            int departmentId,
+            string departmentName,
+            string? worker,
+            string notes)
+        {
+            return new InventoryRoute
+            {
+                RouteType = RouteType.CodeChange,
+                ProductSnapshot = productSnapshot,
+                ToDepartmentId = departmentId,
+                ToDepartmentName = departmentName,
+                ToWorker = worker,
                 Notes = notes,
                 CreatedAt = DateTime.Now
             };

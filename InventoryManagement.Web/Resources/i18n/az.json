@@ -1218,5 +1218,6 @@
   "Color cannot exceed 30 characters": "Rəng 30 simvoldan uzun ola bilməz",
   "A product can have at most {0} specifications": "Məhsulun ən çox {0} xüsusiyyəti ola bilər",
   "A specification name cannot exceed 50 characters": "Xüsusiyyətin adı 50 simvoldan uzun ola bilməz",
-  "A specification value cannot exceed 200 characters": "Xüsusiyyətin dəyəri 200 simvoldan uzun ola bilməz"
+  "A specification value cannot exceed 200 characters": "Xüsusiyyətin dəyəri 200 simvoldan uzun ola bilməz",
+  "Code change": "Kod dəyişikliyi"
 }

@@ -8,6 +8,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int Id { get; set; }
         public string RouteType { get; set; } = string.Empty;
         public string RouteTypeName { get; set; } = string.Empty;
+        /// <summary>The type as an English text key for L[...] ("CodeChange" reads "Code change").</summary>
+        public string RouteTypeLabel => RouteTypeName == "CodeChange" ? "Code change" : RouteTypeName;
         public int ProductId { get; set; }
         public int InventoryCode { get; set; }
         public string Model { get; set; } = string.Empty;

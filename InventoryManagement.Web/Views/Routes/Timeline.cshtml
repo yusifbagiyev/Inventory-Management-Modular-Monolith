@@ -69,7 +69,7 @@
             {
                 <li class="timeline-item"
                     data-when="@route.CreatedAt.ToString("dd.MM.yyyy HH:mm")"
-                    data-type="@L[route.RouteTypeName ?? ""]"
+                    data-type="@L[route.RouteTypeLabel]"
                     data-status="@(route.IsCompleted ? "completed" : "pending")"
                     data-status-text="@(route.IsCompleted ? L["Completed"] : L["Pending"])"
                     data-from="@(route.FromDepartmentName == null ? "" : Place(route.FromDepartmentName, route.FromWorker))"
@@ -84,7 +84,7 @@
                             <a asp-action="Details" asp-route-id="@route.Id" class="ip-num fw-semibold text-body">
                                 @route.CreatedAt.ToString("dd.MM.yyyy") <span class="ip-muted fw-normal">@route.CreatedAt.ToString("HH:mm")</span>
                             </a>
-                            <span class="ip-tag-plain">@L[route.RouteTypeName ?? ""]</span>
+                            <span class="ip-tag-plain">@L[route.RouteTypeLabel]</span>
                             @if (route.IsCompleted)
                             {
                                 <span class="ip-badge ip-badge-success">@L["Completed"]</span>

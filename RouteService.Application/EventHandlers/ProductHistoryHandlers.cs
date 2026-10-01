@@ -57,6 +57,21 @@ namespace RouteService.Application.EventHandlers
         {
             var before = notification.Before;
             var after = notification.After;
+
+            // Only UpdateProductInventoryCode changes the code, and it changes nothing else.
+            if (before.InventoryCode != after.InventoryCode)
+            {
+                var codeChange = InventoryRoute.CreateCodeChange(
+                    Snapshot(after),
+                    after.DepartmentId,
+                    after.DepartmentName,
+                    after.Worker,
+                    notification.Changes);
+                codeChange.Complete();
+                await SaveAsync(codeChange, cancellationToken);
+                return;
+            }
+
             var imageUrl = await CopyImageAsync(notification.NewImageUrl, after.InventoryCode, cancellationToken);
 
             var route = InventoryRoute.CreateUpdate(
