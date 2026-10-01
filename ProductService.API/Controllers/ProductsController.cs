@@ -128,7 +128,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpPut("{id}/inventory-code")]
-        [Permission(AllPermissions.ProductUpdate)]
+        [Permission(AllPermissions.ProductCodeUpdate)]
         public async Task<IActionResult> UpdateInventoryCode(int id, [FromBody] UpdateInventoryCodeDto dto)
         {
             await _mediator.Send(new UpdateProductInventoryCode.Command(id, dto.InventoryCode));

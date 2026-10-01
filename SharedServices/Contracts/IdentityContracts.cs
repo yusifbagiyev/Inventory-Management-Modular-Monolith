@@ -8,5 +8,8 @@ namespace SharedServices.Contracts
 
         /// <summary>Ids of active users in <paramref name="role"/>.</summary>
         Task<IReadOnlyList<int>> GetActiveUserIdsInRoleAsync(string role, CancellationToken cancellationToken = default);
+
+        /// <summary>Ids of active users who hold <paramref name="permission"/>: Admins, plus everyone granted it.</summary>
+        Task<IReadOnlyList<int>> GetActiveUserIdsWithPermissionAsync(string permission, CancellationToken cancellationToken = default);
     }
 }

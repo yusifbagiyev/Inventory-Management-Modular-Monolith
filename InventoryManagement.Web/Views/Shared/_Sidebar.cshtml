@@ -2,8 +2,10 @@
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
+    // Each entry shows only with its page's permission (Admins hold them all).
     var isAdmin = User.IsInRole("Admin");
-    var productTotal = await RailCounts.ProductTotalAsync();
+    bool Can(string permission) => User.HasPermission(permission);
+    int? productTotal = Can("product.view") ? await RailCounts.ProductTotalAsync() : null;
 
     var firstName = User.FindFirst("FirstName")?.Value;
     var lastName = User.FindFirst("LastName")?.Value;
@@ -24,14 +26,21 @@
     </a>
 
     <nav class="ip-rail-nav">
-        <div class="ip-rail-group">
-            <a href="/Home/Dashboard" class="@Active(action == "Dashboard")" title="@L["Dashboard"]">
-                <i class="fa-solid fa-table-cells-large"></i><span>@L["Dashboard"]</span>
-            </a>
-        </div>
+        @if (Can("dashboard.view"))
+        {
+            <div class="ip-rail-group">
+                <a href="/Home/Dashboard" class="@Active(action == "Dashboard")" title="@L["Dashboard"]">
+                    <i class="fa-solid fa-table-cells-large"></i><span>@L["Dashboard"]</span>
+                </a>
+            </div>
+        }
 
+        @if (Can("product.view") || Can("route.view") || Can("route.create") || Can("route.create.direct"))
+        {
         <div class="ip-rail-group">
             <div class="ip-rail-title">@L["Operations"]</div>
+            @if (Can("product.view"))
+            {
             <a href="/Products" class="@Active(controller == "Products")" title="@L["Products"]">
                 <i class="fa-solid fa-box"></i><span>@L["Products"]</span>
                 @if (productTotal is int total)
@@ -39,9 +48,13 @@
                     <span class="ip-rail-count">@total</span>
                 }
             </a>
+            }
+            @if (Can("route.view"))
+            {
             <a href="/Routes" class="@Active(controller == "Routes" && action != "Transfer")" title="@L["Routes"]">
                 <i class="fa-solid fa-route"></i><span>@L["Routes"]</span>
             </a>
+            }
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
             {
                 <a href="/Routes/Transfer" class="@Active(controller == "Routes" && action == "Transfer")" title="@L["Transfer"]">
@@ -49,17 +62,18 @@
                 </a>
             }
         </div>
+        }
 
         <div class="ip-rail-group">
             <div class="ip-rail-title">@L["Oversight"]</div>
-            @if (isAdmin)
+            @if (Can("approval.view"))
             {
                 <a href="/Approvals" class="@Active(controller == "Approvals")" title="@L["Approvals"]">
                     <i class="fa-solid fa-clipboard-check"></i><span>@L["Approvals"]</span>
                     <span class="ip-rail-count is-alert" id="sidebarPendingCount" style="display: none;"></span>
                 </a>
             }
-            else
+            @if (!isAdmin)
             {
                 <a href="/MyRequests" class="@Active(controller == "MyRequests")" title="@L["My Requests"]">
                     <i class="fa-solid fa-clock-rotate-left"></i><span>@L["My Requests"]</span>
@@ -69,7 +83,7 @@
                 <i class="fa-regular fa-bell"></i><span>@L["Notifications"]</span>
                 <span class="ip-rail-count is-alert" id="sidebarUnreadCount" style="display: none;"></span>
             </a>
-            @if (isAdmin)
+            @if (Can("user.view"))
             {
                 <a href="/UserManagement" class="@Active(controller == "UserManagement")" title="@L["Users"]">
                     <i class="fa-solid fa-users"></i><span>@L["Users"]</span>
@@ -77,16 +91,22 @@
             }
         </div>
 
-        @if (isAdmin)
+        @if (Can("category.view") || Can("department.view"))
         {
             <div class="ip-rail-group">
                 <div class="ip-rail-title">@L["Catalog"]</div>
-                <a href="/Categories" class="@Active(controller == "Categories")" title="@L["Categories"]">
-                    <i class="fa-solid fa-tags"></i><span>@L["Categories"]</span>
-                </a>
-                <a href="/Departments" class="@Active(controller == "Departments")" title="@L["Departments"]">
-                    <i class="fa-solid fa-sitemap"></i><span>@L["Departments"]</span>
-                </a>
+                @if (Can("category.view"))
+                {
+                    <a href="/Categories" class="@Active(controller == "Categories")" title="@L["Categories"]">
+                        <i class="fa-solid fa-tags"></i><span>@L["Categories"]</span>
+                    </a>
+                }
+                @if (Can("department.view"))
+                {
+                    <a href="/Departments" class="@Active(controller == "Departments")" title="@L["Departments"]">
+                        <i class="fa-solid fa-sitemap"></i><span>@L["Departments"]</span>
+                    </a>
+                }
             </div>
         }
     </nav>

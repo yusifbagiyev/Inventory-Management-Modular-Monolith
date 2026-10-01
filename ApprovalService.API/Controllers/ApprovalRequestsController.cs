@@ -1,3 +1,4 @@
+using SharedServices.Authorization;
 using System.Security.Claims;
 using ApprovalService.Application.DTOs;
 using ApprovalService.Application.Features.Commands;
@@ -33,7 +34,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpGet]
-        [Authorize(Roles = AllRoles.Admin)]
+        [Permission(AllPermissions.ApprovalView)]
         public async Task<ActionResult<PagedResultDto<ApprovalRequestDto>>> GetPending(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 20)
@@ -56,8 +57,10 @@ namespace ApprovalService.API.Controllers
         {
             var approvalRequest = await _mediator.Send(new GetRequestById.Query(id));
 
-            // Only the requester or an Admin may read a request (NotFound avoids an existence oracle).
-            if (approvalRequest == null || (!User.IsInRole(AllRoles.Admin) && approvalRequest.RequestedById != CurrentUserId))
+            // Only the requester or an approval.view holder may read a request (NotFound avoids an
+            // existence oracle).
+            var canViewAll = User.IsInRole(AllRoles.Admin) || User.HasClaim("permission", AllPermissions.ApprovalView);
+            if (approvalRequest == null || (!canViewAll && approvalRequest.RequestedById != CurrentUserId))
                 return NotFound();
 
             return Ok(approvalRequest);
@@ -65,7 +68,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpPost("{id}/approve")]
-        [Authorize(Roles = AllRoles.Admin)]
+        [Permission(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Approve(int id)
         {
             await _mediator.Send(new ApproveRequest.Command(id, CurrentUserId, CurrentUserName));
@@ -74,7 +77,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpPost("{id}/reject")]
-        [Authorize(Roles = AllRoles.Admin)]
+        [Permission(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Reject(int id, RejectRequestDto dto)
         {
             await _mediator.Send(new RejectRequest.Command(id, CurrentUserId, CurrentUserName, dto.Reason));
@@ -83,7 +86,7 @@ namespace ApprovalService.API.Controllers
 
 
         [HttpGet("all")]
-        [Authorize(Roles = AllRoles.Admin)]
+        [Permission(AllPermissions.ApprovalView)]
         public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetAllRequests()
         {
             var result = await _mediator.Send(new GetAllRequests.Query());

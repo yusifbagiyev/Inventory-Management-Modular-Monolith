@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,7 @@ using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = AllRoles.Admin)]
+    [Authorize]
     public class UserManagementController : BaseController
     {
         private readonly IUserManagementService _userManagementService;
@@ -25,10 +26,12 @@ namespace InventoryManagement.Web.Controllers
         }
 
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserView)]
         public async Task<IActionResult> Index() => View(await _userManagementService.GetAllUsersAsync());
 
 
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> Create()
         {
             var model = new CreateUserViewModel();
@@ -39,6 +42,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> Create(CreateUserViewModel model)
         {
             if (!ModelState.IsValid)
@@ -46,6 +50,10 @@ namespace InventoryManagement.Web.Controllers
                 await LoadRoles(model);
                 return HandleValidationErrors(model);
             }
+
+            // Only Admins choose the role; everyone else creates plain users.
+            if (!User.IsInRole(AllRoles.Admin))
+                model.SelectedRole = AllRoles.User;
 
             var success = await _userManagementService.CreateUserAsync(model);
             if (IsAjaxRequest())
@@ -64,8 +72,12 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> Edit(int id)
         {
+            if (await IsProtectedAsync(id))
+                return Forbidden();
+
             var user = await _userManagementService.GetUserByIdAsync(id);
             return user == null ? RedirectToNotFound() : View(user);
         }
@@ -73,13 +85,21 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> Edit(EditUserViewModel model)
         {
+            if (await IsProtectedAsync(model.Id))
+                return Forbidden();
+
             if (!ModelState.IsValid)
             {
                 await LoadRoles(model);
                 return HandleValidationErrors(model);
             }
+
+            // Roles are changed by Admins only (the form shows them to Admins only).
+            if (!User.IsInRole(AllRoles.Admin))
+                model.SelectedRoles = null;
 
             var success = await _userManagementService.UpdateUserAsync(model);
             if (IsAjaxRequest())
@@ -99,8 +119,12 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> Delete(int id)
         {
+            if (await IsProtectedAsync(id))
+                return Forbidden();
+
             var success = await _userManagementService.DeleteUserAsync(id);
             if (IsAjaxRequest())
                 return AjaxResponse(success, success ? "User deleted successfully" : "Failed to delete user");
@@ -112,8 +136,12 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> ToggleStatus(int id)
         {
+            if (await IsProtectedAsync(id))
+                return Forbidden();
+
             var success = await _userManagementService.ToggleUserStatusAsync(id);
             return IsAjaxRequest()
                 ? AjaxResponse(success, success ? "User status updated successfully" : "Failed to update user status")
@@ -122,8 +150,12 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> ResetPassword(int id)
         {
+            if (await IsProtectedAsync(id))
+                return Forbidden();
+
             var user = await _userManagementService.GetUserByIdAsync(id);
             return user == null
                 ? RedirectToNotFound()
@@ -133,8 +165,12 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
+            if (await IsProtectedAsync(model.UserId))
+                return Forbidden();
+
             if (!ModelState.IsValid)
                 return HandleValidationErrors(model);
 
@@ -154,6 +190,7 @@ namespace InventoryManagement.Web.Controllers
 
 
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserView)]
         public async Task<IActionResult> Details(int id)
         {
             var user = await _userManagementService.GetUserByIdAsync(id);
@@ -163,8 +200,13 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.UserManage)]
         public async Task<JsonResult> QuickToggleStatus(int id)
-            => Json(new { success = await _userManagementService.ToggleUserStatusAsync(id) });
+        {
+            if (await IsProtectedAsync(id))
+                return Json(new { success = false });
+            return Json(new { success = await _userManagementService.ToggleUserStatusAsync(id) });
+        }
 
 
         /// <summary>
@@ -172,6 +214,7 @@ namespace InventoryManagement.Web.Controllers
         /// through a role (shown, but revoking a direct grant does not remove it).
         /// </summary>
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.UserView)]
         public async Task<JsonResult> GetUserPermissions(int id)
         {
             var user = await _identity.GetUserAsync(id);
@@ -193,8 +236,10 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        /// <summary>Granting permissions is Admin-only: a holder could otherwise grant themselves anything.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = AllRoles.Admin)]
         public async Task<JsonResult> TogglePermission(int id, [FromBody] TogglePermissionViewModel model)
         {
             var success = model.IsGranting
@@ -206,6 +251,22 @@ namespace InventoryManagement.Web.Controllers
                 : new { success = false, message = (string?)Tr("Permission change failed") });
         }
 
+
+        /// <summary>
+        /// Admin accounts can be changed by Admins only: a user.manage holder must not be able to
+        /// reset an Admin's password or deactivate them.
+        /// </summary>
+        private async Task<bool> IsProtectedAsync(int userId)
+        {
+            if (User.IsInRole(AllRoles.Admin))
+                return false;
+            var target = await _identity.GetUserAsync(userId);
+            return target?.Roles.Contains(AllRoles.Admin) == true;
+        }
+
+        private IActionResult Forbidden() => IsAjaxRequest()
+            ? StatusCode(StatusCodes.Status403Forbidden, new { isSuccess = false, success = false, message = Tr("Only an administrator can change an administrator account.") })
+            : RedirectToAction("AccessDenied", "Account");
 
         private async Task LoadRoles(CreateUserViewModel model)
             => model.Roles = (await _userManagementService.GetAllRolesAsync())

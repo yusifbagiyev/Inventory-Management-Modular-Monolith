@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
@@ -13,7 +14,7 @@ using ModuleDtos = ProductService.Application.DTOs;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = AllRoles.Admin)]
+    [Authorize]
     public class CategoriesController : BaseController
     {
         /// <summary>Upper bound for the product table on the details page.</summary>
@@ -27,6 +28,7 @@ namespace InventoryManagement.Web.Controllers
             _mediator = mediator;
         }
 
+        [PermissionAuthorize(AllPermissions.CategoryView)]
         public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
         {
             var page = await _mediator.Send(new GetPagedCategoriesQuery(pageNumber, pageSize, search));
@@ -43,6 +45,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.CategoryView)]
         public async Task<IActionResult> Details(int id)
         {
             var category = await _mediator.Send(new GetCategoryByIdQuery(id));
@@ -58,11 +61,13 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.CategoryCreate)]
         public IActionResult Create() => View(new CategoryViewModel());
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.CategoryCreate)]
         public async Task<IActionResult> Create(CategoryViewModel model)
         {
             if (!ModelState.IsValid)
@@ -79,6 +84,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.CategoryUpdate)]
         public async Task<IActionResult> Edit(int id)
         {
             var category = await _mediator.Send(new GetCategoryByIdQuery(id));
@@ -90,6 +96,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.CategoryUpdate)]
         public async Task<IActionResult> Edit(int id, CategoryViewModel model)
         {
             if (!ModelState.IsValid)
@@ -108,6 +115,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.CategoryDelete)]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await RunAsync(() => _mediator.Send(new DeleteCategory.Command(id)), "Category deleted successfully");

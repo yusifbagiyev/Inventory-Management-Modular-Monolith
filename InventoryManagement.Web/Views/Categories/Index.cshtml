@@ -20,7 +20,7 @@
             <button type="button" class="ip-btn ip-btn-secondary" onclick="exportCategoriesToPDF()">
                 <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
-            @if (User.IsInRole("Admin"))
+            @if (User.HasPermission("category.create"))
             {
                 <a asp-action="Create" class="ip-btn ip-btn-primary">
                     <span>@L["New Category"]</span><i class="fa-solid fa-plus"></i>
@@ -118,13 +118,19 @@
                                         <a asp-action="Details" asp-route-id="@category.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
                                         </a>
+                                        @if (User.HasPermission("category.update"))
+                                        {
                                         <a asp-action="Edit" asp-route-id="@category.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
                                             <i class="fa-solid fa-pen"></i>
                                         </a>
+                                        }
+                                        @if (User.HasPermission("category.delete"))
+                                        {
                                         <button type="button" class="ip-btn-icon ip-btn-icon-danger" title="@L["Delete"]" aria-label="@L["Delete"]"
                                                 data-id="@category.Id" data-name="@category.Name" onclick="deleteCategory(this.dataset.id, this.dataset.name)">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
+                                        }
                                     </div>
                                 </td>
                             </tr>

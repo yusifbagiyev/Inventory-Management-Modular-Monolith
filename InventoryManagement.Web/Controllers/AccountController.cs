@@ -35,7 +35,7 @@ namespace InventoryManagement.Web.Controllers
         public IActionResult Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated == true)
-                return RedirectToAction("Dashboard", "Home");
+                return RedirectToAction("Index", "Home");
 
             ViewData["ReturnUrl"] = returnUrl;
             return View();
@@ -82,7 +82,7 @@ namespace InventoryManagement.Web.Controllers
 
                 return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
                     ? Redirect(returnUrl)
-                    : RedirectToAction("Dashboard", "Home");
+                    : RedirectToAction("Index", "Home");
             }
             catch (UnauthorizedAccessException ex)
             {

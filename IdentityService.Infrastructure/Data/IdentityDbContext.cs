@@ -122,7 +122,6 @@ namespace IdentityService.Infrastructure.Data
             var roles = new[]
             {
                 new Role { Id = 1, Name = "Admin", NormalizedName = "ADMIN", ConcurrencyStamp = "ADMIN_STAMP_123" },
-                new Role { Id = 2, Name = "Operator", NormalizedName = "OPERATOR", ConcurrencyStamp = "OPERATOR_STAMP_123" },
                 new Role { Id = 3, Name = "User", NormalizedName = "USER", ConcurrencyStamp = "USER_STAMP_123" }
             };
             builder.Entity<Role>().HasData(roles);
@@ -148,6 +147,26 @@ namespace IdentityService.Infrastructure.Data
                 new Permission { Id = 13, Name = AllPermissions.ProductUpdateDirect, Category = "Product", Description = "Update products directly" },
                 new Permission { Id = 14, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
                 new Permission { Id = 15, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
+
+                // Pages and functions that used to be Admin-only or open to everyone
+                new Permission { Id = 16, Name = AllPermissions.ProductCodeUpdate, Category = "Product", Description = "Change inventory codes" },
+                new Permission { Id = 17, Name = AllPermissions.ProductExport, Category = "Product", Description = "Export products to PDF" },
+                new Permission { Id = 18, Name = AllPermissions.RouteExport, Category = "Route", Description = "Export routes and timelines to PDF" },
+                new Permission { Id = 19, Name = AllPermissions.DashboardView, Category = "Dashboard", Description = "View the dashboard" },
+                new Permission { Id = 20, Name = AllPermissions.CategoryView, Category = "Category", Description = "View categories" },
+                new Permission { Id = 21, Name = AllPermissions.CategoryCreate, Category = "Category", Description = "Create categories" },
+                new Permission { Id = 22, Name = AllPermissions.CategoryUpdate, Category = "Category", Description = "Edit categories" },
+                new Permission { Id = 23, Name = AllPermissions.CategoryDelete, Category = "Category", Description = "Delete categories" },
+                new Permission { Id = 24, Name = AllPermissions.DepartmentView, Category = "Department", Description = "View departments" },
+                new Permission { Id = 25, Name = AllPermissions.DepartmentCreate, Category = "Department", Description = "Create departments" },
+                new Permission { Id = 26, Name = AllPermissions.DepartmentUpdate, Category = "Department", Description = "Edit departments" },
+                new Permission { Id = 27, Name = AllPermissions.DepartmentDelete, Category = "Department", Description = "Delete departments" },
+                new Permission { Id = 28, Name = AllPermissions.DepartmentExport, Category = "Department", Description = "Export a department's inventory to Word" },
+                new Permission { Id = 29, Name = AllPermissions.ApprovalView, Category = "Approval", Description = "View approval requests" },
+                new Permission { Id = 30, Name = AllPermissions.ApprovalDecide, Category = "Approval", Description = "Approve or reject requests" },
+                new Permission { Id = 31, Name = AllPermissions.UserView, Category = "User", Description = "View users" },
+                new Permission { Id = 32, Name = AllPermissions.UserManage, Category = "User", Description = "Create, edit, deactivate and delete users (not administrators)" },
+                new Permission { Id = 33, Name = AllPermissions.AuditView, Category = "Audit", Description = "View the audit log" },
             };
             builder.Entity<Permission>().HasData(permissions);
 
@@ -160,27 +179,9 @@ namespace IdentityService.Infrastructure.Data
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
 
-            // Operator - request (approval) permissions plus route completion. The earlier seed was
-            // off by one and granted product.create.direct / product.update.direct instead.
-            rolePermissions.AddRange(new[]
-            {
-                new RolePermission { RoleId = 2, PermissionId = 1 },  // RouteView
-                new RolePermission { RoleId = 2, PermissionId = 2 },  // RouteCreate (request)
-                new RolePermission { RoleId = 2, PermissionId = 4 },  // RouteUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 6 },  // RouteDelete (request)
-                new RolePermission { RoleId = 2, PermissionId = 8 },  // RouteComplete
-                new RolePermission { RoleId = 2, PermissionId = 9 },  // ProductView
-                new RolePermission { RoleId = 2, PermissionId = 10 }, // ProductCreate (request)
-                new RolePermission { RoleId = 2, PermissionId = 12 }, // ProductUpdate (request)
-                new RolePermission { RoleId = 2, PermissionId = 14 }, // ProductDelete (request)
-            });
-
-            // User - View only
-            rolePermissions.AddRange(new[]
-            {
-                new RolePermission { RoleId = 3, PermissionId = 1 }, // RouteView
-                new RolePermission { RoleId = 3, PermissionId = 9 }  // ProductView
-            });
+            // Only Admin has role permissions (and passes every check anyway). Users hold exactly the
+            // permissions granted to them one by one; the Operator role was removed (see the
+            // UserPermissionsOnly migration, which turned role grants into per-user grants).
 
             builder.Entity<RolePermission>().HasData(rolePermissions);
 

@@ -49,9 +49,12 @@
             </div>
         </div>
         <div class="ip-page-actions">
-            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()">
-                <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
-            </button>
+            @if (User.HasPermission("route.export"))
+            {
+                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()">
+                    <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
+                </button>
+            }
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
             {
                 <a asp-action="Transfer" class="ip-btn ip-btn-primary">

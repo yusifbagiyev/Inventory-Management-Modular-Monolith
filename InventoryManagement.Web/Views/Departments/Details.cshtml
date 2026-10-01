@@ -27,12 +27,18 @@
     </div>
 
     <div class="ip-page-actions mb-4">
-        <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
-            <i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span>
-        </a>
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary">
-            <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
-        </a>
+        @if (User.HasPermission("department.export"))
+        {
+            <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
+                <i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span>
+            </a>
+        }
+        @if (User.HasPermission("department.update"))
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary">
+                <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
+            </a>
+        }
     </div>
 
     <hr class="ip-rule" />

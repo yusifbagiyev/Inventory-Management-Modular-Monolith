@@ -173,7 +173,7 @@
                 is Newtonsoft.Json.Linq.JValue { Type: Newtonsoft.Json.Linq.JTokenType.Integer } value ? (int)value : null;
 
             if (Id("approvalRequestId") is int requestId)
-                return ((User.IsInRole("Admin") && notification.Type == "ApprovalRequest" ? "/Approvals" : "/MyRequests") + "?open=" + requestId,
+                return ((User.HasPermission("approval.view") && notification.Type == "ApprovalRequest" ? "/Approvals" : "/MyRequests") + "?open=" + requestId,
                         L["View request #{0}", requestId].Value);
             if (Id("routeId") is int routeId)
                 return ($"/Routes/Details/{routeId}", L["View route"].Value);

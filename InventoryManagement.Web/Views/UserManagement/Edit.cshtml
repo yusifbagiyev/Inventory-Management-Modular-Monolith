@@ -1,6 +1,8 @@
 @model EditUserViewModel
 @{
     ViewData["Title"] = "Edit User";
+    var isAdminViewer = User.IsInRole("Admin");
+    var userRole = Model.CurrentRoles.Contains("Admin") ? "Admin" : "User";
 }
 
 <div class="container-fluid px-4">
@@ -65,45 +67,24 @@
             </div>
         </section>
 
-        <section class="ip-form-section">
-            <h2>@L["Roles"]</h2>
-            @* Always send role data, even when every box is cleared. *@
-            <input type="hidden" name="RoleUpdateFlag" value="true" />
-            @if (Model.AvailableRoles.Any())
-            {
-                <div class="role-selection d-flex flex-column">
-                    @foreach (var role in Model.AvailableRoles)
+        @* One role: Admin (every permission) or User (only the permissions granted below).
+           Only Admins see and change it. *@
+        @if (isAdminViewer)
+        {
+            <section class="ip-form-section">
+                <h2>@L["Role"]</h2>
+                <div class="d-flex flex-column">
+                    @foreach (var (role, hint) in new[] { ("User", "Only the permissions granted below."), ("Admin", "Every page and action; permissions are not needed.") })
                     {
-                        var isCurrent = Model.CurrentRoles.Contains(role.Value);
-                        <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role.Value">
-                            <input type="checkbox"
-                                   class="ip-check role-checkbox"
-                                   name="SelectedRoles"
-                                   value="@role.Value"
-                                   id="role_@role.Value"
-                                   @(isCurrent ? "checked" : "") />
-                            <span class="fw-medium">@role.Text</span>
-                            @if (isCurrent)
-                            {
-                                <span class="ip-tag-plain">@L["Current"]</span>
-                            }
+                        <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
+                            <input type="radio" class="ip-check" name="SelectedRoles" value="@role" id="role_@role"
+                                   @(userRole == role ? "checked" : "") />
+                            <span><span class="d-block fw-medium">@L[role]</span><span class="ip-hint">@L[hint]</span></span>
                         </label>
                     }
                 </div>
-            }
-            else
-            {
-                <p class="ip-muted py-2 mb-0">@L["No roles available"]</p>
-            }
-            @* Hidden fields to track original roles *@
-            @foreach (var role in Model.CurrentRoles)
-            {
-                <input type="hidden" name="CurrentRoles" value="@role" />
-            }
-            <p class="ip-hint mt-3 mb-0">
-                @L["Select one or more roles for this user. Changes will be applied immediately upon save."]
-            </p>
-        </section>
+            </section>
+        }
 
         <div class="ip-form-foot">
             <span class="note"></span>
@@ -116,9 +97,18 @@
 
     @* Direct permissions are granted and revoked one by one (AJAX, applied at once), so they
        live outside the form and its Save button. *@
+    @if (isAdminViewer && userRole == "Admin")
+    {
+        <section class="ip-section ip-form mt-5">
+            <h2 class="mb-1">@L["User Permissions"]</h2>
+            <p class="ip-hint mb-0">@L["Administrators hold every permission."]</p>
+        </section>
+    }
+    else if (isAdminViewer)
+    {
     <section class="ip-section ip-form mt-5" id="permissionsSection">
         <h2 class="mb-1">@L["User Permissions"]</h2>
-        <p class="ip-hint mb-3">@L["Permission changes apply immediately."]</p>
+        <p class="ip-hint mb-3">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
         <label class="ip-filter search col-12 col-md-6 mb-3">
             <i class="fa-solid fa-magnifying-glass"></i>
             <input type="search" id="permissionSearch" autocomplete="off"
@@ -128,11 +118,13 @@
             <partial name="_Skeleton" model="6" />
         </div>
     </section>
+    }
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function() {
+            if (!document.getElementById('permissionsContainer')) return;   // Admins only
             loadUserPermissions();
 
             $('#permissionSearch').on('input', filterPermissions);

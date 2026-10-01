@@ -7,7 +7,7 @@ using SharedServices.Identity;
 namespace InventoryManagement.Web.Controllers
 {
     /// <summary>A non-admin user's own approval requests.</summary>
-    [Authorize(Roles = AllRoles.User + "," + AllRoles.Operator)]
+    [Authorize]
     public class MyRequestsController : BaseController
     {
         private readonly IApprovalService _approvalService;

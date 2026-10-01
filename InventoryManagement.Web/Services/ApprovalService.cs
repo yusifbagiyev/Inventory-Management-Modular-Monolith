@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Extensions;
 using System.Security.Claims;
 using ApprovalService.Application.Features.Commands;
 using ApprovalService.Application.Features.Queries;
@@ -34,11 +35,11 @@ namespace InventoryManagement.Web.Services
             return ModelMapper.MapList<ApprovalRequestDto>(page.Items);
         }
 
-        /// <summary>Null when the request does not exist or belongs to someone else (non-admins).</summary>
+        /// <summary>Null when the request does not exist or belongs to someone else (without approval.view).</summary>
         public async Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id)
         {
             var request = await _mediator.Send(new GetRequestById.Query(id));
-            if (request == null || (!User.IsInRole(AllRoles.Admin) && request.RequestedById != UserId))
+            if (request == null || (!User.HasPermission(AllPermissions.ApprovalView) && request.RequestedById != UserId))
                 return null;
             return ModelMapper.Map<ApprovalRequestDto>(request);
         }

@@ -1,59 +1,39 @@
-﻿using InventoryManagement.Web.Extensions;
+using InventoryManagement.Web.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace InventoryManagement.Web.Filters
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method ,AllowMultiple =true)]
-    public class PermissionAuthorizeAttribute:Attribute,IAuthorizationFilter
+    /// <summary>
+    /// UI gate: the user needs any one of the permissions (Admins pass every check). Several
+    /// attributes on one action must all pass. Pages redirect to Access denied; AJAX calls get 403.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
+    public class PermissionAuthorizeAttribute : Attribute, IAuthorizationFilter
     {
-        private readonly string _permission;
-        private readonly string? _alternatePermission;
+        private readonly string[] _permissions;
 
-        public PermissionAuthorizeAttribute(string permission)
+        public PermissionAuthorizeAttribute(params string[] permissions)
         {
-            _permission= permission;
-        }
-
-        public PermissionAuthorizeAttribute(string permission,string alternatePermission)
-        {
-            _permission = permission;
-            _alternatePermission = alternatePermission;
+            _permissions = permissions;
         }
 
         public void OnAuthorization(AuthorizationFilterContext context)
         {
-            // First check if user is authenticated at all
             var user = context.HttpContext.User;
-
-            if(user == null || !user?.Identity?.IsAuthenticated == true)
+            if (user.Identity?.IsAuthenticated != true)
             {
-                // Not authenticated -redirect to login
-                context.Result = new RedirectToActionResult("Login", "Account", new
-                {
-                    returnUrl = context.HttpContext.Request.Path
-                });
+                context.Result = new RedirectToActionResult("Login", "Account", new { returnUrl = context.HttpContext.Request.Path });
                 return;
             }
 
-            if(user!= null)
-            {
-                // Check if user has the required permission (or alternate permission)
-                bool hasPermission = user.HasPermission(_permission);
+            if (_permissions.Any(user.HasPermission))
+                return;
 
-                if (!hasPermission && !string.IsNullOrEmpty(_alternatePermission))
-                {
-                    hasPermission=user.HasPermission(_alternatePermission);
-                }
-
-                if (!hasPermission)
-                {
-                    // User is authenticated but lacks permission - show access denied
-                    context.Result = new RedirectToActionResult("AccessDenied", "Account", null);
-                    return;
-                }
-                // User has permission - allow the request to proceed
-            }
+            var isAjax = context.HttpContext.Request.Headers.XRequestedWith == "XMLHttpRequest";
+            context.Result = isAjax
+                ? new ObjectResult(new { isSuccess = false, success = false, message = "Access denied" }) { StatusCode = StatusCodes.Status403Forbidden }
+                : new RedirectToActionResult("AccessDenied", "Account", null);
         }
     }
 }

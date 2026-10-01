@@ -47,7 +47,8 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task ApprovalRequestCreatedAsync(ApprovalRequestCreatedEvent e, CancellationToken cancellationToken)
         {
-            var admins = await _users.GetActiveUserIdsInRoleAsync(AllRoles.Admin, cancellationToken);
+            // Everyone who can decide on requests (Admins and approval.decide holders).
+            var admins = await _users.GetActiveUserIdsWithPermissionAsync(AllPermissions.ApprovalDecide, cancellationToken);
             var data = Json(new { approvalRequestId = e.RequestId, requestType = e.RequestType, requestedBy = e.RequestedByName });
 
             await SaveAndPushAsync(admins.Select(adminId => new Notification(
@@ -57,7 +58,7 @@ namespace NotificationService.Infrastructure.Services
                 $"{e.RequestedByName} has requested to {ActionDescription(e.RequestType)}. Request #{e.RequestId} needs your approval.",
                 data)), cancellationToken);
 
-            await _hub.Clients.Group($"role-{AllRoles.Admin}")
+            await _hub.Clients.Groups(admins.Select(id => $"user-{id}").ToList())
                 .SendAsync("RefreshApprovals", new { requestId = e.RequestId, requestType = e.RequestType }, cancellationToken);
         }
 
@@ -97,7 +98,7 @@ namespace NotificationService.Infrastructure.Services
         public async Task ProductCreatedAsync(ProductCreatedEvent e, int? actorId, CancellationToken cancellationToken)
         {
             var product = e.Product;
-            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, AllPermissions.ProductView, cancellationToken);
             var data = Json(new { productId = product.ProductId, inventoryCode = product.InventoryCode, model = product.Model });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -128,7 +129,7 @@ namespace NotificationService.Infrastructure.Services
         public async Task ProductDeletedAsync(ProductDeletedEvent e, int? actorId, CancellationToken cancellationToken)
         {
             var product = e.Product;
-            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, AllPermissions.ProductView, cancellationToken);
             var data = Json(new { productId = product.ProductId, inventoryCode = product.InventoryCode, departmentName = product.DepartmentName });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -141,7 +142,7 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task RouteCompletedAsync(RouteCompletedEvent e, int? actorId, CancellationToken cancellationToken)
         {
-            var users = await OtherActiveUsersAsync(actorId, cancellationToken);
+            var users = await OtherActiveUsersAsync(actorId, AllPermissions.RouteView, cancellationToken);
             var data = Json(new { routeId = e.RouteId, productId = e.ProductId });
 
             await SaveAndPushAsync(users.Select(userId => new Notification(
@@ -169,8 +170,9 @@ namespace NotificationService.Infrastructure.Services
             }, $"route_{e.InventoryCode}.jpg", cancellationToken);
         }
 
-        private async Task<IEnumerable<int>> OtherActiveUsersAsync(int? actorId, CancellationToken cancellationToken)
-            => (await _users.GetActiveUserIdsAsync(cancellationToken)).Where(id => id != actorId);
+        /// <summary>Active users who may see the record (<paramref name="permission"/>), except the actor.</summary>
+        private async Task<IEnumerable<int>> OtherActiveUsersAsync(int? actorId, string permission, CancellationToken cancellationToken)
+            => (await _users.GetActiveUserIdsWithPermissionAsync(permission, cancellationToken)).Where(id => id != actorId);
 
         /// <summary>Persists the whole fan-out in one SaveChanges, then pushes each over SignalR.</summary>
         private async Task SaveAndPushAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken)

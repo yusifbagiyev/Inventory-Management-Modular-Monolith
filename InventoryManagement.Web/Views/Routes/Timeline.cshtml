@@ -52,7 +52,7 @@
         <a asp-controller="Products" asp-action="Details" asp-route-id="@productId" class="ip-btn ip-btn-secondary">
             <i class="fa-solid fa-box"></i><span>@L["View Product"]</span>
         </a>
-        @if (ordered.Any())
+        @if (ordered.Any() && User.HasPermission("route.export"))
         {
             <button type="button" class="ip-btn ip-btn-secondary" onclick="exportTimelineToPDF()">
                 <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>

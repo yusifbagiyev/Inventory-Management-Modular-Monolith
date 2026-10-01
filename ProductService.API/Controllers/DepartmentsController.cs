@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
@@ -26,7 +26,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.DepartmentView)]
         public async Task<ActionResult<IEnumerable<DepartmentDto>>> GetAll()
         {
             var departments = await _mediator.Send(new GetAllDepartmentsQuery());
@@ -35,7 +35,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet("paged")]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.DepartmentView)]
         public async Task<ActionResult<PagedResult<DepartmentDto>>> GetPaged(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -48,7 +48,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet("{id}")]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.DepartmentView)]
         public async Task<ActionResult<DepartmentDto>> GetById(int id)
         {
             var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
@@ -60,7 +60,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpPost]
-        [Permission(AllPermissions.ProductCreate)]
+        [Permission(AllPermissions.DepartmentCreate)]
         public async Task<ActionResult<DepartmentDto>> Create(CreateDepartmentDto dto)
         {
             var department = await _mediator.Send(new CreateDepartment.Command(dto));
@@ -70,7 +70,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpPut("{id}")]
-        [Permission(AllPermissions.ProductUpdate)]
+        [Permission(AllPermissions.DepartmentUpdate)]
         public async Task<IActionResult> Update(int id, UpdateDepartmentDto dto)
         {
             await _mediator.Send(new UpdateDepartment.Command(id, dto));
@@ -80,7 +80,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpDelete("{id}")]
-        [Permission(AllPermissions.ProductDelete)]
+        [Permission(AllPermissions.DepartmentDelete)]
         public async Task<IActionResult> Delete(int id)
         {
             await _mediator.Send(new DeleteDepartment.Command(id));

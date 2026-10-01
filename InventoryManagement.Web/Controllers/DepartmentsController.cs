@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
@@ -14,7 +15,7 @@ using ModuleDtos = ProductService.Application.DTOs;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = AllRoles.Admin)]
+    [Authorize]
     public class DepartmentsController : BaseController
     {
         /// <summary>Upper bound for the product table on the details page and the Word export.</summary>
@@ -33,6 +34,7 @@ namespace InventoryManagement.Web.Controllers
             _wordExportService = wordExportService;
         }
 
+        [PermissionAuthorize(AllPermissions.DepartmentView)]
         public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
         {
             var page = await _mediator.Send(new GetPagedDepartmentsQuery(pageNumber, pageSize, search));
@@ -49,6 +51,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.DepartmentView)]
         public async Task<IActionResult> Details(int id)
         {
             var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
@@ -69,11 +72,13 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.DepartmentCreate)]
         public IActionResult Create() => View(new DepartmentViewModel());
 
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.DepartmentCreate)]
         public async Task<IActionResult> Create(DepartmentViewModel model)
         {
             if (!ModelState.IsValid)
@@ -91,6 +96,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.DepartmentUpdate)]
         public async Task<IActionResult> Edit(int id)
         {
             var department = await _mediator.Send(new GetDepartmentByIdQuery(id));
@@ -102,6 +108,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.DepartmentUpdate)]
         public async Task<IActionResult> Edit(int id, DepartmentViewModel model)
         {
             if (!ModelState.IsValid)
@@ -121,6 +128,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.DepartmentDelete)]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await RunAsync(() => _mediator.Send(new DeleteDepartment.Command(id)), "Department deleted successfully");
@@ -129,6 +137,7 @@ namespace InventoryManagement.Web.Controllers
 
 
         /// <summary>Department inventory as a Word document ("Təhvil verdi" is the exporting user).</summary>
+        [PermissionAuthorize(AllPermissions.DepartmentExport)]
         public async Task<IActionResult> ExportToWord(int id)
         {
             var department = await _mediator.Send(new GetDepartmentByIdQuery(id));

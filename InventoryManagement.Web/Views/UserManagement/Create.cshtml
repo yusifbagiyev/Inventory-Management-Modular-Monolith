@@ -79,13 +79,23 @@
         <section class="ip-form-section">
             <h2>@L["Access"]</h2>
             <div class="ip-form-grid">
+                @* Admin: every permission. User: only what is granted on the Edit page afterwards. *@
+                @if (User.IsInRole("Admin"))
+                {
                 <div class="ip-field">
                     <label asp-for="SelectedRole" class="ip-label"><span>@L["Role"]</span> <span class="req">*</span></label>
-                    <select asp-for="SelectedRole" asp-items="Model.Roles" class="ip-select">
-                        <option value="">@L["Select a role"]</option>
+                    <select asp-for="SelectedRole" class="ip-select">
+                        <option value="User" selected>@L["User"]</option>
+                        <option value="Admin">@L["Admin"]</option>
                     </select>
+                    <span class="ip-hint">@L["A User sees only what you grant on the Edit page after creating the account."]</span>
                     <span asp-validation-for="SelectedRole" class="ip-error"></span>
                 </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="SelectedRole" value="User" />
+                }
             </div>
             <div class="ip-switch-list mt-3">
                 <label class="ip-switch-row">

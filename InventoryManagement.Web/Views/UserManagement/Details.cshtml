@@ -31,6 +31,8 @@
         </div>
     </div>
 
+    @if (User.HasPermission("user.manage") && (User.IsInRole("Admin") || !Model.CurrentRoles.Contains("Admin")))
+    {
     <div class="ip-page-actions mb-4">
         <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
             <i class="fa-solid fa-trash-can"></i><span>@L["Delete User"]</span>
@@ -52,6 +54,7 @@
             <span>@L["Edit User"]</span><i class="fa-solid fa-pen"></i>
         </a>
     </div>
+    }
 
     <hr class="ip-rule" />
 

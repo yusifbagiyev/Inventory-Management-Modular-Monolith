@@ -121,8 +121,10 @@ namespace InventoryManagement.Web.Services
                 IsActive = model.IsActive
             });
 
-            // Role failures used to be logged and then reported as success.
-            return updated && await _auth.SetRolesAsync(model.Id, model.SelectedRoles ?? []);
+            // Role failures used to be logged and then reported as success. Null: roles unchanged.
+            if (!updated || model.SelectedRoles is not { Count: > 0 })
+                return updated;
+            return await _auth.SetRolesAsync(model.Id, model.SelectedRoles);
         }
 
         public Task<bool> DeleteUserAsync(int id) => _auth.DeleteUserAsync(id);

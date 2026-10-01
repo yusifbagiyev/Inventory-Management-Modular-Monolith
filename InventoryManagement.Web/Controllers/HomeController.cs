@@ -1,3 +1,6 @@
+using InventoryManagement.Web.Extensions;
+using SharedServices.Identity;
+using InventoryManagement.Web.Filters;
 using System.Diagnostics;
 using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models;
@@ -23,13 +26,32 @@ namespace InventoryManagement.Web.Controllers
             _mediator = mediator;
         }
 
-        public IActionResult Index() => RedirectToAction(nameof(Dashboard));
+        /// <summary>
+        /// The start page ("/", after sign-in): the first page the user may open. Everyone can open
+        /// Notifications, so this never ends on Access denied.
+        /// </summary>
+        public IActionResult Index()
+        {
+            var pages = new (string Permission, string Url)[]
+            {
+                (AllPermissions.DashboardView, "/Home/Dashboard"),
+                (AllPermissions.ProductView, "/Products"),
+                (AllPermissions.RouteView, "/Routes"),
+                (AllPermissions.ApprovalView, "/Approvals"),
+                (AllPermissions.CategoryView, "/Categories"),
+                (AllPermissions.DepartmentView, "/Departments"),
+                (AllPermissions.UserView, "/UserManagement"),
+                (AllPermissions.AuditView, "/Audit"),
+            };
+            return Redirect(pages.FirstOrDefault(p => User.HasPermission(p.Permission)).Url ?? "/Notifications");
+        }
 
         /// <summary>
         /// Transfer-centred dashboard. Everything period-based is derived from the transfers created
         /// in the period; product counts are "new in period" (or the whole inventory for "all").
         /// Built from aggregate queries - it used to download every product and every route.
         /// </summary>
+        [PermissionAuthorize(AllPermissions.DashboardView)]
         public async Task<IActionResult> Dashboard(string period = "last7days")
         {
             period = period.ToLowerInvariant();
@@ -91,7 +113,7 @@ namespace InventoryManagement.Web.Controllers
             // "Needs attention": the current state, whatever the period.
             ViewBag.NotWorking = (period == "all" ? products : await _mediator.Send(new GetProductCountsQuery())).NotWorking;
             ViewBag.OpenTransfers = (await _mediator.Send(new GetAllRoutesQuery(1, 1, IsCompleted: false))).TotalCount;
-            if (User.IsInRole(SharedServices.Identity.AllRoles.Admin))
+            if (User.HasPermission(AllPermissions.ApprovalView))
                 ViewBag.PendingApprovals = (await _mediator.Send(new ApprovalService.Application.Features.Queries.GetApprovalStatistics.Query())).Pending;
 
             return View(model);

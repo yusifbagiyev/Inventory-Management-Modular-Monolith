@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SharedServices.Authorization
 {
-    public class PermissionAttribute:AuthorizeAttribute
+    /// <summary>Requires any one of the given permissions (Admins pass every check).</summary>
+    public class PermissionAttribute : AuthorizeAttribute
     {
-        public PermissionAttribute(string permission)
+        public PermissionAttribute(params string[] permissions)
         {
-            Policy = permission;
+            Policy = string.Join(PermissionRequirement.Separator, permissions);
         }
     }
 }

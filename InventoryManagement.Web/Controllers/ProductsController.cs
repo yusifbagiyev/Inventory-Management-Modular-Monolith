@@ -32,6 +32,7 @@ namespace InventoryManagement.Web.Controllers
             _productManagement = productManagement;
         }
 
+        [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Index(
             int? pageNumber = 1,
             int? pageSize = 30,
@@ -80,6 +81,7 @@ namespace InventoryManagement.Web.Controllers
         /// else becomes a search on the product list.
         /// </summary>
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Find(string? code)
         {
             code = code?.Trim();
@@ -97,6 +99,7 @@ namespace InventoryManagement.Web.Controllers
 
         /// <summary>Suggestions under the toolbar's code search: up to six products matching the text.</summary>
         [HttpGet]
+        [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Suggest(string? term)
         {
             term = term?.Trim();
@@ -119,6 +122,7 @@ namespace InventoryManagement.Web.Controllers
                 }));
         }
 
+        [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Details(int id)
         {
             var product = await _mediator.Send(new GetProductByIdQuery(id));
@@ -126,7 +130,9 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToNotFound();
 
             // The transfers below the details (the full history, updates included, is the timeline).
-            var routes = await _mediator.Send(new GetRoutesByProductQuery(id));
+            var routes = User.HasPermission(AllPermissions.RouteView)
+                ? await _mediator.Send(new GetRoutesByProductQuery(id))
+                : [];
             ViewBag.Transfers = ModelMapper.MapList<RouteViewModel>(routes)
                 .Where(r => r.RouteTypeName == "Transfer")
                 .OrderByDescending(r => r.CreatedAt)
@@ -236,7 +242,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [PermissionAuthorize(AllPermissions.ProductUpdate, AllPermissions.ProductUpdateDirect)]
+        [PermissionAuthorize(AllPermissions.ProductCodeUpdate)]
         public async Task<IActionResult> UpdateInventoryCode([FromBody] UpdateInventoryCodeDto request)
         {
             var response = await RunAsync(() => _mediator.Send(new UpdateProductInventoryCode.Command(request.Id, request.InventoryCode)));

@@ -1,3 +1,4 @@
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -6,7 +7,7 @@ using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
-    [Authorize(Roles = AllRoles.Admin)]
+    [Authorize]
     public class ApprovalsController : BaseController
     {
         private readonly IApprovalService _approvalService;
@@ -20,6 +21,7 @@ namespace InventoryManagement.Web.Controllers
         private const int DecidedPageSize = 50;
 
         /// <param name="status">The tab: pending (default), approved or rejected.</param>
+        [PermissionAuthorize(AllPermissions.ApprovalView)]
         public async Task<IActionResult> Index(string? status = null)
         {
             var tab = status is "approved" or "rejected" ? status : "pending";
@@ -39,6 +41,7 @@ namespace InventoryManagement.Web.Controllers
             });
         }
 
+        [PermissionAuthorize(AllPermissions.ApprovalView)]
         public async Task<IActionResult> Details(int id)
         {
             var request = await _approvalService.GetRequestDetailsAsync(id);
@@ -48,6 +51,7 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>Approves and executes the request. A failed execution is reported, not thrown.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Approve(int id)
         {
             var response = await RunAsync(() => _approvalService.ApproveRequestAsync(id));
@@ -71,6 +75,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Reject(int id, string reason)
         {
             if (string.IsNullOrWhiteSpace(reason))

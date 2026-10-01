@@ -1,40 +1,32 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SharedServices.Authorization
 {
-    public class PermissionRequirement:IAuthorizationRequirement
+    /// <summary>Met when the user holds any one of <see cref="Permissions"/>, or is an Admin.</summary>
+    public class PermissionRequirement : IAuthorizationRequirement
     {
-        public string Permission { get; }
-        public PermissionRequirement(string permission)
+        public const string Separator = "|";
+
+        public IReadOnlyList<string> Permissions { get; }
+
+        public PermissionRequirement(string policyName)
         {
-            Permission = permission ?? throw new ArgumentNullException(nameof(permission));
+            ArgumentException.ThrowIfNullOrWhiteSpace(policyName);
+            Permissions = policyName.Split(Separator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
     }
-    public class PermissionHandler:AuthorizationHandler<PermissionRequirement>
+
+    public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
     {
-        protected override Task HandleRequirementAsync(
-            AuthorizationHandlerContext context, 
-            PermissionRequirement requirement)
+        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
         {
-            // Check if user is authenticated
-            if (!context.User.Identity?.IsAuthenticated ?? true)
-            {
+            if (context.User.Identity?.IsAuthenticated != true)
                 return Task.CompletedTask;
-            }
 
-            // Check for the permission claim - this is the key fix
-            // The claim type should be "permission" (lowercase) to match what's in your JWT
-            var hasPermission = context.User.Claims.Any(c =>
-                c.Type.Equals("permission", StringComparison.OrdinalIgnoreCase) &&
-                c.Value.Equals(requirement.Permission, StringComparison.OrdinalIgnoreCase));
-
-            if (hasPermission)
-            {
-                context.Succeed(requirement);
-            }
-
-            // Also check if user is in Admin role (Admins bypass permission checks)
-            else if (context.User.IsInRole("Admin"))
+            // Admins bypass permission checks; everyone else needs a "permission" claim.
+            if (context.User.IsInRole("Admin") || context.User.Claims.Any(c =>
+                    c.Type.Equals("permission", StringComparison.OrdinalIgnoreCase) &&
+                    requirement.Permissions.Contains(c.Value, StringComparer.OrdinalIgnoreCase)))
             {
                 context.Succeed(requirement);
             }

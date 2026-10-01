@@ -32,6 +32,7 @@ namespace InventoryManagement.Web.Controllers
             _routeManagement = routeManagement;
         }
 
+        [PermissionAuthorize(AllPermissions.RouteView)]
         public async Task<IActionResult> Index(
             int? pageNumber = 1,
             int? pageSize = 30,
@@ -159,6 +160,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.RouteView)]
         public async Task<IActionResult> Timeline(int productId)
         {
             var routes = await _mediator.Send(new GetRoutesByProductQuery(productId));
@@ -167,6 +169,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
+        [PermissionAuthorize(AllPermissions.RouteView)]
         public async Task<IActionResult> Details(int id)
         {
             var route = await _mediator.Send(new GetRouteByIdQuery(id));

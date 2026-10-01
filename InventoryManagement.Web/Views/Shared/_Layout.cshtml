@@ -49,6 +49,8 @@
 
                     @* Suggestions while typing (site.js: CodeFinder); Enter or the button: an exact
                        inventory code opens that product, anything else the filtered product list. *@
+                    @if (User.HasPermission("product.view"))
+                    {
                     <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search" data-no-ajax data-code-finder>
                         <button type="submit" class="ip-finder-go" title="@L["Search"]" aria-label="@L["Search"]">
                             <i class="fa-solid fa-magnifying-glass"></i>
@@ -58,6 +60,7 @@
                                placeholder="@L["Find by code, e.g. 1042"]" aria-label="@L["Find by code"]" />
                         <div class="ip-finder-menu" id="codeFinderList" role="listbox" hidden></div>
                     </form>
+                    }
                 }
 
                 @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
@@ -172,14 +175,15 @@
     <script src="~/js/live-updates.js" asp-append-version="true"></script>
     <script src="~/js/image-manager.js" asp-append-version="true"></script>
 
-    @if (User.IsInRole("Admin"))
+    @* The pending-approvals count: for whoever may see the approvals page. *@
+    @if (User.HasPermission("approval.view"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
     <script>
         $(document).ready(function() {
                 // Pass the admin status to the notification manager
-                const isAdmin = @(User.IsInRole("Admin") ? "true" : "false");
+                const isAdmin = @(User.HasPermission("approval.view") ? "true" : "false");   // sees the approvals page
 
                     // Initialize the notification system
                 NotificationManager.initialize(isAdmin);

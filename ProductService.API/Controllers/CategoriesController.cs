@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
@@ -23,7 +23,7 @@ namespace ProductService.API.Controllers
         }
 
         [HttpGet]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.CategoryView)]
         public async Task<ActionResult<IEnumerable<CategoryDto>>> GetAll()
         {
             var categories = await _mediator.Send(new GetAllCategoriesQuery());
@@ -32,7 +32,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet("paged")]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.CategoryView)]
         public async Task<ActionResult<PagedResult<CategoryDto>>> GetPaged(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
@@ -45,7 +45,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpGet("{id}")]
-        [Permission(AllPermissions.ProductView)]
+        [Permission(AllPermissions.ProductView, AllPermissions.CategoryView)]
         public async Task<ActionResult<CategoryDto>> GetById(int id)
         {
             var category = await _mediator.Send(new GetCategoryByIdQuery(id));
@@ -56,7 +56,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpPost]
-        [Permission(AllPermissions.ProductCreate)]
+        [Permission(AllPermissions.CategoryCreate)]
         public async Task<ActionResult<CategoryDto>> Create(CreateCategoryDto dto)
         {
             var category = await _mediator.Send(new CreateCategory.Command(dto));
@@ -65,7 +65,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpPut("{id}")]
-        [Permission(AllPermissions.ProductUpdate)] 
+        [Permission(AllPermissions.CategoryUpdate)] 
         public async Task<IActionResult> Update(int id, UpdateCategoryDto dto)
         {
             await _mediator.Send(new UpdateCategory.Command(id, dto));
@@ -74,7 +74,7 @@ namespace ProductService.API.Controllers
 
 
         [HttpDelete("{id}")]
-        [Permission(AllPermissions.ProductDelete)]
+        [Permission(AllPermissions.CategoryDelete)]
         public async Task<IActionResult> Delete(int id)
         {
             await _mediator.Send(new DeleteCategory.Command(id));

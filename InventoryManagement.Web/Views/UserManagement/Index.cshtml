@@ -3,6 +3,8 @@
     ViewData["Title"] = "Users";
     var allRoles = Model.SelectMany(u => u.Roles).Distinct().OrderBy(r => r).ToList();
     var activeCount = Model.Count(u => u.IsActive);
+    var isAdminViewer = User.IsInRole("Admin");
+    var canManage = User.HasPermission("user.manage");
 }
 <div class="container-fluid px-4">
     <div class="ip-page-head">
@@ -16,9 +18,12 @@
             <button type="button" class="ip-btn ip-btn-secondary" onclick="exportUsersToPDF()">
                 <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
-            <a href="@Url.Action("Create")" class="ip-btn ip-btn-primary">
-                <span>@L["New User"]</span><i class="fa-solid fa-user-plus"></i>
-            </a>
+            @if (canManage)
+            {
+                <a href="@Url.Action("Create")" class="ip-btn ip-btn-primary">
+                    <span>@L["New User"]</span><i class="fa-solid fa-user-plus"></i>
+                </a>
+            }
         </div>
     </div>
 
@@ -130,6 +135,9 @@
                                        title="@L["View Details"]" aria-label="@L["View Details"]">
                                         <i class="fa-regular fa-eye"></i>
                                     </a>
+                                    @* Admin accounts are changed by Admins only. *@
+                                    @if (canManage && (isAdminViewer || !user.Roles.Contains("Admin")))
+                                    {
                                     <a href="@Url.Action("Edit", new { id = user.Id })" class="ip-btn-icon"
                                        title="@L["Edit User"]" aria-label="@L["Edit User"]">
                                         <i class="fa-solid fa-pen"></i>
@@ -149,6 +157,7 @@
                                             title="@L["Delete User"]" aria-label="@L["Delete User"]">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
+                                    }
                                 </div>
                             </td>
                         </tr>

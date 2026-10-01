@@ -24,6 +24,7 @@
             || curHasImage.HasValue || curAssigned.HasValue;
         var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
         var canTransfer = User.HasPermission("route.create") || User.HasPermission("route.create.direct");
+        var canChangeCode = User.HasPermission("product.code.update");
     }
     <div class="ip-page-head">
         <div>
@@ -36,9 +37,12 @@
             }
         </div>
         <div class="ip-page-actions">
-            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()">
-                <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
-            </button>
+            @if (User.HasPermission("product.export"))
+            {
+                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()">
+                    <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
+                </button>
+            }
             @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
             {
                 <a asp-action="Create" class="ip-btn ip-btn-primary">
@@ -139,7 +143,7 @@
                                     </span>
                                 </td>
                                 <td data-no-row-link>
-                                    @if (canUpdate)
+                                    @if (canChangeCode)
                                     {
                                         <span class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Double-click to change the code"]">@product.InventoryCode</span>
                                         <div class="inventory-code-edit d-none" data-id="@product.Id">

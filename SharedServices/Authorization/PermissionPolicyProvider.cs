@@ -4,9 +4,10 @@ using Microsoft.Extensions.Options;
 namespace SharedServices.Authorization
 {
     /// <summary>
-    /// Resolves any policy name that looks like a permission ("product.view", "route.create.direct")
-    /// to a <see cref="PermissionRequirement"/>, so permissions no longer have to be registered one
-    /// by one. Everything else falls through to the default provider.
+    /// Resolves any policy name that looks like a permission ("product.view", "route.create.direct",
+    /// or several joined with "|", meaning any of them) to a <see cref="PermissionRequirement"/>, so
+    /// permissions do not have to be registered one by one. Everything else falls through to the
+    /// default provider.
     /// </summary>
     public sealed class PermissionPolicyProvider : IAuthorizationPolicyProvider
     {
