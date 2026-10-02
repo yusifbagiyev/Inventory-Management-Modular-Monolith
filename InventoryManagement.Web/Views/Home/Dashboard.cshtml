@@ -68,7 +68,7 @@
             {
                 null => L["None waiting"].Value,
                 0 => L["the oldest is from today"].Value,
-                var days => L["the oldest has waited {0} days", days].Value
+                int days => L.Plural(days, "the oldest has waited {0} day", "the oldest has waited {0} days").Value
             })</span>
         </a>
     </div>
@@ -163,7 +163,7 @@
                             <span class="text-truncate" style="width: 30%">@dept.DepartmentName</span>
                             <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
                             <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">
-                                @L["{0} transfers", dept.PeriodTransfers]
+                                @L.Plural(dept.PeriodTransfers, "{0} transfer", "{0} transfers")
                             </span>
                         </a>
                     }

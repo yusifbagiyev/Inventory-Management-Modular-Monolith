@@ -22,7 +22,7 @@
                 {
                     <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                 }
-                <span class="ip-num">@L["{0} products", Model.ProductCount] · @L["{0} workers", Model.WorkerCount]</span>
+                <span class="ip-num">@L.Plural(Model.ProductCount, "{0} product", "{0} products") · @L.Plural(Model.WorkerCount, "{0} worker", "{0} workers")</span>
             </div>
         </div>
     </div>

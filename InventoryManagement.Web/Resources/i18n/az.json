@@ -1420,5 +1420,14 @@
   "All notifications have been read": "Bütün bildirişlər oxunub",
   "There are no unread notifications.": "Oxunmamış bildiriş yoxdur.",
   "{0} found": "{0} nəticə tapıldı",
-  "View image": "Şəkli göstər"
+  "View image": "Şəkli göstər",
+  "{0} transfer": "{0} transfer",
+  "the oldest has waited {0} day": "ən köhnəsi {0} gündür gözləyir",
+  "{0} product": "{0} məhsul",
+  "{0} worker": "{0} işçi",
+  "{0} user": "{0} istifadəçi",
+  "{0} department": "{0} şöbə",
+  "{0} category": "{0} kateqoriya",
+  "{0} action": "{0} əməliyyat",
+  "{0} deleted product": "{0} silinmiş məhsul"
 }

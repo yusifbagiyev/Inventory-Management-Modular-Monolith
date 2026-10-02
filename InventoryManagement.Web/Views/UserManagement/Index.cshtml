@@ -11,7 +11,7 @@
         <div>
             <h1>@L["Users"]</h1>
             <div class="ip-sub ip-num" id="usersSummary">
-                <span id="userCount">@L["{0} users", Model.Count]</span> · @L["{0} active", activeCount]
+                <span id="userCount">@L.Plural(Model.Count, "{0} user", "{0} users")</span> · @L["{0} active", activeCount]
             </div>
         </div>
         <div class="ip-page-actions">

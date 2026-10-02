@@ -36,7 +36,7 @@
                     {
                         <strong class="ip-found">@L["{0} found", Model.TotalCount]</strong><span> · </span>
                     }
-                    @L["{0} products", counts.Total] · @L["{0} active", counts.Active] · @L["{0} not working", counts.NotWorking]
+                    @L.Plural(counts.Total, "{0} product", "{0} products") · @L["{0} active", counts.Active] · @L["{0} not working", counts.NotWorking]
                 </div>
             }
         </div>

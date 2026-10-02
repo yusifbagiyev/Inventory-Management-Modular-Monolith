@@ -118,7 +118,7 @@
     <div class="ip-page-head">
         <div>
             <h1>@L["Audit log"]</h1>
-            <div class="ip-sub ip-num">@L["{0} actions", Model.TotalCount]</div>
+            <div class="ip-sub ip-num">@L.Plural(Model.TotalCount, "{0} action", "{0} actions")</div>
         </div>
     </div>
 

@@ -13,7 +13,7 @@
         <div>
             <h1>@L["Departments"]</h1>
             <div class="ip-sub ip-num" id="departmentsSummary">
-                @L["{0} departments", Model.TotalCount] · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
+                @L.Plural(Model.TotalCount, "{0} department", "{0} departments") · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
             </div>
         </div>
         <div class="ip-page-actions">
