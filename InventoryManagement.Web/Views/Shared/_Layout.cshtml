@@ -362,11 +362,30 @@
         }
 
         // Unread = accent dot + stronger title; the type icon sits on a neutral tile.
+        // Same mapping as Icon() on the Notifications page.
+        function notificationIcon(notification) {
+            let status = null;
+            try { status = JSON.parse(notification.data || '{}').status ?? null; } catch (e) { }
+            switch (notification.type) {
+                case 'ApprovalRequest': return ['fa-clipboard-list', ''];
+                case 'ApprovalResponse':
+                    return status === 'Approved' ? ['fa-circle-check', 'ok']
+                         : status === 'Rejected' ? ['fa-circle-xmark', 'bad']
+                         : status === 'Failed' ? ['fa-triangle-exclamation', 'bad'] : ['fa-reply', ''];
+                case 'RouteUpdate': case 'RouteCompleted': case 'TransferCompleted': return ['fa-right-left', ''];
+                case 'ProductUpdate':
+                    return notification.title === t('Product Deleted') || notification.title === 'Product Deleted' ? ['fa-trash-can', ''] : ['fa-box', ''];
+                default: return ['fa-bell', ''];
+            }
+        }
+
         function createNotificationItem(notification) {
             const unreadClass = notification.isRead ? '' : 'unread';
+            const [icon, tone] = notificationIcon(notification);
             return `
                 <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}" role="button" tabindex="0">
                     <span class="unread-dot" aria-hidden="true"></span>
+                    <span class="ip-notif-icon ${tone}" aria-hidden="true"><i class="fa-solid ${icon}"></i></span>
                     <div class="flex-grow-1" style="min-width: 0">
                         <div class="d-flex justify-content-between align-items-baseline gap-2">
                             <span class="title">${escapeHtml(notification.title)}</span>

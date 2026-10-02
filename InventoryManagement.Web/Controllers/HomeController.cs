@@ -80,6 +80,7 @@ namespace InventoryManagement.Web.Controllers
             var pending = await _mediator.Send(new GetAllRoutesQuery(1, 1000, IsCompleted: false));
             var oldestPending = pending.Items.Select(r => (DateTime?)r.CreatedAt).Min();
 
+            var categories = BuildCategoryDistribution(transfers);
             var model = new DashboardViewModel
             {
                 TotalProducts = products.Total,
@@ -89,8 +90,9 @@ namespace InventoryManagement.Web.Controllers
                 CompletedTransfers = transfers.Count(t => t.IsCompleted),
                 PendingTransfers = pending.TotalCount,
                 OldestPendingDays = oldestPending is { } oldest ? (int)(now.Date - oldest.Date).TotalDays : null,
-                DepartmentStats = BuildDepartmentStats(transfers),
-                CategoryDistributions = BuildCategoryDistribution(transfers),
+                CategoryDistributions = categories,
+                // As many departments as category rows, so the two lists side by side end level.
+                DepartmentStats = BuildDepartmentStats(transfers, categories.Count),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
                 PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
                 PeriodEnd = period == "all" ? null : endDate.ToString("yyyy-MM-dd")
@@ -111,7 +113,7 @@ namespace InventoryManagement.Web.Controllers
         /// Top 5 departments by transfers sent or received in the period, by the department name
         /// written on each transfer (what it was called then, even if renamed or deleted since).
         /// </summary>
-        private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers)
+        private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers, int count)
         {
             var byDepartment = new Dictionary<string, (string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
 
@@ -143,7 +145,7 @@ namespace InventoryManagement.Web.Controllers
                 })
                 .OrderByDescending(d => d.PeriodTransfers)
                 .ThenByDescending(d => d.ProductCount)
-                .Take(5)
+                .Take(count)
                 .ToList();
         }
 

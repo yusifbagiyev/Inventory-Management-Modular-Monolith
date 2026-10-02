@@ -71,6 +71,8 @@
                         <div class="ip-notif-item @(notification.IsRead ? "" : "unread")" role="button" tabindex="0"
                              data-id="@notification.Id" data-type="@notification.Type" data-read="@(notification.IsRead ? "read" : "unread")">
                             <span class="unread-dot" aria-hidden="true"></span>
+                            @{ var (icon, tone) = Icon(notification); }
+                            <span class="ip-notif-icon @tone" aria-hidden="true"><i class="fa-solid @icon"></i></span>
                             <div class="flex-grow-1" style="min-width: 0">
                                 <div class="d-flex justify-content-between align-items-baseline gap-3">
                                     <span class="title">@notification.Title</span>
@@ -176,6 +178,36 @@
         }
         catch (Newtonsoft.Json.JsonException) { }
         return null;
+    }
+
+    // The type icon (same mapping as createNotificationItem in _Layout): an approval answer
+    // shows its outcome in the status colours, everything else sits on a neutral tile.
+    (string Icon, string Tone) Icon(NotificationDto notification)
+    {
+        string? status = null;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(notification.Data))
+                status = Newtonsoft.Json.Linq.JObject.Parse(notification.Data)
+                    .GetValue("status", StringComparison.OrdinalIgnoreCase)?.ToString();
+        }
+        catch (Newtonsoft.Json.JsonException) { }
+
+        return notification.Type switch
+        {
+            "ApprovalRequest" => ("fa-clipboard-list", ""),
+            "ApprovalResponse" => status switch
+            {
+                "Approved" => ("fa-circle-check", "ok"),
+                "Rejected" => ("fa-circle-xmark", "bad"),
+                "Failed" => ("fa-triangle-exclamation", "bad"),
+                _ => ("fa-reply", "")
+            },
+            "RouteUpdate" or "RouteCompleted" or "TransferCompleted" => ("fa-right-left", ""),
+            "ProductUpdate" when notification.Title == "Product Deleted" || notification.Title == L["Product Deleted"].Value => ("fa-trash-can", ""),
+            "ProductUpdate" => ("fa-box", ""),
+            _ => ("fa-bell", "")
+        };
     }
 
     string TypeLabel(string type) => type switch

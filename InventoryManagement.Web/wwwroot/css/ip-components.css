@@ -993,3 +993,9 @@ select option:disabled { color: var(--ip-text-3); }
 /* Banners: a long message wraps beside its icon instead of dropping below it (the row still wraps for buttons). */
 .ip-banner > i { flex: none; }
 .ip-banner > div { flex: 1 1 200px; min-width: 0; }
+
+/* Notification type icon (page and bell dropdown): neutral tile; an approval answer in its status colour. */
+.ip-notif-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--ip-sunken); color: var(--ip-text-2); font-size: 14px; }
+.ip-notif-icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
+.ip-notif-icon.bad { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
+.ip-notif-item .unread-dot { margin-top: 12px; }   /* level with the icon centre */
