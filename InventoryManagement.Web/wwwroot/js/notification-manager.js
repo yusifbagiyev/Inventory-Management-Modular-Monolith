@@ -32,8 +32,29 @@ window.NotificationManager = (function () {
         if (!suspended) return;
         suspended = false;
         connectionRetryCount = 0;
-        if (connection) startConnection();
+        if (!connection) return;
+        if (document.hidden) waitUntilVisible();
+        else startConnection();
     }
+
+    // A hidden tab that loses the socket waits to be shown instead of reconnecting every minute
+    let waitingForVisible = false;
+
+    function waitUntilVisible() {
+        waitingForVisible = true;
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+        clearTimeout(outageNoticeTimer);
+        outageNoticeTimer = null;
+    }
+
+    // Reconnecting also reloads the notification list and count, see ConnectionEstablished
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden || !waitingForVisible || suspended || !connection) return;
+        waitingForVisible = false;
+        connectionRetryCount = 0;
+        startConnection();
+    });
 
     window.addEventListener('pagehide', e => { if (e.persisted) suspendConnection(); });
     window.addEventListener('pageshow', e => { if (e.persisted) resumeConnection(); });
@@ -95,7 +116,8 @@ window.NotificationManager = (function () {
             })
             .withAutomaticReconnect({
                 nextRetryDelayInMilliseconds: retryContext => {
-                    if (retryContext.previousRetryCount >= maxRetries) {
+                    // Giving up in a hidden tab hands over to onclose, which waits for the tab to be shown
+                    if (document.hidden || retryContext.previousRetryCount >= maxRetries) {
                         return null;
                     }
                     return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 16000);
@@ -142,6 +164,10 @@ window.NotificationManager = (function () {
         connection.onclose((error) => {
             connectionState = 'disconnected';
             if (suspended) return; // Closed on purpose, resumeConnection() reopens it
+            if (document.hidden) {
+                waitUntilVisible();
+                return;
+            }
             console.error('SignalR connection closed:', error);
             noteOutage();
 
@@ -171,10 +197,14 @@ window.NotificationManager = (function () {
             connectionState = 'connected';
             connectionRetryCount = 0;
 
-
-
+            // The list also reloads the unread count
             if (connectedBefore) {
-                setTimeout(() => window.loadRecentNotifications(), 500);
+                setTimeout(() => {
+                    window.loadRecentNotifications();
+                    if (window.isAdmin && typeof debouncedLoadPendingApprovalsCount === 'function') {
+                        debouncedLoadPendingApprovalsCount();
+                    }
+                }, 500);
             }
             connectedBefore = true;
         });
@@ -259,7 +289,8 @@ window.NotificationManager = (function () {
         }
         reconnectTimeout = setTimeout(() => {
             reconnectTimeout = null;
-            startConnection();
+            if (document.hidden) waitUntilVisible();
+            else startConnection();
         }, delay);
     }
 
@@ -286,6 +317,11 @@ window.NotificationManager = (function () {
             .catch(err => {
                 connectionState = 'disconnected';
                 console.error('❌ SignalR connection failed:', err);
+
+                if (document.hidden && !isAuthError(err)) {
+                    waitUntilVisible();
+                    return;
+                }
 
                 // An auth error will not fix itself, so it is not retried
                 if (connectionRetryCount < maxRetries && !isAuthError(err)) {

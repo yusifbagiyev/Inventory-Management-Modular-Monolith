@@ -7,6 +7,7 @@ IMAGE="${1:?usage: deploy.sh <image>}"
 DEPLOY_DIR="${DEPLOY_DIR:-$(pwd)}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"   # Seconds, long enough for the startup migrations
 KEEP_BACKUPS="${KEEP_BACKUPS:-14}"
+KEEP_IMAGES="${KEEP_IMAGES:-3}"   # App images kept for rollback, the deployed and previous one included
 APP_CONTAINER=inventory_app
 PG_CONTAINER=inventory_postgres
 
@@ -68,6 +69,10 @@ if run_app "$IMAGE" && wait_healthy; then
     docker compose up -d --no-build
     docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload
     docker image prune -f > /dev/null
+    # Every deploy leaves a tagged image behind, and the registry still has the removed ones
+    docker images "${IMAGE%:*}" --format '{{.CreatedAt}}\t{{.Repository}}:{{.Tag}}' | sort -r | cut -f2 \
+        | grep -vxF -e "$IMAGE" -e "${previous:-none}" | tail -n +"$((KEEP_IMAGES - 1))" \
+        | xargs -r docker image rm > /dev/null || true
     echo "==> Deployed $IMAGE"
 else
     echo "!! $IMAGE did not become healthy within ${HEALTH_TIMEOUT}s" >&2
