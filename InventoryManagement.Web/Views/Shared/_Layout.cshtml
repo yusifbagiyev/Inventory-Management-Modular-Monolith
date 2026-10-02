@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - Inventory Pro" : "Inventory Pro")</title>
+    <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - 166 İnventar" : "166 İnventar")</title>
     @* Tab icon: the rail logo (favicon.svg); .ico for older browsers, PNG for iOS home screens. *@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
@@ -80,7 +80,7 @@
                 <button type="button" class="ip-btn-icon" data-rail-open aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
                 <a class="ip-btn-icon ip-appbar-back" href="/" hidden aria-label="@L["Back"]"><i class="fa-solid fa-arrow-left"></i></a>
                 <div class="title">
-                    @L[ViewData["Title"]?.ToString() ?? "Inventory Pro"]
+                    @(ViewData["Title"] is string appBarTitle ? L[appBarTitle] : "166 İnventar")
                     @if (ViewData["Subtitle"] is string subtitle && subtitle.Length > 0)
                     {
                         <small>@subtitle</small>

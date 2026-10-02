@@ -975,3 +975,17 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-table td.meta .sub:first-child::before, .ip-table td.meta .cell-sub:first-child::before,
   .ip-table td.meta > .cell-text > .cell-sub:first-child::before { content: none; }
 }
+
+/* The company mark (_BrandMark): no tile; the big chevron follows the text colour (white on the dark rail). */
+.ip-logo.brand { background: none; border-radius: 0; color: var(--ip-text-1); }
+.ip-logo.brand svg { width: 100%; height: 100%; display: block; }
+.ip-rail.collapsed .ip-rail-brand .ip-logo { display: grid; }
+
+/* Toolbar: the code search leads on the left, language / theme / bell stay on the right
+   (with everything pushed right the bar read as empty). */
+.ip-toolbar-search { margin-right: auto; }
+@media (min-width: 1025px) { .ip-toolbar-search { width: 440px; } }
+/* Product name with the department under it (rail, sign-in). */
+.ip-rail-name { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.ip-rail-name small { font-size: var(--ip-fs-xs, 11px); font-weight: 400; color: var(--ip-text-3); }
+

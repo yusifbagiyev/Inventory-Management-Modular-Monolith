@@ -117,7 +117,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
 </header>
 ${filterLine}
 <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
-<footer>Inventory Pro</footer>
+<footer>166 İnventar</footer>
 </body></html>`);
 
     printWindow.document.close();
@@ -309,7 +309,7 @@ function exportTimelineToPDF() {
   <div class="meta">${escapePdfText(t('Generated on: {0}', formatDate(new Date(), true)))} &middot; ${escapePdfText(t('Total Transfers: {0}', items.length))}</div>
 </header>
 <div class="timeline">${rows}</div>
-<footer>Inventory Pro</footer>
+<footer>166 İnventar</footer>
 </body>
 </html>`);
 }

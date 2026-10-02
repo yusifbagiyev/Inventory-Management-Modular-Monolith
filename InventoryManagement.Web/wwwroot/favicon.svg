@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- The rail logo (.ip-logo): brand yellow tile with the box-archive mark. -->
-  <rect width="64" height="64" rx="14" fill="#FFC000"/>
-  <g transform="translate(14 14) scale(0.0703125)" fill="#1B1C1E">
-    <path d="M32 32H480c17.7 0 32 14.3 32 32V96c0 17.7-14.3 32-32 32H32C14.3 128 0 113.7 0 96V64C0 46.3 14.3 32 32 32zm0 128H480V416c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64V160zm128 80c0 8.8 7.2 16 16 16H336c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="254 150 300 300">
+  <!-- The 166 mark (Views/Shared/_BrandMark.cshtml): black chevron, white on a dark browser theme. -->
+  <style>.k { fill: #1B1C1E; } @media (prefers-color-scheme: dark) { .k { fill: #F2F2F0; } }</style>
+  <defs>
+    <mask id="gap" maskUnits="userSpaceOnUse" x="254" y="150" width="300" height="300">
+      <rect x="254" y="150" width="300" height="300" fill="#fff"/>
+      <polygon points="349,233 416,300 349,367 335.5,353.5 389,300 335.5,246.5" fill="#000" stroke="#000" stroke-width="22"/>
+    </mask>
+  </defs>
+  <polygon class="k" points="352,156 497,300 352,444 310,402 412,300 310,198" mask="url(#gap)"/>
+  <polygon points="349,233 416,300 349,367 335.5,353.5 389,300 335.5,246.5" fill="#FFC526"/>
 </svg>
