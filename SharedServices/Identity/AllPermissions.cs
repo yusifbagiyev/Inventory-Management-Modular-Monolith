@@ -1,7 +1,6 @@
 namespace SharedServices.Identity
 {
-    // Rows are seeded in IdentityDbContext. A new constant needs a seed row and a migration there.
-    /// <summary>Every permission. Admins hold them all without a grant.</summary>
+    /// <summary>Every permission, and a new one also needs a seed row in IdentityDbContext and a migration.</summary>
     public static class AllPermissions
     {
         // Dashboard
@@ -26,7 +25,7 @@ namespace SharedServices.Identity
         public const string ProductUpdateDirect = "product.update.direct";
         public const string ProductDelete = "product.delete";
         public const string ProductDeleteDirect = "product.delete.direct";
-        /// <summary>Changes a product's inventory code right away. There is no approval step.</summary>
+        /// <summary>Changes a product's inventory code right away, without an approval step.</summary>
         public const string ProductCodeUpdate = "product.code.update";
         public const string ProductExport = "product.export";
         /// <summary>Opens the Deleted products page.</summary>
@@ -48,10 +47,10 @@ namespace SharedServices.Identity
 
         // Approvals
         public const string ApprovalView = "approval.view";
-        /// <summary>Approves or rejects requests. Holders are notified of new ones.</summary>
+        /// <summary>Approves or rejects requests, and holders are notified of new ones.</summary>
         public const string ApprovalDecide = "approval.decide";
 
-        // Users. Only Admins change roles and permissions.
+        // Users, though only Admins change roles and permissions
         public const string UserView = "user.view";
         /// <summary>Manages non-admin users, including passwords and deactivation.</summary>
         public const string UserManage = "user.manage";

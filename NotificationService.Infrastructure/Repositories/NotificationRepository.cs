@@ -28,7 +28,7 @@ namespace NotificationService.Infrastructure.Repositories
 
             query = query.OrderByDescending(n => n.CreatedAt);
 
-            // Cap in SQL so callers showing the newest few never load the whole history.
+            // Cap in SQL so callers showing the newest few never load the whole history
             if (limit.HasValue)
                 query = query.Take(limit.Value);
 
@@ -79,7 +79,7 @@ namespace NotificationService.Infrastructure.Repositories
                 .CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
         }
 
-        // A set-based UPDATE that does the same as Notification.MarkAsRead without loading rows.
+        // Same as Notification.MarkAsRead but as one UPDATE, without loading the rows
         public async Task<int> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await _context.Notifications
@@ -94,8 +94,7 @@ namespace NotificationService.Infrastructure.Repositories
 
         public Task<int> DeleteByApprovalRequestAsync(int approvalRequestId, CancellationToken cancellationToken = default)
         {
-            // Data is compact JSON, so the id is followed by a comma or a closing brace.
-            // Matching that delimiter keeps request 1 from also matching request 10.
+            // Data is compact JSON, so matching the comma or brace after the id keeps request 1 from matching 10
             var withComma = $"\"approvalRequestId\":{approvalRequestId},";
             var atEnd = $"\"approvalRequestId\":{approvalRequestId}}}";
             return _context.Notifications

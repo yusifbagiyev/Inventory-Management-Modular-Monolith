@@ -1,7 +1,6 @@
 namespace RouteService.Application.DTOs
 {
-    /// <summary>Department and category pairs found on routes, so the list filters can cascade.</summary>
-    /// <remarks>Routes store the category name only, so there is no category id here.</remarks>
+    /// <summary>Department and category name pairs found on routes, so the list filters can cascade.</summary>
     public class RouteFilterFacetsDto
     {
         public List<DepartmentCategoryNameFacetDto> Pairs { get; set; } = new();

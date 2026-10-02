@@ -14,8 +14,7 @@ namespace NotificationService.Infrastructure.Services
     /// <summary>One WhatsApp group message waiting to go out, with RouteId set for a completed transfer.</summary>
     public sealed record WhatsAppJob(string Message, string? ImageUrl, string FallbackFileName, int InventoryCode, int? RouteId);
 
-    /// <summary>Holds WhatsApp messages so they go out one at a time at the account's pace.</summary>
-    /// <remarks>WaSender allows one message every 5 seconds. The queue is lost on restart.</remarks>
+    /// <summary>In-memory queue that lets WhatsApp messages out one at a time, since WaSender allows one every 5 seconds.</summary>
     public sealed class WhatsAppOutbox
     {
         private readonly Channel<WhatsAppJob> _channel = Channel.CreateUnbounded<WhatsAppJob>();
@@ -32,8 +31,7 @@ namespace NotificationService.Infrastructure.Services
         internal ChannelReader<WhatsAppJob> Reader => _channel.Reader;
     }
 
-    /// <summary>Sends the outbox in order, at least WhatsApp:MinIntervalSeconds apart.</summary>
-    /// <remarks>A rate-limited message waits as asked and is retried, other errors get two more tries. A transfer's outcome is stored on its route.</remarks>
+    /// <summary>Sends the outbox in order and at least WhatsApp:MinIntervalSeconds apart, retrying failed messages.</summary>
     public sealed class WhatsAppOutboxWorker : BackgroundService
     {
         private const int MaxAttempts = 5;
@@ -79,7 +77,7 @@ namespace NotificationService.Infrastructure.Services
         private async Task SendAsync(WhatsAppJob job, CancellationToken cancellationToken)
         {
             var groupId = _outbox.GroupId;
-            if (string.IsNullOrEmpty(groupId)) return;   // Switched off meanwhile.
+            if (string.IsNullOrEmpty(groupId)) return;   // Switched off meanwhile
 
             var image = await _images.ReadAsync(job.ImageUrl, cancellationToken);
             var fileName = Path.GetFileName(job.ImageUrl) ?? job.FallbackFileName;
@@ -97,6 +95,7 @@ namespace NotificationService.Infrastructure.Services
 
                 var result = await whatsApp.SendAsync(groupId, job.Message, image, fileName, uploaded, cancellationToken);
                 _lastSentUtc = DateTime.UtcNow;
+                // Retries reuse the uploaded image instead of uploading it again
                 uploaded ??= result.UploadedImageUrl;
 
                 if (result.Success)
@@ -106,6 +105,7 @@ namespace NotificationService.Infrastructure.Services
                 }
 
                 lastError = result.Error;
+                // A rate limit waits as asked and does not use up one of the MaxOtherErrors tries
                 if (result.RateLimited)
                 {
                     await Task.Delay((result.RetryAfter ?? _minInterval) + TimeSpan.FromSeconds(1), cancellationToken);
@@ -119,6 +119,7 @@ namespace NotificationService.Infrastructure.Services
             await RecordAsync(job, WhatsAppStatus.Failed, lastError, cancellationToken);
         }
 
+        /// <summary>Stores a completed transfer's outcome on its route, while product messages are not recorded anywhere.</summary>
         private async Task RecordAsync(WhatsAppJob job, string status, string? error, CancellationToken cancellationToken)
         {
             if (job.RouteId is not int routeId) return;

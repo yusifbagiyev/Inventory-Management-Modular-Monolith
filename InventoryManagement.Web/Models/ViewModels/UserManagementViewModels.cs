@@ -76,7 +76,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public bool IsActive { get; set; }
 
         public List<string> CurrentRoles { get; set; } = new List<string>();
-        /// <summary>Holds a single role. Null leaves the roles unchanged.</summary>
+        /// <summary>Holds a single role, and null leaves the roles unchanged.</summary>
         public List<string>? SelectedRoles { get; set; } = new List<string>();
         public List<SelectListItem> AvailableRoles { get; set; } = new List<SelectListItem>();
     }

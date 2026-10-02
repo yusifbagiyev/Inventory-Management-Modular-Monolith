@@ -14,9 +14,10 @@ using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Controllers
 {
+    /// <summary>Sign-in, sign-out, the profile page and the user's own password change.</summary>
     public class AccountController : Controller
     {
-        // Leftover username cookie from before the account picker. Deleted at sign-in.
+        // Old username cookie that sign-in deletes
         private const string OldUsernameCookie = "username";
 
         private readonly IdentityAuth _identity;
@@ -42,7 +43,7 @@ namespace InventoryManagement.Web.Controllers
             _throttle = throttle;
         }
 
-        /// <summary>Issues the auth cookie. Also called after a password change so the new stamp does not end this session.</summary>
+        /// <summary>Issues the auth cookie, also after a password change so the new stamp does not end this session.</summary>
         private async Task SignInAsync(IdentityService.Application.DTOs.UserDto user, bool persistent, DateTimeOffset? signedInAt = null)
         {
             var stamp = await _identity.GetSessionStampAsync(user.Id);
@@ -61,7 +62,7 @@ namespace InventoryManagement.Web.Controllers
             => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
                 reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
-        /// <summary>Two steps: pick an account remembered on this browser, then enter the password.</summary>
+        /// <summary>Sign-in in two steps, picking an account remembered on this browser and then entering the password.</summary>
         [AllowAnonymous]
         [HttpGet]
         public IActionResult Login(string? returnUrl = null, string? user = null, int? other = null)
@@ -97,7 +98,7 @@ namespace InventoryManagement.Web.Controllers
                 ? recent.FirstOrDefault(a => string.Equals(a.Login, model.Username, StringComparison.OrdinalIgnoreCase))
                 : null;
             if (model.Mode == "user" && chosen == null)
-                model.Mode = "other";   // Forgotten in the meantime, so ask for the username.
+                model.Mode = "other";   // Forgotten in the meantime, so ask for the username
 
             if (chosen != null)
             {
@@ -142,7 +143,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var user = await _identity.ValidateCredentialsAsync(model.Username, model.Password);
-                // Session cookie that ends with the browser. The account itself stays in the picker list.
+                // Session cookie that ends with the browser, while the account stays in the picker list
                 await SignInAsync(user, persistent: false);
                 var displayName = $"{user.FirstName} {user.LastName}".Trim();
                 RecentAccounts.Remember(HttpContext, new RecentAccounts.Entry(user.Username,
@@ -166,7 +167,7 @@ namespace InventoryManagement.Web.Controllers
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
                 await AuditSessionAsync(AuditOperations.SignInFailed, null, model.Username, model.Username, ex.Message);
-                // Same answer for every failure so it cannot be used to probe usernames.
+                // Same answer for every failure so it cannot be used to probe usernames
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
                     "Invalid username or password. After repeated failed attempts, sign-in is suspended for 15 minutes."));
                 return View(Prepare(model));
@@ -178,7 +179,7 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            // Anyone can post here, so only a signed-in user's sign-out is audited.
+            // Anyone can post here, so only a signed-in user's sign-out is audited
             if (User.Identity?.IsAuthenticated == true)
             {
                 _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
@@ -205,7 +206,7 @@ namespace InventoryManagement.Web.Controllers
             return profile == null ? RedirectToAction(nameof(Login)) : View(profile);
         }
 
-        // Admins set other users' passwords from User Management.
+        /// <summary>Own password only, Admins set other users' passwords from User Management.</summary>
         [Authorize]
         [HttpGet]
         public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
@@ -221,7 +222,7 @@ namespace InventoryManagement.Web.Controllers
             var (success, error) = await _userManagementService.ChangePasswordAsync(model.CurrentPassword, model.NewPassword);
             if (success)
             {
-                // The new stamp ends the other sessions. Re-issue this one so it survives.
+                // The new stamp ends the other sessions, so re-issue this one to keep it alive
                 var auth = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 var me = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var myId)
                     ? await _identity.GetUserAsync(myId) : null;

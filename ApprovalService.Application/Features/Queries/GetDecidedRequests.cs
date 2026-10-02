@@ -6,8 +6,7 @@ using MediatR;
 
 namespace ApprovalService.Application.Features.Queries
 {
-    /// <summary>The latest approved or rejected requests for the approvals page tabs, with the count of each.</summary>
-    /// <remarks>Approved includes requests whose action failed. A null Approved returns only the counts.</remarks>
+    /// <summary>Latest decided requests for an approvals tab plus both tab counts, with failed ones counted as approved.</summary>
     public class GetDecidedRequests
     {
         public record Query(bool? Approved, int Take) : IRequest<Result>;
@@ -28,6 +27,7 @@ namespace ApprovalService.Application.Features.Queries
 
             public async Task<Result> Handle(Query request, CancellationToken cancellationToken)
             {
+                // A null Approved asks only for the counts
                 var items = request.Approved is bool approved
                     ? (await _repository.GetDecidedAsync(approved ? ApprovedStatuses : RejectedStatuses, request.Take, cancellationToken))
                         .Select(r => r.ToDto()).ToList()

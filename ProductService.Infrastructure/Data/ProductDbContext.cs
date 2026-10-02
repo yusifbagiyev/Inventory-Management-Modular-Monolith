@@ -24,8 +24,7 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                // Deleted products stay hidden unless a query calls IgnoreQueryFilters.
-                // The unique index skips them, so their inventory code can be reused.
+                // Deleted products stay hidden without IgnoreQueryFilters, and the unique index skips their codes
                 entity.HasQueryFilter(e => !e.IsDeleted);
                 entity.HasIndex(e => e.InventoryCode).IsUnique().HasFilter("\"IsDeleted\" = false");
                 entity.Property(e => e.DeletedBy).HasMaxLength(200);
@@ -34,7 +33,7 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
                 entity.Property(e => e.Color).HasMaxLength(30);
-                // Specifications are stored on the product row as a jsonb array.
+                // A jsonb array on the product row, with a comparer so EF notices edits inside the list
                 entity.Property(e => e.Specifications)
                       .HasColumnType("jsonb")
                       .HasDefaultValueSql("'[]'::jsonb")
@@ -50,7 +49,7 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.UpdatedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // Restrict instead of Cascade, so deleting a category or department never deletes its products.
+                // Restrict instead of Cascade, so deleting a category or department never deletes its products
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(e => e.CategoryId)
@@ -65,7 +64,7 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Category>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                // Keep in step with the validators' 100-character limit.
+                // Keep in step with the validators' 100-character limit
                 entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");

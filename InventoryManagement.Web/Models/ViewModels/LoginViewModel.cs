@@ -17,7 +17,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         [Display(Name = "Password")]
         public string Password { get; set; } = string.Empty;
 
-        /// <summary>The value user means a picked account with the username hidden. The value other asks for both fields.</summary>
+        /// <summary>With user the account was picked and the username stays hidden, anything else asks for both fields.</summary>
         public string? Mode { get; set; }
 
         public string? ReturnUrl { get; set; }

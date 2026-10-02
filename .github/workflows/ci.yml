@@ -23,7 +23,7 @@ jobs:
 
       - name: Vulnerable packages
         run: |
-          # The command exits 0 either way, so fail on any listed package, which is marked with >.
+          # The command exits 0 either way, so fail on any listed package, which is marked with >
           dotnet list InventoryManagement.sln package --vulnerable --include-transitive | tee vulnerable.txt
           ! grep -q '>' vulnerable.txt
 

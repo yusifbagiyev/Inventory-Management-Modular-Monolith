@@ -72,12 +72,12 @@ namespace ProductService.Application.Services
                 IsWorking = data.GetBool("isWorking", true),
                 IsActive = data.GetBool("isActive", true),
                 IsNewItem = data.GetBool("isNewItem", true),
-                // Older requests carry a single image that replaces all images.
+                // Older requests carry a single image that replaces all images
                 ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
                 ImageFiles = data.GetImages(),
                 RemoveImageUrls = data.GetStrings("removeImageUrls"),
                 CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null,
-                // Requests made before colour and specifications existed leave them alone.
+                // Requests without colour and specifications leave them alone
                 ReplaceDetails = data.GetBool("replaceDetails", false),
                 Color = data.GetString("color"),
                 Specifications = Specifications(data)
@@ -86,8 +86,7 @@ namespace ProductService.Application.Services
             var existing = await _mediator.Send(new GetProductByIdQuery(productId), cancellationToken)
                 ?? throw new NotFoundException($"Product with ID {productId} not found");
 
-            // Apply only the listed fields on top of the product as it is now, which may have moved meanwhile.
-            // Older requests have no list and apply every field.
+            // Apply only the listed fields on top of the product as it is now, older requests without a list apply all
             if (data.Has("changed"))
             {
                 var changed = data.GetStrings("changed").ToHashSet(StringComparer.OrdinalIgnoreCase);

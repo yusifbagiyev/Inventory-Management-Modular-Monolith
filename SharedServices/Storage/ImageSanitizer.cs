@@ -5,14 +5,14 @@ namespace SharedServices.Storage
     /// <summary>Checks that an upload really is a JPEG or PNG and strips its metadata, such as phone GPS.</summary>
     public static class ImageSanitizer
     {
-        /// <summary>A small file can unpack to gigabytes and crash the thumbnail maker. This is about 200 MB decoded.</summary>
+        /// <summary>About 200 MB decoded, since a small file can unpack to gigabytes and crash the thumbnail maker.</summary>
         public const int MaxPixels = 50_000_000;
 
         public const string InvalidMessage = "Invalid image. Allowed: JPG, JPEG, PNG photos up to 50 megapixels.";
 
         public sealed record Result(byte[] Data, string Extension);
 
-        /// <summary>The cleaned image, or <see cref="ArgumentException"/> when it is not an acceptable photo.</summary>
+        /// <summary>Returns the cleaned image and throws <see cref="ArgumentException"/> when it is not an acceptable photo.</summary>
         public static Result Clean(byte[] data)
         {
             using var codec = SKCodec.Create(new SKMemoryStream(data))
@@ -21,7 +21,7 @@ namespace SharedServices.Storage
             if (info.Width <= 0 || info.Height <= 0 || (long)info.Width * info.Height > MaxPixels)
                 throw new ArgumentException(InvalidMessage);
 
-            // The EXIF orientation flag goes with the metadata, so sideways photos are re-encoded upright first.
+            // The EXIF orientation flag goes with the metadata, so sideways photos are re-encoded upright first
             switch (codec.EncodedFormat)
             {
                 case SKEncodedImageFormat.Jpeg:
@@ -54,7 +54,7 @@ namespace SharedServices.Storage
             return encoded.ToArray();
         }
 
-        /// <summary>Applies an EXIF orientation. Returns the same bitmap for TopLeft.</summary>
+        /// <summary>Applies an EXIF orientation, returning the same bitmap for TopLeft.</summary>
         public static SKBitmap Orient(SKBitmap bitmap, SKEncodedOrigin origin)
         {
             if (origin == SKEncodedOrigin.TopLeft) return bitmap;
@@ -64,26 +64,30 @@ namespace SharedServices.Storage
             using var canvas = new SKCanvas(result);
             switch (origin)
             {
-                case SKEncodedOrigin.TopRight:      // Mirrored
+                // Mirrored
+                case SKEncodedOrigin.TopRight:
                     canvas.Translate(result.Width, 0); canvas.Scale(-1, 1); break;
-                case SKEncodedOrigin.BottomRight:   // Upside down
+                // Upside down
+                case SKEncodedOrigin.BottomRight:
                     canvas.Translate(result.Width, result.Height); canvas.RotateDegrees(180); break;
-                case SKEncodedOrigin.BottomLeft:    // Flipped
+                // Flipped
+                case SKEncodedOrigin.BottomLeft:
                     canvas.Translate(0, result.Height); canvas.Scale(1, -1); break;
-                case SKEncodedOrigin.RightTop:      // The usual phone portrait
+                // RightTop is the usual phone portrait
+                case SKEncodedOrigin.RightTop:
                 case SKEncodedOrigin.LeftTop:
                     canvas.Translate(result.Width, 0); canvas.RotateDegrees(90); break;
                 case SKEncodedOrigin.LeftBottom:
                 case SKEncodedOrigin.RightBottom:
                     canvas.Translate(0, result.Height); canvas.RotateDegrees(270); break;
             }
-            // Quarter turns and mirrors land on whole pixels, so the default sampling copies them exactly.
+            // Quarter turns and mirrors land on whole pixels, so the default sampling copies them exactly
             using var source = SKImage.FromBitmap(bitmap);
             canvas.DrawImage(source, 0, 0, SKSamplingOptions.Default);
             return result;
         }
 
-        /// <summary>Drops the EXIF, XMP, IPTC and comment segments of a JPEG. Null when malformed.</summary>
+        /// <summary>Drops the EXIF, XMP, IPTC and comment segments of a JPEG, or returns null when malformed.</summary>
         private static byte[]? StripJpeg(byte[] data)
         {
             if (data.Length < 4 || data[0] != 0xFF || data[1] != 0xD8) return null;
@@ -94,15 +98,17 @@ namespace SharedServices.Storage
             {
                 if (data[pos] != 0xFF) return null;
                 var marker = data[pos + 1];
-                if (marker == 0xFF) { pos++; continue; }               // Fill byte
-                if (marker == 0xDA)                                       // Start of scan. The rest is image data.
+                // Skip a fill byte
+                if (marker == 0xFF) { pos++; continue; }
+                // Start of scan, after which everything is image data
+                if (marker == 0xDA)
                 {
                     output.Write(data, pos, data.Length - pos);
                     return output.ToArray();
                 }
                 var length = (data[pos + 2] << 8) | data[pos + 3];
                 if (length < 2 || pos + 2 + length > data.Length) return null;
-                // APP1 is EXIF and XMP, APP13 is IPTC, FE is a comment. The colour profile stays.
+                // APP1 holds EXIF and XMP, APP13 IPTC and FE a comment, while the colour profile stays
                 var drop = marker is 0xE1 or 0xED or 0xFE;
                 if (!drop) output.Write(data, pos, 2 + length);
                 pos += 2 + length;
@@ -110,7 +116,7 @@ namespace SharedServices.Storage
             return null;
         }
 
-        /// <summary>Drops the text, EXIF and timestamp chunks of a PNG. Null when malformed.</summary>
+        /// <summary>Drops the text, EXIF and timestamp chunks of a PNG, or returns null when malformed.</summary>
         private static byte[]? StripPng(byte[] data)
         {
             if (data.Length < 8 || data[0] != 0x89 || data[1] != 0x50 || data[2] != 0x4E || data[3] != 0x47) return null;

@@ -10,7 +10,7 @@ using SharedServices.Identity;
 
 namespace ApprovalService.API.Controllers
 {
-    /// <remarks>There is no create endpoint on purpose. Only the owning modules submit requests, after their own checks.</remarks>
+    /// <summary>Approval requests API without a create endpoint, since only the owning modules submit requests.</summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -23,7 +23,7 @@ namespace ApprovalService.API.Controllers
             _mediator = mediator;
         }
 
-        // API-key clients have no numeric user id and get 0 instead of a 500.
+        // API-key clients have no numeric user id and get 0 instead of a 500
         private int CurrentUserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
         private string CurrentUserName => User.Identity?.Name ?? "Unknown";
@@ -53,7 +53,7 @@ namespace ApprovalService.API.Controllers
         {
             var approvalRequest = await _mediator.Send(new GetRequestById.Query(id));
 
-            // Only the requester or an approver may read a request. NotFound hides whether it exists.
+            // Only the requester or an approver may read a request, and NotFound hides whether it exists
             var canViewAll = User.IsInRole(AllRoles.Admin) || User.HasClaim("permission", AllPermissions.ApprovalView)
                 || User.HasClaim("permission", AllPermissions.ApprovalDecide);
             if (approvalRequest == null || (!canViewAll && approvalRequest.RequestedById != CurrentUserId))

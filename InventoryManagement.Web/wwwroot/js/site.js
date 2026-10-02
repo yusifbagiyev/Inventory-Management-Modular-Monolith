@@ -1,4 +1,4 @@
-/** Translates a UI string from window.I18n. The English text is the key, so a missing one shows in English. */
+/** Translates a UI string keyed by its English text, so a missing key shows in English. */
 function t(key, ...args) {
     const table = window.I18n || {};
     const text = Object.prototype.hasOwnProperty.call(table, key) ? table[key] : key;
@@ -10,7 +10,7 @@ function uiLocale() {
     return ({ az: 'az-Latn-AZ', ru: 'ru-RU' })[document.documentElement.lang] || 'en-US';
 }
 
-/** Formats as dd.MM.yyyy, adding HH:mm when withTime. It is the only date format in the UI. */
+/** Formats as dd.MM.yyyy with optional HH:mm, the only date format the UI uses. */
 function formatDate(value, withTime) {
     if (!value) return '';
     const d = value instanceof Date ? value : new Date(value);
@@ -20,7 +20,7 @@ function formatDate(value, withTime) {
     return withTime ? `${date} ${pad(d.getHours())}:${pad(d.getMinutes())}` : date;
 }
 
-// DataTables texts for every table. A page's own language option still wins.
+// DataTables texts for every table, though a page's own language option still wins
 if (window.DataTable && window.DataTable.defaults) {
     window.DataTable.defaults.language = Object.assign({}, window.DataTable.defaults.language, {
         search: t('Search:'),
@@ -38,7 +38,7 @@ if (window.DataTable && window.DataTable.defaults) {
     });
 }
 
-/** In-page confirm dialog. Falls back to window.confirm on pages without the shared modal. */
+/** In-page confirm dialog that falls back to window.confirm on pages without the shared modal. */
 function confirmAction(options, onConfirm) {
     const opts = typeof options === 'string' ? { message: options } : (options || {});
     const modalEl = document.getElementById('globalConfirmModal');
@@ -57,14 +57,13 @@ function confirmAction(options, onConfirm) {
     okBtn.textContent = opts.okText || t('Confirm');
     okBtn.className = 'ip-btn ' + (opts.danger ? 'ip-btn-danger' : 'ip-btn-primary');
 
-    // Rebuild the OK button so a previous dialog's handler can never fire for this one.
+    // Rebuild the OK button so a previous dialog's handler can never fire for this one
     const freshOk = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(freshOk, okBtn);
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-    // Listeners from an earlier dialog can still fire on this shared modal.
-    // A per-call token makes sure only the current dialog's listener runs the callback.
+    // Earlier dialogs' listeners can still fire on the shared modal, so a per-call token picks the current one
     const token = Symbol('confirm');
     modalEl.__confirmToken = token;
     modalEl.__confirmAccepted = false;
@@ -74,7 +73,6 @@ function confirmAction(options, onConfirm) {
         modal.hide();
     });
 
-    // Enter anywhere in the dialog confirms.
     function onKeydown(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -95,7 +93,7 @@ function confirmAction(options, onConfirm) {
         if (modalEl.__confirmAccepted) onConfirm?.();   // Runs after the modal is gone so redirects are clean
     });
 
-    // Showing while the previous dialog is still hiding leaves Bootstrap stuck on its backdrop.
+    // Showing while the previous dialog is still hiding leaves Bootstrap stuck on its backdrop
     if (modalEl.classList.contains('show')) {
         modalEl.addEventListener('hidden.bs.modal', () => modal.show(), { once: true });
     } else {
@@ -109,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Layout forms like sign out navigate at once, so their buttons get no spinner.
+    // Layout forms like sign out navigate at once, so their buttons get no spinner
     const forms = document.querySelectorAll('form:not(.no-spinner):not([data-no-ajax])');
     forms.forEach(function (form) {
         form.addEventListener('submit', function () {
@@ -124,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setupSessionMonitor();
 });
 
-/** Small server-made copy of an uploaded photo for lists. Other URLs come back unchanged. */
+/** Server-made thumbnail URL for an uploaded photo, leaving other URLs unchanged. */
 function thumbUrl(url, width) {
     return typeof url === 'string' && url.startsWith('/images/') ? '/thumbs/' + (width || 160) + url : url;
 }
@@ -175,7 +173,7 @@ function showToast(message, type = 'info', duration = 4000) {
         toastElement.remove();
     });
 
-    // Returned so callers can attach their own handlers, like click-to-refresh.
+    // Returned so callers can attach their own handlers, like click-to-refresh
     return toastElement;
 }
 
@@ -192,7 +190,7 @@ function getToastIcon(type) {
 }
 
 
-/** HTML-escapes text for markup. Null and undefined become an empty string. */
+/** HTML-escapes text for markup, turning null and undefined into an empty string. */
 function escapeHtml(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -204,6 +202,7 @@ function escapeHtml(value) {
 }
 
 
+// Pings every 5 minutes so an ended session sends the page to sign-in instead of failing later
 function setupSessionMonitor() {
     const isUserAuthenticated = document.getElementById('ipRail') !== null;
 
@@ -251,7 +250,7 @@ function showListSkeleton() {
 window.ListNav = (function () {
     'use strict';
 
-    // Filter controls are never swapped, so typing and open pickers are not disturbed.
+    // Filter controls are never swapped, so typing and open pickers are not disturbed
     const SWAPPED = ['[data-list-region]', '[data-list-tabs]', '.ip-page-head .ip-sub'];
     let pending = null;
     let loadedAt = 0;
@@ -284,7 +283,7 @@ window.ListNav = (function () {
                 headers: { 'Accept': 'text/html' },
                 signal: request.signal
             });
-            // A redirect or failure means sign-out or lost access, so let the browser show the real page.
+            // A redirect or failure means sign-out or lost access, so let the browser show the real page
             if (!response.ok || new URL(response.url).pathname !== window.location.pathname) throw new Error('reload');
             doc = new DOMParser().parseFromString(await response.text(), 'text/html');
         } catch (e) {
@@ -312,14 +311,13 @@ window.ListNav = (function () {
         if (window.LiveUpdates) LiveUpdates.afterSwap();
         document.dispatchEvent(new CustomEvent('listnav:loaded'));
 
-        // New results start at the top of the list, not where the old ones were scrolled to.
+        // New results start at the top of the list, not where the old ones were scrolled to
         const list = document.querySelector('[data-list-region]');
         if (!options.quiet && list && list.getBoundingClientRect().top < 0)
             list.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
-    // Quick filter and Reset buttons depend on the filters, so they come from the new page.
-    // The controls and the phone Filters button stay as they are.
+    // Quick filter and Reset buttons depend on the filters, so they come from the new page
     function syncFilterButtons(doc) {
         const fresh = doc.querySelectorAll('.ip-filterbar');
         document.querySelectorAll('.ip-filterbar').forEach(function (bar, i) {
@@ -330,7 +328,7 @@ window.ListNav = (function () {
         });
     }
 
-    // Tab, pager, reset and empty-state links stay on this page with a new query.
+    // Tab, pager, reset and empty-state links stay on this page with a new query
     document.addEventListener('click', function (e) {
         const link = e.target.closest('.ip-table-foot a[href], [data-list-tabs] a[href], .ip-filterbar a[href], [data-list-region] .ip-empty a[href]');
         if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || link.target) return;
@@ -339,7 +337,7 @@ window.ListNav = (function () {
         go(link.href);
     });
 
-    // GET filter forms, like the audit log's, submit in place.
+    // GET filter forms, like the audit log's, submit in place
     document.addEventListener('submit', function (e) {
         const form = e.target;
         if (!form.matches('form.ip-filterbar') || (form.method || 'get').toLowerCase() !== 'get' || !available()) return;
@@ -349,8 +347,7 @@ window.ListNav = (function () {
         go(window.location.pathname + '?' + params.toString());
     });
 
-    // Search as you type reloads 350 ms after the last key, or at once on Enter.
-    // It replaces the history entry so Back does not step through every letter.
+    // Search as you type replaces the history entry so Back does not step through every letter
     let typing = null;
     function searchNow(input) {
         clearTimeout(typing);
@@ -390,7 +387,7 @@ window.ListNav = (function () {
     };
 })();
 
-/** Rows-per-page select. Goes back to the first page with the new size. */
+/** Rows-per-page select, which goes back to the first page with the new size. */
 function changePageSize(size) {
     const params = new URLSearchParams(window.location.search);
     params.set('pageSize', size);
@@ -398,8 +395,7 @@ function changePageSize(size) {
     ListNav.go(window.location.pathname + '?' + params.toString());
 }
 
-// A row with data-href opens that page. Controls inside it keep their own behaviour.
-// Selecting text does not navigate, and Ctrl or Cmd click opens a new tab.
+// A row with data-href opens its page unless the click hit a control or ended a text selection
 document.addEventListener('click', function (e) {
     const row = e.target.closest('tr[data-href]');
     if (!row || e.button !== 0) return;
@@ -416,7 +412,7 @@ function showImageModal(imageUrl, title) {
     $('#globalImageModal').modal('show');
 }
 
-/** Placeholder lines while a panel loads. Keep the markup in step with _Skeleton.cshtml. */
+/** Placeholder lines while a panel loads, matching the markup of _Skeleton.cshtml. */
 function skeletonHtml(lines) {
     const widths = ['100%', '92%', '78%', '96%', '68%', '88%'];
     let html = '<div class="skeleton-group" aria-busy="true" role="status">'
@@ -427,8 +423,7 @@ function skeletonHtml(lines) {
     return html + '</div>';
 }
 
-// Theme toggle. The head script in _Layout applies the saved theme before first paint.
-// A change fires themechange on window so pages like the dashboard can redraw.
+// Theme toggle that fires themechange so charts can redraw, while _Layout applies it before paint
 window.Theme = (function () {
     const KEY = 'theme';
     const root = document.documentElement;
@@ -463,7 +458,7 @@ window.Theme = (function () {
         if (e.target.closest('[data-theme-toggle]')) apply(current() === 'dark' ? 'light' : 'dark', true);
     });
 
-    // Follow the OS until a theme has been picked here.
+    // Follow the OS until a theme has been picked here
     if (window.matchMedia) {
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
             if (!saved()) apply(e.matches ? 'dark' : 'light', false);
@@ -474,8 +469,7 @@ window.Theme = (function () {
     return { current: current, apply: apply };
 })();
 
-// Sidebar rail. Wide screens remember collapsed or expanded, tablets collapse it by default.
-// On phones it is a drawer and its state is never remembered.
+// Sidebar rail, remembered on wide screens, collapsed by default on tablets and a drawer on phones
 window.Rail = (function () {
     const KEY = 'ip-rail';
     const phone = window.matchMedia('(max-width: 767.98px)');
@@ -585,8 +579,7 @@ function loadApprovalDetails(url, modalEl) {
     });
 }
 
-// Toolbar find-by-code box with suggestions. Enter with nothing highlighted submits the form.
-// The server opens the product for an exact code and the filtered list for anything else.
+// Find-by-code box whose plain submit opens the product for an exact code and the filtered list otherwise
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('[data-code-finder]');
     if (!form) return;
@@ -634,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) return;
             const list = await response.json();
             if (input.value.trim() === term) render(list, term);
-        } catch (e) { /* Aborted by newer typing or offline. The form still submits */ }
+        } catch (e) { /* Aborted by newer typing or offline, and the form still submits */ }
     }
 
     function options() { return Array.from(menu.querySelectorAll('a')); }
@@ -664,8 +657,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// On phones tables become cards. Cells with a role class are placed by CSS, the rest get header labels here.
-// Filter bars without the filter sheet get a Filters button that folds everything but the search.
+// Phone cards get header labels on cells without a role class, and plain filter bars fold away
 window.MobileLayout = (function () {
     'use strict';
 
@@ -678,14 +670,14 @@ window.MobileLayout = (function () {
                 if (td.tagName !== 'TD') return;
                 if (ROLES.some(function (r) { return td.classList.contains(r); })) { delete td.dataset.label; return; }
                 const label = headers[i] || '';
-                // Detected by content because these columns have visually hidden headers.
+                // Detected by content because these columns have visually hidden headers
                 const media = !!td.querySelector('img, .ip-thumb') && !td.textContent.trim();
                 const onlyControls = td.children.length > 0 && Array.from(td.children).every(c => c.matches('a.ip-btn, a.ip-btn-icon, button, form'));
                 const actions = !media && (!!td.querySelector('.actions') || onlyControls || (!label && !!td.querySelector('a, button')));
                 if (label && td.colSpan === 1 && !media && !actions) td.dataset.label = label; else delete td.dataset.label;
                 td.classList.toggle('cell-media', media);
                 td.classList.toggle('cell-actions', actions);
-                // No text and nothing to interact with, like the arrow cell in a transfer row.
+                // No text and nothing to interact with, like the arrow cell in a transfer row
                 td.classList.toggle('cell-empty', !media && !td.textContent.trim() && !td.querySelector('img, input, button, select, a[href]'));
             });
         });
@@ -735,7 +727,7 @@ window.MobileLayout = (function () {
 
     document.addEventListener('DOMContentLoaded', function () {
         apply(document);
-        // Live updates and list refreshes swap regions, so new rows need labels too.
+        // Live updates and list refreshes swap regions, so new rows need labels too
         new MutationObserver(function (mutations) {
             if (mutations.some(function (m) { return Array.from(m.addedNodes).some(touchesLists); }))
                 schedule();
@@ -745,8 +737,7 @@ window.MobileLayout = (function () {
     return { apply: apply };
 })();
 
-// Send again on a failed WhatsApp message queues it once more.
-// Live updates then show the new outcome a few seconds later.
+// Send again queues a failed WhatsApp message once more and live updates show the outcome later
 document.addEventListener('click', async function (e) {
     const button = e.target.closest('[data-wa-resend]');
     if (!button) return;
@@ -769,8 +760,7 @@ document.addEventListener('click', async function (e) {
     }
 });
 
-// Back button before the breadcrumb. Coming from the parent page it uses history.back() to keep filters and scroll.
-// Otherwise it opens the parent crumb's page.
+// Breadcrumb back button that uses history.back() from the parent page to keep its filters and scroll
 (function () {
     function addBackButtons() {
         document.querySelectorAll('.ip-page-head ol.breadcrumb').forEach(function (crumbs) {
@@ -802,7 +792,7 @@ document.addEventListener('click', async function (e) {
             crumbs.parentNode.insertBefore(row, crumbs);
             row.append(back, crumbs);
 
-            // On phones the app bar shows a back arrow instead of the menu button.
+            // On phones the app bar shows a back arrow instead of the menu button
             const appBack = document.querySelector('.ip-appbar-back');
             if (appBack) {
                 appBack.href = back.href;
@@ -816,7 +806,7 @@ document.addEventListener('click', async function (e) {
     else addBackButtons();
 })();
 
-// Dashboard figures count up once when the page opens, not on live refreshes.
+// Dashboard figures count up once when the page opens, not on live refreshes
 (function () {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     document.addEventListener('DOMContentLoaded', function () {
@@ -839,8 +829,7 @@ document.addEventListener('click', async function (e) {
     });
 })();
 
-// List thumbnails with data-image-preview show a larger peek on mouse hover.
-// Clicking or Enter opens the photo in the image modal instead of the row's page.
+// Thumbnails with data-image-preview peek larger on hover and open the photo instead of the row's page
 (function () {
     let peek = null, timer = null;
     const canHover = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -890,7 +879,7 @@ document.addEventListener('click', async function (e) {
         const el = e.target.closest && e.target.closest('[data-image-preview]');
         if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showImageModal(el.dataset.image, el.dataset.title); }
     });
-    // Makes thumbnails reachable from the keyboard.
+    // Makes thumbnails reachable from the keyboard
     function focusable() { document.querySelectorAll('[data-image-preview]:not([tabindex])').forEach(function (el) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', t('View image')); }); }
     document.addEventListener('DOMContentLoaded', focusable);
     document.addEventListener('listnav:loaded', focusable);

@@ -16,7 +16,7 @@ namespace ProductService.Application.Features.Products.Commands
         {
             public Validator()
             {
-                // Same range as CreateProduct.
+                // Same range as CreateProduct
                 RuleFor(x => x.InventoryCode)
                     .GreaterThan(0).WithMessage("Inventory code must be greater than 0")
                     .LessThan(10000).WithMessage("Inventory code must be less than 10000");
@@ -54,7 +54,7 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // The route history records the code change from this event.
+                // The route history records the code change from this event
                 await _publisher.Publish(new ProductUpdatedEvent(
                     before,
                     product.ToState(),

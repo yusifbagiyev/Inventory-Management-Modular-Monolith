@@ -34,6 +34,7 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<IReadOnlyList<int>> GetActiveUserIdsWithPermissionAsync(string permission, CancellationToken cancellationToken = default)
         {
+            // Admins count as holding every permission without any rows of their own
             const string admin = "ADMIN";
             return await _context.Users
                 .AsNoTracking()

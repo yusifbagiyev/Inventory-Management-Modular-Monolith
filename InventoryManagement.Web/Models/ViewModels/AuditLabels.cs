@@ -7,7 +7,7 @@ namespace InventoryManagement.Web.Models.ViewModels
     {
         private static readonly Dictionary<string, string> Actions = new(StringComparer.OrdinalIgnoreCase)
         {
-            // The first command of the request.
+            // The first command of the request
             ["CreateProduct"] = "Added a product",
             ["UpdateProduct"] = "Edited a product",
             ["DeleteProduct"] = "Deleted a product",
@@ -27,7 +27,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             ["RejectRequest"] = "Rejected a request",
             ["CancelRequest"] = "Cancelled a request",
 
-            // Endpoints without a command, mostly identity and sign-in.
+            // Endpoints without a command, mostly identity and sign-in
             ["Account.Login"] = "Sign-in",
             ["Account.Logout"] = "Sign-out",
             ["Account.ChangePassword"] = "Changed own password",
@@ -63,7 +63,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             ["route.delete"] = "Route deletion",
         };
 
-        /// <summary>Known actions get a sentence. Unknown ones are split into words.</summary>
+        /// <summary>Known actions get a sentence, unknown ones are split into words.</summary>
         public static string Action(string action)
         {
             if (Actions.TryGetValue(action, out var text)) return text;

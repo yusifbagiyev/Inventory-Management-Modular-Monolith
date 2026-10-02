@@ -47,7 +47,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var type = ParseRouteType(routeType);
 
-            // The department filter matches either end of a route. Routes only store the category name.
+            // The department filter matches either end of a route, and routes store only the category name
             var result = await _mediator.Send(new GetAllRoutesQuery(
                 pageNumber, pageSize, search, isCompleted, startDate, endDate,
                 departmentId, categoryName, type, departmentName));
@@ -70,7 +70,7 @@ namespace InventoryManagement.Web.Controllers
 
             await LoadFilterLists(isCompleted, type);
 
-            // Tab counts use the same filters with each completion state.
+            // Tab counts use the same filters with each completion state
             ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
                 : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
             ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
@@ -175,7 +175,7 @@ namespace InventoryManagement.Web.Controllers
                 : View(TranslateNotes(ModelMapper.Map<RouteViewModel>(route)));
         }
 
-        /// <summary>Translates system-written notes. Notes typed by people match no key and stay as written.</summary>
+        /// <summary>Translates system-written notes, while notes typed by people match no key and stay as written.</summary>
         private static RouteViewModel TranslateNotes(RouteViewModel route)
         {
             route.Notes = Tr(route.Notes);
@@ -205,7 +205,7 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new { isSuccess = false, message = Tr("WhatsApp messages are sent only for completed transfers.") });
             if (!whatsApp.Enabled)
                 return Json(new { isSuccess = false, message = Tr("WhatsApp is not configured.") });
-            // Failed messages only. Resending anything else could flood the group, and WaSender bans accounts for that.
+            // Failed messages only, since resending others could flood the group and WaSender bans accounts for that
             if (route.WhatsAppStatus != SharedServices.Contracts.WhatsAppStatus.Failed)
                 return Json(new { isSuccess = false, message = Tr("Only a message that failed to send can be resent.") });
 

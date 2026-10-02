@@ -12,8 +12,7 @@ namespace RouteService.Application.DTOs
         public List<string>? RemoveImageUrls { get; set; }
         /// <summary>Url of the image to make the cover, or null to keep the current one.</summary>
         public string? CoverImageUrl { get; set; }
-        /// <summary>New destination department, or null to leave it unchanged.</summary>
-        /// <remarks>The department name is looked up on the server from this id.</remarks>
+        /// <summary>New destination department or null to keep it, the server looks up its name.</summary>
         public int? ToDepartmentId { get; set; }
         public string? ToWorker { get; set; }
         public string? Notes { get; set; }

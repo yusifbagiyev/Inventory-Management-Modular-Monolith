@@ -2,7 +2,7 @@ using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>One action in the permission editor. With Direct set it is a two-level choice of none, with approval or direct.</summary>
+    /// <summary>One action in the permission editor, a choice of none, with approval or direct when Direct is set.</summary>
     public sealed record PermissionItem(string Permission, string Label, string? Direct = null, bool IsView = false)
     {
         public IEnumerable<string> Names => Direct == null ? [Permission] : [Permission, Direct];
@@ -10,7 +10,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public sealed record PermissionArea(string Key, string Title, string Icon, IReadOnlyList<PermissionItem> Items);
 
-    /// <summary>Every permission grouped by page in plain words. Anything missing here still shows under Other.</summary>
+    /// <summary>Every permission grouped by page in plain words, and anything missing here still shows under Other.</summary>
     public static class PermissionCatalog
     {
         public static IReadOnlyList<PermissionArea> Areas { get; } =
@@ -72,7 +72,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public static IReadOnlySet<string> Known { get; } =
             Areas.SelectMany(a => a.Items).SelectMany(i => i.Names).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>Two-level items return none, approval or direct. Others return on or none.</summary>
+        /// <summary>Two-level items return none, approval or direct, the others on or none.</summary>
         public static string State(PermissionItem item, ISet<string> held)
         {
             if (item.Direct != null && held.Contains(item.Direct)) return "direct";

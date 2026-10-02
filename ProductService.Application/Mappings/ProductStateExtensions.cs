@@ -5,7 +5,7 @@ namespace ProductService.Application.Mappings
 {
     internal static class ProductStateExtensions
     {
-        /// <summary>Snapshot for events. Category and Department must be loaded.</summary>
+        /// <summary>Snapshot for events, which needs Category and Department loaded.</summary>
         public static ProductState ToState(this Product product) => new()
         {
             ProductId = product.Id,

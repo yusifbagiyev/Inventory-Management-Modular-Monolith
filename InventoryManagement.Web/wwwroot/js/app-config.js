@@ -1,5 +1,4 @@
-// UI and API share one host, so the auth cookie covers API calls.
-// POST, PUT and DELETE calls must also send AppConfig.antiforgeryHeaders().
+// UI and API share one host, so the cookie covers API calls but writes also need antiforgeryHeaders()
 
 window.AppConfig = (function () {
     'use strict';

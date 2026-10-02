@@ -10,7 +10,7 @@ namespace AuditService.Data
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
         private readonly IServiceProvider _services;
 
-        // The context is resolved lazily because module DbContexts ask for the sink while their options are built.
+        // Resolved lazily because module DbContexts ask for the sink while their options are built
         public AuditSink(IServiceProvider services) => _services = services;
 
         public async Task WriteAsync(IReadOnlyList<AuditRecord> records, CancellationToken cancellationToken = default)

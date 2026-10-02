@@ -11,7 +11,7 @@ using SharedServices.Identity;
 
 namespace ProductService.API.Controllers
 {
-    /// <remarks>Module exceptions are turned into status codes by the host's API exception middleware.</remarks>
+    /// <summary>Product API, whose module exceptions the host's API exception middleware turns into status codes.</summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -72,7 +72,7 @@ namespace ProductService.API.Controllers
         }
 
 
-        // The Transfer page uses this too, so anyone who may transfer must be able to find the product.
+        // The Transfer page uses this too, so anyone who may transfer must be able to find the product
         [HttpGet("search/inventory-code/{inventoryCode}")]
         [Permission(AllPermissions.ProductView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)

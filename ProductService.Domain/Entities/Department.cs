@@ -28,6 +28,7 @@ namespace ProductService.Domain.Entities
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
 
+            // A blank description or head keeps the current value
             if(!string.IsNullOrWhiteSpace(description))
                 Description=description;
 

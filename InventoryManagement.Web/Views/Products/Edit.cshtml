@@ -46,7 +46,7 @@
     <script src="~/js/product-form.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // Ignore further clicks until the request comes back.
+            // Ignore further clicks until the request comes back
             let isSubmitting = false;
             const $submitBtn = $('#productForm button[type="submit"]');
             const originalButtonHtml = $submitBtn.html();
@@ -63,7 +63,7 @@
                 },
 
                 onSuccess: function(response) {
-                    // Without product.update.direct the change waits for approval.
+                    // Without product.update.direct the change waits for approval
                     if (response.isApprovalRequest || response.approvalRequestId) {
                         showToast(response.message || t('Product update submitted for approval'), 'info', 3000);
                         setTimeout(() => { window.location.href = '@Url.Action("Details", new { id = Model.Id })'; }, 2000);
@@ -79,7 +79,7 @@
             });
         });
 
-        // If someone else changes this product while it is open, warn but leave the form alone.
+        // If someone else changes this product while it is open, warn but leave the form alone
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['product'],

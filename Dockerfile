@@ -1,10 +1,7 @@
-# One image for the whole app, built from the repository root.
-#   docker build -t inventory-app .
+# One image for the whole app, built from the repository root
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-# Npgsql probes for Kerberos at startup and logs an error without libgssapi.
-# The compose healthcheck needs curl.
-# The non-root app user writes to keys and images.
+# Npgsql wants libgssapi, the healthcheck wants curl and the non-root user writes keys and images
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgssapi-krb5-2 curl \
     && rm -rf /var/lib/apt/lists/* \
@@ -18,7 +15,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Project files first so the restore layer is cached until a dependency changes.
+# Project files first so the restore layer is cached until a dependency changes
 COPY ["SharedServices/SharedServices.csproj", "SharedServices/"]
 COPY ["IdentityService.Domain/IdentityService.Domain.csproj", "IdentityService.Domain/"]
 COPY ["IdentityService.Application/IdentityService.Application.csproj", "IdentityService.Application/"]

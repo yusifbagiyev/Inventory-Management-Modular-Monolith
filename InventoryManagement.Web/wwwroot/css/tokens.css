@@ -1,4 +1,4 @@
-/* Design tokens, switched by data-bs-theme on <html>. System fonts only because the app must work offline. */
+/* Design tokens switched by data-bs-theme on <html>, with system fonts since the app must work offline */
 :root, [data-bs-theme="light"] {
   --ip-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --ip-font-mono: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;

@@ -107,7 +107,7 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.AddAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Reload so the event and the response get the category and department.
+                // Reload so the event and the response get the category and department
                 var created = await _productRepository.GetByIdAsync(product.Id, cancellationToken)
                     ?? throw new NotFoundException($"Product with ID {product.Id} not found");
 

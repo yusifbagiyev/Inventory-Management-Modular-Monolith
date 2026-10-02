@@ -1,9 +1,9 @@
 namespace SharedServices.Auditing
 {
-    /// <summary>One field of an audited change. Values are display strings, null when empty.</summary>
+    /// <summary>One field of an audited change, as display strings that are null when empty.</summary>
     public sealed record AuditFieldChange(string Field, string? Old, string? New);
 
-    /// <summary>One audited change or sign-in event. Records of one request share a CorrelationId.</summary>
+    /// <summary>One audited change or sign-in event, and the records of one request share a CorrelationId.</summary>
     public sealed record AuditRecord(
         DateTime At,
         string CorrelationId,

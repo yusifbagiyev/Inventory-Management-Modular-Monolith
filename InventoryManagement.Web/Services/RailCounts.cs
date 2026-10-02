@@ -32,7 +32,7 @@ namespace InventoryManagement.Web.Services
             }
             catch (Exception ex)
             {
-                // A count in the menu is not worth failing the page for.
+                // A count in the menu is not worth failing the page for
                 _logger.LogWarning(ex, "Could not read the product total for the sidebar");
                 return null;
             }

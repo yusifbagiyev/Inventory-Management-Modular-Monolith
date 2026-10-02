@@ -47,7 +47,7 @@ namespace InventoryManagement.Web.Controllers
             return request == null ? RedirectToNotFound() : PartialView("_ApprovalDetails", request);
         }
 
-        /// <summary>Approves and executes the request. A failed execution is reported, not thrown.</summary>
+        /// <summary>Approves and executes the request, reporting a failed execution rather than throwing.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [PermissionAuthorize(AllPermissions.ApprovalDecide)]
@@ -60,7 +60,7 @@ namespace InventoryManagement.Web.Controllers
             if (response.Data)
                 return Json(new { success = true, message = Tr("Request approved successfully") });
 
-            // Show the stored failure reason so the approver knows why.
+            // Show the stored failure reason so the approver knows why
             var failed = await _approvalService.GetRequestDetailsAsync(id);
             var reason = failed?.RejectionReason;
             return Json(new

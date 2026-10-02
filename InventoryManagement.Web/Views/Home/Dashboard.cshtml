@@ -7,7 +7,7 @@
     var openTransfers = (int)(ViewBag.OpenTransfers ?? 0);
     var pendingApprovals = ViewBag.PendingApprovals as int?;
 
-    // Period caption under the completed-transfers figure.
+    // Period caption under the completed-transfers figure
     var periodText = currentPeriod switch
     {
         "last30days" => L["in the last {0} days", 30].Value,
@@ -17,11 +17,11 @@
         _ => L["in the last {0} days", 7].Value
     };
 
-    // Figures, chart bars and rows link to the lists filtered to this period.
+    // Figures, chart bars and rows link to the lists filtered to this period
     string PeriodQuery() => Model.PeriodStart is null ? "" : $"&startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
     var transfersUrl = "/Routes?routeType=Transfer" + PeriodQuery();
     var productsUrl = Model.PeriodStart is null ? "/Products" : $"/Products?startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
-    // Without the permission these return null and Razor drops the href.
+    // Without the permission these return null and Razor drops the href
     var canProducts = User.HasPermission("product.view");
     var canRoutes = User.HasPermission("route.view");
     string? ProductLink(string url) => canProducts ? url : null;
@@ -44,7 +44,7 @@
     </div>
 
     <div class="ip-kpi-grid" id="dashboardStats">
-        @* Only completed transfers follow the period. The other figures show the current state. *@
+        @* Only completed transfers follow the period, the other figures show the current state *@
         <a class="ip-kpi" href="@ProductLink("/Products")">
             <span class="label">@L["Total products"]</span>
             <span class="value">@Model.TotalProducts.ToString("N0")</span>
@@ -97,7 +97,7 @@
             </section>
         </div>
 
-        @* On phones CSS order moves this block above the chart. *@
+        @* On phones CSS order moves this block above the chart *@
         <div class="col-xl-4 ip-dash-attention">
             <section class="ip-section">
                 <h2 class="mb-3">@L["Needs attention"]</h2>
@@ -180,7 +180,7 @@
     <script>
         let transferChart, categoryChart;
 
-        // Colours are read from the tokens so the charts follow the theme.
+        // Colours are read from the tokens so the charts follow the theme
         const v = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
         function initializeCharts() {
@@ -206,7 +206,7 @@
             afterRefresh: initializeCharts
         });
 
-        // Charts only have data-link when the user may open the routes list.
+        // Charts only have data-link when the user may open the routes list
         function pointerOnHover(event, elements) {
             event.native.target.style.cursor = elements.length && event.native.target.dataset.link ? 'pointer' : 'default';
         }
@@ -215,7 +215,7 @@
             return { backgroundColor: v('--ip-text-1'), titleColor: v('--ip-surface'), bodyColor: v('--ip-surface'), padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4 };
         }
 
-        // Clicking a bar opens the transfers of that bucket.
+        // Clicking a bar opens that bucket's transfers, and a single segment also filters by status
         function initializeTransferChart() {
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
@@ -239,7 +239,7 @@
                     scales: {
                         x: {
                             stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') },
-                            // Phones show only the day numbers so the labels fit.
+                            // Phones show only the day numbers so the labels fit
                             ticks: {
                                 callback: function (value) {
                                     const label = this.getLabelForValue(value);
@@ -264,7 +264,7 @@
             });
         }
 
-        // The legend is plain HTML next to the chart. Clicking a slice opens that category's transfers.
+        // The legend is plain HTML beside the chart, and clicking a slice opens that category's transfers
         function initializeCategoryChart() {
             const ctx = document.getElementById('categoryChart');
             if (!ctx) return;

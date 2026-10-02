@@ -66,7 +66,7 @@ namespace SharedServices.Persistence
                 await EndAsync();
                 _afterCommit.Clear();
 
-                // Undo side effects outside the database, such as uploaded files.
+                // Undo side effects outside the database, such as uploaded files
                 foreach (var compensate in _onRollback)
                 {
                     try { await compensate(); } catch { /* Best effort */ }
@@ -83,7 +83,6 @@ namespace SharedServices.Persistence
             _savepoints[name] = (_afterCommit.Count, _onRollback.Count, _enlisted.Count);
         }
 
-        // Only contexts that first saved after the savepoint are reset. A context used on both sides keeps stale tracked state.
         /// <summary>Undoes the work since the savepoint, drops its after-commit work and runs its compensations.</summary>
         public async Task RollbackToSavepointAsync(string name, CancellationToken cancellationToken = default)
         {
@@ -94,7 +93,7 @@ namespace SharedServices.Persistence
 
             _afterCommit.RemoveRange(marks.AfterCommit, _afterCommit.Count - marks.AfterCommit);
 
-            // Their tracked rows no longer exist. Clearing them stops a later SaveChanges from bringing them back.
+            // Only contexts first enlisted after the savepoint are cleared, so a later save cannot revive their rows
             foreach (var context in _enlisted.Skip(marks.Enlisted))
                 context.ChangeTracker.Clear();
 
@@ -106,7 +105,7 @@ namespace SharedServices.Persistence
             }
         }
 
-        /// <summary>Queues work for after the commit, or right away outside a transaction. A rollback discards it.</summary>
+        /// <summary>Queues work for after the commit, or right away outside a transaction, and a rollback discards it.</summary>
         public void AfterCommit(BackgroundWorkItem work)
         {
             if (Transaction == null)
@@ -131,7 +130,7 @@ namespace SharedServices.Persistence
 
         private async Task EndAsync()
         {
-            // Otherwise a later SaveChanges in the same scope would try to reuse the finished transaction.
+            // Otherwise a later SaveChanges in the same scope would try to reuse the finished transaction
             foreach (var context in _enlisted)
             {
                 try { context.Database.UseTransaction(null); } catch (ObjectDisposedException) { }

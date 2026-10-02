@@ -1,4 +1,4 @@
-/* Component layer. Needs tokens.css and loads after bootstrap.min.css. */
+/* Component layer on top of tokens.css, loaded after bootstrap.min.css */
 
 /* Base */
 body { font-family: var(--ip-font-sans); font-size: var(--ip-fs-base); line-height: var(--ip-lh-base); color: var(--ip-text-1); background: var(--ip-surface); }
@@ -315,7 +315,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .form-control, .form-select { border-radius: var(--ip-radius-md); border-color: var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); }
 .form-control:focus, .form-select:focus { border-color: var(--ip-accent); box-shadow: 0 0 0 3px var(--ip-focus-ring); }
 
-/* Responsive layer. Tablets are 768 to 1024px, phones up to 767px. */
+/* Responsive layer with tablets at 768 to 1024px and phones up to 767px */
 
 /* Phone app bar and drawer */
 .ip-appbar { display: none; }
@@ -460,11 +460,11 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-notif-menu { display: none !important; }
 }
 
-/* App additions start here. Leave the package rules above as they are so a new version can be dropped in. */
+/* App additions, kept apart so a new package version can replace everything above */
 
 /* Rail */
 button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inherit; cursor: pointer; text-align: left; }
-/* Uses .is-alert because .alert clashes with Bootstrap and site.js auto-closes alerts. */
+/* Uses .is-alert because .alert clashes with Bootstrap and site.js auto-closes alerts */
 .ip-rail-count.is-alert { display: inline-block; min-width: 22px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-weight: 600; line-height: 20px; text-align: center; }
 .ip-rail-count:empty { display: none !important; }
 /* A collapsed rail shows a dot on links with something pending */
@@ -478,7 +478,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-rail.collapsed .ip-rail-logout { display: none; }
 .ip-rail.collapsed .ip-rail-account { justify-content: center; }
 .ip-rail.collapsed .ip-rail-brand { padding: 0 21px; }
-/* App parts of the phone drawer and app bar. The responsive layer above has the rest. */
+/* App parts of the phone drawer and app bar, on top of the responsive layer above */
 .ip-rail-home { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
 .ip-rail-home:hover, .ip-rail-home:focus { color: inherit; text-decoration: none; }
 .ip-rail-prefs { display: none; }
@@ -487,7 +487,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 @media (max-width: 767.98px) {
   .ip-rail-prefs { display: flex; align-items: center; justify-content: space-between; gap: var(--ip-space-2); padding-bottom: var(--ip-space-2); }
   .ip-crumbs .ip-back { display: none; }
-  /* The package hides these in base rules that come after its phone rules, so show them again. */
+  /* The package hides these in base rules that come after its phone rules, so show them again */
   .ip-rail .ip-rail-close { display: grid; }
   .ip-rail-prefs .ip-seg { display: flex; }
 }
@@ -511,7 +511,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 @media (max-width: 575.98px) { .ip-notif-menu { width: calc(100vw - 32px); } }
 
 /* Bootstrap fixes */
-/* The background shorthand set above also removes the select chevron. */
+/* The background shorthand set above also removes the select chevron */
 .form-select {
   background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none);
   background-repeat: no-repeat;
@@ -519,7 +519,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
   background-size: 16px 12px;
 }
 
-/* Warning and info toast icons. The package only styles success and danger. */
+/* Warning and info toast icons, which the package leaves unstyled */
 .ip-toast.warning > .toast-body > i:first-child { color: var(--ip-warning-text); }
 .ip-toast.info > .toast-body > i:first-child, .ip-toast.secondary > .toast-body > i:first-child { color: var(--ip-info-text); }
 .ip-toast .toast-body { align-items: flex-start; }
@@ -530,7 +530,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 /* List pages */
 .ip-filterbar { margin-bottom: 0; }
 .ip-filter > span { white-space: nowrap; }
-/* Size a select to its chosen option so long names don't push the filters onto a second line. */
+/* Size a select to its chosen option so long names don't push the filters onto a second line */
 .ip-filter select { appearance: auto; field-sizing: content; max-width: 24ch; text-overflow: ellipsis; }
 .ip-filter.search { flex-basis: 220px; min-width: 200px; }
 .ip-filterbar > .ip-btn { flex: none; white-space: nowrap; }
@@ -611,7 +611,7 @@ tr.ip-clickable { cursor: pointer; }
 .ip-finder-all { display: block; padding: 8px 12px; border-top: 1px solid var(--ip-border); font-size: var(--ip-fs-sm); color: var(--ip-accent-text); }
 .ip-finder-all:hover, .ip-finder-all.active { background: var(--ip-surface-hover); text-decoration: none; }
 
-/* Contrast for WCAG AA. --ip-text-3 drops below 4.5:1 on sunken and hover grounds, so those use --ip-text-2. */
+/* --ip-text-3 falls below WCAG AA on sunken and hover grounds, so those use --ip-text-2 */
 .ip-filter, .ip-toolbar-search, .ip-filter input::placeholder, .ip-toolbar-search input::placeholder { color: var(--ip-text-2); }
 .ip-table tbody tr:hover .sub, .ip-table tbody tr:hover .cell-sub, .ip-table tbody tr:hover .ip-faint { color: var(--ip-text-2); }
 .ip-rail-link:hover .ip-rail-count { color: var(--ip-text-2); }
@@ -638,11 +638,10 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .dt-container > .row { margin-left: 0; margin-right: 0; }
 .dt-container > .row > [class*="col"] { padding-left: 0; padding-right: 0; }
 
-/* The package's negative margins assume a full-width page and push the footer under the rail. */
+/* The package's negative margins assume a full-width page and push the footer under the rail */
 .ip-form .ip-form-foot { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
 
-/* Absolute children of a table need a positioned ancestor inside the scroller.
-   Otherwise they escape its clipping and widen the page on phones. */
+/* Absolute children of a table need a positioned ancestor or they widen the page on phones */
 .ip-table-wrap { position: relative; }
 .ip-table td { position: relative; }
 /* On phones a filter in the tabs row moves to its own line */
@@ -672,15 +671,13 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-audit-changes .old { color: var(--ip-text-2); text-decoration: line-through; text-decoration-color: var(--ip-border-strong, currentColor); }
 @media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
 
-/* Centers the icon in links too, not just buttons.
-   :where() keeps specificity at zero so [hidden] and d-none still win. */
+/* Centers the icon in links too, with :where() keeping specificity low so [hidden] and d-none still win */
 :where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
 
-/* Resizing stops at about three lines and at 60% of the screen. */
+/* Resizing stops at about three lines and at 60% of the screen */
 .ip-textarea { min-height: 88px; max-height: 60vh; }
 
-/* Page transitions keep the rail and toolbar still while the content cross-fades.
-   Their names are set only during the swap, so they never trap dropdowns or modals in a stacking context. */
+/* Rail and toolbar stay still during page transitions, named only mid-swap so menus never get trapped */
 @view-transition { navigation: auto; }
 @keyframes ip-page-out { to { opacity: 0; } }
 @keyframes ip-page-in { from { opacity: 0; transform: translateY(8px); } }
@@ -695,14 +692,13 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .no-vt .ip-main > :not(.ip-toolbar), .no-vt .ip-login-main { animation: none; }
 }
 
-/* Phones. List pages mark their cells by role, and MobileLayout in site.js labels cells in other tables.
-   Filter bars without the filter sheet fold behind a Filters button. */
+/* Phone cards, placed by role classes on list pages and by MobileLayout labels elsewhere */
 .ip-filter-toggle { display: none; }
 .ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--ip-accent); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
-/* On desktop the actions cell stays a table cell, since .ip-table .actions also matches it. */
+/* On desktop the actions cell stays a table cell, since .ip-table .actions also matches it */
 @media (min-width: 768px) { .ip-table td.actions { display: table-cell; } }
 @media (max-width: 767.98px) {
-  /* Cards without a photo use the whole width. */
+  /* Cards without a photo use the whole width */
   .ip-table tbody tr:not(:has(> td.thumb, > td.cell-media)) { grid-template-columns: minmax(0, 1fr); }
   .ip-table tbody tr:not(:has(> td.thumb, > td.cell-media)) > td { grid-column: 1; }
   .ip-table tbody tr[data-href], .ip-table tbody tr.ip-clickable { cursor: pointer; }
@@ -738,11 +734,11 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-kpi .trend { font-size: 12px; }
   .modal:not(.ip-modal) .modal-dialog { margin: var(--ip-space-2); }
 }
-/* Tablet bars without a filter sheet keep all their filters visible. */
+/* Tablet bars without a filter sheet keep all their filters visible */
 @media (min-width: 768px) and (max-width: 1024px) {
   .ip-filterbar:not(:has(.ip-filter-more)) .ip-filter { display: flex !important; }
 }
-/* Fingers need bigger targets than a mouse. */
+/* Fingers need bigger targets than a mouse */
 @media (pointer: coarse) {
   .ip-btn-icon:not(.lg) { width: 40px; height: 40px; }
 }
@@ -773,7 +769,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-perm-row .ip-seg-sm > * { flex: 1; justify-content: center; }
 }
 
-/* ListNav dims the list while it loads instead of showing a skeleton. */
+/* ListNav dims the list while it loads instead of showing a skeleton */
 [data-list-region].is-loading { opacity: .55; pointer-events: none; transition: opacity .15s; }
 .ip-audit-thumbs { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
 .ip-audit-thumbs img { width: 36px; height: 36px; object-fit: cover; border-radius: var(--ip-radius-sm); border: 1px solid var(--ip-border); background: var(--ip-sunken); }
@@ -781,14 +777,14 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 /* Spelled-out empty values in the approval dialog and audit log */
 .ip-empty-value { color: var(--ip-text-3); font-style: italic; }
 .ip-removed-value { color: var(--ip-danger-text); font-style: italic; }
-/* Keeps the .ip-diff phone layout by undoing the generic card grid. */
+/* Keeps the .ip-diff phone layout by undoing the generic card grid */
 @media (max-width: 767.98px) {
   .ip-table.ip-diff tbody tr { display: block; grid-template-columns: none; }
   .ip-table.ip-diff td { display: inline; grid-column: auto; }
   .ip-table.ip-diff td.field { display: block; }
   .ip-table.ip-diff td::before { content: none; }
 }
-/* Audit cards on phones put time and user side by side with the changes below. */
+/* Audit cards on phones put time and user side by side with the changes below */
 @media (max-width: 767.98px) {
   .ip-table.ip-audit-table tbody tr { display: flex; flex-wrap: wrap; gap: 0 12px; }
   .ip-table.ip-audit-table td { padding-left: 0 !important; }
@@ -798,7 +794,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-table.ip-audit-table td:nth-child(3) { order: 3; flex: 1 1 100%; margin-top: 6px; padding-top: 8px !important; border-top: 1px solid var(--ip-border) !important; }
   .ip-audit-changes dl > div { grid-template-columns: 1fr; }
 }
-/* Dashboard figures lose their link without the list permission, so drop the hover cue. */
+/* Dashboard figures lose their link without the list permission, so drop the hover cue */
 a.ip-kpi:not([href]), a.ip-list-link:not([href]) { cursor: default; }
 a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 
@@ -808,8 +804,7 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 .ip-wa-queued { color: var(--ip-text-3); }
 .ip-wa-resend { height: 26px; padding: 0 8px; gap: 6px; }
 
-/* Category colours for the dashboard donut. The chart tokens are too similar to tell slices apart.
-   Plain red and green are left out so they don't read as status. */
+/* Dashboard donut colours, since the chart tokens are too alike and red or green would read as status */
 :root, [data-bs-theme="light"] {
   --ip-cat-1: #1D6A85; --ip-cat-2: #D98E2B; --ip-cat-3: #7B5CC4; --ip-cat-4: #2563EB;
   --ip-cat-5: #D0579A; --ip-cat-6: #6E8F2E; --ip-cat-7: #B4562F; --ip-cat-8: #5E6873;
@@ -827,8 +822,7 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 .ip-back:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
 .ip-back i { font-size: 12px; }
 
-/* Chromium on Windows paints an open select list with the select's own background, which is transparent here.
-   Without these colours the dark theme shows light text on a white list. */
+/* Chromium on Windows paints open select lists with the transparent select background */
 select option, select optgroup { background-color: var(--ip-surface); color: var(--ip-text-1); }
 select option:checked { background-color: var(--ip-surface-active); }
 select option:disabled { color: var(--ip-text-3); }
@@ -842,7 +836,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-link-danger:hover { color: var(--ip-danger-solid); }
 .ip-link-danger:disabled { opacity: .6; cursor: default; }
 
-/* The package styles the filter sheet only for phones, but tablets use it too. */
+/* The package styles the filter sheet only for phones, but tablets use it too */
 @media (min-width: 768px) { .ip-filter-more { height: var(--ip-control-md); } }
 .ip-filter-more { align-items: center; gap: var(--ip-space-2); padding: 0 14px; border: 0; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-1); font: inherit; font-weight: 500; cursor: pointer; }
 .ip-filter-more .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-size: var(--ip-fs-xs); font-weight: 600; line-height: 20px; text-align: center; }
@@ -852,11 +846,11 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-chip.active { background: var(--ip-text-1); border-color: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
 #filterSheet .modal-title { font-size: var(--ip-fs-lg); font-weight: 600; margin: 0; }
 
-/* Gallery dots are for phones only. A rule without the media query would override the phone block. */
+/* Gallery dots are hidden only from 768px up, since a plain rule would override the phone block */
 @media (min-width: 768px) { .ip-gallery-dots { display: none; } }
 .ip-gallery { touch-action: pan-y; }
 
-/* On phones the chart is shorter and the attention list moves above it. */
+/* On phones the chart is shorter and the attention list moves above it */
 .ip-chart { position: relative; height: 220px; }
 @media (max-width: 767.98px) {
   .ip-chart { height: 160px; }
@@ -868,15 +862,14 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-table td.route-from::after { content: " →"; }
 }
 
-/* Centred dialogs are bottom sheets on phones too. Bootstrap's centring would float them mid-screen. */
+/* Centred dialogs are bottom sheets on phones too, or Bootstrap would float them mid-screen */
 @media (max-width: 767.98px) {
   .ip-modal .modal-dialog-centered { min-height: 0; align-items: flex-end; }
-  /* Without this a scrollable dialog covers the backdrop, so a tap above the sheet can't close it. */
+  /* Without this a scrollable dialog covers the backdrop, so a tap above the sheet can't close it */
   .ip-modal .modal-dialog-scrollable { height: auto; }
 }
 
-/* Tablet bars with a filter sheet keep search and two dropdowns, the rest go in the sheet.
-   The package rule counts children, which the inserted sheet button throws off. */
+/* Tablet bars with a sheet keep search and two dropdowns, as the sheet button breaks the package's count */
 @media (min-width: 768px) and (max-width: 1024px) {
   .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(-n+3) { display: flex !important; }
   .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(n+4) { display: none !important; }
@@ -884,18 +877,17 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-filterbar[data-filter-sheet] > .ip-btn[data-flag] { display: none; }   /* Shown in the sheet instead */
 }
 
-/* A flex item won't shrink below its content without min-height 0, so the links could not scroll.
-   overscroll-behavior keeps the scroll inside the drawer. */
+/* A flex item needs min-height 0 to shrink, or the drawer links would not scroll */
 .ip-rail-nav { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 @media (max-width: 767.98px) {
   .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { overflow: hidden; }
   .ip-rail-foot { flex: none; padding-bottom: calc(var(--ip-space-3) + env(safe-area-inset-bottom)); }
 }
 
-/* Phone bars with a filter sheet keep only search and the sheet button.
-   The smaller gutter stops g-5 rows from sticking out past the page margin. */
+/* Phone bars with a filter sheet keep only search and the sheet button */
 @media (max-width: 767.98px) {
   .ip-filterbar[data-filter-sheet] > .ip-btn { display: none; }
+  /* A smaller gutter keeps g-5 rows inside the page margin */
   .ip-main .row { --bs-gutter-x: 1rem; }
 }
 
@@ -908,7 +900,7 @@ select option:disabled { color: var(--ip-text-3); }
   div.dt-container .dt-length select, div.dt-container .dt-search input { min-height: 40px; }
 }
 
-/* On phones the fixed list foot only shows when there is more than one page. */
+/* On phones the fixed list foot only shows when there is more than one page */
 @media (max-width: 767.98px) {
   .ip-table-foot:not(:has(.ip-pagination)) { display: none; }
   .ip-table td.title > .cell-title, .ip-table td.meta > .cell-title { display: inline; }
@@ -917,15 +909,15 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-table td.meta > .cell-sub::before { content: " · "; }
 }
 
-/* Details lists keep label and value side by side on phones to save height.
-   Empty second lines in card cells are hidden so no stray separator shows. */
+/* Details lists keep label and value side by side on phones to save height */
 @media (max-width: 767.98px) {
   .ip-dl > div, .ip-dl-wide > div { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--ip-space-3); padding: 10px 0; }
   .ip-dl dt { font-size: var(--ip-fs-sm); }
+  /* Empty second lines in card cells are hidden so no stray separator shows */
   .ip-table td .sub:empty, .ip-table td .cell-sub:empty { display: none; }
 }
 
-/* Tabs stay on one line and scroll sideways on phones. A filter in the tab row still gets its own line. */
+/* Tabs stay on one line and scroll sideways on phones unless a filter shares their row */
 @media (max-width: 767.98px) {
   .ip-tabs:not(:has(> .ip-filter)) { flex-wrap: nowrap; }
   .ip-tabs > .ip-tab { flex: none; }
@@ -936,7 +928,7 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-table td.meta > .cell-text > .cell-sub:first-child::before { content: none; }
 }
 
-/* Company mark without a tile. The big chevron follows the text colour. */
+/* Company mark without a tile, its big chevron following the text colour */
 .ip-logo.brand { background: none; border-radius: 0; color: var(--ip-text-1); }
 .ip-logo.brand svg { width: 100%; height: 100%; display: block; }
 .ip-rail.collapsed .ip-rail-brand .ip-logo { display: grid; }
@@ -949,18 +941,17 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-rail-name small { font-size: var(--ip-fs-xs, 11px); font-weight: 400; color: var(--ip-text-3); }
 
 
-/* A long banner message wraps beside its icon instead of dropping below it. */
+/* A long banner message wraps beside its icon instead of dropping below it */
 .ip-banner > i { flex: none; }
 .ip-banner > div { flex: 1 1 200px; min-width: 0; }
 
-/* Notification icons are neutral. Only approval answers use status colours. */
+/* Notification icons are neutral and only approval answers use status colours */
 .ip-notif-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--ip-sunken); color: var(--ip-text-2); font-size: 14px; }
 .ip-notif-icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
 .ip-notif-icon.bad { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
 .ip-notif-item .unread-dot { margin-top: 12px; }   /* Level with the icon centre */
 
-/* Motion. Only the empty-state mark loops.
-   Everything here is switched off for reduced motion at the end of the block. */
+/* Motion, where only the empty-state mark loops and reduced motion switches it all off at the end */
 @keyframes ip-rise { from { opacity: 0; transform: translateY(6px); } }
 @keyframes ip-fade { from { opacity: 0; } }
 @keyframes ip-pop-in { from { opacity: 0; transform: scale(.8); } }
@@ -981,7 +972,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-empty > :nth-child(n+4) { animation-delay: .28s; }
 .ip-empty .icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
 
-/* List rows arrive one after another. Live refreshes, DataTables redraws and the bell menu stay still. */
+/* List rows arrive one after another, except on live refreshes, DataTables redraws and in the bell menu */
 .ip-table tbody tr, .ip-notif-item, .ip-list-link { animation: ip-rise .32s cubic-bezier(.2, .7, .2, 1) backwards; }
 :is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(2) { animation-delay: 25ms; }
 :is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(3) { animation-delay: 50ms; }
@@ -1000,7 +991,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-kpi { transition: transform 160ms ease; }
 .ip-kpi:hover { transform: translateY(-2px); }
 
-/* Page blocks arrive in reading order. Live refreshes stay still here too. */
+/* Page blocks arrive in reading order, except on live refreshes */
 .ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap, .ip-account-other { animation: ip-rise .38s cubic-bezier(.2, .7, .2, 1) backwards; }
 :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(2) { animation-delay: 50ms; }
 :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(3) { animation-delay: 100ms; }

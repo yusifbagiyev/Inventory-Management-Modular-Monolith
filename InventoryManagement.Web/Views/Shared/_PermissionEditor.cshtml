@@ -1,6 +1,5 @@
 @model PermissionEditorModel
-@* Built from PermissionCatalog. Permissions the role already grants are shown locked.
-   The read-only profile view lists only what the user holds. *@
+@* Built from PermissionCatalog with role grants locked, and read-only mode lists only what the user holds *@
 @{
     var own = Model.Own.ToHashSet(StringComparer.OrdinalIgnoreCase);
     var role = Model.FromRole.ToHashSet(StringComparer.OrdinalIgnoreCase);

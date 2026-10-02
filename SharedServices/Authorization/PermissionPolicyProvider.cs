@@ -3,8 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace SharedServices.Authorization
 {
-    // A name with a dot is a permission, and a|b means any of them. Other names go to the default provider.
-    /// <summary>Builds permission policies on the fly so they need not be registered one by one.</summary>
+    /// <summary>Builds a policy on the fly for any name with a dot, where a|b means any of those permissions.</summary>
     public sealed class PermissionPolicyProvider : IAuthorizationPolicyProvider
     {
         private readonly DefaultAuthorizationPolicyProvider _fallback;

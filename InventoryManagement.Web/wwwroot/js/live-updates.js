@@ -1,5 +1,4 @@
-// Keeps open pages current when the server announces a committed change.
-// Changes carry no record data, so pages re-fetch their regions with the viewer's own permissions.
+// Changes carry no record data, so open pages re-fetch their regions with the viewer's own permissions
 
 window.LiveUpdates = (function () {
     'use strict';
@@ -10,12 +9,11 @@ window.LiveUpdates = (function () {
     const OWN_SAVE_WINDOW_MS = 10000;
     const watchers = [];
 
-    // This tab's own submit comes back as a change too and is not a conflict.
-    // Saves from another tab or an approval still warn, even for the same user.
+    // This tab's own submit comes back as a change too, while saves from another tab still warn
     let ownSaveUntil = 0;
     document.addEventListener('submit', () => { ownSaveUntil = Date.now() + OWN_SAVE_WINDOW_MS; }, true);
 
-    // Warn mode is for edit forms. It only shows a notice and never touches what was typed.
+    // Warn mode is for edit forms and only shows a notice, never touching what was typed
     function watch(options) {
         watchers.push(Object.assign({ mode: 'refresh', ids: {}, regions: [], entities: [] }, options, {
             pending: null,
@@ -23,8 +21,7 @@ window.LiveUpdates = (function () {
         }));
     }
 
-    // Prefers this record being deleted, then this record changing, then any relevant change.
-    // A null id means many records changed.
+    // Prefers this record's deletion, then its change, then any match, and a null id means many records
     function relevantChange(w, update) {
         const matching = ((update && update.changes) || []).filter(c =>
             w.entities.includes(c.entity) &&
@@ -36,7 +33,7 @@ window.LiveUpdates = (function () {
             || null;
     }
 
-    // Updates in one debounce window are merged so a deletion is not lost behind a later change.
+    // Updates in one debounce window are merged so a deletion is not lost behind a later change
     function merge(pending, update) {
         if (!pending) return update;
         return Object.assign({}, update, { changes: (pending.changes || []).concat(update.changes || []) });
@@ -57,7 +54,7 @@ window.LiveUpdates = (function () {
         });
     });
 
-    // After a reconnect the page may have missed changes, so every region refreshes once.
+    // After a reconnect the page may have missed changes, so every region refreshes once
     window.addEventListener('live:resync', () => {
         watchers.filter(w => w.mode === 'refresh').forEach(w => schedule(w, {}));
     });
@@ -97,7 +94,7 @@ window.LiveUpdates = (function () {
     async function refresh(w) {
         const update = w.pending;
         w.pending = null;
-        // The page just reloaded these regions itself, so the change is already on screen.
+        // The page just reloaded these regions itself, so the change is already on screen
         if (window.ListNav && ListNav.freshWithin(3000)) return;
 
         let doc;
@@ -107,20 +104,20 @@ window.LiveUpdates = (function () {
                 cache: 'no-store',
                 headers: { 'Accept': 'text/html' }
             });
-            // A redirect or refusal means the record is gone or the session ended, so keep the screen.
+            // A redirect or refusal means the record is gone or the session ended, so keep the screen
             if (!response.ok || new URL(response.url).pathname !== window.location.pathname) {
                 showNotice(describe(w, update) || t('This page is out of date.'));
                 return;
             }
             doc = new DOMParser().parseFromString(await response.text(), 'text/html');
         } catch {
-            // Probably offline for a moment. Retry later with whatever arrived meanwhile.
+            // Probably offline for a moment, so retry later with whatever arrived meanwhile
             w.pending = merge(update, w.pending || { changes: [] });
             w.timer = setTimeout(() => tryRefresh(w), OFFLINE_RETRY_MS);
             return;
         }
 
-        // A missing region means the record is gone or access was lost, so offer a reload instead.
+        // A missing region means the record is gone or access was lost, so offer a reload instead
         const pairs = w.regions.map(selector => [document.querySelector(selector), doc.querySelector(selector)]);
         if (pairs.some(([current, fresh]) => current && !fresh)) {
             showNotice(describe(w, update) || t('This page is out of date.'));
@@ -144,8 +141,7 @@ window.LiveUpdates = (function () {
         return !!change && change.action === 'deleted' && change.id != null;
     }
 
-    // Whole sentences per record kind, because a noun spliced into one template translates badly.
-    // Each list goes plain, with actor, with time, then with both.
+    // Whole sentences per record kind because a spliced noun translates badly, ordered plain, actor, time, both
     const NOTICES = {
         product: {
             changed: ['This product was changed.', 'This product was changed by {0}.', 'This product was changed at {1}.', 'This product was changed by {0} at {1}.'],
@@ -189,14 +185,13 @@ window.LiveUpdates = (function () {
         return t(sentences[index], update.actorName || '', at);
     }
 
-    // One notice at the top of the page that later messages replace.
-    // It uses textContent because the actor's name is user data.
+    // One notice at the top that later messages replace, set as text because the actor's name is user data
     function showNotice(text) {
         let notice = document.getElementById('liveUpdateNotice');
         if (!notice) {
             notice = document.createElement('div');
             notice.id = 'liveUpdateNotice';
-            // Not a Bootstrap alert, because site.js auto-closes alerts shortly after load.
+            // Not a Bootstrap alert, because site.js auto-closes alerts shortly after load
             notice.className = 'ip-banner ip-banner-warning justify-content-between mt-3';
             notice.setAttribute('role', 'status');
             const toolbar = document.querySelector('.ip-main > .ip-toolbar');
@@ -216,7 +211,7 @@ window.LiveUpdates = (function () {
         notice.replaceChildren(message, reload);
     }
 
-    // Used by ListNav, which swaps the same regions when a list's filters, tab or page change.
+    // Used by ListNav, which swaps the same regions when a list's filters, tab or page change
     function refreshing() { return watchers.filter(w => w.mode !== 'warn'); }
     function regions() { return refreshing().flatMap(w => w.regions); }
     function beforeSwap() { refreshing().forEach(w => { if (typeof w.beforeRefresh === 'function') w.beforeRefresh(); }); }

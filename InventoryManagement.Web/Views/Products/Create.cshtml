@@ -43,7 +43,7 @@
     <script src="~/js/product-form.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // Ignore further clicks until the request comes back, so one click makes one product.
+            // Ignore further clicks until the request comes back, so one click makes one product
             let isSubmitting = false;
             const $submitBtn = $('#productForm button[type="submit"]');
             const originalButtonHtml = $submitBtn.html();
@@ -60,7 +60,7 @@
                 },
 
                 onSuccess: function(response) {
-                    // Without product.create.direct the product waits for approval.
+                    // Without product.create.direct the product waits for approval
                     if (response.isApprovalRequest || response.approvalRequestId) {
                         showToast(response.message || t('Product creation submitted for approval'), 'info', 3000);
                         setTimeout(() => { window.location.href = '@Url.Action("Index")'; }, 2000);

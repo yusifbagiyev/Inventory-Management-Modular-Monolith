@@ -4,7 +4,7 @@ namespace ApprovalService.Application.Interfaces
 {
     public interface IActionExecutor
     {
-        /// <summary>Runs the approved action. Throws when it cannot be executed.</summary>
+        /// <summary>Runs the approved action and throws when it cannot be executed.</summary>
         Task ExecuteAsync(
             string requestType,
             string actionData,

@@ -24,7 +24,7 @@
         var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
         var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
 
-        // Keeps the other filters, swaps the completion state and goes back to page 1.
+        // Keeps the other filters, swaps the completion state and goes back to page 1
         string TabUrl(bool? completed)
         {
             var query = Context.Request.Query
@@ -73,6 +73,7 @@
         <a href="@TabUrl(false)" class="ip-tab @(curCompleted == false ? "active" : "")">@L["Pending"] <span class="count warning">@pendingCount</span></a>
         <a href="@TabUrl(true)" class="ip-tab @(curCompleted == true ? "active" : "")">@L["Completed"] <span class="count">@completedCount</span></a>
     </nav>
+    @* Hidden so ListFilters keeps the tab's completion state like any other filter *@
     <select id="statusFilter" class="d-none" aria-hidden="true" tabindex="-1">
         <option value=""></option>
         <option value="false" selected="@(curCompleted == false)"></option>
@@ -266,7 +267,7 @@
             basePath: '/Routes',
             pageSize: @Model.PageSize,
             pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // Pairs of department and category names
-            // Routes keep department and category names from the time of the transfer, so filter by name.
+            // Routes keep department and category names from the time of the transfer, so filter by name
             categoryKey: 'name',
             departmentKey: 'name',
             fields: {
@@ -278,7 +279,7 @@
             sheet: true
         });
 
-        // Names used by the markup's onclick/onchange handlers.
+        // Names used by the markup's onclick and onchange handlers
         function applyRouteFilters() { routeFilters.apply(); }
         function onDepartmentChange() { routeFilters.onDepartmentChange(); }
         function onCategoryChange() { routeFilters.onCategoryChange(); }
@@ -331,7 +332,7 @@
             });
         }
 
-        // Other users' changes refresh the count and the table in place.
+        // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['route', 'product', 'department', 'category'],
             regions: ['#routesSummary', '#routesTabs', '#routesRegion']

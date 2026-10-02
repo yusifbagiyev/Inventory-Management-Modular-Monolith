@@ -1,10 +1,6 @@
 name: CD
 
-# After CI passes on master, builds the image, pushes it to ghcr.io and deploys it through the self-hosted runner.
-# The deploy job runs only when the repository variable CD_ENABLED is true.
-# Pull requests, forks included, never reach the self-hosted runner.
-#
-# To roll back, run this workflow by hand with image_tag set to an earlier sha-<commit> tag.
+# After CI passes on master, builds the image, pushes it to ghcr.io and deploys it through the self-hosted runner
 
 on:
   workflow_run:
@@ -18,7 +14,7 @@ on:
         required: false
         default: ''
 
-# One deployment at a time, in order. Never cancel one half-way.
+# One deployment at a time and in order, never cancelled half-way
 concurrency:
   group: production
   cancel-in-progress: false
@@ -28,6 +24,7 @@ env:
 
 jobs:
   image:
+    # Only pushes to this repository build, so pull requests and forks never reach the self-hosted runner
     if: >-
       !inputs.image_tag &&
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' ||
@@ -42,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # The commit CI tested, not whatever master points at by now.
+          # The commit CI tested, not whatever master points at by now
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - id: tag
@@ -68,7 +65,7 @@ jobs:
 
   deploy:
     needs: image
-    # Runs after a successful build, or alone for a rollback to an existing tag.
+    # Runs after a successful build or alone for a rollback, and only while CD_ENABLED is true
     if: >-
       always() && vars.CD_ENABLED == 'true' &&
       (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master') &&
@@ -91,7 +88,7 @@ jobs:
           test -f "$DEPLOY_DIR/.env" || { echo "$DEPLOY_DIR/.env is missing"; exit 1; }
           [[ "$TAG" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "Invalid image tag: $TAG"; exit 1; }
 
-      # Server-specific values belong in .env and docker-compose.override.yml, which are never overwritten.
+      # Server-specific values belong in .env and docker-compose.override.yml, which are never overwritten
       - name: Sync deployment files
         run: |
           cp docker-compose.yml "$DEPLOY_DIR/docker-compose.yml"

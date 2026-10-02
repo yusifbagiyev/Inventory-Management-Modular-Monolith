@@ -1,5 +1,4 @@
-// Filter bar shared by the Products and Routes lists. The server does the filtering.
-// Every change updates the list in place through ListNav and keeps the filters in the query string.
+// Products and Routes filter bar, each change reloads the list in place and keeps the filters in the URL
 
 window.ListFilters = (function () {
     'use strict';
@@ -13,7 +12,7 @@ window.ListFilters = (function () {
             ? function (v) { return parseInt(v, 10); }
             : function (v) { return v; };
 
-        // Department to categories and back, for the cascading dropdowns.
+        // Department to categories and back, for the cascading dropdowns
         const deptToCats = new Map();
         const catToDepts = new Map();
         (config.pairs || []).forEach(function (pair) {
@@ -33,7 +32,6 @@ window.ListFilters = (function () {
             return value ? toCategoryKey(value) : null;
         }
 
-        // ListNav swaps the list in place and the URL keeps the filters.
         function navigate(params, options) {
             ListNav.go(config.basePath + '?' + params.toString(), options);
         }
@@ -42,7 +40,7 @@ window.ListFilters = (function () {
             return new URLSearchParams(window.location.search);
         }
 
-        // Builds the query from every active control, starting from page 1.
+        /** Builds the query from every active control, starting from page 1. */
         function collect() {
             const params = new URLSearchParams();
 
@@ -60,7 +58,7 @@ window.ListFilters = (function () {
                 if (value !== undefined && value !== null && value !== '') params.append(param, value);
             });
 
-            // URL-only flags have no control, so they are carried over from the current URL.
+            // URL-only flags have no control, so they are carried over from the current URL
             const current = currentParams();
             config.urlFlags.forEach(function (flag) {
                 if (current.get(flag) === 'false') params.set(flag, 'false');
@@ -78,7 +76,7 @@ window.ListFilters = (function () {
 
             const search = params.get('search');
             const input = document.getElementById('searchInput');
-            // Leave the box alone while it has focus. Live search reloads the list during typing.
+            // Leave the box alone while it has focus, since live search reloads the list during typing
             if (input && document.activeElement !== input) input.value = search || '';
 
             if (params.get('startDate') && params.get('endDate'))
@@ -86,13 +84,13 @@ window.ListFilters = (function () {
             else
                 DateRange.clear('#dateRange');
 
-            // A param missing from the URL means All, since Back can return to a state without it.
+            // A param missing from the URL means All, since Back can return to a state without it
             Object.keys(config.fields).forEach(function (param) {
                 $(config.fields[param]).val(params.get(param) || '');
             });
         }
 
-        // Shows only the categories found in the selected department.
+        // Shows only the categories found in the selected department
         function cascadeCategoryOptions() {
             const dep = selectedDepartment();
             const allowed = dep === null ? null : (deptToCats.get(dep) || new Set());
@@ -101,7 +99,7 @@ window.ListFilters = (function () {
             });
         }
 
-        // Shows only the departments that hold the selected category.
+        // Shows only the departments that hold the selected category
         function cascadeDepartmentOptions() {
             const cat = selectedCategory();
             const allowed = cat === null ? null : (catToDepts.get(cat) || new Set());
@@ -110,7 +108,7 @@ window.ListFilters = (function () {
             });
         }
 
-        // An incompatible pairing is dropped so the reload cannot land on an empty result.
+        // An incompatible pairing is dropped so the reload cannot land on an empty result
         function onDepartmentChange() {
             const dep = selectedDepartment(), cat = selectedCategory();
             if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) {
@@ -129,7 +127,7 @@ window.ListFilters = (function () {
             apply();
         }
 
-        /** Removes one applied filter. The dates key removes both ends of the range. */
+        /** Removes one applied filter, where the dates key removes both ends of the range. */
         function remove(key) {
             const params = currentParams();
             if (key === 'dates') {
@@ -157,9 +155,8 @@ window.ListFilters = (function () {
         $(function () {
             DateRange.attach('#dateRange', {
                 position: 'bottom right',
-                // Picking a range applies it immediately, like the other filters.
                 onApply: apply,
-                // Clear reloads only if a date filter was actually set.
+                // Clear reloads only if a date filter was actually set
                 onClear: function () {
                     if (currentParams().has('startDate')) remove('dates');
                 }
@@ -173,7 +170,7 @@ window.ListFilters = (function () {
             cascadeCategoryOptions();
             cascadeDepartmentOptions();
 
-            // Tabs, paging and Back change the URL in place, so the controls are restored from it.
+            // Tabs, paging and Back change the URL in place, so the controls are restored from it
             document.addEventListener('listnav:loaded', function () {
                 restore();
                 cascadeCategoryOptions();
@@ -181,10 +178,10 @@ window.ListFilters = (function () {
             });
         });
 
-        // Filter sheet for phones and tablets. It is built from the bar so filters are defined in one place.
+        // Filter sheet for phones and tablets, built from the bar so filters are defined in one place
         const bar = document.querySelector('.ip-filterbar');
         let sheetEl = null;
-        // Marked before DOMContentLoaded so MobileLayout leaves this bar to the sheet.
+        // Marked before DOMContentLoaded so MobileLayout leaves this bar to the sheet
         if (bar && config.sheet) bar.setAttribute('data-filter-sheet', '');
 
         function activeCount() {
@@ -192,7 +189,7 @@ window.ListFilters = (function () {
             let n = 0;
             if (params.has('startDate')) n++;
             Object.keys(config.fields).forEach(function (p) {
-                // Only filters shown in the bar count, so a status tab does not.
+                // Only filters shown in the bar count, so a status tab does not
                 if (params.has(p) && bar && bar.querySelector(config.fields[p])) n++;
             });
             config.urlFlags.forEach(function (f) { if (params.get(f) === 'false') n++; });
@@ -242,7 +239,7 @@ window.ListFilters = (function () {
         function fillSheet() {
             const body = sheetEl.querySelector('.modal-body');
             body.innerHTML = '';
-            // Follow the bar's order, since config.fields can list them in any order.
+            // Follow the bar's order, since config.fields can list them in any order
             const inBar = Object.keys(config.fields)
                 .map(function (param) { return { param: param, select: bar.querySelector(config.fields[param]) }; })
                 .filter(function (f) { return f.select; })
@@ -279,13 +276,12 @@ window.ListFilters = (function () {
                 const select = bar.querySelector(config.fields[param]);
                 if (select) select.value = pick(param);
             });
-            // A department and category pair with no products keeps only the department.
+            // A department and category pair with no products keeps only the department
             const dep = selectedDepartment(), cat = selectedCategory();
             if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) $('#categoryFilter').val('');
 
             const params = collect();
-            // Dates go straight into the query and restore() shows them in the picker after the reload.
-            // The custom chip keeps the range picked in the bar.
+            // Presets go straight into the query and the custom chip keeps the range picked in the bar
             const date = pick('date');
             const preset = datePresets.find(function (p) { return p.key === date; });
             if (preset && preset.start) {

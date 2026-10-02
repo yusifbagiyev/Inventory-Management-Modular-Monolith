@@ -15,8 +15,7 @@ namespace SharedServices.Contracts
 
     public record ApprovalActor(int UserId, string UserName);
 
-    // Implementations throw on failure. The message is recorded on the request.
-    /// <summary>Runs an approved request. Each owning module registers one for its request types.</summary>
+    /// <summary>Runs an approved request for the owning module and throws on failure, so the message is recorded.</summary>
     public interface IApprovalActionHandler
     {
         bool CanHandle(string requestType);

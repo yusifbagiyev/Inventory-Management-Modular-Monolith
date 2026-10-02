@@ -17,6 +17,7 @@ using System.Security.Claims;
 
 namespace ProductService.Application.Services
 {
+    /// <summary>Runs a product write directly with its .direct permission, otherwise submits it for approval.</summary>
     public class ProductManagementService : IProductManagementService
     {
         private readonly IMediator _mediator;
@@ -151,7 +152,7 @@ namespace ProductService.Application.Services
                 throw new InsufficientPermissionsException("You don't have permission to delete products");
             }
 
-            // The product details let the approver see what would be deleted.
+            // The product details let the approver see what would be deleted
             var approvalRequest = new CreateApprovalRequestDto
             {
                 RequestType = RequestType.DeleteProduct,
@@ -215,7 +216,7 @@ namespace ProductService.Application.Services
                 ["specifications"] = SpecificationData(dto.Specifications)
             };
 
-            // Names make the request readable for the approver. A failed lookup is not fatal.
+            // Names make the request readable for the approver, but a failed lookup isn't fatal
             try
             {
                 var category = await _mediator.Send(new GetCategoryByIdQuery(dto.CategoryId));
@@ -259,7 +260,7 @@ namespace ProductService.Application.Services
                 updateData["specifications"] = SpecificationData(dto.Specifications);
             }
 
-            // A single legacy ImageFile still means replace all images.
+            // A single legacy ImageFile still means replace all images
             if (dto.ImageFile is { Length: > 0 })
                 updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([dto.ImageFile]);
             if (dto.ImageFiles?.Any(f => f.Length > 0) == true)
@@ -269,8 +270,7 @@ namespace ProductService.Application.Services
             if (!string.IsNullOrEmpty(dto.CoverImageUrl))
                 updateData["coverImageUrl"] = dto.CoverImageUrl;
 
-            // The form sends every field, but approval applies only these on top of the product as it is then.
-            // That way approving an edit does not undo a transfer made while the request waited.
+            // Approval applies only the changed fields, so it can't undo a transfer made while the request waited
             updateData["changed"] = ChangedFields(existing, dto);
 
             return updateData;
@@ -371,8 +371,7 @@ namespace ProductService.Application.Services
 
         public int GetUserId(ClaimsPrincipal User)
         {
-            // API-key clients carry a service id, not a user id.
-            // They get 0, so the permission check answers 403 instead of failing with a 500.
+            // API-key clients carry a service id, so they get 0 and the permission check answers 403, not a 500
             return int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
         }
 

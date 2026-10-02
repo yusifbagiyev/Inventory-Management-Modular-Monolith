@@ -31,8 +31,7 @@ namespace AuditService.Queries
 
     public sealed record AuditFacets(IReadOnlyList<AuditUserOption> Users, IReadOnlyList<string> EntityTypes);
 
-    // Filters apply to rows, so an action is listed with only its matching rows.
-    /// <summary>The audit log, paged by action.</summary>
+    /// <summary>The audit log paged by action, where filters apply to rows so an action lists only its matches.</summary>
     public sealed record GetAuditLogQuery(
         int PageNumber = 1,
         int PageSize = 30,
@@ -75,6 +74,7 @@ namespace AuditService.Queries
                 rows = rows.Where(e => e.At <= request.To.Value);
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
+                // Escape the LIKE wildcards so the search matches the text literally
                 var pattern = "%" + request.Search.Trim().Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_") + "%";
                 rows = rows.Where(e =>
                     EF.Functions.ILike(e.Label ?? "", pattern) ||

@@ -1,5 +1,4 @@
-// Pending-approvals badge on the rail's Approvals link.
-// It reloads on start, on any approval change and when a new-request notification arrives.
+// Pending-approvals badge on the rail, reloaded on start and whenever an approval request changes
 
 let isLoadingApprovals = false;
 
@@ -23,7 +22,7 @@ function updatePendingApprovalsCount(count) {
     else $badge.hide();
 }
 
-// A burst of approvals loads the count only once.
+// A burst of approvals loads the count only once
 function debouncedLoadPendingApprovalsCount() {
     clearTimeout(window.approvalsLoadTimeout);
     window.approvalsLoadTimeout = setTimeout(loadPendingApprovalsCount, 500);
@@ -32,7 +31,7 @@ function debouncedLoadPendingApprovalsCount() {
 window.loadPendingApprovalsCount = loadPendingApprovalsCount;
 window.debouncedLoadPendingApprovalsCount = debouncedLoadPendingApprovalsCount;
 
-// Any decided, cancelled or new request changes the pending count.
+// Any decided, cancelled or new request changes the pending count
 window.addEventListener('live:changed', function (e) {
     const changes = (e.detail && e.detail.changes) || [];
     if (changes.some(c => c.entity === 'approval')) debouncedLoadPendingApprovalsCount();

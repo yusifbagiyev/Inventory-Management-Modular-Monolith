@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace InventoryManagement.Web.Middleware
 {
+    /// <summary>Last-resort handler that logs an unhandled exception and answers with JSON or the error page.</summary>
     public class ExceptionHandlerMiddleware
     {
         private readonly RequestDelegate _next;
@@ -72,7 +73,7 @@ namespace InventoryManagement.Web.Middleware
 
                 case InvalidOperationException:
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    // Internal exception text stays out of production responses. The full message is still logged.
+                    // Internal text stays out of production responses, the full message is still logged
                     errorResponse.Message = _environment.IsDevelopment()
                         ? exception.Message
                         : "The request could not be completed";

@@ -2,7 +2,7 @@ using MediatR;
 
 namespace SharedServices.Events
 {
-    /// <summary>A product's state as carried by product events. Images are site-relative URLs, never bytes.</summary>
+    /// <summary>A product's state as carried by product events, with images as site-relative URLs, never bytes.</summary>
     public record ProductState
     {
         public int ProductId { get; init; }
@@ -21,10 +21,10 @@ namespace SharedServices.Events
         public string? ImageUrl { get; init; }
     }
 
-    // Published inside the creating transaction, so the route history row commits with the product.
+    // Published inside the creating transaction, so the route history row commits with the product
     public record ProductCreatedEvent(ProductState Product, DateTime CreatedAt) : INotification;
 
-    // Changes is a readable summary for notes and messages. NewImageUrl is set only when a new image was uploaded.
+    // Changes is a readable summary for notes, and NewImageUrl is set only when an image was uploaded
     public record ProductUpdatedEvent(
         ProductState Before,
         ProductState After,

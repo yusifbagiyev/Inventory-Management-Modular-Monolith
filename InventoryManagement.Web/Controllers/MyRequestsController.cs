@@ -30,7 +30,7 @@ namespace InventoryManagement.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            // Null for a request owned by someone else.
+            // Null for a request owned by someone else
             var request = await _approvalService.GetRequestDetailsAsync(id);
             return request == null
                 ? RedirectToNotFound()

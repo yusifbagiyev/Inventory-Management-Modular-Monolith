@@ -68,7 +68,7 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentAssigned = assigned;
 
             await LoadFilterLists(status, availability, hasImage, assigned);
-            // The subtitle counts the whole inventory and ignores the filters.
+            // The subtitle counts the whole inventory and ignores the filters
             ViewBag.Counts = await _mediator.Send(new GetProductCountsQuery());
 
             return View(products);
@@ -104,7 +104,7 @@ namespace InventoryManagement.Web.Controllers
 
             var result = await _mediator.Send(new GetAllProductsQuery(1, 6, term));
             var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result).Items;
-            // Exact code match first so Enter opens the product that was typed.
+            // Exact code match first so Enter opens the product that was typed
             return Json(products
                 .OrderByDescending(p => p.InventoryCode.ToString() == term)
                 .Select(p => new
@@ -141,14 +141,14 @@ namespace InventoryManagement.Web.Controllers
             var product = await _mediator.Send(new GetProductByIdQuery(id));
             if (product == null)
             {
-                // Old links to a product deleted since then go to its kept record.
+                // Old links to a product deleted since then go to its kept record
                 if (User.HasPermission(AllPermissions.ProductDeletedView)
                     && await _mediator.Send(new GetDeletedProductByIdQuery(id)) != null)
                     return RedirectToAction(nameof(Deleted), new { id });
                 return RedirectToNotFound();
             }
 
-            // Transfers only. The full history with updates is on the timeline page.
+            // Transfers only, the full history with updates is on the timeline page
             var routes = User.HasPermission(AllPermissions.RouteView)
                 ? await _mediator.Send(new GetRoutesByProductQuery(id))
                 : [];
@@ -246,7 +246,7 @@ namespace InventoryManagement.Web.Controllers
                 ImageFiles = productModel.ImageFiles,
                 RemoveImageUrls = productModel.RemoveImageUrls,
                 CoverImageUrl = productModel.CoverImageUrl,
-                // The form always sends colour and specifications, so an empty list clears them.
+                // The form always sends colour and specifications, so an empty list clears them
                 ReplaceDetails = true,
                 Color = productModel.Color,
                 Specifications = ToSpecificationDtos(productModel.Specifications)
@@ -305,7 +305,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var lookups = await _mediator.Send(new GetLookupsQuery());
             model.Categories = lookups.Categories.ToSelectList();
-            // Keeps the product's current department even if it is inactive.
+            // Keeps the product's current department even if it is inactive
             model.Departments = lookups.Departments.ToChoiceList(model.DepartmentId);
         }
     }

@@ -19,7 +19,7 @@ namespace AuditService.Data
             {
                 entity.ToTable("AuditEntries");
                 entity.HasKey(e => e.Id);
-                // Local time like every other module.
+                // Local time like every other module
                 entity.Property(e => e.At).HasColumnType("timestamp without time zone");
                 entity.Property(e => e.CorrelationId).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.UserName).HasMaxLength(200);
@@ -29,7 +29,7 @@ namespace AuditService.Data
                 entity.Property(e => e.EntityId).HasMaxLength(100);
                 entity.Property(e => e.Label).HasMaxLength(600);
                 entity.Property(e => e.Operation).HasMaxLength(30).IsRequired();
-                // Plain text is enough. It is only shown and searched with ILIKE, never queried as JSON.
+                // Plain text is enough since it is only shown and searched with ILIKE, never queried as JSON
                 entity.Property(e => e.Changes).HasColumnType("text").IsRequired();
                 entity.HasIndex(e => e.At);
                 entity.HasIndex(e => e.CorrelationId);

@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    @* Status and sort work on the rows already on screen. Search on Enter goes to the server. *@
+    @* Status and sort work on the rows already on screen, while search on Enter goes to the server *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -186,7 +186,7 @@
 @section Scripts {
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Kept so the status filter can be undone without going back to the server.
+        // Kept so the status filter can be undone without going back to the server
         let allCategoryRows = [];
         const serverSearchActive = @(hasSearch ? "true" : "false");
 
@@ -226,7 +226,7 @@
                 }
             });
 
-            // Missing when the server returned no rows at all.
+            // The table body is missing when the server returned no rows at all
             const tbody = document.getElementById('categoriesTable');
             if (!tbody) {
                 return;
@@ -289,7 +289,7 @@
             $('#deleteModal').modal('show');
         }
 
-        // Other users' changes refresh the count and the table in place.
+        // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['category', 'product'],
             regions: ['#categoriesSummary', '#categoriesRegion'],

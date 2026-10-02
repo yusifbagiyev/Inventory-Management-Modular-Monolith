@@ -24,6 +24,7 @@ namespace ProductService.Infrastructure
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            // One instance per request serves both contracts
             services.AddScoped<ProductCatalog>();
             services.AddScoped<IProductCatalog>(sp => sp.GetRequiredService<ProductCatalog>());
             services.AddScoped<IProductTransfers>(sp => sp.GetRequiredService<ProductCatalog>());

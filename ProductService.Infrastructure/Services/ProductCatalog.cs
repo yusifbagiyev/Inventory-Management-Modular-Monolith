@@ -60,7 +60,7 @@ namespace ProductService.Infrastructure.Services
 
             product.UpdateAfterRouting(toDepartmentId, toWorker);
 
-            // The route's photos show the item as handed over, so they replace the product's images.
+            // The route's photos show the item as handed over, so they replace the product's images
             var copies = new List<string>();
             foreach (var routeImageUrl in routeImageUrls)
             {

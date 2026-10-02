@@ -158,6 +158,7 @@
                 form.method = 'POST';
                 form.action = '/Routes/Complete/' + id;
 
+                // The token value is cut out of the hidden input that AntiForgeryToken renders
                 const token = document.createElement('input');
                 token.type = 'hidden';
                 token.name = '__RequestVerificationToken';
@@ -196,7 +197,7 @@
         }
 
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['route', 'product'],
             ids: { route: @Model.Id, product: @Model.ProductId },

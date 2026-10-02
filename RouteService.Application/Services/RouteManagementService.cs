@@ -14,6 +14,7 @@ using System.Security.Claims;
 
 namespace RouteService.Application.Services
 {
+    /// <summary>Runs a route write directly with its .direct permission, otherwise submits it for approval.</summary>
     public class RouteManagementService : IRouteManagementService
     {
         private readonly IMediator _mediator;
@@ -191,7 +192,7 @@ namespace RouteService.Application.Services
             {
                 throw new NotFoundException($"Target department {dto.ToDepartmentId} not found");
             }
-            // Refuse it before it reaches the approval queue.
+            // Refuse it before it reaches the approval queue
             if (!toDepartment.IsActive)
             {
                 throw new RouteService.Domain.Exceptions.RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
@@ -237,7 +238,7 @@ namespace RouteService.Application.Services
                 changes.Add($"Notes updated");
             }
 
-            // Worker and destination go into the payload only when they change, so approval applies just those.
+            // Worker and destination go into the payload only when they change, so approval applies just those
             if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
             {
                 updateData["toWorker"] = updated.ToWorker;
@@ -252,7 +253,7 @@ namespace RouteService.Application.Services
                 changes.Add("Destination department changed");
             }
 
-            // A single legacy ImageFile still means replace all images.
+            // A single legacy ImageFile still means replace all images
             if (updated.ImageFile is { Length: > 0 })
                 updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([updated.ImageFile]);
             if (updated.ImageFiles?.Any(f => f.Length > 0) == true)
@@ -311,7 +312,7 @@ namespace RouteService.Application.Services
 
         public int GetUserId(ClaimsPrincipal User)
         {
-            // API-key clients carry a service id, not a user id. They get 0 and the permission check answers them.
+            // API-key clients carry a service id rather than a user id, so they get 0 and the permission check decides
             var raw = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(raw, out var id) ? id : 0;
         }

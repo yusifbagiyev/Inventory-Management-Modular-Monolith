@@ -8,8 +8,7 @@ using SharedServices.Storage;
 
 namespace RouteService.Application.EventHandlers
 {
-    /// <summary>Records every product change as a completed route, which forms the product's history.</summary>
-    /// <remarks>Runs in the product command's transaction. Images are copied so later edits cannot change history.</remarks>
+    /// <summary>Records every product change as a completed route in the product command's transaction.</summary>
     public class ProductHistoryHandlers :
         INotificationHandler<ProductCreatedEvent>,
         INotificationHandler<ProductUpdatedEvent>,
@@ -55,7 +54,7 @@ namespace RouteService.Application.EventHandlers
             var before = notification.Before;
             var after = notification.After;
 
-            // Only UpdateProductInventoryCode changes the code, and it changes nothing else.
+            // Only UpdateProductInventoryCode changes the code, and it changes nothing else
             if (before.InventoryCode != after.InventoryCode)
             {
                 var codeChange = InventoryRoute.CreateCodeChange(
@@ -119,6 +118,7 @@ namespace RouteService.Application.EventHandlers
             product.CategoryName,
             product.IsWorking);
 
+        // History keeps its own copy, so later edits to the product's images can't change it
         private async Task<string?> CopyImageAsync(string? productImageUrl, int inventoryCode, CancellationToken cancellationToken)
         {
             var copy = await _images.CopyAsync(productImageUrl, ImageStorage.Routes, inventoryCode, cancellationToken);

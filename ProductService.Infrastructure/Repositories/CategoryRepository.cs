@@ -54,6 +54,7 @@ namespace ProductService.Infrastructure.Repositories
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim();
+                // ILIKE doesn't fold Azerbaijani letters, so the final match happens in memory
                 var broadQuery = query.Where(r =>
                     EF.Functions.ILike(r.Name, $"%{search}%") ||
                     EF.Functions.ILike(r.Description, $"%{search}%")

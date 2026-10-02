@@ -1,6 +1,6 @@
 namespace SharedServices.Identity
 {
-    /// <summary>Admins pass every permission check. Users get only what is granted to their role or account.</summary>
+    /// <summary>Admins pass every check, users only get what their role or account is granted.</summary>
     public static class AllRoles
     {
         public const string Admin = "Admin";

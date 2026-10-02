@@ -7,7 +7,7 @@ using RouteService.Application.Features.Routes.Queries;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>Runs the main pages' queries once after startup so the first user after a deploy does not wait for EF to warm up.</summary>
+    /// <summary>Runs the main pages' queries once after startup so the first visitor after a deploy does not wait.</summary>
     public sealed class StartupWarmup : BackgroundService
     {
         private readonly IServiceScopeFactory _scopes;
@@ -44,17 +44,17 @@ namespace InventoryManagement.Web.Services
                 if (stoppingToken.IsCancellationRequested) return;
                 try
                 {
-                    await using var scope = _scopes.CreateAsyncScope();   // DbSession only disposes asynchronously.
+                    await using var scope = _scopes.CreateAsyncScope();   // DbSession only disposes asynchronously
                     await scope.ServiceProvider.GetRequiredService<IMediator>().Send(query, stoppingToken);
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
                 {
-                    // Just a head start. A failure here does not affect real requests.
+                    // Only a head start, so a failure here never affects real requests
                     _logger.LogWarning(ex, "Warm-up query {Query} failed", query.GetType().Name);
                 }
             }
 
-            // The users page reads through the identity module's service, not MediatR.
+            // The users page reads through the identity module's service, not MediatR
             try
             {
                 await using var scope = _scopes.CreateAsyncScope();

@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    @* All users are rendered at once, so these filters run in the browser. *@
+    @* All users are rendered at once, so these filters run in the browser *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -140,7 +140,7 @@
                                        title="@L["View Details"]" aria-label="@L["View Details"]">
                                         <i class="fa-regular fa-eye"></i>
                                     </a>
-                                    @* Admin accounts are changed by Admins only. *@
+                                    @* Admin accounts are changed by Admins only *@
                                     @if (canManage && (isAdminViewer || !user.Roles.Contains("Admin")))
                                     {
                                     <a href="@Url.Action("Edit", new { id = user.Id })" class="ip-btn-icon"
@@ -266,7 +266,7 @@
 
         document.getElementById('searchInput').addEventListener('input', applyUserFilters);
 
-        // Razor renders the flag unquoted, so isActive is usually a real boolean.
+        // Razor renders the flag unquoted, so isActive is usually a real boolean
         function toggleUserStatus(userId, isActive) {
             const deactivating = (isActive === true || isActive === 'true');
             confirmAction({
@@ -307,7 +307,7 @@
             modal.show();
         }
 
-        // Other users' changes refresh the count and the table in place.
+        // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['user'],
             regions: ['#usersSummary', '#usersRegion'],

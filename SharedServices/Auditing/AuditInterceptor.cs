@@ -54,7 +54,7 @@ namespace SharedServices.Auditing
         {
             Capture(eventData.Context);
 
-            // Without a request-wide transaction EF would commit the change before its audit rows exist.
+            // Without a request-wide transaction EF would commit the change before its audit rows
             if (_pending is { Count: > 0 } && !_session.InTransaction && eventData.Context != null)
             {
                 await _session.BeginAsync(cancellationToken);
@@ -134,14 +134,14 @@ namespace SharedServices.Auditing
                     case EntityState.Modified:
                         operation = AuditOperations.Updated;
                         fields = Fields(entry, "", (p, _) => (p.OriginalValue, p.CurrentValue), includeUnchanged: false);
-                        // Identity marks every column on Update(). A sign-in that only stamped LastLoginAt is not an action.
+                        // Identity marks every column on Update(), but a sign-in that only stamps LastLoginAt is no action
                         if (fields.Count == 0) continue;
                         break;
                     default:
                         continue;
                 }
 
-                // Deleted rows are labelled now. Others wait until after the save, when generated ids exist.
+                // Deleted rows are labelled now, the rest after the save when generated ids exist
                 var label = entry.State == EntityState.Deleted ? Label(entry) : null;
                 (_pending ??= new()).Add(new Pending(entry, operation, fields, label));
             }
@@ -161,7 +161,7 @@ namespace SharedServices.Auditing
                 .ToList();
         }
 
-        /// <summary>The entry's columns and those of its owned parts, without keys. For an update only real changes.</summary>
+        /// <summary>The entry's columns and its owned parts' columns without keys, and for an update only real changes.</summary>
         private static List<AuditFieldChange> Fields(
             EntityEntry entry, string prefix,
             Func<PropertyEntry, EntityEntry, (object? Old, object? New)> values, bool includeUnchanged)
@@ -235,10 +235,11 @@ namespace SharedServices.Auditing
             }
 
             From(entry);
+            // Owned parts and loaded parents add to the label too
             foreach (var reference in entry.References)
             {
                 if (reference.TargetEntry is { } target)
-                    From(target);   // Owned parts and loaded parents
+                    From(target);
             }
             return parts.Count == 0 ? null : Truncate(string.Join(" · ", parts.Take(3)));
         }
@@ -249,7 +250,8 @@ namespace SharedServices.Auditing
             {
                 null => null,
                 string s => s,
-                DateTime d when d == DateTime.MinValue => null,   // Means not set yet
+                // MinValue means the date is not set yet
+                DateTime d when d == DateTime.MinValue => null,
                 DateTime d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 DateTimeOffset d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 bool b => b ? "true" : "false",

@@ -5,7 +5,6 @@ using ProductService.Domain.Repositories;
 namespace ProductService.Application.Features.Products.Queries
 {
     /// <summary>Department and category pairs left by the state and quick filters, so the list filters can cascade.</summary>
-    /// <remarks>The unfiltered set is cached.</remarks>
     public record GetProductFilterFacetsQuery(
         bool? Status = null,
         bool? Availability = null,

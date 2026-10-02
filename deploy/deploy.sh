@@ -1,17 +1,11 @@
 #!/usr/bin/env bash
-# Deploys one app image on the production server. CD runs it on the self-hosted runner, and it works by hand too.
-#
-#   DEPLOY_DIR=/opt/inventory deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<commit>
-#
-# 1. Back up with pg_dump. Migrations run at startup and an image rollback does not undo them.
-# 2. Pull the image and recreate only the app container.
-# 3. Wait for the healthcheck. If it never passes, put the previous image back and fail.
-# 4. Pin the image as APP_IMAGE in .env so a plain docker compose up keeps running it.
+# Deploys one app image on the production server, run by CD on the self-hosted runner or by hand
+# Usage is DEPLOY_DIR=/opt/inventory deploy/deploy.sh ghcr.io/owner/inventory-app:sha-commit
 set -euo pipefail
 
 IMAGE="${1:?usage: deploy.sh <image>}"
 DEPLOY_DIR="${DEPLOY_DIR:-$(pwd)}"
-HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"   # Seconds. Migrations run before the app turns healthy.
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"   # Seconds, long enough for the startup migrations
 KEEP_BACKUPS="${KEEP_BACKUPS:-14}"
 APP_CONTAINER=inventory_app
 PG_CONTAINER=inventory_postgres
@@ -19,7 +13,7 @@ PG_CONTAINER=inventory_postgres
 cd "$DEPLOY_DIR"
 [ -f .env ] || { echo "No .env in $DEPLOY_DIR" >&2; exit 1; }
 
-# The server's .env has Windows line endings. Compose ignores the \r, so this must too.
+# The server's .env has Windows line endings and Compose ignores the \r, so this does too
 env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | tr -d '\r' || true; }
 
 set_env_value() {
@@ -31,7 +25,7 @@ set_env_value() {
 }
 
 run_app() {
-    # A locally built image is not in the registry. The pull fails and up uses the local copy.
+    # A locally built image is not in the registry, so the pull fails and up uses the local copy
     APP_IMAGE="$1" docker compose pull --quiet app || echo "Pull of $1 failed; using a local copy if there is one"
     APP_IMAGE="$1" docker compose up -d --no-build --no-deps app
 }
@@ -54,7 +48,7 @@ previous=$(env_value APP_IMAGE)
 [ -n "$previous" ] || previous=$(docker inspect -f '{{.Config.Image}}' "$APP_CONTAINER" 2>/dev/null || true)
 echo "==> Deploying $IMAGE (running now: ${previous:-nothing})"
 
-# 1. Backup
+# Back up first, since migrations run at startup and an image rollback does not undo them
 db_name=$(env_value DB_NAME)
 mkdir -p backups && chmod 700 backups   # Full copies of the data
 backup="backups/pre-deploy-$(date +%Y%m%d-%H%M%S).dump"
@@ -64,13 +58,13 @@ docker exec "$PG_CONTAINER" sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$1"' _ "${db
 [ -s "$backup" ] || { rm -f "$backup"; echo "Backup is empty; nothing was deployed" >&2; exit 1; }
 ls -1t backups/pre-deploy-*.dump | tail -n +"$((KEEP_BACKUPS + 1))" | xargs -r rm --
 
-# 2-3. Deploy and wait for health
+# Recreate only the app and put the previous image back if it never turns healthy
 if run_app "$IMAGE" && wait_healthy; then
-    # 4. Pin the image
+    # Pinned in .env so a plain docker compose up keeps running this image
     set_env_value APP_IMAGE "$IMAGE"
     echo "$(date -Is) $IMAGE" >> deploy-history.log
 
-    # Other services pick up compose file changes. The nginx config is a bind mount, so it needs a reload.
+    # Other services pick up compose changes, and nginx needs a reload because its config is a bind mount
     docker compose up -d --no-build
     docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload
     docker image prune -f > /dev/null

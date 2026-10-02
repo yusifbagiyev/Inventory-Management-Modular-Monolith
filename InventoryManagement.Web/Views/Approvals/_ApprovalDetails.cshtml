@@ -1,7 +1,6 @@
 @model ApprovalRequestDto
 @inject MediatR.IMediator Mediator
-@* Decision dialog content for Approvals and My Requests.
-   loadApprovalDetails() in site.js moves [data-approval-head] into the modal header. *@
+@* Dialog content for Approvals and My Requests, loadApprovalDetails() moves [data-approval-head] into the header *@
 @{
     var view = ApprovalView.From(Model.RequestType, Model.ActionData);
     var images = view.ImageData;
@@ -10,8 +9,7 @@
     string Value(string? value, bool localize) => string.IsNullOrWhiteSpace(value) ? "" : localize ? L[value].Value : value;
     var pending = Model.Status == "Pending";
 
-    // The request stores only the new specifications, so load the current ones while it is pending.
-    // After a decision the product has changed and the comparison would be wrong.
+    // The request stores only the new specifications, and once decided the product has moved on, so compare only while pending
     string? currentSpecifications = null;
     if (pending && Model.RequestType == "product.update" && Model.EntityId is int productId
         && view.Changes.Any(c => c.Field == "Specifications"))
@@ -34,12 +32,13 @@
     var removedUrls = (images?.GetValue("removeImageUrls", StringComparison.OrdinalIgnoreCase) as Newtonsoft.Json.Linq.JArray)?
         .Select(u => u.ToString()).Where(u => u.StartsWith("/images/")).ToList() ?? new List<string>();
     var cover = images?.GetValue("coverImageUrl", StringComparison.OrdinalIgnoreCase)?.ToString();
+    // A cover of new:N points at the Nth uploaded image instead of a stored URL
     string? newCoverName = cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < newImageNames.Count
         ? newImageNames[coverIndex] : null;
 }
 
 @{
-    // Only Admins may approve their own request. ApproveRequest enforces this too.
+    // Only Admins may approve their own request, which ApproveRequest enforces as well
     var ownRequest = Model.RequestedById.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                      && !User.IsInRole(SharedServices.Identity.AllRoles.Admin);
 }
@@ -133,7 +132,7 @@ else if (view.Changes.Count > 0)
                             <td class="old">
                                 @if (string.IsNullOrWhiteSpace(current))
                                 {
-                                    @* Empty values are spelled out instead of shown as a dash. *@
+                                    @* Empty values are spelled out instead of shown as a dash *@
                                     <span class="ip-empty-value">@L[change.Field == "Specifications" ? "None" : "Not set"]</span>
                                 }
                                 else

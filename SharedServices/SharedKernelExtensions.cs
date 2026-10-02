@@ -26,7 +26,7 @@ namespace SharedServices
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssemblies(moduleAssemblies);
-                // Behaviors run in registration order. Validation must happen before the transaction opens.
+                // Behaviors run in registration order, and validation must happen before the transaction opens
                 config.AddOpenBehavior(typeof(AuditActionBehavior<,>));
                 config.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 config.AddOpenBehavior(typeof(TransactionBehavior<,>));

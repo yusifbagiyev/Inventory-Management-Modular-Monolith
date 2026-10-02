@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
 namespace InventoryManagement.Web.Localization
 {
-    // Without an ErrorMessage the framework uses its built-in English text and skips localization.
-    /// <summary>Gives bare validation attributes an explicit ErrorMessage so the localizer can translate it.</summary>
+    /// <summary>Gives bare validation attributes an ErrorMessage, since without one the framework skips localization.</summary>
     public sealed class DefaultValidationMessages : IValidationMetadataProvider
     {
         public void CreateValidationMetadata(ValidationMetadataProviderContext context)

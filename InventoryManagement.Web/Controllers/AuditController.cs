@@ -29,7 +29,7 @@ namespace InventoryManagement.Web.Controllers
                 pageNumber, pageSize, search, userId, entityType, operation,
                 startDate?.Date, endDate?.Date.AddDays(1).AddTicks(-1), entityId));
             ViewBag.Facets = await _mediator.Send(new GetAuditFacetsQuery());
-            // Changes store department and category ids, so the view needs the names.
+            // Changes store department and category ids, so the view needs the names
             var lookups = await _mediator.Send(new GetLookupsQuery());
             ViewBag.DepartmentNames = lookups.Departments.ToDictionary(d => d.Id, d => d.Name);
             ViewBag.CategoryNames = lookups.Categories.ToDictionary(c => c.Id, c => c.Name);

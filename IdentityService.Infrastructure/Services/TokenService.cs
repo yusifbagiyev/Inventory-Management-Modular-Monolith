@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.Infrastructure.Services
 {
+    /// <summary>Issues JWT access tokens and refresh tokens for external API clients.</summary>
     public class TokenService : ITokenService
     {
         private readonly UserManager<User> _userManager;
@@ -40,7 +41,7 @@ namespace IdentityService.Infrastructure.Services
                 new(ClaimTypes.Email, user.Email!),
                 new("FirstName", user.FirstName),
                 new("LastName", user.LastName),
-                // The host checks this on every use, so a password change or deactivation ends the token early.
+                // The host checks this on every use, so a password change or deactivation ends the token early
                 new("SessionStamp", AuthService.SessionStamp(user.SecurityStamp ?? string.Empty))
             };
 
@@ -91,6 +92,7 @@ namespace IdentityService.Infrastructure.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
 
+            // Lifetime is skipped on purpose, but a token signed with another algorithm is still refused
             if (securityToken is not JwtSecurityToken jwtSecurityToken ||
                 !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
             {

@@ -1,6 +1,6 @@
 namespace AuditService.Data
 {
-    /// <summary>One audit log row. Rows of one request share a CorrelationId and form one action.</summary>
+    /// <summary>One audit log row, and the rows of one request share a CorrelationId.</summary>
     public class AuditEntry
     {
         public long Id { get; set; }

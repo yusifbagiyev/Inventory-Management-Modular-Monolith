@@ -5,11 +5,11 @@
     var type = ViewBag.TypeFilter as string;
     var unreadTab = status == "unread";
     var items = Model.Notifications;
-    // Tab links keep the type filter and go back to page 1.
+    // Tab links keep the type filter and go back to page 1
     string TabUrl(string? s) => Url.Action("Index", new { status = s, type = string.IsNullOrEmpty(type) ? null : type })!;
 }
 
-@* Paged on the server, 30 a page. Tabs, type filter and paging swap the list in place through ListNav. *@
+@* Paged on the server at 30 a page, and tabs, type and paging swap the list in place via ListNav *@
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>
@@ -47,7 +47,7 @@
             <div class="ip-empty">
                 @if (unreadTab && string.IsNullOrEmpty(type) && Model.AllCount > 0)
                 {
-                    @* Nothing unread gets its own message, not the empty filter one. *@
+                    @* Nothing unread gets its own message rather than the empty filter one *@
                     <span class="icon ok"><i class="fa-solid fa-check-double"></i></span>
                     <div class="title">@L["All notifications have been read"]</div>
                     <div class="text">@L["There are no unread notifications."]</div>
@@ -102,7 +102,7 @@
 
 @section Scripts {
     <script>
-        // Changing the type keeps the tab and goes back to page 1.
+        // Changing the type keeps the tab and goes back to page 1
         $(document).on('change', '#typeFilter', function () {
             const params = new URLSearchParams(window.location.search);
             if (this.value) params.set('type', this.value); else params.delete('type');
@@ -110,7 +110,7 @@
             ListNav.go(window.location.pathname + '?' + params.toString());
         });
 
-        // _Layout removes .unread when a notification is clicked, so count the unread number down here.
+        // _Layout removes .unread when a notification is clicked, so count the unread number down here
         function unreadNow() { return parseInt($('#unreadSummary').attr('data-unread'), 10) || 0; }
         function setUnread(n) {
             $('#unreadSummary').attr('data-unread', n).text(t('{0} unread', n));
@@ -123,7 +123,7 @@
         }).observe(document.getElementById('notificationsList'),
             { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
 
-        // Enter on a focused notification works like a click.
+        // Enter on a focused notification works like a click
         $(document).on('keydown', '#notificationsList .ip-notif-item', function (e) {
             if (e.key === 'Enter' && e.target === this) this.click();
         });
@@ -155,7 +155,7 @@
         return day.ToString("dd.MM.yyyy");
     }
 
-    // Builds the link from the ids stored in the notification's Data.
+    // Builds the link from the ids stored in the notification's Data
     (string Url, string Label)? Link(NotificationDto notification)
     {
         if (string.IsNullOrWhiteSpace(notification.Data)) return null;
@@ -170,7 +170,7 @@
                         L["View request #{0}", requestId].Value);
             if (Id("routeId") is int routeId && User.HasPermission("route.view"))
                 return ($"/Routes/Details/{routeId}", L["View route"].Value);
-            // A deleted product links to the Deleted products page, or to the audit log without that permission.
+            // A deleted product links to the Deleted products page, or to the audit log without that permission
             if (notification.Title == "Product Deleted" || notification.Title == L["Product Deleted"].Value)   // Stored in English, shown translated
             {
                 if (Id("productId") is not int deletedId) return null;
@@ -187,7 +187,7 @@
         return null;
     }
 
-    // Same mapping as createNotificationItem in _Layout. Only approval answers use status colours.
+    // Same mapping as createNotificationItem in _Layout, where only approval answers use status colours
     (string Icon, string Tone) Icon(NotificationDto notification)
     {
         string? status = null;

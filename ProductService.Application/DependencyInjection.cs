@@ -7,7 +7,7 @@ namespace ProductService.Application
 {
     public static class DependencyInjection
     {
-        /// <remarks>MediatR handlers and validators are registered by the host.</remarks>
+        /// <summary>Registers the module's services, while the host registers its MediatR handlers and validators.</summary>
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<IImageService, ImageService>();

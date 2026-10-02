@@ -21,7 +21,7 @@ namespace SharedServices.Auditing
         private static bool IsCommand(Type type)
             => typeof(ITransactionalRequest).IsAssignableFrom(type) || type.Name.EndsWith("Command", StringComparison.Ordinal);
 
-        // A nested Command takes its outer class name. A trailing Command suffix is dropped.
+        // Nested commands are named after their outer class, without the Command suffix
         private static string ActionName(Type type)
         {
             var name = type.Name is "Command" && type.DeclaringType != null ? type.DeclaringType.Name : type.Name;

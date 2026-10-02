@@ -15,15 +15,15 @@ namespace IdentityService.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddModuleDbContext<IdentityDbContext>(IdentityDbContext.Schema);
-            // Sign-ins touch these columns, and nobody needs to see that live.
+            // Sign-ins touch these columns, which nobody needs to see live
             services.TrackLiveEntity<User>("user", "Id",
                 nameof(User.LastLoginAt), nameof(User.SecurityStamp), nameof(User.ConcurrencyStamp),
                 nameof(User.AccessFailedCount), nameof(User.LockoutEnd));
-            // Role and permission grants change what the user row shows.
+            // Role and permission grants change what the user row shows
             services.TrackLiveEntity<IdentityUserRole<int>>("user", "UserId");
             services.TrackLiveEntity<UserPermission>("user", "UserId");
 
-            // Not AddIdentity, which would register its own cookie scheme over the host's schemes.
+            // Not AddIdentity, which would register its own cookie scheme over the host's schemes
             services.AddIdentityCore<User>(options =>
                 {
                     options.Password.RequireDigit = true;
@@ -32,7 +32,7 @@ namespace IdentityService.Infrastructure
                     options.User.RequireUniqueEmail = true;
 
                     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-                    // Not lower, since anyone can lock someone else out with wrong guesses.
+                    // Not lower, since anyone can lock someone else out with wrong guesses
                     options.Lockout.MaxFailedAccessAttempts = 10;
                     options.Lockout.AllowedForNewUsers = true;
 

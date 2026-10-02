@@ -29,13 +29,13 @@ namespace ProductService.Application.Features.Categories.Commands
                 var category = await _categoryRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Category with ID {request.Id} not found");
 
-                // Never let a delete silently take products with it, same as for departments.
+                // Never let a delete silently take products with it, same as for departments
                 var productCount = await _productRepository.CountByCategoryIdAsync(request.Id, cancellationToken);
                 if (productCount > 0)
                     throw new ConflictException(
                         $"Cannot delete category '{category.Name}': {productCount} product(s) are still assigned to it. Move them to another category first.");
 
-                // Deleted products are kept and still point at their category.
+                // Deleted products are kept and still point at their category
                 var deletedCount = await _productRepository.CountDeletedByCategoryIdAsync(request.Id, cancellationToken);
                 if (deletedCount > 0)
                     throw new ConflictException(

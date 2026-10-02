@@ -78,7 +78,7 @@ namespace ProductService.Application.Features.Products.Commands
                     ?? throw new NotFoundException($"Product with ID {request.Id} not found");
 
                 var dto = request.ProductDto;
-                // Moving into an inactive department is refused, but staying in one is fine.
+                // Moving into an inactive department is refused, but staying in one is fine
                 if (dto.DepartmentId != product.DepartmentId)
                     await ProductDetails.RequireActiveDepartmentAsync(_departmentRepository, dto.DepartmentId, cancellationToken);
                 var before = product.ToState();
@@ -93,7 +93,7 @@ namespace ProductService.Application.Features.Products.Commands
                     added.Add(uploaded);
                 }
 
-                // A single ImageFile from older clients replaces all images.
+                // A single ImageFile from older clients replaces all images
                 var (images, removed) = ImageSet.Apply(
                     product.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });
@@ -116,18 +116,18 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Re-query so the category and department navigations follow the new ids.
+                // Re-query so the category and department navigations follow the new ids
                 var after = (await _productRepository.GetByIdAsync(product.Id, cancellationToken))!.ToState();
 
                 await _publisher.Publish(new ProductUpdatedEvent(
                     before,
                     after,
                     string.Join(", ", request.Changes),
-                    // The history row keeps a copy of the cover when it changed.
+                    // The history row keeps a copy of the cover when it changed
                     product.ImageUrl != oldCover && !string.IsNullOrEmpty(product.ImageUrl) ? product.ImageUrl : null,
                     DateTime.Now), cancellationToken);
 
-                // Removed images are only deleted once the update is durable.
+                // Removed images are only deleted once the update is committed
                 foreach (var url in removed)
                     _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(url));
             }

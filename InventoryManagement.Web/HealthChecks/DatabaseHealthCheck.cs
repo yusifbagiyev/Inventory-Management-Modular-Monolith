@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace InventoryManagement.Web.HealthChecks
 {
-    /// <summary>Healthy when the database answers. The app is useless without it.</summary>
+    /// <summary>Healthy only when the database answers, since the app is useless without it.</summary>
     public sealed class DatabaseHealthCheck(IConfiguration configuration) : IHealthCheck
     {
         public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
@@ -18,7 +18,7 @@ namespace InventoryManagement.Web.HealthChecks
             }
             catch (Exception ex)
             {
-                // The exception is only logged. The response body just says Unhealthy.
+                // The exception only goes to the log, the response body just says Unhealthy
                 return HealthCheckResult.Unhealthy("Database unreachable", ex);
             }
         }

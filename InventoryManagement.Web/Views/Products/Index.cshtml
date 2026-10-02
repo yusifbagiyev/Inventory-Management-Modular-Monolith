@@ -280,19 +280,19 @@
                 categoryId: '#categoryFilter',
                 departmentId: '#departmentFilter'
             },
-            // Server-side quick flags with no control of their own.
+            // Server-side quick flags with no control of their own
             urlFlags: ['hasImage', 'assigned'],
             sheet: true
         });
 
-        // Names used by the markup's onclick/onchange handlers.
+        // Names used by the markup's onclick and onchange handlers
         function applyProductFilters() { productFilters.apply(); }
         function onDepartmentChange() { productFilters.onDepartmentChange(); }
         function onCategoryChange() { productFilters.onCategoryChange(); }
         function removeFilter(key) { productFilters.remove(key); }
         function resetProductFilters() { productFilters.reset(); }
 
-        // These presets only toggle a flag in the URL.
+        // These presets only toggle a flag in the URL
         function quickFilter(kind) {
             if (kind === 'unassigned') {
                 productFilters.toggleFlag('assigned');
@@ -301,7 +301,7 @@
             }
         }
 
-        // Double-click a code to edit it in place.
+        // Double-click a code to edit it in place
         $(document).on('dblclick', '.inventory-code-display', function() {
             const id = $(this).data('id');
             $(this).addClass('d-none');
@@ -364,11 +364,11 @@
             }
         });
 
-        // Other users' changes refresh the count and the table in place.
+        // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['product', 'category', 'department'],
             regions: ['#productsCounts', '#productsRegion'],
-            // An inventory code being edited in a row must not be swapped away.
+            // An inventory code being edited in a row must not be swapped away
             isEditing: () => $('.inventory-code-input:visible').length > 0
         });
     </script>

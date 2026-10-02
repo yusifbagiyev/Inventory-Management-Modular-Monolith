@@ -4,8 +4,7 @@ using SharedServices.LiveUpdates;
 
 namespace NotificationService.Infrastructure.Services
 {
-    /// <summary>Sends committed changes to every open page as EntityChanged.</summary>
-    /// <remarks>The message carries no record data. Pages re-fetch with the viewer's own permissions.</remarks>
+    /// <summary>Broadcasts committed changes as EntityChanged without record data, so pages re-fetch with the viewer's permissions.</summary>
     public sealed class LiveUpdatePublisher : ILiveUpdatePublisher
     {
         private readonly IHubContext<NotificationHub> _hub;

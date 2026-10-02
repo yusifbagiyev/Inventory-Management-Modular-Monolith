@@ -28,7 +28,7 @@ namespace ApprovalService.Application.Features.Commands
                 var approvalRequest = await _repository.GetByIdAsync(request.RequestId, cancellationToken)
                     ?? throw new NotFoundException($"Request {request.RequestId} not found");
 
-                // Throws unless the request is still pending.
+                // Throws unless the request is still pending
                 approvalRequest.Reject(request.UserId, request.UserName, request.Reason);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

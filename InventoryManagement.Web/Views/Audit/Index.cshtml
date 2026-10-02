@@ -7,7 +7,7 @@
     string? Q(string key) => string.IsNullOrWhiteSpace(query[key]) ? null : query[key].ToString();
     var hasFilters = new[] { "search", "userId", "entityType", "operation", "startDate", "entityId" }.Any(k => Q(k) != null);
 
-    // These return English text keys, translated through L.
+    // These return English text keys that are translated through L
     string TypeLabel(string type) => type switch
     {
         "InventoryRoute" => "Route",
@@ -24,7 +24,7 @@
         "SignedOut" => "Signed out",
         _ => op
     };
-    // Link to the record's page, unless the record was deleted.
+    // Links to the record's page unless the record was deleted
     string? RecordUrl(AuditEntryDto e) => e.Operation == "Deleted" || !int.TryParse(e.EntityId, out var id) ? null : e.EntityType switch
     {
         "Product" when User.HasPermission("product.view") => $"/Products/Details/{id}",
@@ -41,13 +41,13 @@
         "Updated" => "ip-badge-info",
         _ => "ip-badge-neutral"
     };
-    // Turns request types, booleans and status words into translated text.
+    // Turns request types, booleans and status words into translated text
     string Shown(string field, string? value)
     {
         if (value == null || value.StartsWith("01.01.0001")) return "—";   // Older rows stored unset dates as 01.01.0001
         if (AuditLabels.IsRequestType(value)) return L[AuditLabels.RequestType(value)].Value;
         if (value is "true" or "false") return L[value == "true" ? "Yes" : "No"].Value;
-        // Lists are stored as JSON. Specifications are joined with semicolons, other lists with commas.
+        // Lists are stored as JSON, specifications are joined with semicolons and other lists with commas
         if (value.StartsWith('[') && value.EndsWith(']'))
         {
             try
@@ -82,18 +82,18 @@
 
     string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
 
-    // Splits the last part of a field path into words. The result doubles as a text key.
+    // Splits the last part of a field path into words, which also serves as the text key
     string FieldLabel(string field)
     {
         var name = field.Contains('.') ? field[(field.LastIndexOf('.') + 1)..] : field;
-        // Department and category ids are shown by name, so drop the Id suffix.
+        // Department and category ids are shown by name, so drop the Id suffix
         if (name.EndsWith("DepartmentId") || name.EndsWith("CategoryId")) name = name[..^2];
         return System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z])(?=[A-Z])", " ");
     }
 }
 
 @{
-    // Images render as thumbnails and department or category ids as names.
+    // Images render as thumbnails and department or category ids as names
     void RenderValue(string field, string? value)
     {
         if (IsImageField(field) && value != null && !value.StartsWith("01.01.0001"))
@@ -122,7 +122,7 @@
         </div>
     </div>
 
-    @* Plain GET form. Every filter reloads the page from page 1. *@
+    @* A plain GET form, so every filter reloads the page from page 1 *@
     <form method="get" class="ip-filterbar" id="auditFilters" data-no-ajax>
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -212,7 +212,7 @@
                                         <div class="ip-audit-entry">
                                             <div class="d-flex flex-wrap align-items-center gap-2">
                                                 @{
-                                                    // Products are soft-deleted, so an update that sets IsDeleted is shown as a deletion.
+                                                    // Products are soft-deleted, so an update that sets IsDeleted is shown as a deletion
                                                     var shownOperation = entry.Changes.Any(c => c.Field == "IsDeleted" && c.New == "true") ? "Deleted" : entry.Operation;
                                                 }
                                                 <span class="ip-badge @OperationBadge(shownOperation)">@L[OperationLabel(shownOperation)]</span>
@@ -235,7 +235,7 @@
                                                 }
                                             </div>
                                             @{
-                                                // Hide fields that repeat another one, like ImageUrl next to ImageUrls or an id next to its name.
+                                                // Hide fields that repeat another one, like ImageUrl next to ImageUrls or an id next to its name
                                                 var shownChanges = entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))
                                                     && !(c.Field.EndsWith("ById") && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))).ToList();
                                             }
@@ -251,7 +251,7 @@
                                                                 <dd>
                                                                     @if (entry.Operation == "Updated")
                                                                     {
-                                                                        @* Empty values are spelled out instead of shown as a dash. *@
+                                                                        @* Empty values are spelled out instead of shown as a dash *@
                                                                         if (IsEmpty(change.Old))
                                                                         {
                                                                             <span class="ip-empty-value">@L["Not set"]</span>

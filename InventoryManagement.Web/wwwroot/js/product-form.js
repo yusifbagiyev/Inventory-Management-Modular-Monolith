@@ -1,5 +1,4 @@
-// Product create and edit form: character counters, specification rows and the inventory code check.
-// A taken code shows under the field while typing, so the save does not fail later.
+// Product form counters and specification rows, plus a code check that flags a taken code while typing
 
 window.ProductForm = (function () {
     'use strict';
@@ -46,7 +45,7 @@ window.ProductForm = (function () {
                     const product = await response.json();
                     show(t('This code is already in use: {0}', product.model || product.Model || code));
                 } else {
-                    show('');   // 404 means free. Other errors are left to the save
+                    show('');   // 404 means free, and other errors are left to the save
                 }
             } catch (e) {
                 show('');
@@ -70,7 +69,7 @@ window.ProductForm = (function () {
         if (!list || !template || !add) return;
         const max = parseInt(list.dataset.max, 10) || 30;
 
-        // Names must stay gap-free or model binding drops the rows after a gap.
+        // Names must stay gap-free or model binding drops the rows after a gap
         function renumber() {
             list.querySelectorAll('[data-spec-row]').forEach(function (row, i) {
                 const inputs = row.querySelectorAll('input');

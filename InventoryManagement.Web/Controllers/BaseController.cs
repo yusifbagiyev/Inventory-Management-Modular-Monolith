@@ -9,6 +9,7 @@ using SharedServices.Exceptions;
 
 namespace InventoryManagement.Web.Controllers
 {
+    /// <summary>Shared helpers that turn module outcomes into the JSON or redirect each page expects.</summary>
     [Authorize]
     public abstract class BaseController : Controller
     {
@@ -31,7 +32,7 @@ namespace InventoryManagement.Web.Controllers
 
         protected IActionResult RedirectToNotFound() => RedirectToAction("NotFound", "Home", new { statusCode = 404 });
 
-        /// <summary>Turns the expected module outcomes into an ApiResponse. Anything unexpected still throws.</summary>
+        /// <summary>Turns the expected module outcomes into an ApiResponse, while anything unexpected still throws.</summary>
         protected async Task<ApiResponse<T>> RunAsync<T>(Func<Task<T>> action, string? successMessage = null)
         {
             try
@@ -60,7 +61,7 @@ namespace InventoryManagement.Web.Controllers
                                           or InsufficientPermissionsException or InvalidOperationException
                                           or ArgumentException or UnauthorizedAccessException)
             {
-                // Framework and database exceptions of these types carry internal text, so log them instead of showing it.
+                // Framework and database exceptions of these types carry internal text, so log them instead of showing it
                 if (!SharedServices.Web.UserFacingErrors.IsUserFacing(ex))
                     HttpContext.RequestServices.GetRequiredService<ILogger<BaseController>>()
                         .LogWarning(ex, "Request failed: {Message}", ex.Message);

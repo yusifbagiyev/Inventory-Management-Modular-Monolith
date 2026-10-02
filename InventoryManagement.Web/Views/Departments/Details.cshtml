@@ -161,7 +161,7 @@
     <script>
         $(document).ready(initProductsTable);
 
-        // Runs on load and again after live-updates.js swaps in a fresh table.
+        // Runs on load and again after live-updates.js swaps in a fresh table
         function initProductsTable() {
             $('#departmentProductsTable').DataTable({
                 pageLength: 25,
@@ -175,12 +175,11 @@
                     infoEmpty: t('No products to show'),
                     infoFiltered: t('(filtered from _MAX_ total)')
                 }
-                // The default DataTables layout is the one this table needs.
             });
         }
 
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['department', 'product'],
             ids: { department: @Model.Id },

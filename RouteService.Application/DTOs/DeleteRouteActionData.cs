@@ -1,5 +1,6 @@
 ﻿namespace RouteService.Application.DTOs
 {
+    /// <summary>What a route delete request shows the approver about the route.</summary>
     public record DeleteRouteActionDataWithRequest
     {
         public int RouteId { get; set; }

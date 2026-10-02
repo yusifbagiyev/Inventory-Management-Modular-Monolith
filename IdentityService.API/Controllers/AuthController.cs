@@ -9,6 +9,7 @@ using SharedServices.Identity;
 
 namespace IdentityService.API.Controllers
 {
+    /// <summary>JWT sign-in and user administration for external API clients.</summary>
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
@@ -30,8 +31,7 @@ namespace IdentityService.API.Controllers
         [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
-            // The forwarded-headers middleware has already set RemoteIpAddress from the trusted proxy.
-            // Never read X-Forwarded-For directly, the client controls it.
+            // RemoteIpAddress already comes from the trusted proxy, while X-Forwarded-For is client-controlled
             var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
             if (_throttle.RetryAfter(ipAddress) is { } wait)
             {
@@ -68,7 +68,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                // Anyone can call this, so internal error text stays in the log.
+                // Anyone can call this, so internal error text stays in the log
                 _logger.LogError(ex,
                     "Login error for user {Username} from IP {IpAddress}",
                     dto.Username,
@@ -85,7 +85,7 @@ namespace IdentityService.API.Controllers
         {
             try
             {
-                // Only Admins choose the role, same as on the Users page.
+                // Only Admins choose the role, same as on the Users page
                 if (!User.IsInRole(AllRoles.Admin))
                     dto = dto with { SelectedRole = AllRoles.User };
                 var result = await _authService.RegisterAsync(dto);
@@ -439,8 +439,7 @@ namespace IdentityService.API.Controllers
             }
         }
 
-        /// <summary>True for Admins and for users holding a permission the non-admin caller lacks.</summary>
-        /// <remarks>Only Admins may change those accounts, same rule as in UserManagementController.</remarks>
+        /// <summary>True when only an Admin may change the account, being an Admin or holding a permission the caller lacks.</summary>
         private async Task<bool> IsProtectedAsync(int userId)
         {
             if (User.IsInRole(AllRoles.Admin)) return false;

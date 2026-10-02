@@ -6,7 +6,7 @@
     var pageSize = ViewBag.PageSize as int? ?? 30;
     var search = Context.Request.Query["search"].ToString();
 }
-@* Soft-deleted products. Search updates the list in place through ListNav. *@
+@* Soft-deleted products, where search updates the list in place through ListNav *@
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>

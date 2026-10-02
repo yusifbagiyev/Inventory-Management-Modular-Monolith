@@ -26,7 +26,7 @@ namespace InventoryManagement.Web.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Sends the user to the first page they may open. Everyone can open Notifications, so it never ends on Access denied.</summary>
+        /// <summary>Sends the user to the first page they may open, else to Notifications which everyone can open.</summary>
         public IActionResult Index()
         {
             var pages = new (string Permission, string Url)[]
@@ -44,7 +44,7 @@ namespace InventoryManagement.Web.Controllers
             return Redirect(pages.FirstOrDefault(p => User.HasPermission(p.Permission)).Url ?? "/Notifications");
         }
 
-        /// <summary>Period figures come from the transfers created in the period. Product figures are the current state.</summary>
+        /// <summary>Period figures come from transfers created in the period, while product figures show the current state.</summary>
         [PermissionAuthorize(AllPermissions.DashboardView)]
         public async Task<IActionResult> Dashboard(string period = "last7days")
         {
@@ -55,7 +55,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 "last30days" => now.Date.AddDays(-29),
                 "last90days" => now.Date.AddDays(-89),
-                // Starts on the 1st so every monthly bar covers a whole month.
+                // Starts on the 1st so every monthly bar covers a whole month
                 "last6months" => new DateTime(now.Year, now.Month, 1).AddMonths(-5),
                 "all" => DateTime.MinValue,
                 _ => now.Date.AddDays(-6)
@@ -64,7 +64,7 @@ namespace InventoryManagement.Web.Controllers
                 period = "last7days";
 
             var transfers = await _mediator.Send(new GetTransferActivityQuery(startDate, endDate));
-            // Product tiles ignore the period and show the current state.
+            // Product tiles ignore the period and show the current state
             var products = await _mediator.Send(new GetProductCountsQuery());
             var faulty = products.NotWorking > 0
                 ? (await _mediator.Send(new GetAllProductsQuery(1, 2, status: false))).Items
@@ -84,7 +84,7 @@ namespace InventoryManagement.Web.Controllers
                 PendingTransfers = pending.TotalCount,
                 OldestPendingDays = oldestPending is { } oldest ? (int)(now.Date - oldest.Date).TotalDays : null,
                 CategoryDistributions = categories,
-                // Same row count as categories so the two lists side by side end level.
+                // Same row count as categories so the two lists side by side end level
                 DepartmentStats = BuildDepartmentStats(transfers, categories.Count),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
                 PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
@@ -93,7 +93,7 @@ namespace InventoryManagement.Web.Controllers
 
             ViewBag.CurrentPeriod = period;
 
-            // The needs-attention block also ignores the period.
+            // The needs-attention block also ignores the period
             ViewBag.NotWorking = products.NotWorking;
             ViewBag.OpenTransfers = pending.TotalCount;
             if (User.HasPermission(AllPermissions.ApprovalView))
@@ -176,7 +176,7 @@ namespace InventoryManagement.Web.Controllers
                     break;
 
                 case "last90days":
-                    // Weekly buckets labelled by their first day.
+                    // Weekly buckets labelled by their first day
                     for (var from = startDate; from <= endDate; from = from.AddDays(7))
                         AddBucket(from.ToString("dd.MM"), from.Date, from.AddDays(7).Date);
                     break;
@@ -207,7 +207,7 @@ namespace InventoryManagement.Web.Controllers
             return data;
         }
 
-        // Hand-written because the formatting culture stays en-US.
+        // Hand-written because the formatting culture stays en-US
         private static readonly string[] AzMonths = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
         private static readonly string[] AzDays = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
         private static readonly string[] RuMonths = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];

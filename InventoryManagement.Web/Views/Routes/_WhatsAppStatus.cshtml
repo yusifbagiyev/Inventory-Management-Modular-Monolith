@@ -1,5 +1,5 @@
 @model RouteViewModel
-@* Shows nothing once the WhatsApp message is sent. Only failed and queued messages get a marker. *@
+@* Only failed and queued WhatsApp messages get a marker, a sent one shows nothing *@
 @if (Model.WhatsAppStatus == "Failed")
 {
     <span class="ip-wa ip-wa-failed" title="@Model.WhatsAppError">

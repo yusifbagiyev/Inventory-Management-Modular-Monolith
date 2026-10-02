@@ -47,13 +47,13 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.CompletedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // The xmin column is the concurrency token, so two users cannot both complete the same route.
+                // The xmin column is the concurrency token, so two users can't both complete the same route
                 entity.Property<uint>("xmin").IsRowVersion();
 
                 entity.HasIndex(e => e.FromDepartmentId).HasDatabaseName("IX_InventoryRoutes_FromDepartmentId");
                 entity.HasIndex(e => e.ToDepartmentId).HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
                 entity.HasIndex(e => e.CreatedAt);
-                // Matches the default list order, pending first and then most recently completed.
+                // Matches the default list order, pending first and then most recently completed
                 entity.HasIndex(e => new { e.IsCompleted, e.CompletedAt });
             });
         }

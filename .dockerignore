@@ -28,6 +28,7 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
+# Secrets, certificates, runtime data and deploy scripts stay out of the build context
 .env
 .env.production
 *.key

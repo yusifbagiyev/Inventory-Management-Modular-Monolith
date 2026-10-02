@@ -2,8 +2,7 @@ using System.Collections.Concurrent;
 
 namespace SharedServices.Identity
 {
-    // Only failures count because a whole office signs in from one public address.
-    /// <summary>Holds back a client address after too many failed sign-ins in the window.</summary>
+    /// <summary>Holds back an address after too many failed sign-ins, counting only failures as an office shares one IP.</summary>
     public sealed class LoginThrottle
     {
         public const int MaxFailures = 20;

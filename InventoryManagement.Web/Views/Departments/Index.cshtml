@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    @* Status and sort work on the rows already on screen. Search on Enter goes to the server. *@
+    @* Status and sort work on the rows already on screen, while search on Enter goes to the server *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -100,7 +100,7 @@
                                     }
                                 </td>
                                 <td class="hide-sm">
-                                    @* The ellipsis needs a max-width in an auto-layout table. *@
+                                    @* The ellipsis needs a max-width in an auto-layout table *@
                                     <div class="cell-sub text-truncate" style="max-width: 300px;" title="@department.Description">
                                         @if (!string.IsNullOrEmpty(department.Description))
                                         {
@@ -203,7 +203,7 @@
 @section Scripts {
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Kept so the status filter can be undone without going back to the server.
+        // Kept so the status filter can be undone without going back to the server
         let allDepartmentRows = [];
         const serverSearchActive = @(hasSearch ? "true" : "false");
 
@@ -223,12 +223,12 @@
 
             $('#resetFiltersBtn').toggleClass('d-none', !serverSearchActive && !statusFilter);
 
+            // The table body is missing when the server returned no rows at all
             const tbody = document.querySelector('#departmentsTable tbody');
             if (!tbody) {
                 return;
             }
 
-            // Rows carry their filter and sort values in data-* attributes.
             let visibleRows = allDepartmentRows.filter(row => {
                 const isActive = row.dataset.status === 'active';
                 return !statusFilter ||
@@ -309,7 +309,7 @@
             $('#deleteModal').modal('show');
         }
 
-        // Other users' changes refresh the count and the table in place.
+        // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['department', 'product'],
             regions: ['#departmentsSummary', '#departmentsRegion'],

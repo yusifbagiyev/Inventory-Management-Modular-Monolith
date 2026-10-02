@@ -41,7 +41,7 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task ApprovalRequestCreatedAsync(ApprovalRequestCreatedEvent e, CancellationToken cancellationToken)
         {
-            // Admins and approval.decide holders.
+            // Everyone who can decide, Admins included
             var admins = await _users.GetActiveUserIdsWithPermissionAsync(AllPermissions.ApprovalDecide, cancellationToken);
             var data = Json(new { approvalRequestId = e.RequestId, requestType = e.RequestType, requestedBy = e.RequestedByName });
 
@@ -146,7 +146,7 @@ namespace NotificationService.Infrastructure.Services
                 $"Product {e.Model} (Code: {e.InventoryCode}) transfer to {e.ToDepartmentName} has been completed",
                 data)), cancellationToken);
 
-            // The outbox paces and retries it, and stores the outcome on the route.
+            // The outbox paces and retries it, and stores the outcome on the route
             await _whatsApp.QueueRouteCompletedAsync(e, cancellationToken);
         }
 

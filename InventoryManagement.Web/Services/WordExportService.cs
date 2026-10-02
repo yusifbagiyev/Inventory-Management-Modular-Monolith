@@ -9,6 +9,7 @@ using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 
 namespace InventoryManagement.Web.Services
 {
+    /// <summary>Builds a department's inventory hand-over document in Word, with the logo and brand colour.</summary>
     public class WordExportService : IWordExportService
     {
         private readonly IWebHostEnvironment _environment;
@@ -56,7 +57,7 @@ namespace InventoryManagement.Web.Services
 
                 AddSignatureSection(body, department, exportedByFullName);
 
-                // Must stay last. Word ignores the margins unless sectPr is the body's final child.
+                // Must stay last because Word ignores the margins unless sectPr is the body's final child
                 SetPageMargins(mainPart);
             }
 
@@ -126,7 +127,7 @@ namespace InventoryManagement.Web.Services
             logoParaProp.Append(new SpacingBetweenLines { Before = "0", After = "0" });
             logoPara.Append(logoParaProp);
 
-            // A missing or unreadable logo falls back to a placeholder instead of failing the export.
+            // A missing or unreadable logo falls back to a placeholder instead of failing the export
             var logoPath = Path.Combine(_environment.WebRootPath, "logo.jpg");
             try
             {
@@ -187,7 +188,7 @@ namespace InventoryManagement.Web.Services
         {
             ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
 
-            // Feeding a file stream directly failed on permissions in the container, so read it into memory.
+            // Read into memory because feeding a file stream hits permission errors in the container
             using (var memoryStream = new MemoryStream(File.ReadAllBytes(imagePath)))
             {
                 imagePart.FeedData(memoryStream);
@@ -195,7 +196,7 @@ namespace InventoryManagement.Web.Services
 
             string relationshipId = mainPart.GetIdOfPart(imagePart);
 
-            // 9525 EMUs per pixel at 96 DPI.
+            // 9525 EMUs per pixel at 96 DPI
             long widthInEmus = widthInPoints * 9525;
             long heightInEmus = heightInPoints * 9525;
 
@@ -284,7 +285,7 @@ namespace InventoryManagement.Web.Services
             tblProp.Append(new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
 
             var tblBorders = new TableBorders(
-                // Word expects this order: top, left, bottom, right, insideH, insideV.
+                // Word expects the borders in exactly this order
                 new TopBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new LeftBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new BottomBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
@@ -318,7 +319,7 @@ namespace InventoryManagement.Web.Services
                 dataRow.Append(CreateCenteredDataCell(product.CategoryName ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Vendor ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Model ?? "N/A"));
-                // An unassigned product gets a blank cell, the same as in the PDF export.
+                // An unassigned product gets a blank cell, the same as in the PDF export
                 dataRow.Append(CreateCenteredDataCell(
                     string.IsNullOrWhiteSpace(product.Worker) ? string.Empty : product.Worker));
                 dataRow.Append(CreateCenteredDataCell(product.InventoryCode.ToString()));
@@ -330,7 +331,7 @@ namespace InventoryManagement.Web.Services
 
             var totalLabelCell = new TableCell();
             var totalLabelCellProp = new TableCellProperties();
-            // Spans all but the last column so the count lines up under the inventory code header.
+            // Spans all but the last column so the count lines up under the inventory code header
             totalLabelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
             totalLabelCellProp.Append(new GridSpan { Val = 4 });
             totalLabelCell.Append(totalLabelCellProp);
@@ -439,7 +440,7 @@ namespace InventoryManagement.Web.Services
             var run = new Run();
             var runProp = new RunProperties();
 
-            // Word expects this order inside rPr: rFonts, b, color, sz.
+            // Word wants rFonts, b, color and sz in that order inside rPr
             if (timesNewRoman)
             {
                 runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman", ComplexScript = "Times New Roman" });
@@ -475,7 +476,7 @@ namespace InventoryManagement.Web.Services
                 runProp.Append(new Bold());
             }
 
-            // Color has to come before sz.
+            // Color has to come before sz
             runProp.Append(new Color { Val = color });
             runProp.Append(new FontSize { Val = fontSize.ToString() });
 

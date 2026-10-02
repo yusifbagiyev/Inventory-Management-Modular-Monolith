@@ -1,5 +1,5 @@
 @model ProductViewModel
-@* Shared by Create and Edit. On Edit the inventory code is read-only because it is changed from the list. *@
+@* Shared by Create and Edit, where the inventory code is read-only because it is changed from the list *@
 @{
     var isEdit = ViewData["IsEdit"] as bool? == true;
 }
@@ -73,7 +73,7 @@
     </div>
 </section>
 
-@* product-form.js adds, removes and renumbers these rows. *@
+@* product-form.js adds, removes and renumbers these rows *@
 <section class="ip-form-section">
     <div class="d-flex justify-content-between align-items-baseline gap-3 flex-wrap mb-3">
         <h2 class="mb-0">@L["Specifications"]</h2>

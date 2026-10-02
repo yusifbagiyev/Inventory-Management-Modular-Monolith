@@ -136,7 +136,7 @@
     <script>
         $(document).ready(initProductsTable);
 
-        // Runs on load and again after live-updates.js swaps in a fresh table.
+        // Runs on load and again after live-updates.js swaps in a fresh table
         function initProductsTable() {
             $('#categoryProductsTable').DataTable({
                 pageLength: 10,
@@ -146,7 +146,7 @@
         }
 
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['category', 'product'],
             ids: { category: @Model.Id },

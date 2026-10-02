@@ -1,5 +1,5 @@
 @using InventoryManagement.Web.Localization
-@* LanguageController.Set stores the culture cookie and sends the user back to this page. *@
+@* LanguageController.Set stores the culture cookie and sends the user back to this page *@
 <form method="post" asp-controller="Language" asp-action="Set" class="ip-seg" data-no-ajax role="group" aria-label="@L["Switch language"]">
     @Html.AntiForgeryToken()
     <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />

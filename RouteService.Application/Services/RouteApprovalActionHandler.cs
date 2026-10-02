@@ -53,13 +53,13 @@ namespace RouteService.Application.Services
             var existing = await _mediator.Send(new GetRouteByIdQuery(routeId), cancellationToken)
                 ?? throw new NotFoundException($"Route with ID {routeId} not found");
 
-            // The request carries only the changed fields. Everything else keeps its current value.
+            // The request carries only the changed fields, everything else keeps its current value
             var dto = new UpdateRouteDto
             {
                 Notes = data.Has("notes") ? data.GetString("notes") : existing.Notes,
                 ToWorker = data.Has("toWorker") ? data.GetString("toWorker") : existing.ToWorker,
                 ToDepartmentId = data.Has("toDepartmentId") ? data.GetInt("toDepartmentId") : null,
-                // Older requests carry a single image that replaces all images.
+                // Older requests carry a single image that replaces all images
                 ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
                 ImageFiles = data.GetImages(),
                 RemoveImageUrls = data.GetStrings("removeImageUrls"),

@@ -67,7 +67,7 @@
             </div>
         </section>
 
-        @* Only Admins see and change the role. *@
+        @* Only Admins see and change the role *@
         @if (isAdminViewer)
         {
             <section class="ip-form-section">
@@ -94,7 +94,7 @@
         </div>
     </form>
 
-    @* Each permission change saves on its own, so this sits outside the form and its Save button. *@
+    @* Each permission change saves on its own, so this sits outside the form and its Save button *@
     @if (isAdminViewer && userRole == "Admin")
     {
         <section class="ip-section ip-form mt-5">
@@ -104,7 +104,7 @@
     }
     else if (isAdminViewer && ViewBag.PermissionEditor is PermissionEditorModel editor)
     {
-        @* The user's own permissions on top of the role's, which are shown locked. *@
+        @* The user's own permissions on top of the role's, which are shown locked *@
         <section class="ip-section mt-5" id="permissionsSection">
             <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
                 <div>
@@ -130,7 +130,7 @@
 @section Scripts {
     <script src="~/js/permission-editor.js" asp-append-version="true"></script>
     <script>
-        // If someone else changes this user while it is open, warn but leave the form alone.
+        // If someone else changes this user while it is open, warn but leave the form alone
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['user'],

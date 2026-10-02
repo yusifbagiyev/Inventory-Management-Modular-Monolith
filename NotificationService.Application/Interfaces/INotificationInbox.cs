@@ -2,7 +2,7 @@ using NotificationService.Application.DTOs;
 
 namespace NotificationService.Application.Interfaces
 {
-    /// <summary>A user's stored notifications. Every method is scoped to the given user.</summary>
+    /// <summary>A user's stored notifications, with every method scoped to the given user.</summary>
     public interface INotificationInbox
     {
         Task<IReadOnlyList<NotificationDto>> GetAsync(int userId, bool unreadOnly = false, int? limit = null, CancellationToken cancellationToken = default);

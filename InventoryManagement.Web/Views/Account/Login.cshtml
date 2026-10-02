@@ -3,24 +3,23 @@
 @{
     Layout = null;
     var returnUrl = Model.ReturnUrl;
-    // Version plus the commit hash cut to 7 characters.
+    // The version followed by the first 7 characters of the commit hash
     var info = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "";
     var plus = info.IndexOf('+');
     var version = plus < 0 ? info : info[..plus] + " · " + info[(plus + 1)..].Substring(0, Math.Min(7, info.Length - plus - 1));
 }
-@* Recent accounts on this browser only need a password. Another account also asks for the username. *@
+@* Recent accounts on this browser only need a password, another account also asks for the username *@
 <!DOCTYPE html>
 <html lang="@JsonStringLocalizer.Language">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@L["Sign in"] - @L["166 Inventory"]</title>
-    @* The .ico is for older browsers and the PNG for iOS home screens. *@
+    @* The .ico is for older browsers and the PNG for iOS home screens *@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
-    @* Names the rail and toolbar only while a view transition captures them.
-       It has to run before the first render, so it stays inline in the head. *@
+    @* Names the rail and toolbar only during a view transition, inline since it must run before first render *@
     <script>
         (function () {
             var root = document.documentElement;
@@ -36,13 +35,12 @@
                 name(true);
                 e.viewTransition.finished.finally(function () { name(false); });
             });
-            // A page restored from the back/forward cache still has the names from its swap.
+            // A page restored from the back/forward cache still has the names from its swap
             window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
         })();
     </script>
 
-    @* Sets the theme before first paint so dark pages don't flash light.
-       Keep the storage key in sync with Theme in site.js. *@
+    @* Sets the theme before first paint so dark pages don't flash light, same storage key as Theme in site.js *@
     <script>
         (function () {
             var t = null;
@@ -197,7 +195,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Show or hide the password.
             var toggle = document.getElementById('togglePassword');
             if (toggle) toggle.addEventListener('click', function () {
                 var field = document.getElementById('Password');
@@ -210,7 +207,7 @@
                 toggle.querySelector('i').className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
             });
 
-            // Theme toggle. Uses the same storage key as site.js.
+            // The theme toggle uses the same storage key as site.js
             var root = document.documentElement;
             var themeButton = document.getElementById('themeToggle');
             function syncTheme() {

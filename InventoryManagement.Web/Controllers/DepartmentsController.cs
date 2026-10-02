@@ -18,7 +18,7 @@ namespace InventoryManagement.Web.Controllers
     [Authorize]
     public class DepartmentsController : BaseController
     {
-        // Cap for the details page table and the Word export.
+        // Cap for the details page table and the Word export
         private const int MaxProductsListed = 10000;
 
         private readonly IMediator _mediator;
@@ -144,7 +144,7 @@ namespace InventoryManagement.Web.Controllers
             if (department == null)
                 return RedirectToNotFound();
 
-            // The hand-over lists only what is in use, so deactivated items are left out.
+            // The hand-over lists only what is in use, so deactivated items are left out
             var products = await GetDepartmentProducts(id, activeOnly: true);
             var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
 

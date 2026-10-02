@@ -31,6 +31,7 @@
         </div>
     </div>
 
+    @* Admin accounts are changed by Admins only *@
     @if (User.HasPermission("user.manage") && (User.IsInRole("Admin") || !Model.CurrentRoles.Contains("Admin")))
     {
     <div class="ip-page-actions mb-4">
@@ -124,7 +125,7 @@
                 okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
-                // The id goes in the route because the action does not bind it from a JSON body.
+                // The id goes in the route because the action does not bind it from a JSON body
                 fetch(`@Url.Action("QuickToggleStatus")/${userId}`, {
                     method: 'POST',
                     headers: AppConfig.antiforgeryHeaders()
@@ -152,7 +153,7 @@
             modal.show();
         }
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['user'],
             ids: { user: @Model.Id },

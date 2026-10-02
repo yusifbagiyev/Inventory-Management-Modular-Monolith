@@ -3,10 +3,10 @@ using Newtonsoft.Json.Linq;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    // ActionData comes in camelCase and older PascalCase shapes. Field names are English keys that the view translates.
     /// <summary>Reads a request's stored ActionData into a title and a list of field changes for the approval UI.</summary>
     public sealed class ApprovalView
     {
+        /// <summary>One row of the diff, with Field as an English key the view translates.</summary>
         public sealed record Change(string Field, string? Current, string? Proposed, bool Localize = false);
 
         public string Kind { get; private init; } = "";
@@ -19,6 +19,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         private static readonly Regex FieldChange = new(@"^(Vendor|Model|Category|Department|Worker|Description|Color|Destination): (.*?) (?:→|->) (.*)$", RegexOptions.Singleline);
 
+        // Change lines written as whole sentences instead of a field with old and new values
         private static readonly Dictionary<string, Change> Sentences = new()
         {
             ["Product is working now"] = new("Working state", "Not working", "Working", true),
@@ -91,7 +92,7 @@ namespace InventoryManagement.Web.Models.ViewModels
                     view.Changes.Add(new("Specifications", null, update is null ? null : SpecificationText(update)));
                 else if (Sentences.TryGetValue(line.Trim(), out var change))
                     view.Changes.Add(change);
-                // The image change line is skipped here because the images block shows it.
+                // The image change line is skipped here because the images block shows it
             }
             if (HasImageChanges(update) && view.Changes.All(c => c.Field != "Images"))
                 view.Changes.Add(new("Images", null, null));
@@ -191,6 +192,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         private static string SubjectOf(string? model, string? code)
             => string.Join(" · ", new[] { model, code }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+        // Case-insensitive because older ActionData rows are PascalCase
         private static JToken? Get(JObject o, string name) => o.GetValue(name, StringComparison.OrdinalIgnoreCase);
 
         private static JObject? Obj(JObject o, string name) => Get(o, name) as JObject;

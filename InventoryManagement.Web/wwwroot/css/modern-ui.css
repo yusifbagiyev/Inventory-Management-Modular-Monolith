@@ -1,8 +1,6 @@
-/* Restyles the Bootstrap classes the older markup uses. Load it after tokens.css and site.css.
-   The short names below only point at the tokens, so every colour is defined in one place. */
+/* Restyles the Bootstrap classes of the older markup and loads after tokens.css and site.css */
 
-/* Declared on every [data-bs-theme] element, not only :root.
-   Custom properties inherit computed values, so the dark sidebar would otherwise keep the light ones. */
+/* Declared on every [data-bs-theme] element because inherited values would keep the sidebar light */
 :root, [data-bs-theme] {
     --ground: var(--ip-surface);
     --surface: var(--ip-surface);
@@ -191,8 +189,7 @@ hr { border-color: var(--line); opacity: 1; }
 .skeleton-title { height: 1rem; width: 42% !important; margin-bottom: .9rem; }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
-/* tokens.css swaps the dark palette, and this block maps the Bootstrap variables it leaves out.
-   It applies to every dark element because the sidebar is dark in both themes. */
+/* Bootstrap variables tokens.css leaves out, on every dark element since the sidebar is always dark */
 [data-bs-theme="dark"] {
     color-scheme: dark;
     --bs-body-bg: var(--ip-surface);
@@ -207,8 +204,7 @@ hr { border-color: var(--line); opacity: 1; }
     --bs-link-hover-color: var(--ip-accent-hover);
 }
 
-/* Air Datepicker in the app palette.
-   The body prefix outranks the library's own variables, whose stylesheet loads later. */
+/* Air Datepicker palette, with a body prefix to outrank the library stylesheet that loads later */
 body .air-datepicker {
     --adp-background-color: var(--surface);
     --adp-border-color: var(--line-2);
@@ -232,11 +228,10 @@ body .air-datepicker {
     --adp-btn-background-color-hover: var(--surface-2);
     --adp-font-family: inherit;
 }
-/* The library transitions every property, so day colours lagged after a theme switch.
-   Only the month-change animation is kept. */
+/* The library transitions every property, which makes day colours lag on a theme switch */
 body .air-datepicker-body { transition-property: opacity, transform; }
 
-/* Image picker from _ImageManager and image-manager.js. The first tile is the cover. */
+/* Image picker from _ImageManager, where the first tile is the cover */
 .image-manager.im-dragover .ip-image-add { border-color: var(--accent); color: var(--ip-accent-text); background: var(--ip-accent-soft); }
 .im-tile { min-width: 0; }
 .im-tile .ip-image-tile img { cursor: zoom-in; }

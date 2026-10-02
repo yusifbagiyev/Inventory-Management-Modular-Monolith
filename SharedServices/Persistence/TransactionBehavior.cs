@@ -14,7 +14,7 @@ namespace SharedServices.Persistence
 
         public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
-            // Nested requests join the outer transaction.
+            // Nested requests join the outer transaction
             if (request is not ITransactionalRequest || _session.InTransaction)
                 return await next();
 

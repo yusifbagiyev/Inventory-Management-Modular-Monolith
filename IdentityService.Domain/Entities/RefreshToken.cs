@@ -1,5 +1,6 @@
 ﻿namespace IdentityService.Domain.Entities
 {
+    /// <summary>A refresh token of an API client, with Token and ReplacedByToken holding SHA-256 hashes.</summary>
     public class RefreshToken
     {
         public int Id { get; set; }

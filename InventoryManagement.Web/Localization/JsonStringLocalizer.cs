@@ -12,14 +12,14 @@ namespace InventoryManagement.Web.Localization
     /// <summary>Translates by English key from the embedded i18n json files, which the browser also gets.</summary>
     public sealed partial class JsonStringLocalizer : IStringLocalizer
     {
-        // English has no table because the keys are English.
+        // English has no table because the keys are English
         private static readonly Dictionary<string, Lazy<Dictionary<string, string>>> Tables = new()
         {
             ["az"] = new(() => Load("i18n.az.json")),
             ["ru"] = new(() => Load("i18n.ru.json")),
         };
 
-        // Keys with placeholders turned into regexes, used to translate runtime messages.
+        // Keys with placeholders turned into regexes, used to translate runtime messages
         private static readonly Dictionary<string, Lazy<List<(Regex Pattern, string Template)>>> PatternsByLanguage =
             Tables.ToDictionary(t => t.Key, t => new Lazy<List<(Regex Pattern, string Template)>>(() => BuildPatterns(t.Value.Value)));
 
@@ -28,7 +28,7 @@ namespace InventoryManagement.Web.Localization
         public static bool IsAzerbaijani => Language == "az";
         public static bool IsRussian => Language == "ru";
 
-        // Null for English.
+        // Null for English
         private static Dictionary<string, string>? Table => Tables.TryGetValue(Language, out var t) ? t.Value : null;
 
         private static List<(Regex Pattern, string Template)> Patterns
@@ -80,7 +80,7 @@ namespace InventoryManagement.Web.Localization
             if (table.TryGetValue(message, out var exact))
                 return exact;
 
-            // Validation errors come joined into one message.
+            // Validation errors come joined into one message
             if (message.Contains("; "))
                 return string.Join("; ", message.Split("; ").Select(TranslateMessage));
 
@@ -89,12 +89,12 @@ namespace InventoryManagement.Web.Localization
                 var match = pattern.Match(message);
                 if (!match.Success)
                     continue;
-                // A captured value can itself be translatable text, such as a change list.
+                // A captured value can itself be translatable text, such as a change list
                 var values = match.Groups.Cast<Group>().Skip(1).Select(g => (object)TranslateParts(g.Value)).ToArray();
                 return string.Format(CultureInfo.CurrentCulture, template, values);
             }
 
-            // Change summaries are comma-joined lists of known messages.
+            // Change summaries are comma-joined lists of known messages
             return message.Contains(", ") ? TranslateParts(message) : message;
         }
 
@@ -114,7 +114,7 @@ namespace InventoryManagement.Web.Localization
                 return part;
             }));
 
-        /// <summary>Splits a change list into items. Values can contain commas, so an unknown piece joins the item before it.</summary>
+        /// <summary>Splits a change list into items, gluing an unknown piece to the one before since values can hold commas.</summary>
         private static List<string> SplitItems(string value)
         {
             var items = new List<string>();
@@ -130,10 +130,10 @@ namespace InventoryManagement.Web.Localization
             return items;
         }
 
-        // Matches the field name that starts a change item.
+        // Matches the field name that starts a change item
         private static readonly Regex StartsItem = new(@"^[A-Z][A-Za-z ]{1,30}: ", RegexOptions.Compiled);
 
-        // Inside a change only the None placeholder is translated. Real values stay as they are.
+        // Inside a change only the None placeholder is translated, real values stay as they are
         private static string Value(string value)
             => value == "None" && Table is { } table && table.TryGetValue("None", out var none) ? none : value;
 
@@ -164,19 +164,18 @@ namespace InventoryManagement.Web.Localization
             var list = new List<(Regex Pattern, string Template)>();
             foreach (var (key, value) in table)
             {
-                // A pattern needs enough real words around its placeholders or it matches unrelated text.
-                // Change lines with an arrow are specific enough even with a short field name.
+                // Without 8 letters of real text or an arrow a pattern would match unrelated messages
                 var literal = Placeholder().Replace(key, "");
                 if (!Placeholder().IsMatch(key) || (literal.Count(char.IsLetter) < 8 && !literal.Contains('→')))
                     continue;
                 var order = Placeholder().Matches(key).Select(m => int.Parse(m.Groups[1].Value)).ToList();
                 var regex = "^" + string.Concat(Placeholder().Split(key)
                     .Select((part, i) => i % 2 == 0 ? Regex.Escape(part) : "(.*?)")) + "$";
-                // Placeholders may appear out of order in the key, so renumber them by capture position.
+                // Placeholders may appear out of order in the key, so renumber them by capture position
                 var template = Placeholder().Replace(value, m => "{" + order.IndexOf(int.Parse(m.Groups[1].Value)) + "}");
                 list.Add((new Regex(regex, RegexOptions.CultureInvariant), template));
             }
-            // Longest pattern first so the most specific one wins.
+            // Longest pattern first so the most specific one wins
             return list.OrderByDescending(p => p.Item1.ToString().Length).ToList();
         }
 
@@ -184,6 +183,7 @@ namespace InventoryManagement.Web.Localization
         private static partial Regex Placeholder();
     }
 
+    /// <summary>Hands out the one shared localizer whatever resource type is asked for.</summary>
     public sealed class JsonStringLocalizerFactory : IStringLocalizerFactory
     {
         private static readonly JsonStringLocalizer Instance = new();

@@ -21,8 +21,7 @@ namespace ProductService.Application.DTOs
         public bool IsWorking { get; set; }
         public bool IsActive { get; set; }
         public bool IsNewItem { get; set; }
-        /// <summary>True when <see cref="Color"/> and <see cref="Specifications"/> were sent and replace the current ones.</summary>
-        /// <remarks>Older clients and old approval requests leave it false, so the product keeps its details.</remarks>
+        /// <summary>When set, <see cref="Color"/> and <see cref="Specifications"/> replace the current details.</summary>
         public bool ReplaceDetails { get; set; }
         public string? Color { get; set; }
         public List<ProductSpecificationDto>? Specifications { get; set; }

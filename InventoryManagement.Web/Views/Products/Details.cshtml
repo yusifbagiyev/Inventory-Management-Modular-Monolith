@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    @* Phones get these actions in the fixed bar at the end of the page. *@
+    @* Phones get these actions in the fixed bar at the end of the page *@
     <div class="ip-page-actions mb-4 d-none d-md-flex">
         @if (canUpdate)
         {
@@ -61,7 +61,7 @@
         <div class="ip-banner ip-banner-warning mb-4">
             <i class="fa-regular fa-clock"></i>
             <span class="flex-grow-1">@L["This product has a request awaiting approval. The details below stay as they are until it is approved."]</span>
-            @* Only approvers can open someone else's request, so others go to their own list. *@
+            @* Only approvers can open someone else's request, so others go to their own list *@
             @if (User.HasPermission("approval.view") || User.HasPermission("approval.decide"))
             {
                 <a href="/Approvals?open=@Model.PendingRequestId">@L["Request #{0}", Model.PendingRequestId!]</a>
@@ -124,7 +124,7 @@
         </div>
     }
 
-    @* Transfers are route data, so they need route.view. *@
+    @* Transfers are route data, so they need route.view *@
     @if (User.HasPermission("route.view"))
     {
     <section class="ip-section mt-5">
@@ -245,7 +245,7 @@
             });
         }
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['product', 'route'],
             ids: { product: @Model.Id },

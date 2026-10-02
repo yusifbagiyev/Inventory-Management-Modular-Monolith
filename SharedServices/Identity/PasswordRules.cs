@@ -1,7 +1,6 @@
 namespace SharedServices.Identity
 {
-    // Checked only when a password is set. Existing shorter passwords keep working until changed.
-    /// <summary>Password rules shared by the identity options and every form that sets a password.</summary>
+    /// <summary>Password rules checked only when a password is set, so existing shorter ones keep working until changed.</summary>
     public static class PasswordRules
     {
         /// <summary>The site is public, so short guessable passwords are not allowed.</summary>

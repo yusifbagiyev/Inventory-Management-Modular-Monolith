@@ -4,8 +4,7 @@ using SkiaSharp;
 
 namespace InventoryManagement.Web.Services
 {
-    // File names stay the same so URLs keep working. A marker file in _thumbs stops it from running twice.
-    /// <summary>One-off job that strips EXIF data from photos uploaded before ImageSanitizer existed.</summary>
+    /// <summary>One-off job that strips EXIF data from photos saved before ImageSanitizer, keeping their names so URLs work.</summary>
     public sealed class PhotoMetadataCleanup : BackgroundService
     {
         private const string Marker = ".metadata-removed-v1";
@@ -21,11 +20,13 @@ namespace InventoryManagement.Web.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // The marker file in _thumbs keeps the job from running twice
             var marker = Path.Combine(_root, "_thumbs", Marker);
             if (File.Exists(marker)) return;
 
             try
             {
+                // Let startup and the warm-up queries go first
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 var watch = Stopwatch.StartNew();
                 int cleaned = 0, skipped = 0;
@@ -45,9 +46,11 @@ namespace InventoryManagement.Web.Services
                             if (!ImageSanitizer.HasMetadata(data)) continue;
 
                             var clean = ImageSanitizer.Clean(data).Data;
+                            // Keep the original when the cleaned bytes no longer decode
                             using (var check = SKCodec.Create(new SKMemoryStream(clean)))
                                 if (check == null) { skipped++; continue; }
 
+                            // Write beside the photo and move it over so a crash never leaves a half-written file
                             var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                             await File.WriteAllBytesAsync(temp, clean, stoppingToken);
                             File.Move(temp, path, overwrite: true);
@@ -68,7 +71,7 @@ namespace InventoryManagement.Web.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // The marker is only written on completion, so it runs again on the next start.
+                // The marker is only written on completion, so it runs again on the next start
             }
         }
     }

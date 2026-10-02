@@ -3,7 +3,7 @@ namespace InventoryManagement.Web.Models.ViewModels
     /// <summary>Model for the _ImageManager picker, which posts ImageFiles, RemoveImageUrls and CoverImageUrl.</summary>
     public record ImageManagerModel
     {
-        /// <summary>Current images with the cover first. Empty on create.</summary>
+        /// <summary>Current images with the cover first, empty on create.</summary>
         public IReadOnlyList<string> Existing { get; init; } = [];
         /// <summary>Null when the section title already says it.</summary>
         public string? Label { get; init; }

@@ -60,8 +60,9 @@ namespace SharedServices.Contracts
                 .FirstOrDefault(s => !string.IsNullOrEmpty(s));
             if (string.IsNullOrEmpty(base64) || string.IsNullOrEmpty(fileName)) return null;
 
+            // Strip a data URL prefix
             var comma = base64.IndexOf(',');
-            if (comma >= 0) base64 = base64[(comma + 1)..]; // Strip a data URL prefix
+            if (comma >= 0) base64 = base64[(comma + 1)..];
 
             var bytes = Convert.FromBase64String(base64);
             return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "ImageFile", fileName)
@@ -71,7 +72,7 @@ namespace SharedServices.Contracts
             };
         }
 
-        /// <summary>The images stored by EncodeImagesAsync. Older single-image requests are read with GetImage.</summary>
+        /// <summary>The images stored by EncodeImagesAsync, while older single-image requests go through GetImage.</summary>
         public static List<IFormFile> GetImages(this JsonElement element, string name = "images")
         {
             var files = new List<IFormFile>();

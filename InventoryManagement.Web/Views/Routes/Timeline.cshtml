@@ -72,6 +72,7 @@
 
     @if (product != null)
     {
+        @* The PDF export builds its timeline from these data-* attributes *@
         <ol class="timeline" data-product="@($"{product.InventoryCode} · {product.Model} ({product.Vendor})")">
             @foreach (var route in ordered)
             {
@@ -165,7 +166,7 @@
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
 
-        // Other users' changes refresh the page in place. A deletion shows a notice.
+        // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['route', 'product'],
             ids: { product: @(productId ?? 0) },

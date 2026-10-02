@@ -3,7 +3,7 @@ using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Lookups
 {
-    /// <param name="Products">All products, since every product has a category and a department.</param>
+    /// <summary>Active and inactive counts plus all products, since every product has a category and a department.</summary>
     public record CatalogStatsDto(int Active, int Inactive, int Products);
 
     /// <summary>Header counters for the category list, computed with COUNT queries.</summary>

@@ -1,6 +1,6 @@
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>Own is what gets edited. FromRole is shown locked. Without a SaveUrl the editor is read-only.</summary>
+    /// <summary>Own is edited while FromRole is shown locked, and without a SaveUrl the editor is read-only.</summary>
     public sealed record PermissionEditorModel(
         IReadOnlySet<string> Own,
         IReadOnlySet<string> FromRole,

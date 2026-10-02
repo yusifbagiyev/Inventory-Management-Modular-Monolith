@@ -1,6 +1,6 @@
 namespace RouteService.Domain.Repositories
 {
-    /// <remarks>The host's transaction behavior opens the transaction, so commands only save.</remarks>
+    /// <summary>Commands only save, since the host's transaction behavior opens the transaction.</summary>
     public interface IUnitOfWork
     {
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

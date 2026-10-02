@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Http;
 
 namespace SharedServices.Storage
 {
-    /// <summary>An item's ordered image list. The first image is the cover and is also kept in ImageUrl.</summary>
+    /// <summary>An item's ordered image list, where the first image is the cover and is also kept in ImageUrl.</summary>
     public static class ImageSet
     {
         public const int MaxImages = 10;
 
-        /// <summary>Applies an edit to the list. Returns it with the removed urls, whose files go after commit.</summary>
+        /// <summary>Applies an edit and returns the new list with the removed urls, whose files go after commit.</summary>
         public static (List<string> Images, List<string> Removed) Apply(
             IReadOnlyList<string> current,
             IEnumerable<string>? remove,
@@ -28,7 +28,7 @@ namespace SharedServices.Storage
             return (images, removed);
         }
 
-        /// <summary>Turns the cover into a url. A new upload is sent as new:{index} since it has no url yet.</summary>
+        /// <summary>Turns the cover into a url, where a new upload comes as new:{index} since it has no url yet.</summary>
         public static string? ResolveCover(string? cover, IReadOnlyList<string> added)
             => cover is not null && cover.StartsWith("new:", StringComparison.Ordinal)
                 ? int.TryParse(cover.AsSpan(4), out var i) && i >= 0 && i < added.Count ? added[i] : null

@@ -11,6 +11,7 @@ using SharedServices.Identity;
 
 namespace IdentityService.Infrastructure.Services
 {
+    /// <summary>Sign-in, tokens, users, roles and permissions on top of ASP.NET Core Identity.</summary>
     public class AuthService : IAuthService
     {
         private readonly UserManager<User> _userManager;
@@ -46,8 +47,7 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<UserDto> ValidateCredentialsAsync(string username, string password)
         {
-            // Every failure gives the same answer in about the same time, so nobody can probe for usernames.
-            // A lockout is only logged.
+            // Every failure gives the same answer in about the same time, so nobody can probe for usernames
             var user = await _userManager.FindByNameAsync(username);
             if (user == null || !user.IsActive)
             {
@@ -58,7 +58,8 @@ namespace IdentityService.Infrastructure.Services
             var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
             if (result.IsLockedOut)
             {
-                SpendPasswordCheck(password);   // A locked account answers without hashing.
+                // A locked account answers without hashing, so spend the time here
+                SpendPasswordCheck(password);
                 _logger.LogWarning("Sign-in to locked-out account {Username}", user.UserName);
                 throw new UnauthorizedAccessException("Invalid credentials");
             }
@@ -95,6 +96,7 @@ namespace IdentityService.Infrastructure.Services
             var userDto = await ValidateCredentialsAsync(dto.Username, dto.Password);
             var user = (await _userManager.FindByIdAsync(userDto.Id.ToString()))!;
 
+            // A new API sign-in ends the user's older refresh tokens
             await RevokeAllUserRefreshTokensAsync(user.Id);
 
             return await GenerateTokenResponse(user);
@@ -116,7 +118,7 @@ namespace IdentityService.Infrastructure.Services
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // Only existing roles, so a caller cannot pass an arbitrary role name.
+            // Only existing roles, so a caller cannot pass an arbitrary role name
             var role = dto.SelectedRole ?? AllRoles.User;
             if (!await _roleManager.RoleExistsAsync(role))
                 throw new InvalidOperationException($"Invalid role: {role}");
@@ -127,13 +129,13 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<TokenDto> RefreshTokenAsync(RefreshTokenDto dto)
         {
-            // The refresh token is the proof of identity here.
+            // The refresh token is the proof of identity here
             var refreshToken = await _tokenService.GetRefreshTokenAsync(dto.RefreshToken);
             if (refreshToken == null)
                 throw new UnauthorizedAccessException("Invalid refresh token");
             if (!refreshToken.IsActive)
             {
-                // An exchanged token used again was copied, so end all of the user's tokens.
+                // An exchanged token used again was copied, so end all of the user's tokens
                 if (refreshToken.ReplacedByToken != null)
                 {
                     _logger.LogWarning("Reused refresh token for user {UserId}; all their tokens are revoked", refreshToken.UserId);
@@ -146,7 +148,7 @@ namespace IdentityService.Infrastructure.Services
             if (!user.IsActive)
                 throw new UnauthorizedAccessException("User is inactive");
 
-            // The access token is optional. When sent, it must belong to the same user.
+            // The access token is optional, but when sent it must belong to the same user
             if (!string.IsNullOrEmpty(dto.AccessToken))
             {
                 string? tokenUserId = null;
@@ -157,11 +159,11 @@ namespace IdentityService.Infrastructure.Services
                 }
                 catch (Exception ex)
                 {
-                    // An unreadable access token is ignored, the refresh token is enough.
+                    // An unreadable access token is ignored since the refresh token is enough
                     _logger?.LogWarning(ex, "Access token validation failed during refresh, but continuing with valid refresh token");
                 }
 
-                // Refuse someone else's access token next to this refresh token.
+                // Refuse someone else's access token next to this refresh token
                 if (int.TryParse(tokenUserId, out var parsedUserId) && parsedUserId != user.Id)
                     throw new UnauthorizedAccessException("Token user mismatch");
             }
@@ -173,7 +175,7 @@ namespace IdentityService.Infrastructure.Services
             var newAccessToken = await _tokenService.GenerateAccessToken(user);
             var newRefreshToken = await _tokenService.GenerateRefreshToken();
 
-            // Rotate, so the old refresh token is marked as replaced and a reuse is detected.
+            // Rotate so the old token is marked as replaced and any reuse of it is caught
             await _tokenService.RevokeRefreshTokenAsync(dto.RefreshToken, newRefreshToken);
             await _tokenService.CreateRefreshTokenAsync(user.Id, newRefreshToken);
 
@@ -222,7 +224,7 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
         {
-            // Four queries in total instead of several per user.
+            // Four queries in total instead of several per user
             var users = await _userManager.Users.AsNoTracking().ToListAsync();
 
             var rolesByUser = (await (from ur in _context.UserRoles
@@ -316,6 +318,7 @@ namespace IdentityService.Infrastructure.Services
 
             user.IsActive = !user.IsActive;
             var result = await _userManager.UpdateAsync(user);
+            // A new stamp ends the deactivated user's cookie sessions and access tokens
             if (!user.IsActive)
                 await _userManager.UpdateSecurityStampAsync(user);
 
@@ -354,7 +357,7 @@ namespace IdentityService.Infrastructure.Services
             if (user == null)
                 return (false, "User not found");
 
-            // A wrong current password counts toward the lockout, so an unattended session cannot be used to guess it.
+            // Counts toward lockout, so an unattended session cannot be used to guess the password
             var check = await _signInManager.CheckPasswordSignInAsync(user, currentPassword, lockoutOnFailure: true);
             if (!check.Succeeded)
                 return (false, check.IsLockedOut

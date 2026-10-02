@@ -26,7 +26,7 @@ namespace SharedServices.Persistence
                 if (live is { Entities.Count: > 0 })
                     options.AddInterceptors(new LiveUpdateInterceptor(session, live, sp.GetService<IHttpContextAccessor>()));
 
-                // The sink exists only when the Audit module is registered.
+                // The sink exists only when the Audit module is registered
                 if (audited && sp.GetService<IAuditSink>() != null)
                     options.AddInterceptors(new AuditInterceptor(sp.GetRequiredService<AuditContext>(), session, sp));
             });

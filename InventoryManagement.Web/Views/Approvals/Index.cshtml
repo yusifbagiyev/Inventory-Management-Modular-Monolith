@@ -115,7 +115,7 @@
     </div>
 </div>
 
-@* Header and body are filled from _ApprovalDetails. *@
+@* Header and body are filled from _ApprovalDetails *@
 <div class="modal fade ip-modal" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -157,7 +157,7 @@
         const modalEl = document.getElementById('detailsModal');
 
         function setMode(mode) {   // Mode is view, decide or reject
-            // Use d-none because display:flex on these containers overrides [hidden].
+            // d-none rather than [hidden], which display:flex on these containers overrides
             $('#decisionButtons').toggleClass('d-none', mode !== 'decide');
             $('#rejectButtons').toggleClass('d-none', mode !== 'reject');
             $('#rejectBox').toggleClass('d-none', mode !== 'reject');
@@ -173,7 +173,7 @@
             setMode('view');
             loadApprovalDetails(`/Approvals/Details/${requestId}`, modalEl).then(function (head) {
                 setMode(canDecide && head && head.dataset.status === 'Pending' ? 'decide' : 'view');
-                // Approvers can withdraw their own request but not approve it.
+                // Approvers can reject their own request but not approve it
                 const own = head && head.dataset.own === 'true';
                 $('#modalApproveBtn').toggleClass('d-none', own);
                 $('#ownRequestNote').toggleClass('d-none', !own);
@@ -235,11 +235,11 @@
                 });
         });
 
-        // Products and notifications link here with ?open=id to show that request at once.
+        // Products and notifications link here with ?open=id to open that request straight away
         const openId = parseInt(new URLSearchParams(location.search).get('open'), 10);
         if (openId > 0) viewDetails(openId);
 
-        // Requests and decisions by others refresh the figures, tabs and list.
+        // Requests and decisions by others refresh the figures, tabs and list
         LiveUpdates.watch({
             entities: ['approval'],
             regions: ['#approvalsStats', '#approvalsTabs', '#approvalsRegion']

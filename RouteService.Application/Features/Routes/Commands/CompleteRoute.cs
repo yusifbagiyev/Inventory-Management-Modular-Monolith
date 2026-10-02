@@ -43,7 +43,7 @@ namespace RouteService.Application.Features.Routes.Commands
                 if (route.IsCompleted)
                     throw new RouteException("Route is already completed");
 
-                // The destination may have been deactivated or deleted since the transfer was made.
+                // The destination may have been deactivated or deleted since the transfer was made
                 if (route.RouteType == RouteType.Transfer)
                 {
                     var destination = await _productCatalog.GetDepartmentAsync(route.ToDepartmentId, cancellationToken);
@@ -53,10 +53,10 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 route.Complete();
                 await _repository.UpdateAsync(route, cancellationToken);
-                // The row version makes a concurrent second completion fail here, so the product never moves twice.
+                // The row version makes a concurrent second completion fail here, so the product never moves twice
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Same transaction, so the route is never marked complete without the product moving.
+                // Same transaction, so the route is never marked complete without the product moving
                 if (route.RouteType == RouteType.Transfer)
                 {
                     await _productTransfers.ApplyTransferAsync(

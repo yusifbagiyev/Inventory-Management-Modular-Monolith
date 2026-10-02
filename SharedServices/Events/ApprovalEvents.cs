@@ -9,7 +9,7 @@ namespace SharedServices.Events
         string RequestedByName,
         DateTime CreatedAt) : INotification;
 
-    // Status is Approved, Rejected or Failed. Reason holds the rejection reason or the execution error.
+    // Status is Approved, Rejected or Failed, and Reason holds the rejection reason or the execution error
     public record ApprovalRequestProcessedEvent(
         int RequestId,
         string RequestType,

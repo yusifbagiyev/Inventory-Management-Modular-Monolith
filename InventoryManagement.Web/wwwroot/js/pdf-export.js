@@ -1,15 +1,13 @@
-// Exporters read text with textContent and write it back as HTML, so markup in it would go live.
-// Everything taken from textContent must pass through this first.
+// Exporters write textContent back as HTML, so all of it must pass through here or markup goes live
 function escapePdfText(value) {
     return String(value ?? '').replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
 }
 
-/** Reads a rendered table into plain text rows, picking columns by header name so layout changes do not shift them. */
+/** Reads a table into text rows, picking columns by header name so layout changes do not shift them. */
 function collectTableData(table, excludeHeaders = []) {
-    // Headers are shown in the UI language, so both the English name and its translation match.
-    // The actions column is recognised by its class, whatever its caption says.
+    // Headers are in the UI language, so both the English name and its translation match
     const skip = excludeHeaders.flatMap(h => [h, t(h)]).map(h => h.toLowerCase());
     const allHeaders = Array.from(table.querySelectorAll('thead th'));
     const keep = allHeaders
@@ -39,7 +37,7 @@ function readCellText(td) {
         if (text && !parts.includes(text)) parts.push(text);
     };
 
-    // Placeholder text is marked .pdf-omit so the export prints a blank instead of a filler word.
+    // Placeholder text is marked .pdf-omit so the export prints a blank instead of a filler word
     const textWithoutPlaceholders = el => {
         const clone = el.cloneNode(true);
         clone.querySelectorAll('.pdf-omit').forEach(p => p.remove());
@@ -66,7 +64,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
         `<tr>${cells.map(c => `<td>${escapePdfText(c) || '<span class="empty">-</span>'}</td>`).join('')}</tr>`
     ).join('');
 
-    // A hidden iframe, because a popup gets blocked, steals focus and can leave the list unresponsive.
+    // A hidden iframe, because a popup gets blocked, steals focus and can leave the list unresponsive
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
@@ -90,7 +88,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
   th { background: #EFEFEC; text-align: left; font-size: 7.5pt; text-transform: uppercase;
        letter-spacing: .04em; color: #4F5358; padding: 5px 6px; border-bottom: 1.2px solid #CFCFCB;
        white-space: nowrap; }
-  /* overflow-wrap only breaks words that cannot fit. word-break would split short words in narrow columns. */
+  /* overflow-wrap breaks only words that cannot fit, where word-break would split short ones */
   td { padding: 4px 6px; border-bottom: .8px solid #E4E4E1; vertical-align: top;
        overflow-wrap: break-word; hyphens: none; }
   tbody tr { page-break-inside: avoid; }
@@ -110,7 +108,7 @@ ${filterLine}
 
     printWindow.document.close();
 
-    // Give the iframe a tick to lay out. It is removed afterwards even if printing is cancelled.
+    // Give the iframe a tick to lay out, and remove it afterwards even if printing is cancelled
     const cleanup = () => { if (frame.parentNode) frame.parentNode.removeChild(frame); };
     setTimeout(() => {
         try {
@@ -186,7 +184,7 @@ async function loadWholeList(table) {
     }
 }
 
-/** Exports one list table. The title also appears in the not-found toast. */
+/** Exports a list table with every matching row, not just the page on screen. */
 async function exportListTable(table, title) {
     title = t(title);
     if (!table) {
@@ -211,7 +209,7 @@ function exportRoutesToPDF() {
     exportListTable(document.getElementById('routesTable'), 'Routes');
 }
 
-/** Prints the route history from each item's data-* attributes, so it does not depend on the screen markup. */
+/** Prints the route history from data-* attributes, so it does not depend on the screen markup. */
 function exportTimelineToPDF() {
     const timeline = document.querySelector('.timeline');
     if (!timeline) {
@@ -291,7 +289,7 @@ function exportDepartmentsToPDF() {
 }
 
 function exportCategoriesToPDF() {
-    // The id is on the tbody because the list's client-side search uses it.
+    // The id is on the tbody because the list's client-side search uses it
     const body = document.getElementById('categoriesTable');
     exportListTable(body && body.closest('table'), 'Categories');
 }

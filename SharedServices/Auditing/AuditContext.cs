@@ -38,6 +38,7 @@ namespace SharedServices.Auditing
         /// <summary>Client address from the forwarded-headers middleware, never the raw header.</summary>
         public string? IpAddress => Http?.Connection.RemoteIpAddress?.ToString();
 
+        /// <summary>The command name, else Controller.Action, else the method and path.</summary>
         public string CurrentAction
         {
             get
@@ -50,7 +51,7 @@ namespace SharedServices.Auditing
             }
         }
 
-        // userId overrides the signed-in user for a sign-in, before the cookie exists.
+        /// <summary>Builds a record, where userId stands in for the signed-in user during a sign-in before the cookie exists.</summary>
         public AuditRecord Record(string entityType, string? entityId, string? label, string operation,
             IReadOnlyList<AuditFieldChange>? changes = null, int? userId = null, string? userName = null)
             => new(DateTime.Now, CorrelationId, userId ?? UserId, userName ?? UserName, IpAddress, CurrentAction,

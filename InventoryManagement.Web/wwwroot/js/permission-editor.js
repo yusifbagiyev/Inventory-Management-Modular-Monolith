@@ -1,5 +1,4 @@
-// Permission editor for a user or a role. Every change is saved at once to data-save-url.
-// A failed save puts the control back and shows the error.
+// User or role permission editor that saves each change at once and puts the control back if it fails
 
 window.PermissionEditor = (function () {
     'use strict';
@@ -31,7 +30,7 @@ window.PermissionEditor = (function () {
             count.textContent = on + '/' + (switches.length + segs.length);
         }
 
-        // Granting an action without the page it lives on would leave it unreachable.
+        // Granting an action without the page it lives on would leave it unreachable
         async function ensureView(area) {
             const view = area.querySelector('.ip-switch[data-view="true"]');
             if (!view || view.checked) return;
@@ -80,7 +79,7 @@ window.PermissionEditor = (function () {
             select(to);
             seg.classList.add('is-saving');
             try {
-                // A user holds at most one of the base permission and its .direct pair.
+                // A user holds at most one of the base permission and its .direct pair
                 if ((to === 'approval') !== (from === 'approval')) await post(url, seg.dataset.base, to === 'approval');
                 if ((to === 'direct') !== (from === 'direct')) await post(url, seg.dataset.direct, to === 'direct');
                 seg.dataset.own = to;

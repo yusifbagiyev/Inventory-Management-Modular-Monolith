@@ -41,15 +41,14 @@ namespace RouteService.Infrastructure.Repositories
         {
             var scoped = _context.InventoryRoutes.AsNoTracking().AsQueryable();
 
-            // Same status and type predicates as the list, so the options follow the other filters.
+            // Same status and type predicates as the list, so the options follow the other filters
             if (isCompleted.HasValue)
                 scoped = scoped.Where(r => r.IsCompleted == isCompleted.Value);
 
             if (routeType.HasValue)
                 scoped = scoped.Where(r => r.RouteType == routeType.Value);
 
-            // Routes keep the names of the moment, so renamed or deleted departments still show up.
-            // Each row gives one pair per real end. Department 0 is the placeholder of a removal.
+            // One pair per real end of a route, where department 0 is a removal's placeholder
             var rows = await scoped
                 .Select(r => new
                 {
@@ -105,8 +104,7 @@ namespace RouteService.Infrastructure.Repositories
             CancellationToken cancellationToken = default,
             string? departmentName = null)
         {
-            // Clamp so a zero page or size never gives a negative Skip.
-            // Only the API caps the size, exports ask for more on purpose.
+            // Clamp against a negative Skip but leave the size uncapped, since exports ask for more on purpose
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
             var query = _context.InventoryRoutes.AsNoTracking().AsQueryable();
@@ -117,15 +115,15 @@ namespace RouteService.Infrastructure.Repositories
             if (routeType.HasValue)
                 query = query.Where(r => r.RouteType == routeType.Value);
 
-            // A route touches two departments, so either end matches.
+            // A route touches two departments, so either end matches
             if (departmentId.HasValue)
                 query = query.Where(r => r.FromDepartmentId == departmentId.Value || r.ToDepartmentId == departmentId.Value);
 
-            // Match the name stored on the route, which is what the list shows for renamed or deleted departments.
+            // Match the name stored on the route, which is what the list shows for renamed or deleted departments
             if (!string.IsNullOrEmpty(departmentName))
                 query = query.Where(r => r.FromDepartmentName == departmentName || r.ToDepartmentName == departmentName);
 
-            // The snapshot stores only the category name, there is no id to match on.
+            // The snapshot stores only the category name, there is no id to match on
             if (!string.IsNullOrEmpty(categoryName))
                 query = query.Where(r => r.ProductSnapshot.CategoryName == categoryName);
 
@@ -134,6 +132,7 @@ namespace RouteService.Infrastructure.Repositories
                 query=query.Where(r=>r.CreatedAt>= startDate);
             }
 
+            // The end date counts as the whole day
             if (endDate.HasValue)
             {
                 var EndDate = endDate.Value.AddDays(1).AddTicks(-1);
@@ -145,10 +144,10 @@ namespace RouteService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                // Each word must match some field, since the words of a phrase often sit in different columns.
+                // Each word must match some field, since the words of a phrase often sit in different columns
                 var tokens = search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-                // Rough filter in the database first. ILIKE does not fold Azerbaijani letters.
+                // ILIKE doesn't fold Azerbaijani letters, so the database only does a rough first pass
                 var broadQuery = query;
                 foreach (var word in tokens)
                 {
@@ -168,12 +167,12 @@ namespace RouteService.Infrastructure.Repositories
                 var allFilteredItems = await broadQuery
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes share the same CompletedAt, so these keep paging stable.
+                    // Pending routes share the same CompletedAt, so these keep paging stable
                     .ThenByDescending(r => r.CreatedAt)
                     .ThenByDescending(r => r.Id)
                     .ToListAsync(cancellationToken);
 
-                // Then match in memory with Azerbaijani folding. Every word must hit some field.
+                // Then match every word in memory with Azerbaijani folding
                 items = allFilteredItems.Where(r =>
                 {
                     var fields = new[]
@@ -204,7 +203,7 @@ namespace RouteService.Infrastructure.Repositories
                 items = await query
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes share the same CompletedAt, so these keep paging stable.
+                    // Pending routes share the same CompletedAt, so these keep paging stable
                     .ThenByDescending(r => r.CreatedAt)
                     .ThenByDescending(r => r.Id)
                     .Skip((pageNumber - 1) * pageSize)

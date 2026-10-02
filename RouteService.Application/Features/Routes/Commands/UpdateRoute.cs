@@ -60,11 +60,11 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 var dto = request.Dto;
 
-                // The edit form posts both fields, so this also lets a worker or note be cleared.
+                // The edit form posts both fields, so this also lets a worker or note be cleared
                 if (dto.ToWorker != null || dto.Notes != null)
                     route.UpdateExistingRoute(dto.ToWorker, dto.Notes);
 
-                // Look the name up here so the stored id and name cannot disagree.
+                // Look the name up here so the stored id and name can't disagree
                 if (dto.ToDepartmentId.HasValue && dto.ToDepartmentId.Value != route.ToDepartmentId)
                 {
                     var department = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId.Value, cancellationToken)
@@ -84,7 +84,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     added.Add(uploaded);
                 }
 
-                // A single ImageFile from older clients replaces all images.
+                // A single ImageFile from older clients replaces all images
                 var (images, removed) = ImageSet.Apply(
                     route.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });
@@ -94,6 +94,7 @@ namespace RouteService.Application.Features.Routes.Commands
                 await _repository.UpdateAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                // Removed images are only deleted once the update is committed
                 foreach (var url in removed)
                     _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(url));
             }

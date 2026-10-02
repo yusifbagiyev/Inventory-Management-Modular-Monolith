@@ -4,12 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - " + L["166 Inventory"] : L["166 Inventory"])</title>
-    @* The .ico is for older browsers and the PNG for iOS home screens. *@
+    @* The .ico is for older browsers and the PNG for iOS home screens *@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
-    @* Prefetches a page when its link is hovered, so the click opens it at once.
-       Exclude anything with a side effect or a file download. *@
+    @* Prefetches a page when its link is hovered, so leave out anything with a side effect or a download *@
     <script type="speculationrules">
         {
             "prefetch": [{
@@ -22,8 +21,7 @@
             }]
         }
     </script>
-    @* Names the rail and toolbar only while a view transition captures them.
-       It has to run before the first render, so it stays inline in the head. *@
+    @* Names the rail and toolbar only during a view transition, inline since it must run before first render *@
     <script>
         (function () {
             var root = document.documentElement;
@@ -39,12 +37,11 @@
                 name(true);
                 e.viewTransition.finished.finally(function () { name(false); });
             });
-            // A page restored from the back/forward cache still has the names from its swap.
+            // A page restored from the back/forward cache still has the names from its swap
             window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
         })();
     </script>
-    @* Sets the theme before first paint so dark pages don't flash light.
-       Keep the storage key in sync with Theme in site.js. *@
+    @* Sets the theme before first paint so dark pages don't flash light, same storage key as Theme in site.js *@
     <script>
         (function () {
             var t = null;
@@ -54,7 +51,7 @@
         })();
     </script>
 
-    <!-- Order matters: tokens.css must load before everything that reads its variables -->
+    <!-- tokens.css has to load before every stylesheet that reads its variables -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
@@ -70,8 +67,7 @@
     <div class="ip-app" id="wrapper">
         @if (signedIn)
         {
-            @* Phone app bar, hidden from 768px.
-               On pages with a breadcrumb site.js swaps the menu button for a back arrow. *@
+            @* Phone app bar below 768px, where site.js turns the menu button into a back arrow on breadcrumb pages *@
             <header class="ip-appbar">
                 <button type="button" class="ip-btn-icon" data-rail-open aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
                 <a class="ip-btn-icon ip-appbar-back" href="/" hidden aria-label="@L["Back"]"><i class="fa-solid fa-arrow-left"></i></a>
@@ -93,8 +89,7 @@
             <header class="ip-toolbar">
                 @if (signedIn)
                 {
-                    @* An exact inventory code opens that product, anything else opens the filtered list.
-                       CodeFinder in site.js shows suggestions while typing. *@
+                    @* An exact code opens the product and anything else the filtered list, while CodeFinder suggests codes *@
                     @if (User.HasPermission("product.view"))
                     {
                     <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search" data-no-ajax data-code-finder>
@@ -163,7 +158,7 @@
         </div>
     </div>
 
-    @* Used through confirmAction() instead of the browser's confirm(), which cannot be styled. *@
+    @* Used through confirmAction() instead of the browser's confirm(), which cannot be styled *@
     <div class="modal fade ip-modal" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm-plus">
             <div class="modal-content">
@@ -182,7 +177,7 @@
         </div>
     </div>
 
-    @* Self-hosted because the app must work without internet. Versions are pinned in libman.json. *@
+    @* Self-hosted because the app must work without internet, with versions pinned in libman.json *@
     <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/lib/datatables/js/dataTables.min.js" asp-append-version="true"></script>
@@ -190,8 +185,7 @@
     <script src="~/lib/chart.js/dist/chart.umd.min.js" asp-append-version="true"></script>
     <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
 
-    @* Translation table for t() in site.js. Missing keys fall back to English.
-       The language is part of the URL because the script is cached for good. *@
+    @* Translation table for t() in site.js, with the language in the URL because the script is cached for good *@
     @if (JsonStringLocalizer.Language != "en")
     {
         <script src="/Language/Strings?lang=@JsonStringLocalizer.Language&amp;v=@JsonStringLocalizer.Version"></script>
@@ -208,13 +202,13 @@
     }
     <script>
         $(document).ready(function() {
-                // Whoever may see the approvals page also follows the pending-approvals count.
+                // Whoever may see the approvals page also follows the pending-approvals count
                 const canSeeApprovals = @(User.HasPermission("approval.view") || User.HasPermission("approval.decide") ? "true" : "false");
                 NotificationManager.initialize(canSeeApprovals);
 
                 setupNotificationUIHandlers();
 
-                // Also refreshes the unread count. admin-approvals.js loads the pending count itself.
+                // Also refreshes the unread count, while admin-approvals.js loads the pending count itself
                 loadRecentNotifications();
         });
 
@@ -237,7 +231,7 @@
             });
         }
 
-        // Global because notification-manager.js calls these.
+        // Global because notification-manager.js calls these
         window.loadNotificationCount = function() {
             $.ajax({
                 url: '/Notifications/GetUnreadCount',
@@ -282,7 +276,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to get current count:', error);
-                    // Without the server count, add one to the number already shown.
+                    // Without the server count, add one to the number already shown
                     const $badge = $('#notificationBadge');
                     const currentText = $badge.text().trim();
 
@@ -303,7 +297,7 @@
 
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
-                    // Browsers block autoplay until the user interacts with the page. That is not an error.
+                    // Browsers block autoplay until the page has been interacted with, which is not an error
                     playPromise.catch(() => { });
                 }
             } catch (error) {
@@ -330,7 +324,7 @@
             if (!notifications || notifications.length === 0) {
                 html = `<div class="ip-notif-empty">${escapeHtml(t('No new notifications'))}</div>`;
             } else {
-                // Only the latest four. The rest are on the Notifications page.
+                // Only the latest four, the rest are on the Notifications page
                 notifications.slice(0, 4).forEach(function(notification) {
                     html += createNotificationItem(notification);
                 });
@@ -339,7 +333,7 @@
             $('#notificationList').html(html);
         }
 
-        // Same mapping as Icon() on the Notifications page.
+        // Same mapping as Icon() on the Notifications page
         function notificationIcon(notification) {
             let status = null;
             try { status = JSON.parse(notification.data || '{}').status ?? null; } catch (e) { }
@@ -463,7 +457,7 @@
 
     </script>
 
-    @* Shows TempData messages from redirect-based actions as toasts. *@
+    @* Shows TempData messages from redirect-based actions as toasts *@
     @{
         var tdSuccess = JsonStringLocalizer.TranslateMessage(TempData["Success"] as string);
         var tdError = JsonStringLocalizer.TranslateMessage((TempData["Error"] ?? TempData["ErrorMessage"]) as string);

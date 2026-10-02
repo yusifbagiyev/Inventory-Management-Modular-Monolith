@@ -36,6 +36,7 @@ namespace RouteService.Application.Features.Routes.Commands
                 await _repository.DeleteAsync(route, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+                // The files go only once the delete is committed
                 foreach (var imageUrl in route.ImageUrls)
                     _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(imageUrl));
             }

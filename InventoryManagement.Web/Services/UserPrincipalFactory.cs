@@ -7,8 +7,7 @@ using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Services
 {
-    // The session also ends when the security stamp changes, and always after MaxSessionAge.
-    /// <summary>Builds the cookie principal and re-reads it every few minutes so role and permission changes apply without a re-login.</summary>
+    /// <summary>Builds the cookie principal and re-reads it every five minutes so role changes apply without a re-login.</summary>
     public static class UserPrincipalFactory
     {
         public const string PermissionClaim = "permission";
@@ -43,7 +42,7 @@ namespace InventoryManagement.Web.Services
             => DateTimeOffset.TryParse(principal.FindFirst(SignedInAtClaim)?.Value, CultureInfo.InvariantCulture,
                    DateTimeStyles.RoundtripKind, out var at) ? at : DateTimeOffset.UtcNow;
 
-        /// <summary>Cookie OnValidatePrincipal hook.</summary>
+        /// <summary>Cookie OnValidatePrincipal hook, which also ends the session on a stamp change or after MaxSessionAge.</summary>
         public static async Task RefreshAsync(CookieValidatePrincipalContext context)
         {
             var principal = context.Principal;
@@ -65,7 +64,7 @@ namespace InventoryManagement.Web.Services
             var stamp = user is { IsActive: true } ? await auth.GetSessionStampAsync(userId) : null;
             var held = principal.FindFirst(SessionStampClaim)?.Value;
             var signedInAt = SignedInAt(principal);
-            // A session from before the stamp claim existed takes the current stamp once.
+            // A session from before the stamp claim existed takes the current stamp once
             if (user == null || !user.IsActive || stamp == null
                 || (held != null && held != stamp)
                 || DateTimeOffset.UtcNow - signedInAt > MaxSessionAge)

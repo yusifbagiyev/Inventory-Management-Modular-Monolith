@@ -16,10 +16,10 @@ namespace SharedServices.LiveUpdates
             => services.Configure<LiveUpdateOptions>(o => o.Track<T>(name, idProperty, ignoredProperties));
     }
 
-    /// <summary>Announces the tracked entities a save touched once the transaction commits. Rollbacks are never announced.</summary>
+    /// <summary>Announces the tracked entities a save touched once the transaction commits, never on rollback.</summary>
     internal sealed class LiveUpdateInterceptor : SaveChangesInterceptor
     {
-        // Above this, one change with a null Id replaces the list. Pages refresh either way.
+        // Above this a single change with a null Id replaces the list, since pages refresh either way
         private const int MaxIdsPerKind = 20;
 
         private readonly DbSession _session;
@@ -85,14 +85,14 @@ namespace SharedServices.LiveUpdates
                 if (action == null || !_options.Entities.TryGetValue(entry.Metadata.ClrType, out var live))
                     continue;
 
-                // Compared by value because Identity's Update() flags every column, even on a plain sign-in.
+                // Compared by value because Identity's Update() flags every column, even on a plain sign-in
                 if (entry.State == EntityState.Modified && live.IgnoredProperties.Count > 0
                     && entry.Properties
                         .Where(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue))
                         .All(p => live.IgnoredProperties.Contains(p.Metadata.Name)))
                     continue;
 
-                // New rows get their id from the database, so theirs is read after the save.
+                // New rows get their id from the database, so theirs is read after the save
                 var id = entry.State == EntityState.Added ? null : ReadId(entry, live);
                 (_pending ??= new()).Add(new Pending(entry, live, action, id));
             }

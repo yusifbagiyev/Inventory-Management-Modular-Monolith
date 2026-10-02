@@ -1,5 +1,4 @@
-// Multi-image picker for forms and the image gallery on details pages.
-// Picked files are written back into the file input, so a plain form post sends them all in order.
+// Image picker and gallery, writing picks back into the file input so a plain post sends them in order
 
 window.ImageManager = (function () {
     'use strict';
@@ -108,7 +107,7 @@ window.ImageManager = (function () {
             state.coverNew = false;
             state.grid.insertBefore(tile, state.grid.firstChild);
         } else {
-            // The file moves to the front of the new ones. With saved images present, the server gets it as new:0.
+            // The file moves to the front of the new ones, which the server reads as new:0 next to saved images
             const index = parseInt(tile.dataset.imNew, 10);
             state.files.unshift(state.files.splice(index, 1)[0]);
             state.coverNew = existingTiles(state).length > 0;
@@ -117,7 +116,7 @@ window.ImageManager = (function () {
     }
 
     function render(state) {
-        // Only new-file tiles are rebuilt. Saved-image tiles stay put because their order holds the cover choice.
+        // Only new-file tiles are rebuilt, saved-image tiles stay put because their order holds the cover
         state.grid.querySelectorAll('[data-im-new]').forEach(el => el.remove());
         if (existingTiles(state).length === 0) state.coverNew = false;
 
@@ -133,7 +132,7 @@ window.ImageManager = (function () {
                 '</div>' +
                 `<div class="ip-image-caption"><span class="text-truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>` +
                 `<span class="cover-label">${escapeHtml(t('Cover image'))}</span></div>`;
-            // A new cover leads the grid. Other new files go after the saved images.
+            // A new cover leads the grid and other new files go after the saved images
             state.grid.insertBefore(tile, index === 0 && state.coverNew ? state.grid.firstChild : state.addTile);
         });
 
@@ -184,7 +183,7 @@ window.ImageManager = (function () {
         (scope || document).querySelectorAll('[data-image-manager]').forEach(init);
     }
 
-    // Gallery handlers are delegated on document so live-refreshed regions keep working.
+    // Gallery handlers are delegated on document so live-refreshed regions keep working
     function showGalleryImage(gallery, index) {
         const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
         const main = gallery.querySelector('[data-ig-main]');
@@ -204,8 +203,7 @@ window.ImageManager = (function () {
         return Math.max(0, thumbs.findIndex(b => b.classList.contains('active')));
     }
 
-    // A horizontal swipe of 40px or more changes the image on phones.
-    // The click that ends the swipe is swallowed so it does not open the preview.
+    // A 40px horizontal swipe changes the image, and the click ending it is swallowed so no preview opens
     let swipe = null;
     document.addEventListener('pointerdown', function (e) {
         const box = e.target.closest('[data-image-gallery] .ip-gallery');

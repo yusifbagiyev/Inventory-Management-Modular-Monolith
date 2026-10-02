@@ -5,7 +5,7 @@ using InventoryManagement.Web.Localization;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>Accounts that signed in on this browser, kept in a cookie for the sign-in picker. Never a password.</summary>
+    /// <summary>Accounts that signed in on this browser, kept in a cookie for the sign-in picker without any password.</summary>
     public static class RecentAccounts
     {
         public const string Cookie = "ip_recent";
@@ -20,6 +20,7 @@ namespace InventoryManagement.Web.Services
                 return [];
             try
             {
+                // Unpadded base64url, the way Write stores it
                 var json = Encoding.UTF8.GetString(Convert.FromBase64String(raw.Replace('-', '+').Replace('_', '/').PadRight((raw.Length + 3) / 4 * 4, '=')));
                 return (JsonSerializer.Deserialize<List<Entry>>(json) ?? [])
                     .Where(e => !string.IsNullOrWhiteSpace(e.Login))
@@ -28,7 +29,7 @@ namespace InventoryManagement.Web.Services
             }
             catch (Exception ex) when (ex is FormatException or JsonException or ArgumentException)
             {
-                return [];   // An old or tampered cookie is just ignored.
+                return [];   // An old or tampered cookie is just ignored
             }
         }
 

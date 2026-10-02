@@ -3,6 +3,7 @@ using RouteService.Domain.ValueObjects;
 
 namespace RouteService.Domain.Entities
 {
+    /// <summary>A transfer or history entry, keeping the product details and department names of that moment.</summary>
     public class InventoryRoute
     {
         public int Id { get; private set; }
@@ -31,7 +32,7 @@ namespace RouteService.Domain.Entities
         // For EF Core
         protected InventoryRoute() { }
 
-        // A product entering the inventory, new or second-hand.
+        // A product entering the inventory, new or second-hand
         public static InventoryRoute CreateNewInventory(
             ProductSnapshot productSnapshot,
             int toDepartmentId,
@@ -60,7 +61,7 @@ namespace RouteService.Domain.Entities
         }
 
 
-        // For transfers between departments
+        // A pending transfer, the product only moves once it is completed
         public static InventoryRoute CreateTransfer(
             ProductSnapshot productSnapshot,
             int fromDepartmentId,
@@ -92,7 +93,7 @@ namespace RouteService.Domain.Entities
 
 
 
-        // For removing from inventory
+        // A removal is complete from the start and has no destination department
         public static InventoryRoute CreateRemoval(
             ProductSnapshot productSnapshot,
             int fromDepartmentId,
@@ -118,6 +119,7 @@ namespace RouteService.Domain.Entities
         }
 
 
+        // A product edit, with the department and worker before and after it
         public static InventoryRoute CreateUpdate(
             ExistingProduct changedProduct,
             ProductSnapshot updatedProduct,
@@ -144,8 +146,7 @@ namespace RouteService.Domain.Entities
             };
         }
 
-        /// <summary>An inventory code change, with the new code in the snapshot and the old one in the notes.</summary>
-        /// <remarks>The product stays where it is, so there is no source department.</remarks>
+        /// <summary>A code change in place, with the new code in the snapshot and the old one in the notes.</summary>
         public static InventoryRoute CreateCodeChange(
             ProductSnapshot productSnapshot,
             int departmentId,
@@ -168,6 +169,7 @@ namespace RouteService.Domain.Entities
         public void SetWhatsAppStatus(string status, string? error)
         {
             WhatsAppStatus = status;
+            // The error column holds 500 characters
             WhatsAppError = error is { Length: > 500 } ? error[..500] : error;
             WhatsAppAt = DateTime.Now;
         }

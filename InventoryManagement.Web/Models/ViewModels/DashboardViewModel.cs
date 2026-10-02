@@ -17,7 +17,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];
         public TransferActivityData TransferActivityData { get; set; } = new();
 
-        /// <summary>Period bounds for links to the filtered lists. Null for all time.</summary>
+        /// <summary>Period bounds for links to the filtered lists, null for all time.</summary>
         public string? PeriodStart { get; set; }
         public string? PeriodEnd { get; set; }
     }

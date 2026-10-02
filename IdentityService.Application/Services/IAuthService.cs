@@ -4,9 +4,7 @@ namespace IdentityService.Application.Services
 {
     public interface IAuthService
     {
-        // Authentication
-        /// <summary>Checks the credentials with lockout and records the login for the UI's cookie sign-in.</summary>
-        /// <remarks>Throws UnauthorizedAccessException on failure.</remarks>
+        /// <summary>Checks credentials for the cookie sign-in with lockout, throwing UnauthorizedAccessException on failure.</summary>
         Task<UserDto> ValidateCredentialsAsync(string username, string password);
         Task<TokenDto> LoginAsync(LoginDto dto);
         Task<TokenDto> RegisterAsync(RegisterDto dto);
@@ -24,7 +22,7 @@ namespace IdentityService.Application.Services
 
         // Passwords
         Task<bool> ResetPasswordAsync(int userId, string newPassword);
-        /// <returns>Error is the first identity error description when the change fails.</returns>
+        /// <summary>Error holds the first identity error when the change fails.</summary>
         Task<(bool Succeeded, string? Error)> ChangePasswordAsync(int userId, string currentPassword, string newPassword);
 
         // Roles
@@ -41,7 +39,7 @@ namespace IdentityService.Application.Services
         Task<bool> RevokePermissionFromUserAsync(int userId, string permissionName);
         Task<List<PermissionDto>> GetUserDirectPermissionsAsync(int userId);
 
-        // Everyone in a role holds its permissions on top of their own.
+        // Everyone in a role holds its permissions on top of their own
         Task<IReadOnlyList<string>> GetRolePermissionsAsync(string roleName);
         Task<bool> SetRolePermissionAsync(string roleName, string permissionName, bool grant);
 

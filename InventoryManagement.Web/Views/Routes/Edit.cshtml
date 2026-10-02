@@ -92,7 +92,7 @@
                     }
                     else
                     {
-                        @* Without the department list, post the current value instead of an empty one. *@
+                        @* Without the department list, post the current value instead of an empty one *@
                         <input type="text" id="ToDepartmentId" class="ip-input" value="@Model.ToDepartmentName" readonly disabled />
                         <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
                         <span class="ip-error"><i class="fa-solid fa-circle-exclamation"></i>@L["The department list could not be loaded. Please reload the page."]</span>
@@ -165,7 +165,7 @@
         (function() {
             'use strict';
 
-            // Shared by save and delete so only one request runs at a time.
+            // Shared by save and delete so only one request runs at a time
             let isSubmitting = false;
             let routeId = @Model.Id;
 
@@ -185,7 +185,7 @@
                 const $submitBtn = $('#submitBtn');
                 const originalButtonHtml = $submitBtn.html();
 
-                // Drop handlers bound earlier, otherwise the form is sent twice.
+                // Drop handlers bound earlier, otherwise the form is sent twice
                 $form.off('submit');
                 $form.off('submit.ajaxHandler');
                 $submitBtn.off('click');
@@ -206,7 +206,7 @@
                         return true;
                     },
 
-                    // Approval-required responses are handled by AjaxHandler before onSuccess runs.
+                    // AjaxHandler deals with approval-required responses before onSuccess runs
                     onSuccess: function(response) {
                         showToast(t('Route updated successfully!'), 'success');
                         setTimeout(() => {
@@ -253,7 +253,7 @@
                             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                         },
                         success: function(response) {
-                            // Without route.delete.direct the deletion waits for approval.
+                            // Without route.delete.direct the deletion waits for approval
                             showToast(response && response.isApprovalRequest
                                 ? (response.message || t('Delete request submitted for approval'))
                                 : t('Route deleted successfully. Product has been reverted to previous state.'),
@@ -289,7 +289,7 @@
         })();
 
 
-        // If someone else changes this route while it is open, warn but leave the form alone.
+        // If someone else changes this route while it is open, warn but leave the form alone
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['route'],

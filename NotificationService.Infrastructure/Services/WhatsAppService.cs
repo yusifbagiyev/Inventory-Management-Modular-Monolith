@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 
 namespace NotificationService.Infrastructure.Services
 {
+    /// <summary>WaSender client that posts group messages, uploading an image first to get a temporary URL for it.</summary>
     public class WhatsAppService : IWhatsAppService
     {
         private readonly HttpClient _httpClient;
@@ -21,7 +22,7 @@ namespace NotificationService.Infrastructure.Services
             public bool Success { get; set; }
 
             [JsonPropertyName("publicUrl")]
-            public string? PublicUrl { get; set; }  // WaSender puts publicUrl at the top level, not inside data.
+            public string? PublicUrl { get; set; }  // WaSender puts publicUrl at the top level, not inside data
 
             [JsonPropertyName("message")]
             public string? Message { get; set; }
@@ -53,7 +54,7 @@ namespace NotificationService.Infrastructure.Services
             _httpClient = httpClient;
             _logger = logger;
 
-            // Missing settings must not throw here, or the dispatcher would stop in-app notifications too.
+            // Missing settings must not throw here, or the dispatcher would stop in-app notifications too
             _settings = configuration.GetSection("WhatsApp").Get<WhatsAppSettings>() ?? new WhatsAppSettings();
 
             if (Uri.TryCreate(_settings.ApiUrl, UriKind.Absolute, out var apiUrl))
@@ -69,7 +70,7 @@ namespace NotificationService.Infrastructure.Services
         {
             try
             {
-                // Group ids need the @g.us suffix.
+                // Group ids need the @g.us suffix
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
 
@@ -116,17 +117,17 @@ namespace NotificationService.Infrastructure.Services
                     message = message.Substring(0, 2045) + "...";
                 }
 
-                // Images over 5 MB go as text only.
+                // Images over 5 MB go as text only
                 var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
                 _logger.LogInformation($"Processing image: {fileName} ({imageSizeInMB:F2} MB)");
 
                 if (imageSizeInMB > 5)
                 {
-                    _logger.LogWarning($"Image size {imageSizeInMB:F2}MB exceeds WaSender's 16MB limit. Sending text only.");
+                    _logger.LogWarning($"Image size {imageSizeInMB:F2}MB is over the 5 MB limit. Sending text only.");
                     return await SendGroupMessageAsync(groupId, message);
                 }
 
-                // The message needs a URL, so upload the image first to get a temporary one.
+                // The message needs a URL, so upload the image first to get a temporary one
                 var imageUrl = await UploadImageToWaSender(imageData, fileName);
 
                 if (string.IsNullOrEmpty(imageUrl))
@@ -140,7 +141,7 @@ namespace NotificationService.Infrastructure.Services
                 var requestPayload = new
                 {
                     to = groupId,
-                    text = message,  // Shown as the image caption.
+                    text = message,  // Shown as the image caption
                     imageUrl = imageUrl
                 };
 
@@ -170,8 +171,7 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        /// <summary>One attempt to post a group message, with the image when there is one.</summary>
-        /// <remarks>Pass uploadedImageUrl back in on a retry so the image is uploaded once. A 429 comes back with the wait the service asks for.</remarks>
+        /// <summary>One attempt to post a group message, reusing uploadedImageUrl on retries and reporting the wait a 429 asks for.</summary>
         public async Task<WhatsAppSendResult> SendAsync(string groupId, string message, byte[]? imageData, string fileName,
             string? uploadedImageUrl = null, CancellationToken cancellationToken = default)
         {
@@ -182,7 +182,7 @@ namespace NotificationService.Infrastructure.Services
 
             var imageUrl = uploadedImageUrl;
             if (imageUrl == null && imageData is { Length: > 0 } && imageData.Length <= 5 * 1024 * 1024)
-                imageUrl = await UploadImageToWaSender(imageData, fileName);   // On failure the text goes alone.
+                imageUrl = await UploadImageToWaSender(imageData, fileName);   // On failure the text goes alone
 
             object payload = imageUrl == null ? new { to = groupId, text = message } : new { to = groupId, text = message, imageUrl };
             try
@@ -227,7 +227,7 @@ namespace NotificationService.Infrastructure.Services
             {
                 var mimeType = GetMimeType(fileName);
 
-                // WaSender expects the image as a base64 data URL.
+                // WaSender expects the image as a base64 data URL
                 var base64String = Convert.ToBase64String(imageData);
                 var dataUrl = $"data:{mimeType};base64,{base64String}";
 
@@ -316,7 +316,7 @@ namespace NotificationService.Infrastructure.Services
                 _ => "📌"
             };
 
-            // Text between asterisks is bold in WhatsApp.
+            // Text between asterisks is bold in WhatsApp
             message.AppendLine($"{emoji} *Product {notification.NotificationType.ToUpper()}*");
             message.AppendLine();
 

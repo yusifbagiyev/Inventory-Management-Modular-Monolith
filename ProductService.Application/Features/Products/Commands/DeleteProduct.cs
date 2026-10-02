@@ -34,8 +34,7 @@ namespace ProductService.Application.Features.Products.Commands
 
                 var state = product.ToState();
 
-                // Soft delete. The product and its images stay for the Deleted products page.
-                // The query filter hides it everywhere else and frees its inventory code.
+                // Soft delete keeps the product and its images for the Deleted page, hidden everywhere else
                 product.MarkDeleted(request.UserName);
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

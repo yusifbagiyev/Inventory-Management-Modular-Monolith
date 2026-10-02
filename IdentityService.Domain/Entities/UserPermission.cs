@@ -1,5 +1,6 @@
 ﻿namespace IdentityService.Domain.Entities
 {
+    /// <summary>A permission granted to one user directly, on top of what their role gives.</summary>
     public class UserPermission
     {
         public int UserId { get; set; }

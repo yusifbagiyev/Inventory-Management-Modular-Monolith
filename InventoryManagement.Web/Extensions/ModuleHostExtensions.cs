@@ -37,7 +37,7 @@ namespace InventoryManagement.Web.Extensions
             .. AuditModule.Assemblies
         ];
 
-        // In migration order.
+        // In migration order
         private static readonly Type[] ModuleDbContexts =
         [
             typeof(IdentityDbContext),
@@ -76,15 +76,14 @@ namespace InventoryManagement.Web.Extensions
             services.AddSignalR(options =>
             {
                 options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-                // Background tabs throttle timers to about once a minute, so pings can arrive a minute late.
+                // Background tabs throttle timers to once a minute, so client pings can be a minute late
                 options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
             });
 
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-                // Coarse brake on sign-in posts per address. It is generous because a whole office shares one public IP.
-                // Keyed on RemoteIpAddress, never the raw X-Forwarded-For header, which the client controls.
+                // Coarse brake on sign-in posts per RemoteIpAddress, generous because an office shares one public IP
                 options.AddPolicy(IdentityModule.LoginRateLimitPolicy, context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -97,14 +96,14 @@ namespace InventoryManagement.Web.Extensions
             });
             services.AddSingleton<LoginThrottle>();
 
-            // Anything not marked [AllowAnonymous] needs a signed-in user, so a forgotten [Authorize] is not a hole.
+            // Anything not marked [AllowAnonymous] needs a signed-in user, so a forgotten [Authorize] is not a hole
             services.Configure<AuthorizationOptions>(options =>
                 options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-                // Only nginx can reach the app, but its compose address is not fixed. Trust exactly one hop.
+                // Only nginx can reach the app but its compose address is not fixed, so trust exactly one hop
                 options.KnownIPNetworks.Clear();
                 options.KnownProxies.Clear();
                 options.ForwardLimit = 1;
@@ -123,11 +122,10 @@ namespace InventoryManagement.Web.Extensions
                 await context.Database.MigrateAsync();
             }
 
-            // Seeded and copied rows have explicit ids that don't advance the sequences, so the next insert would collide.
-            // This only ever moves a sequence forward.
+            // Seeded and copied rows have explicit ids that never advanced the sequences, so move them forward
             var db = (DbContext)scope.ServiceProvider.GetRequiredService(ModuleDbContexts[0]);
             var schemas = string.Join(",", ModuleSchemas.Select(s => $"'{s}'"));
-            // Only the fixed schema list is interpolated here, never user input.
+            // Only the fixed schema list is interpolated here, never user input
             var alignSequences = $$"""
                 DO $$
                 DECLARE
@@ -164,12 +162,12 @@ namespace InventoryManagement.Web.Extensions
 
         public static bool IsApiRequest(HttpContext context) => context.Request.Path.StartsWithSegments("/api");
 
-        /// <summary>Unsafe API calls made with the cookie need the antiforgery token. Bearer and API key callers are exempt.</summary>
+        /// <summary>Unsafe API calls made with the cookie need the antiforgery token, bearer and API key calls do not.</summary>
         private static async Task ValidateAntiforgeryForCookieCalls(HttpContext context, Func<Task> next)
         {
             var method = context.Request.Method;
             var safe = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
-            // Ask the scheme selector. Any other Authorization header still falls back to the cookie and must be checked.
+            // Ask the scheme selector, since any other Authorization header still falls back to the cookie
             var usesCredentialHeader = AuthenticationExtensions.SelectScheme(context) != CookieAuthenticationDefaults.AuthenticationScheme;
 
             if (!safe && !usesCredentialHeader && context.User.Identity?.IsAuthenticated == true)

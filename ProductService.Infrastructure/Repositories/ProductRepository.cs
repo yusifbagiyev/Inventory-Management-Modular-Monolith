@@ -39,8 +39,7 @@ namespace ProductService.Infrastructure.Repositories
             bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
-            // Clamp so a zero page or size never gives a negative Skip.
-            // Only the API caps the size, exports ask for more on purpose.
+            // Clamp against a negative Skip but leave the size uncapped, since exports ask for more on purpose
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
             var query = _context.Products
@@ -60,7 +59,7 @@ namespace ProductService.Infrastructure.Repositories
             if (availability.HasValue)
                 query = query.Where(p => p.IsActive == availability.Value);
 
-            // A missing image or worker is stored as NULL or as an empty string, so both count as missing.
+            // A missing image or worker is stored as NULL or as an empty string, so both count as missing
             if (hasImage.HasValue)
             {
                 query = hasImage.Value
@@ -80,6 +79,7 @@ namespace ProductService.Infrastructure.Repositories
                 query = query.Where(r => r.CreatedAt >= startDate);
             }
 
+            // The end date counts as the whole day
             if (endDate.HasValue)
             {
                 var EndDate = endDate.Value.AddDays(1).AddTicks(-1);
@@ -91,13 +91,13 @@ namespace ProductService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                // Each word must match some field, since the words of a phrase often sit in different columns.
+                // Each word must match some field, since the words of a phrase often sit in different columns
                 var terms = search
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Distinct()
                     .ToArray();
 
-                // Narrow down in the database first. ILIKE does not fold Azerbaijani letters.
+                // ILIKE doesn't fold Azerbaijani letters, so the database only narrows the rows down
                 var broadQuery = query;
                 foreach (var term in terms)
                 {
@@ -118,7 +118,7 @@ namespace ProductService.Infrastructure.Repositories
                     .ThenByDescending(r => r.UpdatedAt)
                     .ToListAsync(cancellationToken);
 
-                // Then match in memory with Azerbaijani folding. Every word must hit.
+                // Then match every word in memory with Azerbaijani folding
                 items = allFilteredItems.Where(r => terms.All(t =>
                     SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), t) ||
                     SearchHelper.ContainsAzerbaijani(r.Vendor, t) ||
@@ -167,7 +167,7 @@ namespace ProductService.Infrastructure.Repositories
         {
             var query = _context.Products.AsNoTracking().AsQueryable();
 
-            // Same predicates as GetAllAsync without department and category, so the dropdowns follow the other filters.
+            // GetAllAsync's predicates minus department and category, so the dropdowns follow the other filters
             if (status.HasValue)
                 query = query.Where(p => p.IsWorking == status.Value);
 
@@ -188,7 +188,7 @@ namespace ProductService.Infrastructure.Repositories
                     : query.Where(p => p.Worker == null || p.Worker == "");
             }
 
-            // Anonymous type first, because EF cannot translate a ValueTuple projection.
+            // Anonymous type first, because EF can't translate a ValueTuple projection
             var pairs = await query
                 .Select(p => new { p.DepartmentId, p.CategoryId })
                 .Distinct()
@@ -260,7 +260,7 @@ namespace ProductService.Infrastructure.Repositories
             if (createdFrom.HasValue) query = query.Where(p => p.CreatedAt >= createdFrom.Value);
             if (createdTo.HasValue) query = query.Where(p => p.CreatedAt <= createdTo.Value);
 
-            // One round trip, translated to COUNT with FILTER clauses.
+            // One round trip, translated to COUNT with FILTER clauses
             var counts = await query
                 .GroupBy(_ => 1)
                 .Select(g => new { Total = g.Count(), Active = g.Count(p => p.IsActive), NotWorking = g.Count(p => !p.IsWorking) })
@@ -282,6 +282,7 @@ namespace ProductService.Infrastructure.Repositories
             return await _context.Products.CountAsync(p => p.CategoryId == categoryId, cancellationToken);
         }
 
+        // The query filter hides deleted products, so these queries switch it off
         private IQueryable<Product> Deleted()
             => _context.Products.IgnoreQueryFilters().Where(p => p.IsDeleted);
 

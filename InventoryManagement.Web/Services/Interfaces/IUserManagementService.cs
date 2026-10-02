@@ -12,7 +12,7 @@ namespace InventoryManagement.Web.Services.Interfaces
         Task<bool> DeleteUserAsync(int id);
         Task<bool> ToggleUserStatusAsync(int id);
         Task<bool> ResetPasswordAsync(int userId, string newPassword);
-        // Changes the signed-in user's own password after checking the current one.
+        /// <summary>Changes the signed-in user's own password after checking the current one.</summary>
         Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword);
         Task<List<string>> GetAllRolesAsync();
     }

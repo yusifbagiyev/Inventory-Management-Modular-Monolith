@@ -1,5 +1,6 @@
 namespace RouteService.Domain.Common
 {
+    /// <summary>One transfer with just the fields the dashboard counts by.</summary>
     public record TransferActivity(
         int ProductId,
         int? FromDepartmentId,

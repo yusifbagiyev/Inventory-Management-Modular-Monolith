@@ -26,7 +26,7 @@ namespace ProductService.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
 
-        /// <summary>Soft delete flag. The query filter hides these products and their inventory code can be reused.</summary>
+        /// <summary>Soft delete flag, the query filter hides these products and frees their inventory code.</summary>
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedAt { get; private set; }
         public string? DeletedBy { get; private set; }
@@ -77,7 +77,6 @@ namespace ProductService.Domain.Entities
             UpdatedAt = DateTime.Now;
         }
         /// <summary>Sets colour and specifications, trimmed, with blank colour as null and unnamed lines dropped.</summary>
-        /// <remarks>Transfers never change these.</remarks>
         public void SetDetails(string? color, IEnumerable<ProductSpecification>? specifications)
         {
             Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
@@ -87,6 +86,7 @@ namespace ProductService.Domain.Entities
                 .ToList();
         }
 
+        /// <summary>Moves the product to a completed transfer's destination.</summary>
         public void UpdateAfterRouting(int departmentId, string? worker)
         {
             if (departmentId <= 0)

@@ -72,7 +72,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
 
 
-        /// <summary>On create the first file is the cover. On edit the files go after the current images.</summary>
+        /// <summary>The first file is the cover on create, while on edit the files go after the current images.</summary>
         [Display(Name = "Images")]
         public List<IFormFile>? ImageFiles { get; set; }
 

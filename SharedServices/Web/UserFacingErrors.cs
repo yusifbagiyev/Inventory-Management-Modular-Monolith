@@ -1,7 +1,6 @@
 namespace SharedServices.Web
 {
-    // The framework, EF Core and Npgsql throw the same exception types as our modules, but with internal details.
-    /// <summary>Decides whether an exception's message may be shown to the caller.</summary>
+    /// <summary>Shows only our own exception messages, since framework, EF Core and Npgsql ones carry internal details.</summary>
     public static class UserFacingErrors
     {
         public const string Generic = "An error occurred while processing your request";

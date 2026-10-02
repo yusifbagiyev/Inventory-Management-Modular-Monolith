@@ -1,3 +1,4 @@
+// SignalR connection for notifications and live updates, with its own reconnect and outage toasts
 window.NotificationManager = (function () {
     'use strict';
 
@@ -8,16 +9,14 @@ window.NotificationManager = (function () {
     let reconnectTimeout = null;
     let isInitialized = false;
 
-    // Short drops usually recover within seconds, so only a lasting outage gets a toast.
-    // The restored toast only ever follows that one.
+    // Short drops recover within seconds, so only a lasting outage gets a toast and then a restored one
     const OUTAGE_NOTICE_DELAY_MS = 10000;
     let outageNoticeTimer = null;
     let outageNoticeShown = false;
     let hasConnectedBefore = false; // A later start() is a reconnect, so pages may have missed changes
     let suspended = false;
 
-    // Frozen tabs and the back/forward cache cut the socket, which looked like a lost connection.
-    // Close it quietly first and reopen it when the page is back, which also resyncs open pages.
+    // Frozen and back/forward cached tabs lose the socket, so close it quietly and reopen it on return
     function suspendConnection() {
         suspended = true;
         clearTimeout(reconnectTimeout);
@@ -68,7 +67,7 @@ window.NotificationManager = (function () {
             return;
         }
 
-        // Only rendered for signed-in users. The hub authenticates with the auth cookie.
+        // Only rendered for signed-in users, and the hub authenticates with the cookie
         isInitialized = true;
         window.isAdmin = isAdmin;
         establishConnection();
@@ -105,7 +104,7 @@ window.NotificationManager = (function () {
             .configureLogging(signalR.LogLevel.Warning)
             .build();
 
-        // Matches the server's 15 s keep-alive and 2 min client timeout.
+        // Matches the server's 15 s keep-alive and 2 min client timeout
         connection.serverTimeoutInMilliseconds = 60000;
 
         setupConnectionHandlers();
@@ -129,7 +128,7 @@ window.NotificationManager = (function () {
             noteRecovered();
             window.dispatchEvent(new Event('live:resync'));
 
-            // A short delay so reconnecting tabs do not all hit the server at once.
+            // A short delay so reconnecting tabs do not all hit the server at once
             setTimeout(() => {
                 loadRecentNotifications();
                 loadNotificationCount();
@@ -154,7 +153,7 @@ window.NotificationManager = (function () {
                 clearTimeout(outageNoticeTimer);
                 outageNoticeTimer = null;
                 showToast(t('Unable to connect to notification service'), 'error');
-                // Allow another round of retries after a minute.
+                // Allow another round of retries after a minute
                 setTimeout(() => {
                     connectionRetryCount = 0;
                 }, 60000);
@@ -165,7 +164,7 @@ window.NotificationManager = (function () {
 
 
     function setupMessageHandlers() {
-        // The layout loads the list on page load, but it may be stale after a reconnect.
+        // The layout loads the list on page load, but it may be stale after a reconnect
         let connectedBefore = false;
 
         connection.on("ConnectionEstablished", function (data) {
@@ -201,7 +200,7 @@ window.NotificationManager = (function () {
             }
         });
 
-        // A change was committed somewhere. live-updates.js decides whether the open page cares.
+        // live-updates.js decides whether the open page cares about a committed change
         connection.on("EntityChanged", function (update) {
             window.dispatchEvent(new CustomEvent('live:changed', { detail: update }));
         });
@@ -239,7 +238,7 @@ window.NotificationManager = (function () {
 
         recentNotifications.set(notificationKey, now);
 
-        // Bounded so a tab left open for days does not keep growing the map.
+        // Bounded so a tab left open for days does not keep growing the map
         if (recentNotifications.size > 100) {
             const entries = Array.from(recentNotifications.entries());
             entries.sort((a, b) => b[1] - a[1]);
@@ -253,7 +252,7 @@ window.NotificationManager = (function () {
 
 
 
-    // Single owner of the reconnect timer, so two retry chains can never open duplicate connections.
+    // Single owner of the reconnect timer, so two retry chains can never open duplicate connections
     function scheduleReconnect(delay) {
         if (reconnectTimeout) {
             clearTimeout(reconnectTimeout);
@@ -288,7 +287,7 @@ window.NotificationManager = (function () {
                 connectionState = 'disconnected';
                 console.error('❌ SignalR connection failed:', err);
 
-                // An auth error will not fix itself, so it is not retried.
+                // An auth error will not fix itself, so it is not retried
                 if (connectionRetryCount < maxRetries && !isAuthError(err)) {
                     connectionRetryCount++;
                     const delay = Math.min(1000 * Math.pow(2, connectionRetryCount), 10000);
@@ -325,7 +324,7 @@ window.NotificationManager = (function () {
 
         window.incrementNotificationCount();
 
-        // Several notifications in a row reload the list once.
+        // Several notifications in a row reload the list once
         clearTimeout(window.notificationListReloadTimeout);
         window.notificationListReloadTimeout = setTimeout(() => {
             window.loadRecentNotifications();
@@ -337,7 +336,7 @@ window.NotificationManager = (function () {
 
 
 
-    // Only the approvals badge is updated here. The lists refresh through live-updates.js.
+    // Only the approvals badge is updated here since the lists refresh through live-updates.js
     function handleSpecialNotifications(notification) {
         if (notification.type === 'ApprovalRequest' && window.isAdmin
             && typeof debouncedLoadPendingApprovalsCount === 'function') {
@@ -345,8 +344,7 @@ window.NotificationManager = (function () {
         }
     }
 
-    // At most one sound per 2 seconds across all open tabs.
-    // Every tab receives the same push, so the timestamp is shared through localStorage.
+    // Every tab gets the same push, so a timestamp in localStorage keeps it to one sound per 2 seconds
     let lastSoundPlayed = 0;
     function shouldPlaySound() {
         const now = Date.now();

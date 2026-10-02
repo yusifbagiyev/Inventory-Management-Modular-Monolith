@@ -16,7 +16,7 @@
         <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
         <input type="hidden" asp-for="ProductId" id="ProductId" />
 
-        @* Step 1 finds the product by its code. *@
+        @* Step 1 finds the product by its code *@
         <section class="ip-form-section">
             <h2>@L["Product"]</h2>
             <label class="ip-label mb-2" for="inventoryCodeInput">@L["Inventory Code"]</label>
@@ -49,7 +49,7 @@
             <div id="warningContainer"></div>
         </section>
 
-        @* Step 2 shows only for a product with no pending transfer. *@
+        @* Step 2 shows only for a product with no pending transfer *@
         <div id="transferFields" style="display:none;">
             <section class="ip-form-section">
                 <h2>@L["Where to"]</h2>
@@ -155,7 +155,7 @@
                 }
             });
 
-            // Search a moment after typing stops.
+            // Search a moment after typing stops
             $('#inventoryCodeInput').on('input', function() {
                 const inventoryCode = $(this).val().trim();
                 clearTimeout(searchTimeout);
@@ -176,7 +176,7 @@
                 updateSummary();
             });
 
-            // A transfer must change the department. A new worker in the same department is a product edit.
+            // A transfer must change the department, since a new worker in the same one is a product edit
             function sameAsNow() {
                 return !!currentProductData
                     && $('#ToDepartmentId').val() === String(currentProductData.departmentId ?? '');
@@ -257,7 +257,7 @@
                 }
             }
 
-            // Footer line with the current and target department and the new worker.
+            // Footer line with the current and target department and the new worker
             function updateSummary() {
                 if (!currentProductData) { $('#transferSummary').empty(); return; }
                 const to = $('#ToDepartmentId').val() ? $('#ToDepartmentId option:selected').text() : '…';
@@ -327,7 +327,7 @@
                 updateSummary();
             }
 
-            // A product page links here with ?code=, so search for it right away.
+            // A product page links here with ?code=, so search for it right away
             const preset = new URLSearchParams(window.location.search).get('code');
             if (preset && /^\d{1,4}$/.test(preset)) {
                 $('#inventoryCodeInput').val(preset);

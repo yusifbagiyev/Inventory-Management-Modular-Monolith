@@ -121,7 +121,7 @@ namespace InventoryManagement.Web.Services
                 IsActive = model.IsActive
             });
 
-            // No selected roles means the roles stay as they are. A failed role change must report failure.
+            // No selected roles leaves the roles alone, and a failed role change still reports failure
             if (!updated || model.SelectedRoles is not { Count: > 0 })
                 return updated;
             return await _auth.SetRolesAsync(model.Id, model.SelectedRoles);

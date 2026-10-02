@@ -1,4 +1,4 @@
-# Custom label of the production self-hosted runner.
+# Custom label of the production self-hosted runner, unknown to actionlint otherwise
 self-hosted-runner:
   labels:
     - inventory-prod

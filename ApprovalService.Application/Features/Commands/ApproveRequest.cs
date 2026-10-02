@@ -10,6 +10,7 @@ using SharedServices.Persistence;
 
 namespace ApprovalService.Application.Features.Commands
 {
+    /// <summary>Approves a pending request and runs its action, recording the request as Failed if the action throws.</summary>
     public class ApproveRequest
     {
         /// <param name="ApproverIsAdmin">Only Admins may approve their own requests.</param>
@@ -51,17 +52,16 @@ namespace ApprovalService.Application.Features.Commands
                 if (approvalRequest.Status != ApprovalStatus.Pending)
                     throw new InvalidOperationException($"Request is no longer pending. Current status: {approvalRequest.Status}");
 
-                // Otherwise approval.decide plus the request permission would act as the direct permission.
+                // Otherwise approval.decide plus the request permission would act as the direct permission
                 if (approvalRequest.RequestedById == request.UserId && !request.ApproverIsAdmin)
                     throw new InsufficientPermissionsException("You cannot approve your own request. The decision must be made by another approver.");
 
                 approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);
-                // The row version makes a concurrent second approval fail here, before the action runs twice.
+                // The row version makes a concurrent second approval fail here, before the action runs twice
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // The savepoint lets a failed action undo only its own changes.
-                // The request is then recorded as Failed in the same transaction.
+                // A failed action rolls back to here, so the request can still be saved as Failed in this transaction
                 await _session.SavepointAsync(ExecutionSavepoint, cancellationToken);
                 try
                 {

@@ -1,5 +1,6 @@
 ﻿namespace SharedServices.Enum
 {
+    /// <summary>Approval request types, equal to the non-direct permission except product.transfer, gated by route.create.</summary>
     public static class RequestType
     {
         public const string CreateProduct = "product.create";

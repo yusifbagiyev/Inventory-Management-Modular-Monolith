@@ -34,7 +34,7 @@ namespace ApprovalService.Infrastructure.Data
                 entity.Property(e => e.ExecutedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // The xmin column is the concurrency token, so two approvers cannot both run the action.
+                // The xmin column is the concurrency token, so two approvers cannot both run the action
                 entity.Property<uint>("xmin").IsRowVersion();
 
                 entity.HasIndex(e => e.Status);

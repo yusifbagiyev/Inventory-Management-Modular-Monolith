@@ -13,7 +13,7 @@ namespace AuditService
 
         public static IServiceCollection AddAuditModule(this IServiceCollection services)
         {
-            // Otherwise the audit rows would be audited too.
+            // Not audited itself, otherwise every audit row would get audit rows of its own
             services.AddModuleDbContext<AuditDbContext>(AuditDbContext.Schema, audited: false);
             services.AddScoped<IAuditSink, AuditSink>();
             return services;

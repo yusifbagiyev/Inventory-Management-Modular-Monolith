@@ -2,6 +2,7 @@
 
 namespace ApprovalService.Domain.Entities
 {
+    /// <summary>An action waiting for someone else's approval, with its input stored as JSON in ActionData.</summary>
     public class ApprovalRequest
     {
         public int Id { get;private set; }
@@ -55,6 +56,7 @@ namespace ApprovalService.Domain.Entities
             if (Status != ApprovalStatus.Pending)
                 throw new InvalidOperationException("Only pending requests can be rejected");
 
+            // The Approved* fields hold whoever decided, approver or rejecter
             ApprovedById = rejectedById;
             ApprovedByName = rejectedByName;
             Status = ApprovalStatus.Rejected;
@@ -75,6 +77,7 @@ namespace ApprovalService.Domain.Entities
                 throw new InvalidOperationException("Only approved requests can be marked as failed");
 
             Status = ApprovalStatus.Failed;
+            // RejectionReason doubles as the failure message
             RejectionReason = reason;
         }
     }

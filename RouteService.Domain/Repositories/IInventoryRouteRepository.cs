@@ -27,7 +27,7 @@ namespace RouteService.Domain.Repositories
             CancellationToken cancellationToken = default,
             string? departmentName = null);
 
-        /// <summary>Distinct department and category name pairs from both ends of each route, after the status and type filters.</summary>
+        /// <summary>Distinct department and category name pairs from both ends of the routes left by the filters.</summary>
         Task<IReadOnlyList<(string DepartmentName, string CategoryName)>> GetDepartmentCategoryPairsAsync(
             bool? isCompleted = null,
             RouteType? routeType = null,

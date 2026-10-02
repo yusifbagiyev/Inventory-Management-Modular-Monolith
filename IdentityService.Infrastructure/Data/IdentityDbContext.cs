@@ -82,7 +82,7 @@ namespace IdentityService.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Seed values must stay static, or every model build would differ and need a new migration.
+            // Seed values must stay static, or every model build would differ and need a new migration
             SeedData(builder);
         }
 
@@ -122,7 +122,7 @@ namespace IdentityService.Infrastructure.Data
             };
             builder.Entity<Role>().HasData(roles);
 
-            // A new permission needs a row here and a migration.
+            // A new permission needs a row here and a migration
             var permissions = new[]
             {
                 // Route permissions
@@ -169,13 +169,13 @@ namespace IdentityService.Infrastructure.Data
 
             var rolePermissions = new List<RolePermission>();
 
-            // Admin passes every check anyway. These rows cover only the route and product permissions.
+            // Admin passes every check anyway, so these rows only cover the route and product permissions
             for (int i = 1; i <= 15; i++)
             {
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
 
-            // Only Admin gets seeded role permissions.
+            // Only Admin gets seeded role permissions
 
             builder.Entity<RolePermission>().HasData(rolePermissions);
 

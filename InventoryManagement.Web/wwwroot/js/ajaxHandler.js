@@ -1,3 +1,4 @@
+// Standard AJAX form submit that turns ApiResponse results and errors into toasts
 window.AjaxHandler = (function () {
     'use strict';
 
@@ -16,7 +17,7 @@ window.AjaxHandler = (function () {
 
         const settings = { ...defaults, ...options };
 
-        // Layout forms that must post normally, like sign out, carry data-no-ajax and are skipped.
+        // Forms that must post normally, like sign out, carry data-no-ajax
         const $forms = $(formSelector).not('[data-no-ajax]');
 
         if (!$forms.length) {
@@ -33,10 +34,10 @@ window.AjaxHandler = (function () {
                 submissionStates.set(formElement, { isSubmitting: false });
             }
 
-            // A second handleForm call on the same form must not add a second handler.
+            // A second handleForm call on the same form must not add a second handler
             $individualForm.off('submit.ajaxHandler');
 
-            // Only buttons owned by this form count, not those of a form inside it.
+            // Only buttons owned by this form count, not those of a form inside it
             const $submitBtnInThisForm = $individualForm.find('button[type="submit"]').filter(function () {
                 return $(this).closest('form')[0] === formElement;
             });
@@ -49,7 +50,7 @@ window.AjaxHandler = (function () {
             const originalButtonHtml = $submitBtnInThisForm.html();
             const originalButtonDisabled = $submitBtnInThisForm.prop('disabled');
 
-            // Swallows extra clicks while a submit is in flight.
+            // Swallow extra clicks while a submit is in flight
             $submitBtnInThisForm.off('click.preventDouble');
             $submitBtnInThisForm.on('click.preventDouble', function (e) {
                 const formState = submissionStates.get(formElement);
@@ -138,7 +139,7 @@ window.AjaxHandler = (function () {
                         handleError(xhr, form, settings);
                     },
                     complete: function () {
-                        // Safety net in case a callback threw before the button was restored.
+                        // Safety net in case a callback threw before the button was restored
                         setTimeout(() => {
                             restoreButton();
                         }, 3000);
@@ -151,7 +152,7 @@ window.AjaxHandler = (function () {
     }
 
     function handleSuccess(response, form, settings) {
-        // Checked first because an approval response can also look like a failure.
+        // Checked first because an approval response can also look like a failure
         if (isApprovalRequest(response)) {
             const message = response.message || t('Request submitted for approval');
             showToast(message, 'info');
@@ -257,7 +258,7 @@ window.AjaxHandler = (function () {
 
         if (typeof errors === 'object') {
             for (const field in errors) {
-                // Messages can echo what was typed, so they go in as text, never HTML.
+                // Messages can echo what was typed, so they go in as text, never HTML
                 const $field = $(form).find(`[name="${CSS.escape(field)}"]`);
                 if ($field.length) {
                     $field.addClass('is-invalid');
@@ -269,8 +270,7 @@ window.AjaxHandler = (function () {
         }
     }
 
-    // HTML instead of JSON means the session expired or the server failed unexpectedly.
-    // Either way the user has to see something, not just a restored button.
+    // HTML instead of JSON means the session expired or the server failed, and either needs a visible message
     function handleHtmlResponse(html) {
         if (/action="\/Account\/Login/i.test(html)) {
             window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(location.pathname + location.search);

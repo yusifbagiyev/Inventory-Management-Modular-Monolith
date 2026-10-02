@@ -4,14 +4,14 @@ using Microsoft.Extensions.Localization;
 
 namespace InventoryManagement.Web.Localization
 {
-    /// <summary>Only the UI culture changes. Formatting stays en-US so forms and JS keep a decimal point.</summary>
+    /// <summary>Only the UI culture changes, formatting stays en-US so forms and JS keep a decimal point.</summary>
     public static class LocalizationSetup
     {
         public const string DefaultUiCulture = "az-Latn-AZ";
         public const string FormattingCulture = "en-US";
         public static readonly string[] UiCultures = [DefaultUiCulture, "en-US", "ru-RU"];
 
-        // Language switch entries in display order.
+        // Language switch entries in display order
         public static readonly (string Culture, string Label)[] Languages = [(DefaultUiCulture, "AZ"), ("en-US", "EN"), ("ru-RU", "RU")];
 
         public static string CookieValue(string uiCulture)
@@ -33,7 +33,7 @@ namespace InventoryManagement.Web.Localization
                 DefaultRequestCulture = new RequestCulture(FormattingCulture, DefaultUiCulture),
                 SupportedCultures = [new CultureInfo(FormattingCulture)],
                 SupportedUICultures = UiCultures.Select(c => new CultureInfo(c)).ToList(),
-                // Cookie only, so the browser's Accept-Language never overrides the Azerbaijani default.
+                // Cookie only, so the browser's Accept-Language never overrides the Azerbaijani default
                 RequestCultureProviders = [new CookieRequestCultureProvider()]
             };
             return app.UseRequestLocalization(options);

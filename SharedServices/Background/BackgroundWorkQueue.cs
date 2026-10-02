@@ -8,7 +8,7 @@ namespace SharedServices.Background
     /// <summary>Work executed in a fresh DI scope on the background worker.</summary>
     public delegate Task BackgroundWorkItem(IServiceProvider services, CancellationToken cancellationToken);
 
-    /// <summary>In-process queue for work that must not slow or fail the request. Items are lost on a crash.</summary>
+    /// <summary>In-process queue for work that must not slow or fail the request, lost on a crash.</summary>
     public sealed class BackgroundWorkQueue
     {
         private readonly Channel<BackgroundWorkItem> _channel =
@@ -19,6 +19,7 @@ namespace SharedServices.Background
         internal ChannelReader<BackgroundWorkItem> Reader => _channel.Reader;
     }
 
+    /// <summary>Runs the queued items one at a time, each in its own scope, logging failures.</summary>
     internal sealed class BackgroundWorkService : BackgroundService
     {
         private readonly BackgroundWorkQueue _queue;

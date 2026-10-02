@@ -9,7 +9,7 @@
 
             text = text.ToLowerInvariant();
 
-            // Fold Azerbaijani letters to ASCII so a search typed without them still matches.
+            // Fold Azerbaijani letters to ASCII so a search typed without them still matches
             var replacements = new Dictionary<char, char>
             {
                 {'ə', 'e'}, {'Ə', 'e'},

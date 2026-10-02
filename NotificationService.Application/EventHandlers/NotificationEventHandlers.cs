@@ -8,8 +8,7 @@ using SharedServices.Persistence;
 
 namespace NotificationService.Application.EventHandlers
 {
-    /// <summary>Queues notification work for other modules' events to run after the transaction commits.</summary>
-    /// <remarks>Nothing runs inline, so slow WhatsApp calls or failures never delay or fail the request.</remarks>
+    /// <summary>Queues notification work to run after the commit, so slow or failing WhatsApp calls never hold up a request.</summary>
     public class NotificationEventHandlers :
         INotificationHandler<ApprovalRequestCreatedEvent>,
         INotificationHandler<ApprovalRequestProcessedEvent>,

@@ -3,8 +3,7 @@ using SkiaSharp;
 
 namespace InventoryManagement.Web.Services
 {
-    // Every upload gets a unique name, so a thumbnail never goes stale and can be cached for a year.
-    /// <summary>JPEG thumbnails for lists, made on first request and kept on disk under _thumbs.</summary>
+    /// <summary>List thumbnails made on first request under _thumbs, never stale since every upload has a unique name.</summary>
     public sealed class ImageThumbnails
     {
         public static readonly int[] Widths = [160, 480];
@@ -12,7 +11,7 @@ namespace InventoryManagement.Web.Services
 
         private readonly string _root;
         private readonly ILogger<ImageThumbnails> _logger;
-        // Decoding is memory-heavy, so at most two thumbnails are made at a time.
+        // Decoding is memory-heavy, so at most two thumbnails are made at a time
         private static readonly SemaphoreSlim Rendering = new(2);
 
         public ImageThumbnails(IConfiguration configuration, ILogger<ImageThumbnails> logger)
@@ -21,7 +20,7 @@ namespace InventoryManagement.Web.Services
             _logger = logger;
         }
 
-        /// <summary>Thumbnail URL for an uploaded image. Any other URL comes back unchanged.</summary>
+        /// <summary>Thumbnail URL for an uploaded image, any other URL comes back unchanged.</summary>
         public static string? Url(string? imageUrl, int width = 160)
             => imageUrl != null && imageUrl.StartsWith("/images/", StringComparison.Ordinal) ? $"/thumbs/{width}{imageUrl}" : imageUrl;
 
@@ -30,7 +29,7 @@ namespace InventoryManagement.Web.Services
         {
             if (!Widths.Contains(width)) return null;
 
-            // Uploaded photos only, and never a path that escapes the images root.
+            // Uploaded photos only, and never a path that escapes the images root
             var source = Path.GetFullPath(Path.Combine(_root, relativePath));
             if (!source.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.Ordinal)
                 || !(relativePath.StartsWith("products/") || relativePath.StartsWith("routes/"))
@@ -39,13 +38,14 @@ namespace InventoryManagement.Web.Services
 
             var target = Path.Combine(_root, "_thumbs", width.ToString(), relativePath) + ".jpg";
             if (File.Exists(target)) return target;
-            // Marker file so a broken photo is not retried on every request.
+            // A marker file keeps a broken photo from being retried on every request
             var failed = target + ".failed";
             if (File.Exists(failed)) return null;
 
             await Rendering.WaitAsync(cancellationToken);
             try
             {
+                // Another request may have made it while this one waited
                 if (File.Exists(target)) return target;
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 var bytes = await Task.Run(() => Render(source, width), cancellationToken);
@@ -54,7 +54,7 @@ namespace InventoryManagement.Web.Services
                     await File.WriteAllBytesAsync(failed, [], cancellationToken);
                     return null;
                 }
-                // Write to a temp file and move it so a parallel request never reads half a file.
+                // Write to a temp file and move it so a parallel request never reads half a file
                 var temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 await File.WriteAllBytesAsync(temp, bytes, cancellationToken);
                 File.Move(temp, target, overwrite: true);
@@ -76,14 +76,14 @@ namespace InventoryManagement.Web.Services
             using var stream = File.OpenRead(source);
             using var codec = SKCodec.Create(stream);
             if (codec == null) return null;
-            // Older uploads skipped ImageSanitizer, so refuse anything that would unpack to gigabytes.
+            // Older uploads skipped ImageSanitizer, so refuse anything that would unpack to gigabytes
             if ((long)codec.Info.Width * codec.Info.Height > ImageSanitizer.MaxPixels) return null;
 
-            // JPEGs can decode straight at 1/2, 1/4 or 1/8 size, which saves unpacking the whole photo.
+            // JPEGs can decode straight at 1/2, 1/4 or 1/8 size, which saves unpacking the whole photo
             var scale = Math.Min(1f, 2f * width / Math.Max(codec.Info.Width, codec.Info.Height));
             var size = codec.GetScaledDimensions(scale);
             using var decoded = SKBitmap.Decode(codec, codec.Info.WithSize(size.Width, size.Height))
-                ?? SKBitmap.Decode(codec);   // PNG cannot decode scaled.
+                ?? SKBitmap.Decode(codec);   // PNG cannot decode scaled
             if (decoded == null) return null;
             var oriented = ImageSanitizer.Orient(decoded, codec.EncodedOrigin);
             using var upright = ReferenceEquals(oriented, decoded) ? null : oriented;

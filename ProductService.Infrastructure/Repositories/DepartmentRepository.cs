@@ -58,6 +58,7 @@ namespace ProductService.Infrastructure.Repositories
             {
                 search = search.Trim();
 
+                // ILIKE doesn't fold Azerbaijani letters, so the final match happens in memory
                 var broadQuery = query.Where(r =>
                     EF.Functions.ILike(r.Name, $"%{search}%") ||
                     (r.DepartmentHead != null && EF.Functions.ILike(r.DepartmentHead, $"%{search}%")) ||
@@ -129,7 +130,7 @@ namespace ProductService.Infrastructure.Repositories
                 {
                     g.Key,
                     Products = g.Count(),
-                    // Distinct, case-insensitive, non-empty worker names.
+                    // Distinct non-empty worker names, ignoring case
                     Workers = g.Where(p => p.Worker != null && p.Worker != "").Select(p => p.Worker!.ToLower()).Distinct().Count()
                 })
                 .ToListAsync(cancellationToken);

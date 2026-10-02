@@ -13,7 +13,6 @@ namespace NotificationService.Application.Interfaces
             string? uploadedImageUrl = null, CancellationToken cancellationToken = default);
     }
 
-    /// <summary>The outcome of one send attempt.</summary>
-    /// <remarks>On a rate limit RetryAfter says how long to wait. UploadedImageUrl can be reused on a retry.</remarks>
+    /// <summary>One send attempt's outcome, with the wait asked by a rate limit and an uploaded image to reuse on a retry.</summary>
     public sealed record WhatsAppSendResult(bool Success, bool RateLimited, TimeSpan? RetryAfter, string? Error, string? UploadedImageUrl);
 }

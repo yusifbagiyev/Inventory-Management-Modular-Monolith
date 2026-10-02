@@ -10,7 +10,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <!-- The implicit usings the Web SDK provided when this was a standalone service. -->
+  <!-- Implicit usings the Web SDK would add, which a class library does not get -->
   <ItemGroup>
     <Using Include="Microsoft.AspNetCore.Http" />
     <Using Include="Microsoft.Extensions.Configuration" />

@@ -15,7 +15,7 @@ namespace InventoryManagement.Web.Extensions
         public const string ApiKeyScheme = "ApiKey";
         public const string ApiKeyHeader = "X-Api-Key";
 
-        /// <summary>Pages use the cookie only. The API also accepts a JWT or, for ServiceDesk, an API key.</summary>
+        /// <summary>Pages use only the cookie, while the API also takes a JWT or the ServiceDesk API key.</summary>
         public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddAuthentication(options =>
@@ -34,12 +34,12 @@ namespace InventoryManagement.Web.Extensions
                 options.SlidingExpiration = true;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
-                // TLS ends at nginx, but forwarded headers make the request look like HTTPS here.
+                // TLS ends at nginx, but forwarded headers make the request look like HTTPS here
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
                 options.Events.OnValidatePrincipal = UserPrincipalFactory.RefreshAsync;
 
-                // AJAX and API callers get a status code instead of a redirect to the login page.
+                // AJAX and API callers get a status code instead of a redirect to the login page
                 options.Events.OnRedirectToLogin = context =>
                 {
                     if (WantsStatusCode(context.Request))
@@ -72,7 +72,7 @@ namespace InventoryManagement.Web.Extensions
                         configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured"))),
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
-                // A token is refused once the user's session stamp changes. The stamp is checked at most once a minute.
+                // A token is refused once the user's session stamp changes, checked at most once a minute
                 options.Events = new JwtBearerEvents { OnTokenValidated = ValidateTokenUserAsync };
             })
             .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(ApiKeyScheme, null);
@@ -80,7 +80,7 @@ namespace InventoryManagement.Web.Extensions
             return services;
         }
 
-        /// <summary>Bearer tokens and API keys count only on the API. The API key also only on the product endpoints.</summary>
+        /// <summary>Bearer tokens and API keys count only on the API, and the API key only on the product endpoints.</summary>
         public static string SelectScheme(HttpContext context)
         {
             if (!ModuleHostExtensions.IsApiRequest(context))

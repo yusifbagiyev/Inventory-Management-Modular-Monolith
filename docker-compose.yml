@@ -1,5 +1,4 @@
-# One app container behind nginx, one PostgreSQL database with a schema per module, and Seq for logs.
-# Secrets come from .env, see .env.example.
+# The app behind nginx, PostgreSQL with a schema per module and Seq for logs, with secrets from .env
 
 services:
   postgres:
@@ -9,7 +8,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: postgres
-    # Published for administration from the LAN. Remove, or bind to 127.0.0.1, if not needed.
+    # Published for administration from the LAN, so drop it or bind it to 127.0.0.1 if nobody needs that
     ports:
       - "5432:5432"
     volumes:
@@ -24,7 +23,7 @@ services:
       retries: 5
 
   app:
-    # CD pins APP_IMAGE in .env to the deployed tag. Without it, up --build builds a local image.
+    # CD pins APP_IMAGE in .env to the deployed tag, otherwise up --build builds a local image
     image: ${APP_IMAGE:-inventory-app:local}
     build:
       context: .
@@ -35,26 +34,26 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=${DB_NAME:-inventory};Username=${DB_USER};Password=${DB_PASSWORD}
-      # JWT is only for external /api clients. The UI uses the auth cookie.
+      # JWT is only for external /api clients since the UI uses the auth cookie
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
       - WhatsApp__ApiUrl=https://wasenderapi.com/api/
       - WhatsApp__ApiToken=${WHATSAPP_API_TOKEN}
       - WhatsApp__DefaultGroupId=${WHATSAPP_GROUP_ID}
-      # ServiceDesk integration. Leave SERVICEDESK_API_KEY empty to disable it.
+      # ServiceDesk integration, which stays off while SERVICEDESK_API_KEY is empty
       - ApiKeys__0__Key=${SERVICEDESK_API_KEY:-}
       - ApiKeys__0__ServiceName=ServiceDesk
       - ApiKeys__0__ServiceId=servicedesk-001
       - ApiKeys__0__Permissions__0=product.view
       - ImageSettings__RootPath=/app/wwwroot/images
-      # Persisted so sign-in cookies and antiforgery tokens survive a redeploy.
+      # Persisted so sign-in cookies and antiforgery tokens survive a redeploy
       - DataProtection__KeysPath=/app/keys
     volumes:
-      # The whole images folder, so thumbnails survive a deploy too.
+      # The whole images folder, so thumbnails survive a deploy too
       - ./storage/images:/app/wwwroot/images:rw
       - ./storage/keys:/app/keys:rw
-    # Healthy once migrations ran and the database answers. deploy.sh waits on this.
+    # Healthy once migrations ran and the database answers, which is what deploy.sh waits for
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/health"]
       interval: 15s
@@ -72,7 +71,7 @@ services:
     restart: always
 
   seq:
-    # Pinned because Seq keeps state in seq_data. Upgrade it on purpose.
+    # Pinned because Seq keeps state in seq_data, so it is only upgraded on purpose
     image: datalust/seq:2025.2.14476
     container_name: inventory_seq
     environment:
@@ -95,11 +94,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      # Product API for ServiceDesk on the LAN.
+      # Product API for ServiceDesk on the LAN
       - "5001:5001"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # The files nginx.conf includes.
+      # The files nginx.conf includes
       - ./deploy/nginx:/etc/nginx/inventory:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./storage/images/products:/app/storage/images/products:ro
@@ -110,8 +109,7 @@ services:
       - frontend
     restart: always
 
-  # Public access through a Cloudflare Tunnel. The connection is outbound, so no port is opened on the server.
-  # Runs only with COMPOSE_PROFILES=tunnel and the token in .env. Setup is in deploy/CLOUDFLARE.md.
+  # Outbound Cloudflare Tunnel for public access, run only with COMPOSE_PROFILES=tunnel and its token
   cloudflared:
     image: cloudflare/cloudflared:2026.9.3
     container_name: inventory_cloudflared

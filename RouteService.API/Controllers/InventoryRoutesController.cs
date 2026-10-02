@@ -11,7 +11,7 @@ using SharedServices.Identity;
 
 namespace RouteService.API.Controllers
 {
-    /// <remarks>Module exceptions are turned into status codes by the host's API exception middleware.</remarks>
+    /// <summary>Route API, whose module exceptions the host's API exception middleware turns into status codes.</summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -57,7 +57,7 @@ namespace RouteService.API.Controllers
         }
 
 
-        // The Transfer page uses this too, to check for a pending transfer of the product.
+        // The Transfer page uses this too, to check for a pending transfer of the product
         [HttpGet("product/{productId}")]
         [Permission(AllPermissions.RouteView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<IEnumerable<InventoryRouteDto>>> GetInventoryByProductId(int productId)

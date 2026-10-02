@@ -7,6 +7,7 @@ using SharedServices.Persistence;
 
 namespace ApprovalService.Application.Features.Commands
 {
+    /// <summary>Lets the requester withdraw a pending request, which deletes it.</summary>
     public class CancelRequest
     {
         /// <param name="UserId">The caller, who must be the requester.</param>

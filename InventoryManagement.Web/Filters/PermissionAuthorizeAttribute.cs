@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace InventoryManagement.Web.Filters
 {
-    /// <summary>Passes if the user holds any one of the permissions. Several attributes on one action must all pass.</summary>
+    /// <summary>Passes if the user holds any of the permissions, and several attributes on one action must all pass.</summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
     public class PermissionAuthorizeAttribute : Attribute, IAuthorizationFilter
     {

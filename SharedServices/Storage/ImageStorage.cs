@@ -2,7 +2,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace SharedServices.Storage
 {
-    // The root must be the web root's images folder so the /images/... URLs are served as static files.
     /// <summary>Stores uploaded images under {root}/{category}/{inventoryCode}/ and returns their URLs.</summary>
     public sealed class ImageStorage
     {
@@ -16,6 +15,7 @@ namespace SharedServices.Storage
 
         public ImageStorage(IConfiguration configuration)
         {
+            // The root must be the web root's images folder so the image URLs are served as static files
             _root = Path.GetFullPath(configuration["ImageSettings:RootPath"] ?? Path.Combine("wwwroot", "images"));
         }
 
@@ -29,7 +29,7 @@ namespace SharedServices.Storage
             if (content.CanSeek && content.Length > MaxBytes)
                 throw new ArgumentException("Image size exceeds 5MB limit");
 
-            // A stream that cannot report its length is checked while reading.
+            // A stream that cannot report its length is checked while reading
             using var buffer = new MemoryStream();
             var chunk = new byte[81920];
             int read;
@@ -44,14 +44,14 @@ namespace SharedServices.Storage
             var folder = Path.Combine(_root, category, inventoryCode.ToString());
             Directory.CreateDirectory(folder);
 
-            // The Guid keeps two uploads in the same second apart. The extension follows the content.
+            // The Guid keeps two uploads in the same second apart, and the extension follows the content
             var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{clean.Extension}";
             await File.WriteAllBytesAsync(Path.Combine(folder, storedName), clean.Data, cancellationToken);
 
             return $"/images/{category}/{inventoryCode}/{storedName}";
         }
 
-        /// <summary>Copies an existing image into another category. Null when the source is missing.</summary>
+        /// <summary>Copies an existing image into another category, or returns null when the source is missing.</summary>
         public async Task<string?> CopyAsync(string? sourceUrl, string targetCategory, int inventoryCode, CancellationToken cancellationToken = default)
         {
             var sourcePath = GetPhysicalPath(sourceUrl);

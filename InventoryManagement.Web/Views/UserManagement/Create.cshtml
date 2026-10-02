@@ -79,7 +79,7 @@
         <section class="ip-form-section">
             <h2>@L["Access"]</h2>
             <div class="ip-form-grid">
-                @* Only Admins pick the role. Anyone else creates a User. *@
+                @* Only Admins pick the role, anyone else creates a User *@
                 @if (User.IsInRole("Admin"))
                 {
                 <div class="ip-field">
@@ -137,7 +137,7 @@
             button.setAttribute('aria-label', label);
         }
 
-        // Suggest a username from the first and last name while the field is empty.
+        // Suggest a username from the first and last name while the field is empty
         document.getElementById('FirstName').addEventListener('input', generateUsername);
         document.getElementById('LastName').addEventListener('input', generateUsername);
 
@@ -151,14 +151,14 @@
             }
         }
 
-        // Look the form up by id because the toolbar search is the first form on the page.
-        // stopImmediatePropagation keeps site.js from switching the button to its spinner.
+        // Looked up by id because the toolbar search is the first form on the page
         document.getElementById('createUserForm').addEventListener('submit', function(e) {
             const password = document.getElementById('Password').value;
             const confirmPassword = document.getElementById('ConfirmPassword').value;
 
             if (password !== confirmPassword) {
                 e.preventDefault();
+                // Keeps site.js from switching the button to its spinner
                 e.stopImmediatePropagation();
                 showToast(t('Passwords do not match!'), 'error');
                 return false;
