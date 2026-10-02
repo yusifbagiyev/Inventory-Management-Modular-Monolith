@@ -1416,5 +1416,7 @@
   "At least {0} characters": "Не менее {0} символов",
   "Uppercase and lowercase letters": "Заглавные и строчные буквы",
   "At least one digit": "Не менее одной цифры",
-  "At least {0} characters, with an uppercase letter, a lowercase letter and a digit. Choose a password you do not use for other services.": "Не менее {0} символов, включая заглавную букву, строчную букву и цифру. Выберите пароль, который вы не используете в других сервисах."
+  "At least {0} characters, with an uppercase letter, a lowercase letter and a digit. Choose a password you do not use for other services.": "Не менее {0} символов, включая заглавную букву, строчную букву и цифру. Выберите пароль, который вы не используете в других сервисах.",
+  "All notifications have been read": "Все уведомления прочитаны",
+  "There are no unread notifications.": "Непрочитанных уведомлений нет."
 }

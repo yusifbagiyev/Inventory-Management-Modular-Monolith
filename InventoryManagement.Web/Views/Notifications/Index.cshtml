@@ -46,14 +46,22 @@
         @if (items.Count == 0)
         {
             <div class="ip-empty">
-                <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
-                @if (unreadTab || !string.IsNullOrEmpty(type))
+                @if (unreadTab && string.IsNullOrEmpty(type) && Model.AllCount > 0)
                 {
+                    @* Unread tab with nothing unread: say so, not "nothing found". *@
+                    <span class="icon ok"><i class="fa-solid fa-check-double"></i></span>
+                    <div class="title">@L["All notifications have been read"]</div>
+                    <div class="text">@L["There are no unread notifications."]</div>
+                }
+                else if (unreadTab || !string.IsNullOrEmpty(type))
+                {
+                    <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
                     <div class="title">@L["Nothing found"]</div>
                     <div class="text">@L["No notifications match this filter."]</div>
                 }
                 else
                 {
+                    <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
                     <div class="title">@L["No notifications found"]</div>
                     <div class="text">@L["Approval requests, product and route updates will show up here."]</div>
                 }

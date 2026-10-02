@@ -999,3 +999,74 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-notif-icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
 .ip-notif-icon.bad { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
 .ip-notif-item .unread-dot { margin-top: 12px; }   /* level with the icon centre */
+
+/* ---------- Motion ----------
+   Short and quiet: things arrive (rise and fade), nothing loops except the empty-state mark.
+   Everything here stops under prefers-reduced-motion (end of this block). */
+@keyframes ip-rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes ip-fade { from { opacity: 0; } }
+@keyframes ip-pop-in { from { opacity: 0; transform: scale(.8); } }
+@keyframes ip-float { 50% { transform: translateY(-4px); } }
+@keyframes ip-ripple { from { transform: scale(1); opacity: .55; } to { transform: scale(2.2); opacity: 0; } }
+@keyframes ip-menu-in { from { opacity: 0; translate: 0 -4px; } }
+
+/* Empty states: centred; the mark pops in, floats, and sends out soft rings; the words follow. */
+.ip-empty { align-items: center; text-align: center; margin-inline: auto; padding: 72px 16px 80px; }
+.ip-empty .icon { position: relative; width: 64px; height: 64px; margin-bottom: 12px; border-radius: 50%; font-size: 24px;
+                  animation: ip-pop-in .45s cubic-bezier(.2, .9, .3, 1.25) both, ip-float 4.5s ease-in-out .6s infinite; }
+.ip-empty .icon::before, .ip-empty .icon::after { content: ""; position: absolute; inset: 0; border-radius: 50%;
+                  border: 1.5px solid var(--ip-border-strong); animation: ip-ripple 3.2s ease-out .5s infinite; pointer-events: none; }
+.ip-empty .icon::after { animation-delay: 2.1s; }
+.ip-empty > :not(.icon) { animation: ip-rise .4s cubic-bezier(.2, .7, .2, 1) backwards; }
+.ip-empty > .title { animation-delay: .12s; }
+.ip-empty > .text { animation-delay: .2s; }
+.ip-empty > :nth-child(n+4) { animation-delay: .28s; }
+.ip-empty .icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
+
+/* List rows arrive one after another (page load, tabs, filters, page numbers). A live refresh
+   ([data-quiet], live-updates.js), DataTables redraws and the bell menu stay still. */
+.ip-table tbody tr, .ip-notif-item, .ip-list-link { animation: ip-rise .32s cubic-bezier(.2, .7, .2, 1) backwards; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(2) { animation-delay: 25ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(3) { animation-delay: 50ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(4) { animation-delay: 75ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(5) { animation-delay: 100ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(6) { animation-delay: 125ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(7) { animation-delay: 150ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(8) { animation-delay: 175ms; }
+:is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(n+9) { animation-delay: 200ms; }
+[data-quiet] :is(tr, .ip-notif-item, .ip-list-link), table.dataTable tbody tr, .ip-notif-list .ip-notif-item { animation: none; }
+
+/* Pressed buttons give a little; menus open with a short drop. */
+.ip-btn, .ip-btn-icon { transition: transform 90ms ease, background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
+.ip-btn:active:not(:disabled), .ip-btn-icon:active:not(:disabled) { transform: scale(.97); }
+.dropdown-menu.show, .ip-finder-menu:not([hidden]) { animation: ip-menu-in 140ms cubic-bezier(.2, .8, .2, 1); }
+.ip-kpi { transition: transform 160ms ease; }
+.ip-kpi:hover { transform: translateY(-2px); }
+
+/* Page blocks arrive in reading order: form / details sections, dashboard figures, timeline steps,
+   the accounts on the sign-in page. Same quiet rule as the rows. */
+.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap, .ip-account-other { animation: ip-rise .38s cubic-bezier(.2, .7, .2, 1) backwards; }
+:is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(2) { animation-delay: 50ms; }
+:is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(3) { animation-delay: 100ms; }
+:is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(4) { animation-delay: 150ms; }
+:is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(n+5) { animation-delay: 200ms; }
+.ip-account-other { animation-delay: 220ms; }
+[data-quiet] :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item), [data-quiet]:is(.ip-form-section, .ip-section) { animation: none; }
+
+/* Toasts slide in from the side; hover and selection changes ease instead of jumping. */
+@keyframes ip-toast-in { from { opacity: 0; translate: 16px 0; } }
+.ip-toast.show { animation: ip-toast-in .26s cubic-bezier(.2, .8, .2, 1); }
+.ip-tab { transition: color 140ms ease, border-color 180ms ease; }
+.ip-rail-link, .ip-list-link, .ip-account, .ip-notif-item, .ip-table tbody tr { transition: background-color 120ms ease, color 120ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ip-empty .icon, .ip-empty .icon::before, .ip-empty .icon::after, .ip-empty > *,
+  .ip-table tbody tr, .ip-notif-item, .ip-list-link, .dropdown-menu.show, .ip-finder-menu,
+  .ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap, .ip-account-other, .ip-toast.show { animation: none; }
+  .ip-tab, .ip-rail-link, .ip-list-link, .ip-account, .ip-notif-item, .ip-table tbody tr { transition: none; }
+  .ip-empty .icon::before, .ip-empty .icon::after { display: none; }
+  .ip-btn, .ip-btn-icon, .ip-kpi { transition: none; }
+  .ip-btn:active, .ip-btn-icon:active, .ip-kpi:hover { transform: none; }
+}
+
+@media print { *, *::before, *::after { animation: none !important; transition: none !important; } }

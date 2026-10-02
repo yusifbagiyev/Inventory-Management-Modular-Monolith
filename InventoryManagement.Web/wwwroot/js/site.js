@@ -886,3 +886,27 @@ document.addEventListener('click', async function (e) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackButtons);
     else addBackButtons();
 })();
+
+/** Dashboard figures count up from zero once, when the page opens (not on live refreshes). */
+(function () {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.hidden) return;   // a background tab gets no animation frames: show the figures as they are
+        document.querySelectorAll('.ip-kpi .value').forEach(function (el) {
+            const shown = el.textContent.trim();
+            if (!/^[\d,]+$/.test(shown)) return;
+            const target = parseInt(shown.replace(/,/g, ''), 10);
+            if (!target) return;
+            const start = performance.now(), duration = 700;
+            function step(now) {
+                const p = Math.min(1, (now - start) / duration);
+                el.textContent = p < 1 ? Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString('en-US') : shown;
+                if (p < 1) requestAnimationFrame(step);
+            }
+            el.textContent = '0';
+            requestAnimationFrame(step);
+            setTimeout(function () { el.textContent = shown; }, duration + 400);   // in case frames stop (tab hidden mid-way)
+        });
+    });
+})();
+

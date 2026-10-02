@@ -149,6 +149,7 @@ window.LiveUpdates = (function () {
         pairs.forEach(([current, fresh]) => {
             if (!current || !fresh) return;
             const node = document.importNode(fresh, true);
+            node.setAttribute('data-quiet', '');   // rows keep still on a live refresh (ip-components.css: Motion)
             current.replaceWith(node);
             node.classList.add('live-refreshed');
             setTimeout(() => node.classList.remove('live-refreshed'), 1600);
