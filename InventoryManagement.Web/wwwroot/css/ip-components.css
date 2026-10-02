@@ -989,3 +989,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-rail-name { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .ip-rail-name small { font-size: var(--ip-fs-xs, 11px); font-weight: 400; color: var(--ip-text-3); }
 
+
+/* Banners: a long message wraps beside its icon instead of dropping below it (the row still wraps for buttons). */
+.ip-banner > i { flex: none; }
+.ip-banner > div { flex: 1 1 200px; min-width: 0; }
