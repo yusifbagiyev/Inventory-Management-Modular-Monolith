@@ -109,7 +109,7 @@ dotnet run --project InventoryManagement.Web
 ```
 
 The app runs at http://localhost:5051 and creates its database on the first start, with roles,
-permissions and an initial admin account seeded in
+permissions and a demo admin (`admin` / `Admin12345`) seeded in
 `IdentityService.Infrastructure/Data/IdentityDbContext.cs` - replace that seed before using it.
 
 To add a migration:
