@@ -6,7 +6,7 @@ namespace ProductService.Application.Features.Lookups
 {
     public record ProductLookupsDto(IReadOnlyList<LookupItem> Categories, IReadOnlyList<LookupItem> Departments);
 
-    /// <summary>Category and department options for forms and filters - no product counts.</summary>
+    /// <summary>Category and department options for forms and filters, without product counts.</summary>
     public record GetLookupsQuery : IRequest<ProductLookupsDto>;
 
     public class GetLookupsQueryHandler : IRequestHandler<GetLookupsQuery, ProductLookupsDto>

@@ -47,8 +47,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var type = ParseRouteType(routeType);
 
-            // Department matches either end of a route; category is matched by name (routes store
-            // only the category name).
+            // The department filter matches either end of a route. Routes only store the category name.
             var result = await _mediator.Send(new GetAllRoutesQuery(
                 pageNumber, pageSize, search, isCompleted, startDate, endDate,
                 departmentId, categoryName, type, departmentName));
@@ -69,10 +68,9 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentCategoryName = categoryName;
             ViewBag.CurrentRouteType = routeType;
 
-            // The active status/type filters narrow the cascading facets.
             await LoadFilterLists(isCompleted, type);
 
-            // Tab counts (All / Pending / Completed): the same filters with each completion state.
+            // Tab counts use the same filters with each completion state.
             ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
                 : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
             ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
@@ -126,7 +124,6 @@ namespace InventoryManagement.Web.Controllers
             if (route == null)
                 return RedirectToNotFound();
 
-            // Needed for the destination dropdown.
             ViewBag.Departments = await GetDepartmentOptions(route.ToDepartmentId);
             return View(ModelMapper.Map<RouteViewModel>(route));
         }
@@ -178,11 +175,7 @@ namespace InventoryManagement.Web.Controllers
                 : View(TranslateNotes(ModelMapper.Map<RouteViewModel>(route)));
         }
 
-        /// <summary>
-        /// History rows carry notes the system wrote in English ("Auto-created from product service",
-        /// "Product updated: …"); show them in the interface language. User-typed notes match no key
-        /// and stay as written.
-        /// </summary>
+        /// <summary>Translates system-written notes. Notes typed by people match no key and stay as written.</summary>
         private static RouteViewModel TranslateNotes(RouteViewModel route)
         {
             route.Notes = Tr(route.Notes);
@@ -199,10 +192,7 @@ namespace InventoryManagement.Web.Controllers
             return HandleApiResponse(response, nameof(Index));
         }
 
-        /// <summary>
-        /// Sends a completed transfer's WhatsApp message again (after it failed): queued in the
-        /// WhatsApp outbox, which records the outcome on the route.
-        /// </summary>
+        /// <summary>Queues a failed WhatsApp message of a completed transfer again.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [PermissionAuthorize(AllPermissions.RouteComplete)]
@@ -215,8 +205,7 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new { isSuccess = false, message = Tr("WhatsApp messages are sent only for completed transfers.") });
             if (!whatsApp.Enabled)
                 return Json(new { isSuccess = false, message = Tr("WhatsApp is not configured.") });
-            // Only a failed message: sending one that went out (or is waiting) again would let
-            // anyone with route.complete flood the group, and WaSender bans flooding accounts.
+            // Failed messages only. Resending anything else could flood the group, and WaSender bans accounts for that.
             if (route.WhatsAppStatus != SharedServices.Contracts.WhatsAppStatus.Failed)
                 return Json(new { isSuccess = false, message = Tr("Only a message that failed to send can be resent.") });
 
@@ -257,19 +246,14 @@ namespace InventoryManagement.Web.Controllers
         private static RouteType? ParseRouteType(string? routeType)
             => Enum.TryParse<RouteType>(routeType, ignoreCase: true, out var parsed) ? parsed : null;
 
-        /// <summary>Active departments (plus <paramref name="currentId"/> when a route already points at an inactive one).</summary>
+        /// <summary>Active departments, plus the current one even if it is inactive.</summary>
         private async Task<List<SelectListItem>> GetDepartmentOptions(int? currentId = null)
             => (await _mediator.Send(new GetLookupsQuery())).Departments.ToChoiceList(currentId);
 
         private async Task LoadDepartments(TransferViewModel model)
             => model.Departments = await GetDepartmentOptions();
 
-        /// <summary>
-        /// Department/category options + cascading data for the route list's filter panel. A route
-        /// keeps the department and category NAMES of the moment it was written, so both dropdowns
-        /// offer the names found on routes (renamed and deleted departments included) and filter by
-        /// them. Pairs are emitted as [["department", "category"], ...].
-        /// </summary>
+        /// <summary>Filter options come from the names stored on routes, so renamed and deleted departments still show up.</summary>
         private async Task LoadFilterLists(bool? isCompleted, RouteType? routeType)
         {
             var facets = await _mediator.Send(new GetRouteFilterFacetsQuery(isCompleted, routeType));

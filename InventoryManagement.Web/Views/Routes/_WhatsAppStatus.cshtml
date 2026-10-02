@@ -1,6 +1,5 @@
 @model RouteViewModel
-@* A transfer's WhatsApp message: nothing when sent (or none), a warning when it failed (with the
-   reason in the tooltip and, for whoever completes transfers, a resend button), a clock while queued. *@
+@* Shows nothing once the WhatsApp message is sent. Only failed and queued messages get a marker. *@
 @if (Model.WhatsAppStatus == "Failed")
 {
     <span class="ip-wa ip-wa-failed" title="@Model.WhatsAppError">

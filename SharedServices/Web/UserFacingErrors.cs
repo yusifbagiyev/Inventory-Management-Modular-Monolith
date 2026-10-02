@@ -1,11 +1,7 @@
 namespace SharedServices.Web
 {
-    /// <summary>
-    /// Whether an exception's message may be shown to the caller. The modules throw
-    /// InvalidOperationException / ArgumentException with messages meant for users ("route is
-    /// already completed"); the framework, EF Core and Npgsql throw the same types with internal
-    /// text (queries, connection details), which stays in the log.
-    /// </summary>
+    // The framework, EF Core and Npgsql throw the same exception types as our modules, but with internal details.
+    /// <summary>Decides whether an exception's message may be shown to the caller.</summary>
     public static class UserFacingErrors
     {
         public const string Generic = "An error occurred while processing your request";

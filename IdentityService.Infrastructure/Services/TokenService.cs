@@ -40,19 +40,16 @@ namespace IdentityService.Infrastructure.Services
                 new(ClaimTypes.Email, user.Email!),
                 new("FirstName", user.FirstName),
                 new("LastName", user.LastName),
-                // Checked on every use (host's JwtBearer OnTokenValidated): a password change or
-                // deactivation ends the token before it expires.
+                // The host checks this on every use, so a password change or deactivation ends the token early.
                 new("SessionStamp", AuthService.SessionStamp(user.SecurityStamp ?? string.Empty))
             };
 
-            // Add roles
             var roles = await _userManager.GetRolesAsync(user);
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            // Add permissions
             var permissions = await GetUserPermissionsAsync(user.Id, roles);
             foreach (var permission in permissions)
             {
@@ -143,10 +140,7 @@ namespace IdentityService.Infrastructure.Services
                 .FirstOrDefaultAsync(rt => rt.Token == hash);
         }
 
-        /// <summary>
-        /// Refresh tokens are stored as their SHA-256 (hex): a database copy or backup does not
-        /// hand out working tokens. Callers keep passing the token itself.
-        /// </summary>
+        /// <summary>Refresh tokens are stored as SHA-256 hashes, so a database copy holds no working tokens.</summary>
         private static string Hash(string token)
             => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
 

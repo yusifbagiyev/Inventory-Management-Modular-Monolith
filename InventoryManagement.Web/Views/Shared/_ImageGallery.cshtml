@@ -1,6 +1,5 @@
 @model ImageGalleryModel
-@* Details-page gallery (design: .ip-gallery): the cover large with prev/next and a counter, the
-   rest as thumbnails. The large image opens the preview modal; image-manager.js switches images. *@
+@* image-manager.js switches the images. Clicking the large one opens the preview modal. *@
 @if (Model.Images.Count == 0)
 {
     <div class="ip-gallery" role="img" aria-label="@L[Model.EmptyText]">
@@ -22,7 +21,7 @@ else
                 <button type="button" class="nav prev" data-ig-step="-1" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left"></i></button>
                 <button type="button" class="nav next" data-ig-step="1" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right"></i></button>
                 <span class="counter" data-ig-counter>1 / @Model.Images.Count</span>
-                @* Phones: dots instead of the arrows and thumbnails; swipe to change (image-manager.js). *@
+                @* Phones show dots instead of arrows and thumbnails, and swipe between images. *@
                 <div class="ip-gallery-dots" aria-hidden="true">
                     @for (var i = 0; i < Model.Images.Count; i++)
                     {

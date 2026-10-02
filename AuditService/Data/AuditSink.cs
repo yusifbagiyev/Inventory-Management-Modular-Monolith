@@ -4,16 +4,13 @@ using SharedServices.Auditing;
 
 namespace AuditService.Data
 {
-    /// <summary>
-    /// Saves audit records through <see cref="AuditDbContext"/>, which shares the request's
-    /// connection and joins its transaction (see AddModuleDbContext).
-    /// </summary>
+    /// <summary>Saves audit records on the request's connection, inside its transaction.</summary>
     public sealed class AuditSink : IAuditSink
     {
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
         private readonly IServiceProvider _services;
 
-        // Resolved lazily: module DbContexts ask for the sink while their options are being built.
+        // The context is resolved lazily because module DbContexts ask for the sink while their options are built.
         public AuditSink(IServiceProvider services) => _services = services;
 
         public async Task WriteAsync(IReadOnlyList<AuditRecord> records, CancellationToken cancellationToken = default)

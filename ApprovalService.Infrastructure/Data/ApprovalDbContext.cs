@@ -34,8 +34,7 @@ namespace ApprovalService.Infrastructure.Data
                 entity.Property(e => e.ExecutedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // xmin as optimistic concurrency token: two admins approving the same request at
-                // once can no longer both execute its action.
+                // The xmin column is the concurrency token, so two approvers cannot both run the action.
                 entity.Property<uint>("xmin").IsRowVersion();
 
                 entity.HasIndex(e => e.Status);
@@ -45,7 +44,7 @@ namespace ApprovalService.Infrastructure.Data
         }
     }
 
-    /// <summary>Used by `dotnet ef` only.</summary>
+    /// <summary>Used only by dotnet ef.</summary>
     public class ApprovalDbContextFactory : IDesignTimeDbContextFactory<ApprovalDbContext>
     {
         public ApprovalDbContext CreateDbContext(string[] args)

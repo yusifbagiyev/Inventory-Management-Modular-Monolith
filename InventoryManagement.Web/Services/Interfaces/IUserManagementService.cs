@@ -12,8 +12,7 @@ namespace InventoryManagement.Web.Services.Interfaces
         Task<bool> DeleteUserAsync(int id);
         Task<bool> ToggleUserStatusAsync(int id);
         Task<bool> ResetPasswordAsync(int userId, string newPassword);
-        // Self-service: the signed-in user changes their OWN password (verifies the current one).
-        // Returns the backend's error message on failure (e.g. "current password is incorrect").
+        // Changes the signed-in user's own password after checking the current one.
         Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword);
         Task<List<string>> GetAllRolesAsync();
     }

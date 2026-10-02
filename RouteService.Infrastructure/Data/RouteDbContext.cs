@@ -47,20 +47,19 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.CompletedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // PostgreSQL's xmin system column as an optimistic concurrency token: two users
-                // completing the same route at once can no longer both succeed.
+                // The xmin column is the concurrency token, so two users cannot both complete the same route.
                 entity.Property<uint>("xmin").IsRowVersion();
 
                 entity.HasIndex(e => e.FromDepartmentId).HasDatabaseName("IX_InventoryRoutes_FromDepartmentId");
                 entity.HasIndex(e => e.ToDepartmentId).HasDatabaseName("IX_InventoryRoutes_ToDepartmentId");
                 entity.HasIndex(e => e.CreatedAt);
-                // Default list order: pending first, then most recently completed.
+                // Matches the default list order, pending first and then most recently completed.
                 entity.HasIndex(e => new { e.IsCompleted, e.CompletedAt });
             });
         }
     }
 
-    /// <summary>Used by `dotnet ef` only.</summary>
+    /// <summary>Used only by dotnet ef.</summary>
     public class RouteDbContextFactory : IDesignTimeDbContextFactory<RouteDbContext>
     {
         public RouteDbContext CreateDbContext(string[] args)

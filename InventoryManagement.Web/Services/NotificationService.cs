@@ -21,10 +21,7 @@ namespace InventoryManagement.Web.Services
         private int UserId => int.TryParse(
             _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
-        /// <summary>
-        /// Notifications are stored in English (the text is written once, for every recipient); they are
-        /// shown in the viewer's language through the same table as the rest of the UI.
-        /// </summary>
+        /// <summary>Notifications are stored in English once for all recipients and translated when shown.</summary>
         public async Task<List<NotificationDto>> GetNotificationsAsync(bool unreadOnly = false, int? limit = null)
             => Translate(ModelMapper.MapList<NotificationDto>(await _inbox.GetAsync(UserId, unreadOnly, limit)));
 

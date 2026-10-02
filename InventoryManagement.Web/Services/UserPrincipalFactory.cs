@@ -7,13 +7,8 @@ using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>
-    /// Builds the auth-cookie principal from the identity module, and keeps it current: roles and
-    /// permissions are re-read periodically so an admin's change (or deactivation) takes effect
-    /// without the user having to sign out. The session also ends when the user's security stamp
-    /// changes (password changed or reset elsewhere, deactivation) and at most
-    /// <see cref="MaxSessionAge"/> after signing in, however often it is used.
-    /// </summary>
+    // The session also ends when the security stamp changes, and always after MaxSessionAge.
+    /// <summary>Builds the cookie principal and re-reads it every few minutes so role and permission changes apply without a re-login.</summary>
     public static class UserPrincipalFactory
     {
         public const string PermissionClaim = "permission";
@@ -43,7 +38,7 @@ namespace InventoryManagement.Web.Services
             return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         }
 
-        /// <summary>When this session signed in (now, for sessions from before the claim existed).</summary>
+        /// <summary>Falls back to now for sessions that predate the claim.</summary>
         public static DateTimeOffset SignedInAt(ClaimsPrincipal principal)
             => DateTimeOffset.TryParse(principal.FindFirst(SignedInAtClaim)?.Value, CultureInfo.InvariantCulture,
                    DateTimeStyles.RoundtripKind, out var at) ? at : DateTimeOffset.UtcNow;

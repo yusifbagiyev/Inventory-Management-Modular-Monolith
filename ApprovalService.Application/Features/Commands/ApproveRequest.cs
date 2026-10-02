@@ -12,7 +12,7 @@ namespace ApprovalService.Application.Features.Commands
 {
     public class ApproveRequest
     {
-        /// <param name="ApproverIsAdmin">Admins may approve their own requests; others may not (a second person decides).</param>
+        /// <param name="ApproverIsAdmin">Only Admins may approve their own requests.</param>
         public record Command(int RequestId, int UserId, string UserName, bool ApproverIsAdmin = false) : IRequest<bool>, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command, bool>
@@ -51,20 +51,17 @@ namespace ApprovalService.Application.Features.Commands
                 if (approvalRequest.Status != ApprovalStatus.Pending)
                     throw new InvalidOperationException($"Request is no longer pending. Current status: {approvalRequest.Status}");
 
-                // Someone holding both the approval-level permission and approval.decide would
-                // otherwise have the direct permission in effect, with nobody else involved.
+                // Otherwise approval.decide plus the request permission would act as the direct permission.
                 if (approvalRequest.RequestedById == request.UserId && !request.ApproverIsAdmin)
                     throw new InsufficientPermissionsException("You cannot approve your own request. The decision must be made by another approver.");
 
                 approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);
-                // Row version check: a second admin approving concurrently fails here, before
-                // the action could run twice.
+                // The row version makes a concurrent second approval fail here, before the action runs twice.
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // The action runs in the same transaction behind a savepoint: on failure only its
-                // own changes are undone and the request is recorded as Failed, instead of the old
-                // behaviour of an "Approved" request whose action never ran.
+                // The savepoint lets a failed action undo only its own changes.
+                // The request is then recorded as Failed in the same transaction.
                 await _session.SavepointAsync(ExecutionSavepoint, cancellationToken);
                 try
                 {

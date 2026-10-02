@@ -1,7 +1,7 @@
 @model ProductViewModel
 @{
     ViewData["Title"] = "Product Details";
-    ViewData["Subtitle"] = Model.InventoryCode.ToString();   // under the phone app bar's title
+    ViewData["Subtitle"] = Model.InventoryCode.ToString();   // Shown under the title in the phone app bar
     var transfers = ViewBag.Transfers as List<RouteViewModel> ?? new List<RouteViewModel>();
     var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
     var canDelete = User.HasPermission("product.delete") || User.HasPermission("product.delete.direct");
@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    @* Wider screens: the actions under the title. Phones: the same in the fixed bottom bar (end of page). *@
+    @* Phones get these actions in the fixed bar at the end of the page. *@
     <div class="ip-page-actions mb-4 d-none d-md-flex">
         @if (canUpdate)
         {
@@ -61,7 +61,7 @@
         <div class="ip-banner ip-banner-warning mb-4">
             <i class="fa-regular fa-clock"></i>
             <span class="flex-grow-1">@L["This product has a request awaiting approval. The details below stay as they are until it is approved."]</span>
-            @* Approvers open the request; others see their own requests (someone else's would not open). *@
+            @* Only approvers can open someone else's request, so others go to their own list. *@
             @if (User.HasPermission("approval.view") || User.HasPermission("approval.decide"))
             {
                 <a href="/Approvals?open=@Model.PendingRequestId">@L["Request #{0}", Model.PendingRequestId!]</a>
@@ -95,7 +95,6 @@
                     <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
                 }
             </dl>
-            @* Delete is a quiet text action under the details, not a header button. *@
             @if (canDelete)
             {
                 <button type="button" class="ip-link-danger mt-3" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">@L["Delete product"]</button>
@@ -125,7 +124,7 @@
         </div>
     }
 
-    @* Transfers and the timeline are route data: shown with route.view only. *@
+    @* Transfers are route data, so they need route.view. *@
     @if (User.HasPermission("route.view"))
     {
     <section class="ip-section mt-5">
@@ -246,7 +245,7 @@
             });
         }
 
-        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        // Other users' changes refresh the page in place. A deletion shows a notice.
         LiveUpdates.watch({
             entities: ['product', 'route'],
             ids: { product: @Model.Id },

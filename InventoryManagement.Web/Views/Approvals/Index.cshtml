@@ -6,7 +6,6 @@
 }
 
 <div class="container-fluid px-4">
-    @* Header figures, tabs and the list are refreshed in place by live-updates.js (see Scripts). *@
     <div class="ip-page-head" id="approvalsStats">
         <div>
             <h1>@L["Approvals"]</h1>
@@ -116,7 +115,7 @@
     </div>
 </div>
 
-@* Decision dialog (design: 08 Approvals). The header and body come from _ApprovalDetails. *@
+@* Header and body are filled from _ApprovalDetails. *@
 <div class="modal fade ip-modal" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -157,8 +156,8 @@
         let currentRequestId = null;
         const modalEl = document.getElementById('detailsModal');
 
-        function setMode(mode) {   // 'view' (decided), 'decide' (pending) or 'reject'
-            // d-none, not [hidden]: these are flex containers, and display:flex beats [hidden].
+        function setMode(mode) {   // Mode is view, decide or reject
+            // Use d-none because display:flex on these containers overrides [hidden].
             $('#decisionButtons').toggleClass('d-none', mode !== 'decide');
             $('#rejectButtons').toggleClass('d-none', mode !== 'reject');
             $('#rejectBox').toggleClass('d-none', mode !== 'reject');
@@ -174,7 +173,7 @@
             setMode('view');
             loadApprovalDetails(`/Approvals/Details/${requestId}`, modalEl).then(function (head) {
                 setMode(canDecide && head && head.dataset.status === 'Pending' ? 'decide' : 'view');
-                // Own request: it can be rejected (withdrawn) but another approver approves it.
+                // Approvers can withdraw their own request but not approve it.
                 const own = head && head.dataset.own === 'true';
                 $('#modalApproveBtn').toggleClass('d-none', own);
                 $('#ownRequestNote').toggleClass('d-none', !own);
@@ -199,7 +198,7 @@
         function decided(message, type) {
             bootstrap.Modal.getOrCreateInstance(modalEl).hide();
             showToast(message, type);
-            ListNav.reload();   // in place; live updates then skip the same change
+            ListNav.reload();   // Live updates then skip this same change
         }
 
         $('#modalApproveBtn').on('click', function () {
@@ -236,11 +235,11 @@
                 });
         });
 
-        // Opened from a product or a notification (?open=5): show that request straight away.
+        // Products and notifications link here with ?open=id to show that request at once.
         const openId = parseInt(new URLSearchParams(location.search).get('open'), 10);
         if (openId > 0) viewDetails(openId);
 
-        // New, approved and rejected requests from other admins update the figures, tabs and list.
+        // Requests and decisions by others refresh the figures, tabs and list.
         LiveUpdates.watch({
             entities: ['approval'],
             regions: ['#approvalsStats', '#approvalsTabs', '#approvalsRegion']

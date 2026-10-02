@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    @* Status tabs filter the rows on the client: the click handler keys off .filter-btn + data-filter. *@
+    @* These tabs filter rows in the browser. The script relies on .filter-btn and data-filter. *@
     <nav class="ip-tabs strong" aria-label="@L["Status"]" id="myRequestsTabs">
         <button type="button" class="ip-tab filter-btn active" data-filter="all">
             @L["All"] <span class="count">@Model.Requests.Count</span>
@@ -141,7 +141,7 @@
     </div>
 </div>
 
-@* Decision dialog, read-only here. The header and body come from Approvals/_ApprovalDetails. *@
+@* Read-only here. Header and body are filled from Approvals/_ApprovalDetails. *@
 <div class="modal fade ip-modal" id="detailsModal" tabindex="-1" aria-labelledby="detailsTitle" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -159,7 +159,7 @@
 
 @section Scripts {
     <script>
-        // Delegated: the tabs are replaced by live-updates.js.
+        // Delegated because live updates replace the tabs.
         $(document).on('click', '.filter-btn', function () {
             $('.filter-btn').removeClass('active');
             $(this).addClass('active');
@@ -179,7 +179,7 @@
             $('#myRequestsFilterEmpty').toggleClass('d-none', !none);
         }
 
-        // An admin approving or rejecting one of your requests updates its status and the counts here.
+        // A decision on one of these requests refreshes its status and the counts. The active tab is kept.
         let activeFilter = 'all';
         LiveUpdates.watch({
             entities: ['approval'],
@@ -197,7 +197,7 @@
             loadApprovalDetails(`/MyRequests/Details/${requestId}`, document.getElementById('detailsModal'));
         }
 
-        // Opened from a product or a notification (?open=5): show that request straight away.
+        // Products and notifications link here with ?open=id to show that request at once.
         $(function () {
             const openId = parseInt(new URLSearchParams(location.search).get('open'), 10);
             if (openId > 0) viewDetails(openId);
@@ -231,7 +231,7 @@
                         let isSuccess = false;
                         let message = t('Request cancelled successfully');
 
-                        // Handle the response shapes the server may return
+                        // The server has answered with several shapes over time, so accept them all.
                         if (typeof response === 'object' && response !== null) {
                             isSuccess = response.success === true ||
                                        response.isSuccess === true ||

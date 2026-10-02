@@ -11,10 +11,7 @@ using SharedServices.Identity;
 
 namespace ProductService.API.Controllers
 {
-    /// <remarks>
-    /// Errors (not found, duplicate → 409, approval required → 202, insufficient permissions → 403)
-    /// are mapped to JSON by the host's API exception middleware.
-    /// </remarks>
+    /// <remarks>Module exceptions are turned into status codes by the host's API exception middleware.</remarks>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -52,10 +49,7 @@ namespace ProductService.API.Controllers
         }
 
 
-        /// <summary>
-        /// The (department, category) pairs present in the inventory, used to cascade the list
-        /// filters. The state/quick filters narrow the result so the options react to them.
-        /// </summary>
+        /// <summary>Department and category pairs in use, so the list filters can cascade.</summary>
         [HttpGet("filter-facets")]
         [Permission(AllPermissions.ProductView)]
         public async Task<ActionResult<ProductFilterFacetsDto>> GetFilterFacets(
@@ -78,7 +72,7 @@ namespace ProductService.API.Controllers
         }
 
 
-        // Also for the Transfer page: whoever may transfer must be able to find the product.
+        // The Transfer page uses this too, so anyone who may transfer must be able to find the product.
         [HttpGet("search/inventory-code/{inventoryCode}")]
         [Permission(AllPermissions.ProductView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<ProductDto>> GetByInventoryCode(int inventoryCode)
@@ -88,7 +82,7 @@ namespace ProductService.API.Controllers
         }
 
 
-        /// <summary>Direct with product.create.direct, otherwise queued for approval (202).</summary>
+        /// <summary>Creates directly with product.create.direct, otherwise queues it for approval and answers 202.</summary>
         [HttpPost]
         [Consumes("multipart/form-data")]
         [Permission(AllPermissions.ProductCreate, AllPermissions.ProductCreateDirect)]

@@ -3,10 +3,7 @@ using SharedServices.Persistence;
 
 namespace SharedServices.Auditing
 {
-    /// <summary>
-    /// Names the action for the audit log after the first command of the scope ("UpdateProduct"),
-    /// so commands it sends on (an approval executing an update) are recorded under it.
-    /// </summary>
+    /// <summary>Names the audited action after the first command, so nested commands are recorded under it.</summary>
     public sealed class AuditActionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
         where TRequest : notnull
     {
@@ -24,7 +21,7 @@ namespace SharedServices.Auditing
         private static bool IsCommand(Type type)
             => typeof(ITransactionalRequest).IsAssignableFrom(type) || type.Name.EndsWith("Command", StringComparison.Ordinal);
 
-        /// <summary>UpdateProduct.Command -> "UpdateProduct"; CreateCategoryCommand -> "CreateCategory".</summary>
+        // A nested Command takes its outer class name. A trailing Command suffix is dropped.
         private static string ActionName(Type type)
         {
             var name = type.Name is "Command" && type.DeclaringType != null ? type.DeclaringType.Name : type.Name;

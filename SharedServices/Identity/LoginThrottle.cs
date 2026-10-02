@@ -2,13 +2,8 @@ using System.Collections.Concurrent;
 
 namespace SharedServices.Identity
 {
-    /// <summary>
-    /// Failed sign-ins per client address (UI and /api/auth/login). Only failures count: everyone
-    /// in an office reaches the public site from one address, and counting every sign-in (as the
-    /// rate limiter did) refused the sixth colleague within ten minutes. After
-    /// <see cref="MaxFailures"/> failures in <see cref="Window"/> that address waits until the window ends;
-    /// per-account lockout (identity options) still applies on top.
-    /// </summary>
+    // Only failures count because a whole office signs in from one public address.
+    /// <summary>Holds back a client address after too many failed sign-ins in the window.</summary>
     public sealed class LoginThrottle
     {
         public const int MaxFailures = 20;

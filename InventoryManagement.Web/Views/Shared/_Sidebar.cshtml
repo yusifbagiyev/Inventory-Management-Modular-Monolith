@@ -2,7 +2,7 @@
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
-    // Each entry shows only with its page's permission (Admins hold them all).
+    // Each entry needs its page's permission. Admins hold them all.
     var isAdmin = User.IsInRole("Admin");
     bool Can(string permission) => User.HasPermission(permission);
     int? productTotal = Can("product.view") ? await RailCounts.ProductTotalAsync() : null;
@@ -16,16 +16,15 @@
 
     string Active(bool on) => on ? "ip-rail-link active" : "ip-rail-link";
 }
-@* The rail (design/: "IP Rail"). Dark in both themes: data-bs-theme switches the tokens for
-   everything inside. Collapsed state: localStorage 'ip-rail', applied by the script below before
-   the first paint; the toggle lives in site.js (Rail). Below 768px it is a drawer. *@
+@* The rail stays dark in both themes through its own data-bs-theme.
+   The script below restores the collapsed state before first paint, and Rail in site.js handles the toggle. *@
 <aside class="ip-rail" id="ipRail" data-bs-theme="dark" aria-label="@L["Main menu"]">
     <div class="ip-rail-brand">
         <a class="ip-rail-home" href="/">
             <span class="ip-logo brand" aria-hidden="true"><partial name="_BrandMark" /></span>
             <span class="ip-rail-name">@L["166 Inventory"]<small>@L["IT department"]</small></span>
         </a>
-        @* Phones: closes the drawer. *@
+        @* Closes the drawer on phones. *@
         <button type="button" class="ip-rail-close" data-rail-close aria-label="@L["Close menu"]"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
@@ -128,7 +127,7 @@
     </nav>
 
     <div class="ip-rail-foot">
-        @* Phones: the toolbar is hidden, so language and theme live here (hidden on wider screens). *@
+        @* Phones have no toolbar, so language and theme sit here. Hidden on wider screens. *@
         <div class="ip-rail-prefs">
             <partial name="_LanguageSwitch" />
             <button type="button" class="ip-btn-icon lg" data-theme-toggle title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">

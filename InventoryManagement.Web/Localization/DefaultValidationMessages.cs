@@ -3,11 +3,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 
 namespace InventoryManagement.Web.Localization
 {
-    /// <summary>
-    /// Data-annotations localization only translates attributes that carry an ErrorMessage; a bare
-    /// [Required] falls back to the framework's built-in English text. This gives those attributes
-    /// the framework's own wording as ErrorMessage, which the JSON localizer then translates.
-    /// </summary>
+    // Without an ErrorMessage the framework uses its built-in English text and skips localization.
+    /// <summary>Gives bare validation attributes an explicit ErrorMessage so the localizer can translate it.</summary>
     public sealed class DefaultValidationMessages : IValidationMetadataProvider
     {
         public void CreateValidationMetadata(ValidationMetadataProviderContext context)

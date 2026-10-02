@@ -2,10 +2,7 @@ using MediatR;
 
 namespace SharedServices.Persistence
 {
-    /// <summary>
-    /// Marks a MediatR request whose handler - together with everything it triggers in other
-    /// modules (event handlers, nested commands) - must commit or roll back as one unit.
-    /// </summary>
+    /// <summary>Marks a request that commits or rolls back as one unit with everything it triggers.</summary>
     public interface ITransactionalRequest { }
 
     public sealed class TransactionBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>

@@ -1,20 +1,17 @@
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>
-    /// The multi-image picker (Views/Shared/_ImageManager.cshtml + wwwroot/js/image-manager.js).
-    /// It posts <c>ImageFiles</c> (new files, in order), <c>RemoveImageUrls</c> and <c>CoverImageUrl</c>.
-    /// </summary>
+    /// <summary>Model for the _ImageManager picker, which posts ImageFiles, RemoveImageUrls and CoverImageUrl.</summary>
     public record ImageManagerModel
     {
-        /// <summary>Current images, cover first (empty on create).</summary>
+        /// <summary>Current images with the cover first. Empty on create.</summary>
         public IReadOnlyList<string> Existing { get; init; } = [];
-        /// <summary>Shown above the tiles; null when the surrounding section title already says it.</summary>
+        /// <summary>Null when the section title already says it.</summary>
         public string? Label { get; init; }
         public string? Hint { get; init; }
         public int Max { get; init; } = 10;
     }
 
-    /// <summary>The image gallery on details pages (Views/Shared/_ImageGallery.cshtml).</summary>
+    /// <summary>Model for the _ImageGallery partial on details pages.</summary>
     public record ImageGalleryModel
     {
         public IReadOnlyList<string> Images { get; init; } = [];

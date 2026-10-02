@@ -4,11 +4,8 @@ using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Products.Queries
 {
-    /// <summary>
-    /// Returns the (department, category) pairs present in the inventory, so the list filters can
-    /// cascade. The state/quick filters narrow the result, so the department and category options
-    /// react to the other active filters. Cheap DISTINCT query; the unfiltered set is cached.
-    /// </summary>
+    /// <summary>Department and category pairs left by the state and quick filters, so the list filters can cascade.</summary>
+    /// <remarks>The unfiltered set is cached.</remarks>
     public record GetProductFilterFacetsQuery(
         bool? Status = null,
         bool? Availability = null,

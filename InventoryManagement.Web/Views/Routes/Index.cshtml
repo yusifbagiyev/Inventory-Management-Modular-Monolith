@@ -24,7 +24,7 @@
         var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
         var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
 
-        // Tab link: the current filters with another completion state, back to page 1.
+        // Keeps the other filters, swaps the completion state and goes back to page 1.
         string TabUrl(bool? completed)
         {
             var query = Context.Request.Query
@@ -265,10 +265,9 @@
         const routeFilters = ListFilters.init({
             basePath: '/Routes',
             pageSize: @Model.PageSize,
-            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [["departmentName", "categoryName"], ...]
-            // Routes store the category by name, so the category options carry names.
+            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // Pairs of department and category names
+            // Routes keep department and category names from the time of the transfer, so filter by name.
             categoryKey: 'name',
-            // ...and the department by the name written on the route, too.
             departmentKey: 'name',
             fields: {
                 isCompleted: '#statusFilter',
@@ -332,7 +331,7 @@
             });
         }
 
-        // Other users' changes refresh the count and the table in place (live-updates.js).
+        // Other users' changes refresh the count and the table in place.
         LiveUpdates.watch({
             entities: ['route', 'product', 'department', 'category'],
             regions: ['#routesSummary', '#routesTabs', '#routesRegion']

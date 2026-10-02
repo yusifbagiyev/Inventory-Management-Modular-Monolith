@@ -9,13 +9,7 @@ using SharedServices.Persistence;
 
 namespace SharedServices.Auditing
 {
-    /// <summary>
-    /// Writes an audit record for every row a module's SaveChanges creates, changes or deletes: who,
-    /// when, from where, in which action, and field by field what changed. The records are saved
-    /// right after the change on the same connection and transaction, so a rolled-back action
-    /// leaves no trace and a committed one always has its record. A save outside a request-wide
-    /// transaction gets one of its own here, committed only once its audit rows are written.
-    /// </summary>
+    /// <summary>Writes an audit record for every row a module creates, changes or deletes, in the same transaction.</summary>
     internal sealed class AuditInterceptor : SaveChangesInterceptor
     {
         private const int MaxValueLength = 500;
@@ -23,7 +17,7 @@ namespace SharedServices.Auditing
         /// <summary>Rows that are side effects or bookkeeping, not actions.</summary>
         private static readonly HashSet<string> IgnoredEntities = ["Notification", "RefreshToken", "AuditEntry"];
 
-        /// <summary>Columns that change on their own (sign-in stamps, concurrency tokens...).</summary>
+        /// <summary>Columns that change on their own, like sign-in stamps and concurrency tokens.</summary>
         private static readonly HashSet<string> IgnoredProperties =
         [
             "ConcurrencyStamp", "SecurityStamp", "LastLoginAt", "NormalizedUserName", "NormalizedEmail",
@@ -60,8 +54,7 @@ namespace SharedServices.Auditing
         {
             Capture(eventData.Context);
 
-            // Without a request-wide transaction EF would commit the change before its audit rows
-            // exist; wrap both in one so neither can be saved without the other.
+            // Without a request-wide transaction EF would commit the change before its audit rows exist.
             if (_pending is { Count: > 0 } && !_session.InTransaction && eventData.Context != null)
             {
                 await _session.BeginAsync(cancellationToken);
@@ -141,16 +134,14 @@ namespace SharedServices.Auditing
                     case EntityState.Modified:
                         operation = AuditOperations.Updated;
                         fields = Fields(entry, "", (p, _) => (p.OriginalValue, p.CurrentValue), includeUnchanged: false);
-                        // Identity saves users with Update(), marking every column; a sign-in that only
-                        // stamped LastLoginAt is not an action.
+                        // Identity marks every column on Update(). A sign-in that only stamped LastLoginAt is not an action.
                         if (fields.Count == 0) continue;
                         break;
                     default:
                         continue;
                 }
 
-                // Labels of deleted rows come from their original values; others are read after the
-                // save, when database-generated ids exist.
+                // Deleted rows are labelled now. Others wait until after the save, when generated ids exist.
                 var label = entry.State == EntityState.Deleted ? Label(entry) : null;
                 (_pending ??= new()).Add(new Pending(entry, operation, fields, label));
             }
@@ -170,10 +161,7 @@ namespace SharedServices.Auditing
                 .ToList();
         }
 
-        /// <summary>
-        /// The entry's columns (and those of its owned parts, as "Part.Column"), keys excluded.
-        /// Modified: only the ones whose value really changed.
-        /// </summary>
+        /// <summary>The entry's columns and those of its owned parts, without keys. For an update only real changes.</summary>
         private static List<AuditFieldChange> Fields(
             EntityEntry entry, string prefix,
             Func<PropertyEntry, EntityEntry, (object? Old, object? New)> values, bool includeUnchanged)
@@ -228,7 +216,7 @@ namespace SharedServices.Auditing
             return string.Join(",", key.Properties.Select(p => Format(entry.Property(p.Name).CurrentValue)));
         }
 
-        /// <summary>"1001 · Latitude 5420", a category's name, a user's name...</summary>
+        /// <summary>A short readable name for the row, such as a product's code and model.</summary>
         private static string? Label(EntityEntry entry)
         {
             var useOriginal = entry.State == EntityState.Deleted;
@@ -250,7 +238,7 @@ namespace SharedServices.Auditing
             foreach (var reference in entry.References)
             {
                 if (reference.TargetEntry is { } target)
-                    From(target);   // owned parts (a route's product) and loaded parents (a permission)
+                    From(target);   // Owned parts and loaded parents
             }
             return parts.Count == 0 ? null : Truncate(string.Join(" · ", parts.Take(3)));
         }
@@ -261,7 +249,7 @@ namespace SharedServices.Auditing
             {
                 null => null,
                 string s => s,
-                DateTime d when d == DateTime.MinValue => null,   // "not set" (e.g. CompletedAt before completion)
+                DateTime d when d == DateTime.MinValue => null,   // Means not set yet
                 DateTime d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 DateTimeOffset d => d.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
                 bool b => b ? "true" : "false",

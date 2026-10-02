@@ -39,20 +39,17 @@ namespace RouteService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // Check if user has direct permission
             if (userPermissions.Contains(AllPermissions.RouteCreateDirect))
             {
                 _logger.LogInformation($"User {userName} creating transfer for product {dto.ProductId} directly");
                 return await _mediator.Send(new TransferInventory.Command(dto));
             }
 
-            // Check if user has permission to create with approval
             if (!userPermissions.Contains(AllPermissions.RouteCreate))
             {
                 throw new InsufficientPermissionsException("You don't have permission to create transfers");
             }
 
-            // Build comprehensive transfer data for approval
             var transferData = await BuildTransferApprovalData(dto);
 
             var approvalRequest = new CreateApprovalRequestDto
@@ -78,20 +75,17 @@ namespace RouteService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // Get existing route for comparison
             var existingRoute = await _mediator.Send(new GetRouteByIdQuery(id));
             if (existingRoute == null)
             {
                 throw new NotFoundException($"Route with ID {id} not found");
             }
 
-            // Check if route is already completed
             if (existingRoute.IsCompleted)
             {
                 throw new InvalidOperationException("Cannot update a completed route");
             }
 
-            // Check if user has direct permission
             if (userPermissions.Contains(AllPermissions.RouteUpdateDirect))
             {
                 _logger.LogInformation($"User {userName} updating route {id} directly");
@@ -99,13 +93,11 @@ namespace RouteService.Application.Services
                 return;
             }
 
-            // Check if user has permission to update with approval
             if (!userPermissions.Contains(AllPermissions.RouteUpdate))
             {
                 throw new InsufficientPermissionsException("You don't have permission to update routes");
             }
 
-            // Build update data with change tracking
             var updateData = await BuildRouteUpdateData(existingRoute, dto);
 
             var approvalRequest = new CreateApprovalRequestDto
@@ -139,20 +131,17 @@ namespace RouteService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // Get route information for the approval request
             var route = await _mediator.Send(new GetRouteByIdQuery(id));
             if (route == null)
             {
                 throw new NotFoundException($"Route with ID {id} not found");
             }
 
-            // Business rule: Cannot delete completed routes
             if (route.IsCompleted)
             {
                 throw new InvalidOperationException("Cannot delete completed routes. They are part of the audit trail.");
             }
 
-            // Check if user has direct permission
             if (userPermissions.Contains(AllPermissions.RouteDeleteDirect))
             {
                 _logger.LogInformation($"User {userName} deleting route {id} directly");
@@ -160,13 +149,11 @@ namespace RouteService.Application.Services
                 return;
             }
 
-            // Check if user has permission to delete with approval
             if (!userPermissions.Contains(AllPermissions.RouteDelete))
             {
                 throw new InsufficientPermissionsException("You don't have permission to delete routes");
             }
 
-            // Create approval request with route details
             var approvalRequest = new CreateApprovalRequestDto
             {
                 RequestType = RequestType.DeleteRoute,
@@ -193,7 +180,6 @@ namespace RouteService.Application.Services
 
         private async Task<Dictionary<string, object>> BuildTransferApprovalData(TransferInventoryDto dto)
         {
-            // Fetch comprehensive product information
             var product = await _productCatalog.GetProductAsync(dto.ProductId);
             if (product == null)
             {
@@ -205,7 +191,7 @@ namespace RouteService.Application.Services
             {
                 throw new NotFoundException($"Target department {dto.ToDepartmentId} not found");
             }
-            // Refused before it reaches the approval queue, too.
+            // Refuse it before it reaches the approval queue.
             if (!toDepartment.IsActive)
             {
                 throw new RouteService.Domain.Exceptions.RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
@@ -244,7 +230,6 @@ namespace RouteService.Application.Services
                 ["notes"] = updated.Notes ?? existing.Notes ?? ""
             };
 
-            // Track what's changing
             var changes = new List<string>();
 
             if (existing.Notes != updated.Notes && !string.IsNullOrEmpty(updated.Notes))
@@ -252,8 +237,7 @@ namespace RouteService.Application.Services
                 changes.Add($"Notes updated");
             }
 
-            // Worker and destination were never carried into the approval payload, so an approved
-            // request silently applied neither. Include them whenever they actually change.
+            // Worker and destination go into the payload only when they change, so approval applies just those.
             if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
             {
                 updateData["toWorker"] = updated.ToWorker;
@@ -268,7 +252,7 @@ namespace RouteService.Application.Services
                 changes.Add("Destination department changed");
             }
 
-            // Images. A single legacy ImageFile keeps its "replace the images" meaning.
+            // A single legacy ImageFile still means replace all images.
             if (updated.ImageFile is { Length: > 0 })
                 updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([updated.ImageFile]);
             if (updated.ImageFiles?.Any(f => f.Length > 0) == true)
@@ -327,7 +311,7 @@ namespace RouteService.Application.Services
 
         public int GetUserId(ClaimsPrincipal User)
         {
-            // API-key clients carry a service id, not a user id: 0, and the permission check answers.
+            // API-key clients carry a service id, not a user id. They get 0 and the permission check answers them.
             var raw = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(raw, out var id) ? id : 0;
         }

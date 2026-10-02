@@ -14,10 +14,10 @@ namespace NotificationService.Domain.Repositories
         Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken = default);
         Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default);
         Task<int> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default);
-        /// <summary>Marks every unread notification for the user as read in a single UPDATE. Returns the affected count.</summary>
+        /// <summary>Marks all the user's unread notifications as read in one UPDATE and returns the count.</summary>
         Task<int> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default);
         Task AddRangeAsync(IEnumerable<Notification> notifications, CancellationToken cancellationToken = default);
-        /// <summary>Deletes every user's notifications about one approval request. Returns the deleted count.</summary>
+        /// <summary>Deletes all users' notifications about one approval request and returns the count.</summary>
         Task<int> DeleteByApprovalRequestAsync(int approvalRequestId, CancellationToken cancellationToken = default);
     }
 }

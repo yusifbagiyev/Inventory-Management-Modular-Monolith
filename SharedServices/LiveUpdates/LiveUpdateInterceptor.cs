@@ -10,21 +10,16 @@ namespace SharedServices.LiveUpdates
 {
     public static class LiveUpdateServiceCollectionExtensions
     {
-        /// <summary>Broadcasts committed changes to <typeparamref name="T"/> under <paramref name="name"/>.</summary>
+        /// <summary>Broadcasts committed changes to T under the given name.</summary>
         public static IServiceCollection TrackLiveEntity<T>(
             this IServiceCollection services, string name, string idProperty = "Id", params string[] ignoredProperties)
             => services.Configure<LiveUpdateOptions>(o => o.Track<T>(name, idProperty, ignoredProperties));
     }
 
-    /// <summary>
-    /// Records which tracked entities a SaveChanges touches and, once the surrounding transaction
-    /// commits, hands them to <see cref="ILiveUpdatePublisher"/>. Rolled-back work is never announced
-    /// (<see cref="DbSession.AfterCommit"/> discards it), so browsers only hear about real changes.
-    /// </summary>
+    /// <summary>Announces the tracked entities a save touched once the transaction commits. Rollbacks are never announced.</summary>
     internal sealed class LiveUpdateInterceptor : SaveChangesInterceptor
     {
-        // Past this many changes of one kind in one save, browsers get a single "many changed"
-        // entry (Id = null) instead of a long list; they refresh the page either way.
+        // Above this, one change with a null Id replaces the list. Pages refresh either way.
         private const int MaxIdsPerKind = 20;
 
         private readonly DbSession _session;
@@ -90,8 +85,7 @@ namespace SharedServices.LiveUpdates
                 if (action == null || !_options.Entities.TryGetValue(entry.Metadata.ClrType, out var live))
                     continue;
 
-                // Compared by value: ASP.NET Identity saves users with DbContext.Update(), which flags
-                // every column as modified even when a sign-in only stamped LastLoginAt.
+                // Compared by value because Identity's Update() flags every column, even on a plain sign-in.
                 if (entry.State == EntityState.Modified && live.IgnoredProperties.Count > 0
                     && entry.Properties
                         .Where(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue))

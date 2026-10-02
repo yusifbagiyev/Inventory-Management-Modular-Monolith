@@ -11,14 +11,11 @@ using SharedServices.Storage;
 
 namespace NotificationService.Infrastructure.Services
 {
-    /// <summary>One WhatsApp group message waiting to go out; RouteId set for a completed transfer.</summary>
+    /// <summary>One WhatsApp group message waiting to go out, with RouteId set for a completed transfer.</summary>
     public sealed record WhatsAppJob(string Message, string? ImageUrl, string FallbackFileName, int InventoryCode, int? RouteId);
 
-    /// <summary>
-    /// WhatsApp messages go out one at a time from here (WhatsAppOutboxWorker), so their pace can be
-    /// kept: the WaSender account allows one message every 5 seconds and refused the second of two
-    /// transfers completed 3 seconds apart. Lost on restart, like the background queue.
-    /// </summary>
+    /// <summary>Holds WhatsApp messages so they go out one at a time at the account's pace.</summary>
+    /// <remarks>WaSender allows one message every 5 seconds. The queue is lost on restart.</remarks>
     public sealed class WhatsAppOutbox
     {
         private readonly Channel<WhatsAppJob> _channel = Channel.CreateUnbounded<WhatsAppJob>();
@@ -35,12 +32,8 @@ namespace NotificationService.Infrastructure.Services
         internal ChannelReader<WhatsAppJob> Reader => _channel.Reader;
     }
 
-    /// <summary>
-    /// Sends the outbox in order, at least WhatsApp:MinIntervalSeconds (5.5) apart. A rate-limited
-    /// message waits as long as the service asks and is tried again (up to 5 times); other errors
-    /// get two more tries. A transfer's outcome is stored on its route (Sent / Failed + reason),
-    /// where a failed one can be sent again.
-    /// </summary>
+    /// <summary>Sends the outbox in order, at least WhatsApp:MinIntervalSeconds apart.</summary>
+    /// <remarks>A rate-limited message waits as asked and is retried, other errors get two more tries. A transfer's outcome is stored on its route.</remarks>
     public sealed class WhatsAppOutboxWorker : BackgroundService
     {
         private const int MaxAttempts = 5;
@@ -86,7 +79,7 @@ namespace NotificationService.Infrastructure.Services
         private async Task SendAsync(WhatsAppJob job, CancellationToken cancellationToken)
         {
             var groupId = _outbox.GroupId;
-            if (string.IsNullOrEmpty(groupId)) return;   // switched off meanwhile
+            if (string.IsNullOrEmpty(groupId)) return;   // Switched off meanwhile.
 
             var image = await _images.ReadAsync(job.ImageUrl, cancellationToken);
             var fileName = Path.GetFileName(job.ImageUrl) ?? job.FallbackFileName;
@@ -141,7 +134,7 @@ namespace NotificationService.Infrastructure.Services
         }
     }
 
-    /// <summary>Queues WhatsApp messages: product created, transfer completed, and resends from the route pages.</summary>
+    /// <summary>Queues WhatsApp messages for new products, completed transfers and resends from the route pages.</summary>
     public sealed class WhatsAppRouteNotifier : IWhatsAppRouteNotifier
     {
         private readonly WhatsAppOutbox _outbox;

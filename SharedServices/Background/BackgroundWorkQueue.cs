@@ -8,10 +8,7 @@ namespace SharedServices.Background
     /// <summary>Work executed in a fresh DI scope on the background worker.</summary>
     public delegate Task BackgroundWorkItem(IServiceProvider services, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// In-process queue for work that must not block or fail the request that produced it
-    /// (notification fan-out, WhatsApp). Items queued before a crash are lost.
-    /// </summary>
+    /// <summary>In-process queue for work that must not slow or fail the request. Items are lost on a crash.</summary>
     public sealed class BackgroundWorkQueue
     {
         private readonly Channel<BackgroundWorkItem> _channel =

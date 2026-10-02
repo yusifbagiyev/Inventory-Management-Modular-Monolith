@@ -1,6 +1,5 @@
 @model PaginationViewModel
-@* Table foot for any paged list (design: .ip-table-foot): range, rows per page, page numbers.
-   Links keep the current filters in the URL; #pageSizeFilter is also read by list-filters.js. *@
+@* Page links keep the current filters. list-filters.js also reads #pageSizeFilter. *@
 @{
     var totalPages = Math.Max(1, (int)Math.Ceiling(Model.TotalCount / (double)Math.Max(1, Model.PageSize)));
     var current = Math.Clamp(Model.PageNumber, 1, totalPages);
@@ -14,13 +13,13 @@
         return Context.Request.Path + Microsoft.AspNetCore.Http.QueryString.Create(query).ToString();
     }
 
-    // First, last, and two either side of the current page; gaps become "…".
+    // First, last and two pages either side of the current one. Gaps get an ellipsis.
     var pages = new SortedSet<int> { 1, totalPages };
     for (var p = current - 2; p <= current + 2; p++)
         if (p >= 1 && p <= totalPages) pages.Add(p);
 }
 <div class="ip-table-foot">
-    @* .range / .page-size: hidden on phones by the design's responsive layer (only the pages stay). *@
+    @* Phones hide .range and .page-size and keep only the page numbers. *@
     <span class="ip-num range">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
     <div class="d-flex align-items-center gap-3 flex-wrap">
         <label class="ip-filter page-size">

@@ -1,21 +1,12 @@
-// InventoryManagement.Web/wwwroot/js/image-manager.js
-//
-// Multi-image picker (Views/Shared/_ImageManager.cshtml) and details-page gallery
-// (Views/Shared/_ImageGallery.cshtml).
-//
-// The picker keeps every file the user picked (across several "Add images" clicks) in a
-// DataTransfer and writes it back to the <input name="ImageFiles" multiple>, so a normal form post
-// or new FormData(form) sends them in order. Current images are removed/re-ordered through hidden
-// RemoveImageUrls / CoverImageUrl inputs. The first image is the cover.
-//
-//   ImageManager.reset(formOrElement)   // after a successful AJAX submit that keeps the page
+// Multi-image picker for forms and the image gallery on details pages.
+// Picked files are written back into the file input, so a plain form post sends them all in order.
 
 window.ImageManager = (function () {
     'use strict';
 
     const MAX_BYTES = 5 * 1024 * 1024;
     const ALLOWED = /\.(jpe?g|png)$/i;
-    const states = new WeakMap();   // root element -> state
+    const states = new WeakMap();
 
     function init(root) {
         if (!root || states.has(root)) return;
@@ -29,10 +20,10 @@ window.ImageManager = (function () {
             error: root.querySelector('[data-im-error]'),
             count: root.querySelector('[data-im-count]'),
             max: parseInt(root.dataset.max, 10) || 10,
-            files: [],          // { file, url } in order
-            removed: [],        // current image urls to delete
-            cover: null,        // current image url chosen as cover
-            coverNew: false     // the first new file was chosen as cover over the current images
+            files: [],          // New files in order, with their preview URLs
+            removed: [],        // Saved image URLs to delete
+            cover: null,        // Saved image URL chosen as cover
+            coverNew: false     // The first new file is the cover, ahead of the saved images
         };
         states.set(root, state);
 
@@ -52,7 +43,6 @@ window.ImageManager = (function () {
             }
         });
 
-        // Drag & drop onto the picker.
         root.addEventListener('dragover', function (e) {
             if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
             e.preventDefault();
@@ -118,8 +108,7 @@ window.ImageManager = (function () {
             state.coverNew = false;
             state.grid.insertBefore(tile, state.grid.firstChild);
         } else {
-            // The chosen file goes first among the new ones; with current images present it is
-            // posted as CoverImageUrl "new:0" (the server resolves it after the upload).
+            // The file moves to the front of the new ones. With saved images present, the server gets it as new:0.
             const index = parseInt(tile.dataset.imNew, 10);
             state.files.unshift(state.files.splice(index, 1)[0]);
             state.coverNew = existingTiles(state).length > 0;
@@ -128,7 +117,7 @@ window.ImageManager = (function () {
     }
 
     function render(state) {
-        // New-file tiles are rebuilt; current-image tiles stay in the DOM (their order = cover choice).
+        // Only new-file tiles are rebuilt. Saved-image tiles stay put because their order holds the cover choice.
         state.grid.querySelectorAll('[data-im-new]').forEach(el => el.remove());
         if (existingTiles(state).length === 0) state.coverNew = false;
 
@@ -144,25 +133,22 @@ window.ImageManager = (function () {
                 '</div>' +
                 `<div class="ip-image-caption"><span class="text-truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>` +
                 `<span class="cover-label">${escapeHtml(t('Cover image'))}</span></div>`;
-            // A new cover leads the whole grid; other new files follow the current images.
+            // A new cover leads the grid. Other new files go after the saved images.
             state.grid.insertBefore(tile, index === 0 && state.coverNew ? state.grid.firstChild : state.addTile);
         });
 
-        // The first tile is the cover.
         state.grid.querySelectorAll('.im-tile').forEach(function (el, i) {
             el.classList.toggle('is-cover', i === 0);
             const star = el.querySelector('[data-im-cover]');
             if (star) star.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
         });
 
-        // Files back into the input, in order.
         try {
             const dt = new DataTransfer();
             state.files.forEach(item => dt.items.add(item.file));
             state.input.files = dt.files;
-        } catch (e) { /* very old browsers: the last selection is posted as picked */ }
+        } catch (e) { /* Old browsers without DataTransfer post only the last selection */ }
 
-        // Hidden fields for the current images.
         let hidden = state.removed.map(url => `<input type="hidden" name="RemoveImageUrls" value="${escapeHtml(url)}" />`).join('');
         if (state.coverNew && state.files.length > 0) {
             hidden += '<input type="hidden" name="CoverImageUrl" value="new:0" />';
@@ -176,7 +162,7 @@ window.ImageManager = (function () {
         if (state.count) state.count.textContent = `${n} / ${state.max}`;
     }
 
-    /** Clears new files and pending removals (e.g. after an AJAX submit that keeps the page). */
+    /** Clears new files and pending removals after an AJAX submit that stays on the page. */
     function reset(scope) {
         const el = typeof scope === 'string' ? document.querySelector(scope) : scope;
         const roots = el && el.matches && el.matches('[data-image-manager]') ? [el]
@@ -198,8 +184,7 @@ window.ImageManager = (function () {
         (scope || document).querySelectorAll('[data-image-manager]').forEach(init);
     }
 
-    // Gallery (_ImageGallery): a thumbnail or prev/next shows that image large; the "cover" chip only
-    // on the first. Delegated, so live-refreshed regions keep working.
+    // Gallery handlers are delegated on document so live-refreshed regions keep working.
     function showGalleryImage(gallery, index) {
         const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
         const main = gallery.querySelector('[data-ig-main]');
@@ -219,8 +204,8 @@ window.ImageManager = (function () {
         return Math.max(0, thumbs.findIndex(b => b.classList.contains('active')));
     }
 
-    // Swipe (phones): a horizontal drag of 40px or more shows the next / previous image, and the
-    // tap that ends it does not open the preview.
+    // A horizontal swipe of 40px or more changes the image on phones.
+    // The click that ends the swipe is swallowed so it does not open the preview.
     let swipe = null;
     document.addEventListener('pointerdown', function (e) {
         const box = e.target.closest('[data-image-gallery] .ip-gallery');

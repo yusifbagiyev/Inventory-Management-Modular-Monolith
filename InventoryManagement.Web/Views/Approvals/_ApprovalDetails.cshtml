@@ -1,8 +1,7 @@
 @model ApprovalRequestDto
 @inject MediatR.IMediator Mediator
-@* The decision dialog's content (design: 08 Approvals), used by Approvals and My Requests.
-   [data-approval-head] is moved into the modal header by loadApprovalDetails() (site.js); the
-   rest is the body: what changes as a Field / Current / -> / Proposed table. *@
+@* Decision dialog content for Approvals and My Requests.
+   loadApprovalDetails() in site.js moves [data-approval-head] into the modal header. *@
 @{
     var view = ApprovalView.From(Model.RequestType, Model.ActionData);
     var images = view.ImageData;
@@ -11,8 +10,8 @@
     string Value(string? value, bool localize) => string.IsNullOrWhiteSpace(value) ? "" : localize ? L[value].Value : value;
     var pending = Model.Status == "Pending";
 
-    // The request only records the new specifications; while it is pending, the product's
-    // current ones are shown beside them (not after a decision: by then they have changed).
+    // The request stores only the new specifications, so load the current ones while it is pending.
+    // After a decision the product has changed and the comparison would be wrong.
     string? currentSpecifications = null;
     if (pending && Model.RequestType == "product.update" && Model.EntityId is int productId
         && view.Changes.Any(c => c.Field == "Specifications"))
@@ -40,7 +39,7 @@
 }
 
 @{
-    // Only another approver decides a request (Admins excepted): ApproveRequest refuses it too.
+    // Only Admins may approve their own request. ApproveRequest enforces this too.
     var ownRequest = Model.RequestedById.ToString() == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                      && !User.IsInRole(SharedServices.Identity.AllRoles.Admin);
 }
@@ -134,7 +133,7 @@ else if (view.Changes.Count > 0)
                             <td class="old">
                                 @if (string.IsNullOrWhiteSpace(current))
                                 {
-                                    @* Empty values in words, never a bare dash. *@
+                                    @* Empty values are spelled out instead of shown as a dash. *@
                                     <span class="ip-empty-value">@L[change.Field == "Specifications" ? "None" : "Not set"]</span>
                                 }
                                 else

@@ -2,11 +2,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace SharedServices.Storage
 {
-    /// <summary>
-    /// File storage for uploaded images, laid out as {root}/{category}/{inventoryCode}/{file} and
-    /// addressed by site-relative URLs /images/{category}/{inventoryCode}/{file}. The root must be
-    /// the web root's images folder so the URLs are served as static files.
-    /// </summary>
+    // The root must be the web root's images folder so the /images/... URLs are served as static files.
+    /// <summary>Stores uploaded images under {root}/{category}/{inventoryCode}/ and returns their URLs.</summary>
     public sealed class ImageStorage
     {
         public const string Products = "products";
@@ -32,7 +29,7 @@ namespace SharedServices.Storage
             if (content.CanSeek && content.Length > MaxBytes)
                 throw new ArgumentException("Image size exceeds 5MB limit");
 
-            // Read at most one byte over the limit: a stream that cannot tell its length is checked too.
+            // A stream that cannot report its length is checked while reading.
             using var buffer = new MemoryStream();
             var chunk = new byte[81920];
             int read;
@@ -42,21 +39,19 @@ namespace SharedServices.Storage
                 if (buffer.Length > MaxBytes)
                     throw new ArgumentException("Image size exceeds 5MB limit");
             }
-            // A real JPEG/PNG of sane size, without location and other metadata (ImageSanitizer).
             var clean = ImageSanitizer.Clean(buffer.ToArray());
 
             var folder = Path.Combine(_root, category, inventoryCode.ToString());
             Directory.CreateDirectory(folder);
 
-            // Unique per upload: the old tick-based names could collide and overwrite each other.
-            // The extension follows the content, not the uploaded name.
+            // The Guid keeps two uploads in the same second apart. The extension follows the content.
             var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{clean.Extension}";
             await File.WriteAllBytesAsync(Path.Combine(folder, storedName), clean.Data, cancellationToken);
 
             return $"/images/{category}/{inventoryCode}/{storedName}";
         }
 
-        /// <summary>Copies an existing image into another category; null when the source is missing.</summary>
+        /// <summary>Copies an existing image into another category. Null when the source is missing.</summary>
         public async Task<string?> CopyAsync(string? sourceUrl, string targetCategory, int inventoryCode, CancellationToken cancellationToken = default)
         {
             var sourcePath = GetPhysicalPath(sourceUrl);

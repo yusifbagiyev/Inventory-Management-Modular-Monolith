@@ -1,8 +1,5 @@
-// InventoryManagement.Web/wwwroot/js/admin-approvals.js
-//
-// The pending-approvals count on the rail's Approvals link (#sidebarPendingCount), for whoever
-// may see the approvals page. Loaded on start, and again whenever a request is created,
-// decided or cancelled (live updates) or a new-request notification arrives.
+// Pending-approvals badge on the rail's Approvals link.
+// It reloads on start, on any approval change and when a new-request notification arrives.
 
 let isLoadingApprovals = false;
 
@@ -26,7 +23,7 @@ function updatePendingApprovalsCount(count) {
     else $badge.hide();
 }
 
-// Several changes in a row (a batch of approvals) load the count once.
+// A burst of approvals loads the count only once.
 function debouncedLoadPendingApprovalsCount() {
     clearTimeout(window.approvalsLoadTimeout);
     window.approvalsLoadTimeout = setTimeout(loadPendingApprovalsCount, 500);

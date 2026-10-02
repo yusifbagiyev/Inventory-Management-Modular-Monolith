@@ -62,7 +62,6 @@
         </div>
     </div>
 
-    @* Filter bar (design: 03 Products): search and the main filters, labels inside the controls. *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -273,7 +272,7 @@
         const productFilters = ListFilters.init({
             basePath: '/Products',
             pageSize: @Model.PageSize,
-            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // [[departmentId, categoryId], ...]
+            pairs: @Html.Raw(ViewBag.FilterPairsJson ?? "[]"),   // Pairs of departmentId and categoryId
             categoryKey: 'id',
             fields: {
                 status: '#statusFilter',
@@ -293,7 +292,7 @@
         function removeFilter(key) { productFilters.remove(key); }
         function resetProductFilters() { productFilters.reset(); }
 
-        // One-click presets with no control of their own: URL-only flags.
+        // These presets only toggle a flag in the URL.
         function quickFilter(kind) {
             if (kind === 'unassigned') {
                 productFilters.toggleFlag('assigned');
@@ -302,7 +301,7 @@
             }
         }
 
-        // Double-click to edit inventory code
+        // Double-click a code to edit it in place.
         $(document).on('dblclick', '.inventory-code-display', function() {
             const id = $(this).data('id');
             $(this).addClass('d-none');
@@ -310,7 +309,6 @@
             $(`.inventory-code-input[data-id="${id}"]`).focus().select();
         });
 
-        // Save inventory code
         $(document).on('click', '.save-inventory-code', function() {
             const id = $(this).data('id');
             const newCode = $(`.inventory-code-input[data-id="${id}"]`).val();
@@ -350,25 +348,23 @@
             });
         });
 
-        // Cancel inventory code edit
         $(document).on('click', '.cancel-inventory-code', function() {
             const id = $(this).data('id');
             $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none');
             $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
         });
 
-        // Keyboard shortcuts for inventory code editing
         $(document).on('keydown', '.inventory-code-input', function(e) {
             const id = $(this).data('id');
-            if (e.which === 13) { // Enter key
+            if (e.which === 13) { // Enter
                 e.preventDefault();
                 $(`.save-inventory-code[data-id="${id}"]`).click();
-            } else if (e.which === 27) { // Escape key
+            } else if (e.which === 27) { // Escape
                 $(`.cancel-inventory-code[data-id="${id}"]`).click();
             }
         });
 
-        // Other users' changes refresh the count and the table in place (live-updates.js).
+        // Other users' changes refresh the count and the table in place.
         LiveUpdates.watch({
             entities: ['product', 'category', 'department'],
             regions: ['#productsCounts', '#productsRegion'],

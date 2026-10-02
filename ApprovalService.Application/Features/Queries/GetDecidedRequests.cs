@@ -6,11 +6,8 @@ using MediatR;
 
 namespace ApprovalService.Application.Features.Queries
 {
-    /// <summary>
-    /// The latest decided requests for the approvals page tabs: approved (executed, or approved
-    /// but failed to execute) or rejected, newest decision first, plus the count of each.
-    /// <c>Approved</c> null returns only the counts.
-    /// </summary>
+    /// <summary>The latest approved or rejected requests for the approvals page tabs, with the count of each.</summary>
+    /// <remarks>Approved includes requests whose action failed. A null Approved returns only the counts.</remarks>
     public class GetDecidedRequests
     {
         public record Query(bool? Approved, int Take) : IRequest<Result>;

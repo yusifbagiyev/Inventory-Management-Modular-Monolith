@@ -19,11 +19,7 @@ namespace InventoryManagement.Web.Controllers
             _notificationService = notificationService;
         }
 
-        /// <summary>
-        /// The type filter offers every kind of notification this user can receive (who gets which is
-        /// decided in NotificationDispatcher), not only the kinds already in their list, plus any older
-        /// kind they still have.
-        /// </summary>
+        /// <summary>Every notification type the user can receive, plus any older type still in their list.</summary>
         private List<string> FilterTypes(IEnumerable<string> held)
         {
             var types = new List<string>();
@@ -35,7 +31,6 @@ namespace InventoryManagement.Web.Controllers
             return types;
         }
 
-        /// <summary>Paged, newest first; the tabs (all / unread) and the type filter are query parameters (ListNav updates the list in place).</summary>
         public async Task<IActionResult> Index(string? status = null, string? type = null, int pageNumber = 1, int pageSize = 30)
         {
             try

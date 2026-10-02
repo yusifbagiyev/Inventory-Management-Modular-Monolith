@@ -17,7 +17,7 @@ namespace InventoryManagement.Web.Controllers
     [Authorize]
     public class CategoriesController : BaseController
     {
-        /// <summary>Upper bound for the product table on the details page.</summary>
+        // Cap for the details page table.
         private const int MaxProductsListed = 10000;
 
         private readonly IMediator _mediator;

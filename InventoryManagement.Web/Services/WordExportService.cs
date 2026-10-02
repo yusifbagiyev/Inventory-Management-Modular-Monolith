@@ -14,7 +14,6 @@ namespace InventoryManagement.Web.Services
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<WordExportService> _logger;
 
-        // The golden brand color #FFC000 - we'll use this for text highlighting
         private const string BRAND_COLOR = "FFC000";
 
         public WordExportService(IWebHostEnvironment environment, ILogger<WordExportService> logger)
@@ -37,39 +36,27 @@ namespace InventoryManagement.Web.Services
                 mainPart.Document = new Document();
                 var body = mainPart.Document.AppendChild(new Body());
 
-                // 1. Add header with larger logo and colored title
                 AddHeaderWithLogoAndTitle(body, mainPart);
 
-                // Small spacing
                 body.AppendChild(CreateSmallSpacingParagraph());
 
-                // 2. Add committee section with text highlighting only
                 AddCommitteeSection(body);
 
-                // 3. Add date section with text highlighting only
                 AddDateSection(body);
 
-                // Small spacing before table
                 body.AppendChild(CreateSmallSpacingParagraph());
 
-                // 4. Add inventory table with golden headers and black borders
                 AddInventoryTable(body, products);
 
-                // Small spacing after table
                 body.AppendChild(CreateSmallSpacingParagraph());
 
-                // 5. Add department name in black (no color)
                 AddDepartmentName(body, department);
 
-                // Small spacing
                 body.AppendChild(CreateSmallSpacingParagraph());
 
-                // 6. Add signature section with full-width golden highlighting
-                // This section is marked to keep together (won't split across pages)
                 AddSignatureSection(body, department, exportedByFullName);
 
-                // Page setup goes last: the schema requires the body's sectPr to be its final child
-                // (placed first, as it was, Word ignored the reduced margins).
+                // Must stay last. Word ignores the margins unless sectPr is the body's final child.
                 SetPageMargins(mainPart);
             }
 
@@ -78,20 +65,16 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Sets reduced page margins to maximize content space.
-        /// Reduces top margin to 0.5 inch and bottom margin to 0.5 inch.
-        /// This gives you much more usable space on each page.
-        /// </summary>
+        /// <summary>Half-inch top and bottom margins so more rows fit on a page.</summary>
         private void SetPageMargins(MainDocumentPart mainPart)
         {
             var sectionProperties = new SectionProperties();
             var pageMargin = new PageMargin()
             {
-                Top = 720,      // 0.5 inch (reduced from 1 inch)
-                Right = 1440U,  // 1 inch (standard)
-                Bottom = 720,   // 0.5 inch (reduced from 1 inch)
-                Left = 1440U,   // 1 inch (standard)
+                Top = 720,      // 0.5 inch
+                Right = 1440U,  // 1 inch
+                Bottom = 720,   // 0.5 inch
+                Left = 1440U,   // 1 inch
                 Header = 720U,
                 Footer = 720U,
                 Gutter = 0U
@@ -102,10 +85,7 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates the header with an even larger logo (200x200 points) and the colored title.
-        /// The logo is now significantly larger to be more prominent in the document.
-        /// </summary>
+        /// <summary>Borderless two-cell table with the logo on the left and the title on the right.</summary>
         private void AddHeaderWithLogoAndTitle(Body body, MainDocumentPart mainPart)
         {
             var headerTable = new Table();
@@ -113,7 +93,6 @@ namespace InventoryManagement.Web.Services
             var tblProp = new TableProperties();
             tblProp.Append(new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
 
-            // No borders on the header table
             var tblBorders = new TableBorders(
                 new TopBorder { Val = BorderValues.None },
                 new LeftBorder { Val = BorderValues.None },
@@ -130,7 +109,6 @@ namespace InventoryManagement.Web.Services
 
             var headerRow = new TableRow();
 
-            // Left cell - LARGER Logo (increased to 200x200)
             var logoCell = new TableCell();
             var logoCellProp = new TableCellProperties();
             logoCellProp.Append(new TableCellWidth { Width = "2500", Type = TableWidthUnitValues.Dxa });
@@ -165,7 +143,6 @@ namespace InventoryManagement.Web.Services
             logoCell.Append(logoPara);
             headerRow.Append(logoCell);
 
-            // Right cell - Title with golden TEXT color (not background)
             var titleCell = new TableCell();
             var titleCellProp = new TableCellProperties();
             titleCellProp.Append(new TableCellWidth { Width = "3000", Type = TableWidthUnitValues.Dxa });
@@ -178,7 +155,6 @@ namespace InventoryManagement.Web.Services
 
             titleCell.Append(titleCellProp);
 
-            // First line with golden text color
             var titlePara1 = new Paragraph();
             var titleParaProp1 = new ParagraphProperties();
             titleParaProp1.Append(new SpacingBetweenLines { Before = "0", After = "0", Line = "240" });
@@ -189,7 +165,6 @@ namespace InventoryManagement.Web.Services
             titlePara1.Append(titleRun1);
             titleCell.Append(titlePara1);
 
-            // Second line with golden text color
             var titlePara2 = new Paragraph();
             var titleParaProp2 = new ParagraphProperties();
             titleParaProp2.Append(new SpacingBetweenLines { Before = "0", After = "0", Line = "240" });
@@ -207,15 +182,12 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates an image run for logo insertion.
-        /// This handles the complex OpenXML structure needed for embedded images.
-        /// </summary>
+        /// <summary>Embeds a JPEG as an inline picture of the given size in points.</summary>
         private Run CreateImageRun(MainDocumentPart mainPart, string imagePath, string imageName, int widthInPoints, int heightInPoints)
         {
             ImagePart imagePart = mainPart.AddImagePart(ImagePartType.Jpeg);
 
-            // Read into memory first: feeding a file stream directly failed on permissions in the container.
+            // Feeding a file stream directly failed on permissions in the container, so read it into memory.
             using (var memoryStream = new MemoryStream(File.ReadAllBytes(imagePath)))
             {
                 imagePart.FeedData(memoryStream);
@@ -223,6 +195,7 @@ namespace InventoryManagement.Web.Services
 
             string relationshipId = mainPart.GetIdOfPart(imagePart);
 
+            // 9525 EMUs per pixel at 96 DPI.
             long widthInEmus = widthInPoints * 9525;
             long heightInEmus = heightInPoints * 9525;
 
@@ -262,14 +235,8 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Adds the committee section with TEXT HIGHLIGHTING only (not cell background).
-        /// This creates the effect of using a highlighter pen on just the text,
-        /// leaving white space visible around the edges.
-        /// </summary>
         private void AddCommitteeSection(Body body)
         {
-            // Header paragraph with regular text (no highlight)
             var headerPara = new Paragraph();
             var headerParaProp = new ParagraphProperties();
             headerParaProp.Append(new SpacingBetweenLines { Before = "120", After = "60" });
@@ -280,7 +247,6 @@ namespace InventoryManagement.Web.Services
             headerPara.Append(headerRun);
             body.Append(headerPara);
 
-            // Name paragraph with regular text (no highlight)
             var namePara = new Paragraph();
             var nameParaProp = new ParagraphProperties();
             nameParaProp.Append(new SpacingBetweenLines { Before = "60", After = "120" });
@@ -294,10 +260,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Adds the date section with TEXT HIGHLIGHTING only.
-        /// Again, this highlights just the text itself, not the entire line.
-        /// </summary>
         private void AddDateSection(Body body)
         {
             var datePara = new Paragraph();
@@ -312,10 +274,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates the inventory table with golden column headers and BLACK borders.
-        /// All data is centered, table borders are now black (not golden).
-        /// </summary>
         private static readonly int[] ColumnWidths = [1800, 1600, 1900, 2200, 1300];
 
         private void AddInventoryTable(Body body, List<ProductViewModel> products)
@@ -325,9 +283,8 @@ namespace InventoryManagement.Web.Services
             var tblProp = new TableProperties();
             tblProp.Append(new TableWidth { Width = "5000", Type = TableWidthUnitValues.Pct });
 
-            // ALL borders are BLACK (000000) as requested
             var tblBorders = new TableBorders(
-                // Schema order: top, left, bottom, right, insideH, insideV.
+                // Word expects this order: top, left, bottom, right, insideH, insideV.
                 new TopBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new LeftBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
                 new BottomBorder { Val = BorderValues.Single, Size = 12, Color = "000000" },
@@ -341,7 +298,6 @@ namespace InventoryManagement.Web.Services
             table.Append(tblProp);
             table.Append(new TableGrid(ColumnWidths.Select(w => new GridColumn { Width = w.ToString() })));
 
-            // Header row - only the header row has golden background
             var headerRow = new TableRow();
             headerRow.Append(CreateHeaderCell("Avadanlıq", ColumnWidths[0]));
             headerRow.Append(CreateHeaderCell("İstehsalçı", ColumnWidths[1]));
@@ -350,13 +306,11 @@ namespace InventoryManagement.Web.Services
             headerRow.Append(CreateHeaderCell("İnventar kodu", ColumnWidths[4]));
             table.Append(headerRow);
 
-            // Sort products by category, then inventory code
             var sortedProducts = products
                 .OrderBy(p => p.CategoryName)
                 .ThenBy(p => p.InventoryCode)
                 .ToList();
 
-            // Data rows - all centered
             foreach (var product in sortedProducts)
             {
                 var dataRow = new TableRow();
@@ -364,8 +318,7 @@ namespace InventoryManagement.Web.Services
                 dataRow.Append(CreateCenteredDataCell(product.CategoryName ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Vendor ?? "N/A"));
                 dataRow.Append(CreateCenteredDataCell(product.Model ?? "N/A"));
-                // Unassigned products print a blank cell, not a filler word — same rule the
-                // PDF exporter follows (.pdf-omit placeholders are skipped there).
+                // An unassigned product gets a blank cell, the same as in the PDF export.
                 dataRow.Append(CreateCenteredDataCell(
                     string.IsNullOrWhiteSpace(product.Worker) ? string.Empty : product.Worker));
                 dataRow.Append(CreateCenteredDataCell(product.InventoryCode.ToString()));
@@ -373,12 +326,11 @@ namespace InventoryManagement.Web.Services
                 table.Append(dataRow);
             }
 
-            // Total row - "Cəmi:" left-aligned, count centered
             var totalRow = new TableRow();
 
             var totalLabelCell = new TableCell();
             var totalLabelCellProp = new TableCellProperties();
-            // Spans every column except "İnventar kodu", so the count stays under that header.
+            // Spans all but the last column so the count lines up under the inventory code header.
             totalLabelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
             totalLabelCellProp.Append(new GridSpan { Val = 4 });
             totalLabelCell.Append(totalLabelCellProp);
@@ -415,10 +367,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Adds the department name in BLACK (no color applied).
-        /// Bold and underlined, but standard black text color.
-        /// </summary>
         private void AddDepartmentName(Body body, DepartmentViewModel department)
         {
             var deptPara = new Paragraph();
@@ -427,7 +375,6 @@ namespace InventoryManagement.Web.Services
             deptParaProp.Append(new Justification { Val = JustificationValues.Left });
             deptPara.Append(deptParaProp);
 
-            // Black color (no special color), just bold and underlined
             var deptRun = CreateTextRun(department.Name, 24, true, true);
 
             var runProps = deptRun.RunProperties;
@@ -442,16 +389,11 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Adds the signature section with FULL-WIDTH golden highlighting.
-        /// The entire line is highlighted from start to finish.
-        /// Uses KeepNext property to prevent page breaks between signature lines.
-        /// </summary>
+        /// <summary>The two signature lines, kept on one page.</summary>
         private void AddSignatureSection(Body body, DepartmentViewModel department, string? exportedByFullName)
         {
             var transferredPara = new Paragraph();
             var transferredParaProp = new ParagraphProperties();
-            // Keep with next paragraph to prevent page break
             transferredParaProp.Append(new KeepNext());
             transferredParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
             transferredPara.Append(transferredParaProp);
@@ -470,7 +412,6 @@ namespace InventoryManagement.Web.Services
 
             var receivedPara = new Paragraph();
             var receivedParaProp = new ParagraphProperties();
-            // Keep lines together to prevent page breaks
             receivedParaProp.Append(new KeepNext());
             receivedParaProp.Append(new KeepLines());
             receivedParaProp.Append(new SpacingBetweenLines { Before = "120", After = "120" });
@@ -492,16 +433,13 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates a standard text run with Times New Roman font.
-        /// This is for regular black text without any special highlighting.
-        /// </summary>
+        /// <summary>Font size is in half-points, as Word stores it.</summary>
         private Run CreateTextRun(string text, int fontSize, bool bold, bool timesNewRoman = true)
         {
             var run = new Run();
             var runProp = new RunProperties();
 
-            // Schema order inside rPr: rFonts, b, color, sz.
+            // Word expects this order inside rPr: rFonts, b, color, sz.
             if (timesNewRoman)
             {
                 runProp.Append(new RunFonts { Ascii = "Times New Roman", HighAnsi = "Times New Roman", ComplexScript = "Times New Roman" });
@@ -522,10 +460,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates a text run with colored text (used for the title).
-        /// The text itself is colored, not the background.
-        /// </summary>
         private Run CreateColoredTextRun(string text, int fontSize, bool bold, bool timesNewRoman, string color)
         {
             var run = new Run();
@@ -541,7 +475,7 @@ namespace InventoryManagement.Web.Services
                 runProp.Append(new Bold());
             }
 
-            // Apply color to the text itself (color precedes sz in the schema)
+            // Color has to come before sz.
             runProp.Append(new Color { Val = color });
             runProp.Append(new FontSize { Val = fontSize.ToString() });
 
@@ -553,17 +487,12 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates a header cell with golden background.
-        /// Only the column headers have this background color.
-        /// </summary>
         private TableCell CreateHeaderCell(string text, int width)
         {
             var cell = new TableCell();
 
             var cellProp = new TableCellProperties();
             cellProp.Append(new TableCellWidth { Width = width.ToString(), Type = TableWidthUnitValues.Dxa });
-            // Golden background for headers only
             cellProp.Append(new Shading { Val = ShadingPatternValues.Clear, Fill = BRAND_COLOR });
             cellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
             cell.Append(cellProp);
@@ -582,10 +511,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates a centered data cell for the table.
-        /// These cells have no background color - just centered text.
-        /// </summary>
         private TableCell CreateCenteredDataCell(string text)
         {
             var cell = new TableCell();
@@ -608,9 +533,6 @@ namespace InventoryManagement.Web.Services
 
 
 
-        /// <summary>
-        /// Creates a small spacing paragraph to separate sections.
-        /// </summary>
         private Paragraph CreateSmallSpacingParagraph()
         {
             var para = new Paragraph();

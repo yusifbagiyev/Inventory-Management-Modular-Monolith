@@ -7,7 +7,7 @@ namespace ProductService.Application.DTOs
         public string? Model { get; set; } = string.Empty;
         public string? Vendor { get; set; } = string.Empty;
         public string? ImageUrl { get; set; } = string.Empty;
-        /// <summary>All images, cover (= ImageUrl) first.</summary>
+        /// <summary>All images with the cover, equal to ImageUrl, first.</summary>
         public List<string> ImageUrls { get; set; } = [];
         public string? Description { get; set; } = string.Empty;
         public string? Worker { get; set; } = string.Empty;
@@ -22,7 +22,7 @@ namespace ProductService.Application.DTOs
         public string? DepartmentName { get; set; }=string.Empty;
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        /// <summary>Set for a deleted product (Deleted products page only).</summary>
+        /// <summary>Set only for deleted products.</summary>
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }
     }

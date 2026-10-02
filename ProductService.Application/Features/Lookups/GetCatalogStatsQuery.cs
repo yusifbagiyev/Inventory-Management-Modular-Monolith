@@ -3,7 +3,7 @@ using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Lookups
 {
-    /// <param name="Products">Products assigned to any category/department (every product has both).</param>
+    /// <param name="Products">All products, since every product has a category and a department.</param>
     public record CatalogStatsDto(int Active, int Inactive, int Products);
 
     /// <summary>Header counters for the category list, computed with COUNT queries.</summary>

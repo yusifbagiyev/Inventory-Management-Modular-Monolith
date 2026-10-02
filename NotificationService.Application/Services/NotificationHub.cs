@@ -5,10 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NotificationService.Application.Services
 {
-    /// <summary>
-    /// Pushes notifications to the browser. Each connection joins "user-{id}" and "role-{role}"
-    /// groups so the dispatcher can target a user or every holder of a role.
-    /// </summary>
+    /// <summary>Pushes notifications to the browser, with each connection in a user group and a role group.</summary>
     [Authorize]
     public class NotificationHub : Hub
     {

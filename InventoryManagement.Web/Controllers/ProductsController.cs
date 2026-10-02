@@ -67,19 +67,15 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentHasImage = hasImage;
             ViewBag.CurrentAssigned = assigned;
 
-            // The active state/quick filters narrow the cascading facets.
             await LoadFilterLists(status, availability, hasImage, assigned);
-            // Page subtitle: the whole inventory, whatever the filters.
+            // The subtitle counts the whole inventory and ignores the filters.
             ViewBag.Counts = await _mediator.Send(new GetProductCountsQuery());
 
             return View(products);
         }
 
 
-        /// <summary>
-        /// The toolbar's "find by code": an existing inventory code opens that product, anything
-        /// else becomes a search on the product list.
-        /// </summary>
+        /// <summary>Opens the product for a known inventory code, otherwise searches the list.</summary>
         [HttpGet]
         [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Find(string? code)
@@ -97,7 +93,7 @@ namespace InventoryManagement.Web.Controllers
             return RedirectToAction(nameof(Index), new { search = code });
         }
 
-        /// <summary>Suggestions under the toolbar's code search: up to six products matching the text.</summary>
+        /// <summary>Up to six suggestions for the toolbar's code search.</summary>
         [HttpGet]
         [PermissionAuthorize(AllPermissions.ProductView)]
         public async Task<IActionResult> Suggest(string? term)
@@ -108,7 +104,7 @@ namespace InventoryManagement.Web.Controllers
 
             var result = await _mediator.Send(new GetAllProductsQuery(1, 6, term));
             var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result).Items;
-            // An exact code first, so Enter opens the product that was typed.
+            // Exact code match first so Enter opens the product that was typed.
             return Json(products
                 .OrderByDescending(p => p.InventoryCode.ToString() == term)
                 .Select(p => new
@@ -122,9 +118,7 @@ namespace InventoryManagement.Web.Controllers
                 }));
         }
 
-        /// <summary>
-        /// Deleted products (kept, not erased): the list, or one product's last state with id.
-        /// </summary>
+        /// <summary>Lists soft-deleted products, or shows one when an id is given.</summary>
         [PermissionAuthorize(AllPermissions.ProductDeletedView)]
         public async Task<IActionResult> Deleted(int? id, string? search = null, int pageNumber = 1, int pageSize = 30)
         {
@@ -147,14 +141,14 @@ namespace InventoryManagement.Web.Controllers
             var product = await _mediator.Send(new GetProductByIdQuery(id));
             if (product == null)
             {
-                // Old links (notifications, routes) to a product deleted since: its kept record.
+                // Old links to a product deleted since then go to its kept record.
                 if (User.HasPermission(AllPermissions.ProductDeletedView)
                     && await _mediator.Send(new GetDeletedProductByIdQuery(id)) != null)
                     return RedirectToAction(nameof(Deleted), new { id });
                 return RedirectToNotFound();
             }
 
-            // The transfers below the details (the full history, updates included, is the timeline).
+            // Transfers only. The full history with updates is on the timeline page.
             var routes = User.HasPermission(AllPermissions.RouteView)
                 ? await _mediator.Send(new GetRoutesByProductQuery(id))
                 : [];
@@ -252,7 +246,7 @@ namespace InventoryManagement.Web.Controllers
                 ImageFiles = productModel.ImageFiles,
                 RemoveImageUrls = productModel.RemoveImageUrls,
                 CoverImageUrl = productModel.CoverImageUrl,
-                // The form always sends colour and specifications (an empty list clears them).
+                // The form always sends colour and specifications, so an empty list clears them.
                 ReplaceDetails = true,
                 Color = productModel.Color,
                 Specifications = ToSpecificationDtos(productModel.Specifications)
@@ -289,11 +283,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        /// <summary>
-        /// Category/department options for the filter panel, plus the (department, category) pairs
-        /// present in the inventory, emitted as a compact [[deptId, catId], ...] array that the
-        /// filter JS turns into cascading lookups.
-        /// </summary>
+        /// <summary>Filter options plus the department and category pairs the filter script uses to cascade.</summary>
         private async Task LoadFilterLists(bool? status, bool? availability, bool? hasImage, bool? assigned)
         {
             var lookups = await _mediator.Send(new GetLookupsQuery());
@@ -315,7 +305,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var lookups = await _mediator.Send(new GetLookupsQuery());
             model.Categories = lookups.Categories.ToSelectList();
-            // Inactive departments are not offered, except the one the product is already in.
+            // Keeps the product's current department even if it is inactive.
             model.Departments = lookups.Departments.ToChoiceList(model.DepartmentId);
         }
     }

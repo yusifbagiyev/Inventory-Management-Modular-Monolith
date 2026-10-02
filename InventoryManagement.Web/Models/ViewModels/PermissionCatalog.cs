@@ -2,24 +2,15 @@ using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>
-    /// One action in the permission editor. <see cref="Direct"/> set: a two-level action shown as
-    /// one choice - none / with approval (<see cref="Permission"/>) / direct (<see cref="Direct"/>).
-    /// Texts are English keys for L[...] / t().
-    /// </summary>
+    /// <summary>One action in the permission editor. With Direct set it is a two-level choice of none, with approval or direct.</summary>
     public sealed record PermissionItem(string Permission, string Label, string? Direct = null, bool IsView = false)
     {
         public IEnumerable<string> Names => Direct == null ? [Permission] : [Permission, Direct];
     }
 
-    /// <summary>A page or area of the app and the actions on it.</summary>
     public sealed record PermissionArea(string Key, string Title, string Icon, IReadOnlyList<PermissionItem> Items);
 
-    /// <summary>
-    /// Every permission, grouped the way people think about access: by page, in plain words.
-    /// Used by the user Edit page (granting) and the profile page (what I may do). A permission
-    /// missing here still shows, under "Other".
-    /// </summary>
+    /// <summary>Every permission grouped by page in plain words. Anything missing here still shows under Other.</summary>
     public static class PermissionCatalog
     {
         public static IReadOnlyList<PermissionArea> Areas { get; } =
@@ -78,11 +69,10 @@ namespace InventoryManagement.Web.Models.ViewModels
             ]),
         ];
 
-        /// <summary>Every permission name the catalogue covers.</summary>
         public static IReadOnlySet<string> Known { get; } =
             Areas.SelectMany(a => a.Items).SelectMany(i => i.Names).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>"none", "approval" or "direct" for a two-level item; "on"/"none" otherwise.</summary>
+        /// <summary>Two-level items return none, approval or direct. Others return on or none.</summary>
         public static string State(PermissionItem item, ISet<string> held)
         {
             if (item.Direct != null && held.Contains(item.Direct)) return "direct";

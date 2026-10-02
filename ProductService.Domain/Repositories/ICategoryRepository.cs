@@ -14,7 +14,7 @@ namespace ProductService.Domain.Repositories
         Task<Category> AddAsync(Category category, CancellationToken cancellationToken = default);
         Task UpdateAsync(Category category, CancellationToken cancellationToken = default);
         Task DeleteAsync(Category category, CancellationToken cancellationToken = default);
-        /// <summary>Products per category for the given ids (ids without products are absent).</summary>
+        /// <summary>Products per category for the given ids, leaving out ids without products.</summary>
         Task<Dictionary<int, int>> GetProductCountsAsync(IEnumerable<int> categoryIds, CancellationToken cancellationToken = default);
     }
 }

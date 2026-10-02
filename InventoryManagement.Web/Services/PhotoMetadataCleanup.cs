@@ -4,12 +4,8 @@ using SkiaSharp;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>
-    /// Removes metadata (EXIF: phone location, device, time) from photos uploaded before uploads
-    /// were cleaned (<see cref="ImageSanitizer"/>), once: a marker file in _thumbs records that it
-    /// ran. Each file keeps its name (its URL); the cleaned copy is checked to decode and then
-    /// replaces it. Runs in the background a minute after startup.
-    /// </summary>
+    // File names stay the same so URLs keep working. A marker file in _thumbs stops it from running twice.
+    /// <summary>One-off job that strips EXIF data from photos uploaded before ImageSanitizer existed.</summary>
     public sealed class PhotoMetadataCleanup : BackgroundService
     {
         private const string Marker = ".metadata-removed-v1";
@@ -72,7 +68,7 @@ namespace InventoryManagement.Web.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                // Runs again on the next start: the marker is written only when it finished.
+                // The marker is only written on completion, so it runs again on the next start.
             }
         }
     }

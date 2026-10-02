@@ -13,11 +13,7 @@ namespace SharedServices
 {
     public static class SharedKernelExtensions
     {
-        /// <summary>
-        /// Infrastructure shared by every module: the per-request database session, MediatR with
-        /// validation + transaction behaviors, validators, background work, image storage and
-        /// permission-based authorization.
-        /// </summary>
+        /// <summary>Registers the infrastructure every module shares.</summary>
         public static IServiceCollection AddSharedKernel(this IServiceCollection services, params Assembly[] moduleAssemblies)
         {
             services.AddSingleton<BackgroundWorkQueue>();
@@ -30,8 +26,7 @@ namespace SharedServices
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssemblies(moduleAssemblies);
-                // Registration order = execution order: name the audited action, validate, then
-                // open a transaction.
+                // Behaviors run in registration order. Validation must happen before the transaction opens.
                 config.AddOpenBehavior(typeof(AuditActionBehavior<,>));
                 config.AddOpenBehavior(typeof(ValidationBehavior<,>));
                 config.AddOpenBehavior(typeof(TransactionBehavior<,>));

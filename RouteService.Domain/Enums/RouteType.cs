@@ -7,7 +7,7 @@ namespace RouteService.Domain.Enums
         Update=3,
         Transfer= 4,
         Removal=5,
-        /// <summary>The product's inventory code was changed (notes: "Inventory code changed from X to Y").</summary>
+        /// <summary>The product's inventory code was changed, with the old and new code in the notes.</summary>
         CodeChange=6,
     }
 }

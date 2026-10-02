@@ -3,11 +3,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace SharedServices.Auditing
 {
-    /// <summary>
-    /// Who is acting in this scope (request) and as part of which action. The actor comes from the
-    /// signed-in user (cookie, JWT or API key); <see cref="Action"/> is the outermost MediatR
-    /// request ("UpdateProduct"), else the MVC/API endpoint ("UserManagement.Edit").
-    /// </summary>
+    /// <summary>Who is acting in this request and as part of which action.</summary>
     public sealed class AuditContext
     {
         private readonly IHttpContextAccessor? _httpContext;
@@ -18,7 +14,7 @@ namespace SharedServices.Auditing
             _httpContext = httpContext;
         }
 
-        /// <summary>Set by AuditActionBehavior for the first (outermost) MediatR request.</summary>
+        /// <summary>Set by AuditActionBehavior from the outermost MediatR request.</summary>
         public string? Action { get; set; }
 
         private HttpContext? Http => _httpContext?.HttpContext;
@@ -39,7 +35,7 @@ namespace SharedServices.Auditing
             }
         }
 
-        /// <summary>Client address as set by the forwarded-headers middleware (never the raw header).</summary>
+        /// <summary>Client address from the forwarded-headers middleware, never the raw header.</summary>
         public string? IpAddress => Http?.Connection.RemoteIpAddress?.ToString();
 
         public string CurrentAction
@@ -54,7 +50,7 @@ namespace SharedServices.Auditing
             }
         }
 
-        /// <param name="userId">Overrides the signed-in user (a sign-in, before the cookie exists).</param>
+        // userId overrides the signed-in user for a sign-in, before the cookie exists.
         public AuditRecord Record(string entityType, string? entityId, string? label, string operation,
             IReadOnlyList<AuditFieldChange>? changes = null, int? userId = null, string? userName = null)
             => new(DateTime.Now, CorrelationId, userId ?? UserId, userName ?? UserName, IpAddress, CurrentAction,

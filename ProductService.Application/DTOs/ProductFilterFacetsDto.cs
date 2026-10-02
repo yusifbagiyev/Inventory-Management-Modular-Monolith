@@ -1,10 +1,6 @@
 namespace ProductService.Application.DTOs
 {
-    /// <summary>
-    /// The distinct (department, category) combinations that actually occur in the inventory.
-    /// The list screen uses this to make its Department and Category filters cascade - selecting a
-    /// department hides the categories that department has no products in, and vice versa.
-    /// </summary>
+    /// <summary>Department and category pairs that occur in the inventory, so the list filters can cascade.</summary>
     public class ProductFilterFacetsDto
     {
         public List<DepartmentCategoryFacetDto> Pairs { get; set; } = new();

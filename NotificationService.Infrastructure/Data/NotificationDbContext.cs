@@ -35,7 +35,7 @@ namespace NotificationService.Infrastructure.Data
         }
     }
 
-    /// <summary>Used by `dotnet ef` only.</summary>
+    /// <summary>Used only by dotnet ef.</summary>
     public class NotificationDbContextFactory : IDesignTimeDbContextFactory<NotificationDbContext>
     {
         public NotificationDbContext CreateDbContext(string[] args)

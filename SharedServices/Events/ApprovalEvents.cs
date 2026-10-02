@@ -9,8 +9,7 @@ namespace SharedServices.Events
         string RequestedByName,
         DateTime CreatedAt) : INotification;
 
-    /// <param name="Status">"Approved", "Rejected" or "Failed".</param>
-    /// <param name="Reason">Rejection reason or execution error.</param>
+    // Status is Approved, Rejected or Failed. Reason holds the rejection reason or the execution error.
     public record ApprovalRequestProcessedEvent(
         int RequestId,
         string RequestType,

@@ -16,7 +16,7 @@
         <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
         <input type="hidden" asp-for="ProductId" id="ProductId" />
 
-        @* Step 1 (design: 06 Transfer): the code, then the found product or an inline error. *@
+        @* Step 1 finds the product by its code. *@
         <section class="ip-form-section">
             <h2>@L["Product"]</h2>
             <label class="ip-label mb-2" for="inventoryCodeInput">@L["Inventory Code"]</label>
@@ -49,7 +49,7 @@
             <div id="warningContainer"></div>
         </section>
 
-        @* Step 2: only once a product without a pending transfer is found. *@
+        @* Step 2 shows only for a product with no pending transfer. *@
         <div id="transferFields" style="display:none;">
             <section class="ip-form-section">
                 <h2>@L["Where to"]</h2>
@@ -176,8 +176,7 @@
                 updateSummary();
             });
 
-            // A transfer moves the product to another department (design: 06 Transfer); a new
-            // worker within the same department is a product edit.
+            // A transfer must change the department. A new worker in the same department is a product edit.
             function sameAsNow() {
                 return !!currentProductData
                     && $('#ToDepartmentId').val() === String(currentProductData.departmentId ?? '');
@@ -258,7 +257,7 @@
                 }
             }
 
-            // "Finance -> IT · worker" in the footer.
+            // Footer line with the current and target department and the new worker.
             function updateSummary() {
                 if (!currentProductData) { $('#transferSummary').empty(); return; }
                 const to = $('#ToDepartmentId').val() ? $('#ToDepartmentId option:selected').text() : '…';
@@ -328,7 +327,7 @@
                 updateSummary();
             }
 
-            // Opened from a product (?code=1042): search straight away.
+            // A product page links here with ?code=, so search for it right away.
             const preset = new URLSearchParams(window.location.search).get('code');
             if (preset && /^\d{1,4}$/.test(preset)) {
                 $('#inventoryCodeInput').val(preset);

@@ -88,7 +88,6 @@
     </div>
 </div>
 
-<!-- Delete User Modal -->
 <div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -125,7 +124,7 @@
                 okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
-                // The id travels in the route: a JSON body never bound to the action's int id.
+                // The id goes in the route because the action does not bind it from a JSON body.
                 fetch(`@Url.Action("QuickToggleStatus")/${userId}`, {
                     method: 'POST',
                     headers: AppConfig.antiforgeryHeaders()
@@ -153,7 +152,7 @@
             modal.show();
         }
 
-        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        // Other users' changes refresh the page in place. A deletion shows a notice.
         LiveUpdates.watch({
             entities: ['user'],
             ids: { user: @Model.Id },

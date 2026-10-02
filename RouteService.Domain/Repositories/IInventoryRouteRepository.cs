@@ -8,9 +8,9 @@ namespace RouteService.Domain.Repositories
     {
         Task<InventoryRoute?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<InventoryRoute>> GetByProductIdAsync(int productId, CancellationToken cancellationToken = default);
-        /// <summary>True when the product already has a transfer waiting to be completed.</summary>
-        /// <summary>Transfers created in [from, to], projected to what the dashboard needs.</summary>
+        /// <summary>Transfers created between from and to, projected to what the dashboard needs.</summary>
         Task<IReadOnlyList<TransferActivity>> GetTransferActivityAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+        /// <summary>True when the product already has a transfer waiting to be completed.</summary>
         Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default);
         Task<InventoryRoute> AddAsync(InventoryRoute route, CancellationToken cancellationToken = default);
         Task UpdateAsync(InventoryRoute route, CancellationToken cancellationToken = default);
@@ -27,12 +27,7 @@ namespace RouteService.Domain.Repositories
             CancellationToken cancellationToken = default,
             string? departmentName = null);
 
-        /// <summary>
-        /// Distinct (departmentId, categoryName) combinations across routes, taking BOTH ends of each
-        /// transfer. Drives the cascading list filters. Routes store the category as a name (the
-        /// product snapshot has no id), so the category side is name-based. The status/type filters
-        /// are applied first, so the department and category options narrow to the current selection.
-        /// </summary>
+        /// <summary>Distinct department and category name pairs from both ends of each route, after the status and type filters.</summary>
         Task<IReadOnlyList<(string DepartmentName, string CategoryName)>> GetDepartmentCategoryPairsAsync(
             bool? isCompleted = null,
             RouteType? routeType = null,

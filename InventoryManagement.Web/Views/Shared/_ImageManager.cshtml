@@ -1,7 +1,5 @@
 @model ImageManagerModel
-@* Multi-image picker: current images (make cover / remove) plus new files (preview / remove / make
-   cover while no current image is left). Behaviour in wwwroot/js/image-manager.js; the form posts
-   ImageFiles, RemoveImageUrls and CoverImageUrl. *@
+@* Driven by image-manager.js. The form posts ImageFiles, RemoveImageUrls and CoverImageUrl. *@
 <div class="image-manager" data-image-manager data-max="@Model.Max">
     <div class="d-flex align-items-baseline justify-content-between gap-3 flex-wrap mb-3">
         @if (Model.Label != null)

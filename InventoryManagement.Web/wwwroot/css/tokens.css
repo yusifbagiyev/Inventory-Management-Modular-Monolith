@@ -1,9 +1,9 @@
-/* Inventory Pro — design tokens. Bootstrap 5.3: put data-bs-theme="light|dark" on <html>. No external fonts. */
+/* Design tokens, switched by data-bs-theme on <html>. System fonts only because the app must work offline. */
 :root, [data-bs-theme="light"] {
   --ip-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --ip-font-mono: "Cascadia Mono", Consolas, "SF Mono", ui-monospace, monospace;
 
-  /* type scale (px / line-height) */
+  /* Type scale, font size and line height */
   --ip-fs-xs: 12px;  --ip-lh-xs: 16px;
   --ip-fs-sm: 13px;  --ip-lh-sm: 18px;
   --ip-fs-base: 14px; --ip-lh-base: 20px;
@@ -13,31 +13,31 @@
   --ip-fs-2xl: 28px; --ip-lh-2xl: 34px;
   --ip-fw-regular: 400; --ip-fw-medium: 500; --ip-fw-semibold: 600;
 
-  /* spacing — 4px base */
+  /* Spacing on a 4px grid */
   --ip-space-1: 4px; --ip-space-2: 8px; --ip-space-3: 12px; --ip-space-4: 16px;
   --ip-space-5: 20px; --ip-space-6: 24px; --ip-space-8: 32px; --ip-space-10: 40px; --ip-space-12: 48px;
 
-  /* radius */
+  /* Radius */
   --ip-radius-sm: 6px; --ip-radius-md: 10px; --ip-radius-lg: 12px; --ip-radius-xl: 16px; --ip-radius-pill: 999px;
 
-  /* control heights */
+  /* Control heights */
   --ip-control-sm: 30px; --ip-control-md: 36px; --ip-control-lg: 44px;
 
-  /* surfaces & text */
+  /* Surfaces and text */
   --ip-bg: #F5F5F3;
   --ip-surface: #FFFFFF;
   --ip-surface-2: #FAFAF9;
   --ip-surface-hover: #F1F1EF;
   --ip-surface-active: #E8E8E5;
   --ip-sunken: #EFEFEC;
-  --ip-text-1: #1B1C1E;   /* 16.9:1 on surface */
-  --ip-text-2: #4F5358;   /* 7.9:1 */
-  --ip-text-3: #6B6F75;   /* 5.1:1 */
+  --ip-text-1: #1B1C1E;   /* Contrast 16.9:1 on surface */
+  --ip-text-2: #4F5358;   /* Contrast 7.9:1 */
+  --ip-text-3: #6B6F75;   /* Contrast 5.1:1 */
   --ip-border: #E4E4E1;
   --ip-border-strong: #CFCFCB;
 
-  /* accent — one, restrained */
-  --ip-accent: #1D6A85;         /* 6.0:1 with white — calm, deep version of #0E9BC4 */
+  /* Accent, only for the primary action, focus, active tab and unread */
+  --ip-accent: #1D6A85;         /* Contrast 6.0:1 with white */
   --ip-accent-hover: #175A71;
   --ip-accent-active: #124A5D;
   --ip-accent-soft: #E6F1F5;
@@ -45,16 +45,16 @@
   --ip-on-accent: #FFFFFF;
   --ip-focus-ring: rgba(29, 106, 133, .30);
 
-  /* Modernist structure: strong 2px rules between major sections */
+  /* Rules between major sections */
   --ip-rule-width: 2px;
   --ip-rule: #1B1C1E;
   --ip-rule-soft: #CFCFCB;
 
-  /* brand yellow — logo mark and cover-image star only */
+  /* Brand yellow, only for the logo and the cover image star */
   --ip-brand: #FFC000;
   --ip-on-brand: #1B1C1E;
 
-  /* status — only where it carries meaning */
+  /* Status colours, only for status */
   --ip-success-text: #1E6B45; --ip-success-soft: #E7F3EC; --ip-success-solid: #2F7D55;
   --ip-warning-text: #7F5200; --ip-warning-soft: #FBF0D9; --ip-warning-solid: #B7791F;
   --ip-danger-text:  #A12A1F; --ip-danger-soft:  #FBEAE7; --ip-danger-solid:  #B42318;
@@ -62,13 +62,13 @@
   --ip-neutral-text: #4F5358; --ip-neutral-soft: #EFEFEC;
   --ip-on-danger: #FFFFFF;
 
-  /* elevation */
+  /* Elevation */
   --ip-shadow-sm: 0 1px 2px rgba(20, 20, 20, .06);
   --ip-shadow-md: 0 1px 3px rgba(20, 20, 20, .06), 0 6px 16px rgba(20, 20, 20, .08);
   --ip-shadow-lg: 0 2px 6px rgba(20, 20, 20, .08), 0 20px 48px rgba(20, 20, 20, .16);
   --ip-backdrop: rgba(27, 28, 30, .40);
 
-  /* charts */
+  /* Charts */
   --ip-chart-1: #1D6A85; --ip-chart-2: #79A9BA; --ip-chart-3: #A7A9A4; --ip-chart-4: #C9CBC6; --ip-chart-5: #5E6873;
   --ip-chart-pending: #D2A652;
 
@@ -107,13 +107,13 @@
   --ip-surface-hover: #25272A;
   --ip-surface-active: #2E3034;
   --ip-sunken: #0F1011;
-  --ip-text-1: #ECECE9;   /* 14.6:1 on surface */
-  --ip-text-2: #B0B2B5;   /* 8.4:1 */
-  --ip-text-3: #8C8F94;   /* 5.4:1 */
+  --ip-text-1: #ECECE9;   /* Contrast 14.6:1 on surface */
+  --ip-text-2: #B0B2B5;   /* Contrast 8.4:1 */
+  --ip-text-3: #8C8F94;   /* Contrast 5.4:1 */
   --ip-border: #2A2C2F;
   --ip-border-strong: #3B3D41;
 
-  --ip-accent: #6FB3CB;          /* 8.1:1 with on-accent */
+  --ip-accent: #6FB3CB;          /* Contrast 8.1:1 with on-accent */
   --ip-accent-hover: #86C1D6;
   --ip-accent-active: #5AA0B9;
   --ip-accent-soft: rgba(111, 179, 203, .14);

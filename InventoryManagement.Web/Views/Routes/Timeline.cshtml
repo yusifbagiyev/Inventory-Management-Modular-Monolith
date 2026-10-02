@@ -165,7 +165,7 @@
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
 
-        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        // Other users' changes refresh the page in place. A deletion shows a notice.
         LiveUpdates.watch({
             entities: ['route', 'product'],
             ids: { product: @(productId ?? 0) },

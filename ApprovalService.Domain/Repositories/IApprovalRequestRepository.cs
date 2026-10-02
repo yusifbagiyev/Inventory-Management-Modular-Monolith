@@ -11,7 +11,7 @@ namespace ApprovalService.Domain.Repositories
         /// <summary>The latest requests in these states, newest decision first.</summary>
         Task<IReadOnlyList<ApprovalRequest>> GetDecidedAsync(IReadOnlyCollection<ApprovalStatus> statuses, int take, CancellationToken cancellationToken = default);
         Task<IEnumerable<ApprovalRequest>> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default);
-        /// <summary>Requests in <paramref name="status"/>, optionally only those processed since <paramref name="processedSince"/>.</summary>
+        /// <summary>Counts requests in a status, optionally only those processed since a date.</summary>
         Task<int> CountAsync(ApprovalStatus status, DateTime? processedSince = null, CancellationToken cancellationToken = default);
         Task<ApprovalRequest> AddAsync(ApprovalRequest request, CancellationToken cancellationToken = default);
         Task UpdateAsync(ApprovalRequest request, CancellationToken cancellationToken = default);

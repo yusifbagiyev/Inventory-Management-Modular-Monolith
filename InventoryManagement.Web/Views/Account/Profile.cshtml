@@ -20,8 +20,7 @@
                     <i class="fa-solid fa-arrow-right-from-bracket"></i><span>@L["Sign Out"]</span>
                 </button>
             </form>
-            @* Self-service change (verifies the current password). Previously this pointed at the
-               Admin-only ResetPassword action, so a non-admin got Access Denied. *@
+            @* Not ResetPassword, which is Admin-only. *@
             <a href="@Url.Action("ChangePassword")" class="ip-btn ip-btn-secondary">
                 <i class="fa-solid fa-key"></i><span>@L["Change Password"]</span>
             </a>

@@ -6,8 +6,7 @@
     var pageSize = ViewBag.PageSize as int? ?? 30;
     var search = Context.Request.Query["search"].ToString();
 }
-@* Deleted products are kept (soft delete): their last state, who deleted them and when.
-   Search updates the list in place (ListNav). *@
+@* Soft-deleted products. Search updates the list in place through ListNav. *@
 <div class="container-fluid px-4">
     <div class="ip-page-head">
         <div>

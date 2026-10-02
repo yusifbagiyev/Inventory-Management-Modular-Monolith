@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace SharedServices.Authorization
 {
-    /// <summary>Met when the user holds any one of <see cref="Permissions"/>, or is an Admin.</summary>
+    /// <summary>Met when the user is an Admin or holds any one of the permissions.</summary>
     public class PermissionRequirement : IAuthorizationRequirement
     {
         public const string Separator = "|";
@@ -23,7 +23,6 @@ namespace SharedServices.Authorization
             if (context.User.Identity?.IsAuthenticated != true)
                 return Task.CompletedTask;
 
-            // Admins bypass permission checks; everyone else needs a "permission" claim.
             if (context.User.IsInRole("Admin") || context.User.Claims.Any(c =>
                     c.Type.Equals("permission", StringComparison.OrdinalIgnoreCase) &&
                     requirement.Permissions.Contains(c.Value, StringComparer.OrdinalIgnoreCase)))

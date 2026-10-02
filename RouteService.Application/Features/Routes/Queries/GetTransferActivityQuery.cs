@@ -4,7 +4,7 @@ using RouteService.Domain.Repositories;
 
 namespace RouteService.Application.Features.Routes.Queries
 {
-    /// <summary>Transfers created in [From, To] - the dashboard's data source.</summary>
+    /// <summary>Transfers created between From and To, used by the dashboard.</summary>
     public record GetTransferActivityQuery(DateTime From, DateTime To) : IRequest<IReadOnlyList<TransferActivity>>;
 
     public class GetTransferActivityQueryHandler : IRequestHandler<GetTransferActivityQuery, IReadOnlyList<TransferActivity>>

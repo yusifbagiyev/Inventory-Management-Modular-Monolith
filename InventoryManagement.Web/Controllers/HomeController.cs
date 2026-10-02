@@ -26,10 +26,7 @@ namespace InventoryManagement.Web.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>
-        /// The start page ("/", after sign-in): the first page the user may open. Everyone can open
-        /// Notifications, so this never ends on Access denied.
-        /// </summary>
+        /// <summary>Sends the user to the first page they may open. Everyone can open Notifications, so it never ends on Access denied.</summary>
         public IActionResult Index()
         {
             var pages = new (string Permission, string Url)[]
@@ -47,11 +44,7 @@ namespace InventoryManagement.Web.Controllers
             return Redirect(pages.FirstOrDefault(p => User.HasPermission(p.Permission)).Url ?? "/Notifications");
         }
 
-        /// <summary>
-        /// Transfer-centred dashboard. Everything period-based is derived from the transfers created
-        /// in the period; product counts are "new in period" (or the whole inventory for "all").
-        /// Built from aggregate queries - it used to download every product and every route.
-        /// </summary>
+        /// <summary>Period figures come from the transfers created in the period. Product figures are the current state.</summary>
         [PermissionAuthorize(AllPermissions.DashboardView)]
         public async Task<IActionResult> Dashboard(string period = "last7days")
         {
@@ -62,7 +55,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 "last30days" => now.Date.AddDays(-29),
                 "last90days" => now.Date.AddDays(-89),
-                // The current month and the five before it, so the monthly bars are whole months.
+                // Starts on the 1st so every monthly bar covers a whole month.
                 "last6months" => new DateTime(now.Year, now.Month, 1).AddMonths(-5),
                 "all" => DateTime.MinValue,
                 _ => now.Date.AddDays(-6)
@@ -71,7 +64,7 @@ namespace InventoryManagement.Web.Controllers
                 period = "last7days";
 
             var transfers = await _mediator.Send(new GetTransferActivityQuery(startDate, endDate));
-            // The product tiles and "needs attention" show the current state, whatever the period.
+            // Product tiles ignore the period and show the current state.
             var products = await _mediator.Send(new GetProductCountsQuery());
             var faulty = products.NotWorking > 0
                 ? (await _mediator.Send(new GetAllProductsQuery(1, 2, status: false))).Items
@@ -91,7 +84,7 @@ namespace InventoryManagement.Web.Controllers
                 PendingTransfers = pending.TotalCount,
                 OldestPendingDays = oldestPending is { } oldest ? (int)(now.Date - oldest.Date).TotalDays : null,
                 CategoryDistributions = categories,
-                // As many departments as category rows, so the two lists side by side end level.
+                // Same row count as categories so the two lists side by side end level.
                 DepartmentStats = BuildDepartmentStats(transfers, categories.Count),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
                 PeriodStart = period == "all" ? null : startDate.ToString("yyyy-MM-dd"),
@@ -100,7 +93,7 @@ namespace InventoryManagement.Web.Controllers
 
             ViewBag.CurrentPeriod = period;
 
-            // "Needs attention": the current state, whatever the period.
+            // The needs-attention block also ignores the period.
             ViewBag.NotWorking = products.NotWorking;
             ViewBag.OpenTransfers = pending.TotalCount;
             if (User.HasPermission(AllPermissions.ApprovalView))
@@ -109,10 +102,7 @@ namespace InventoryManagement.Web.Controllers
             return View(model);
         }
 
-        /// <summary>
-        /// Top 5 departments by transfers sent or received in the period, by the department name
-        /// written on each transfer (what it was called then, even if renamed or deleted since).
-        /// </summary>
+        /// <summary>Busiest departments in the period, grouped by the name stored on each transfer.</summary>
         private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers, int count)
         {
             var byDepartment = new Dictionary<string, (string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
@@ -149,7 +139,7 @@ namespace InventoryManagement.Web.Controllers
                 .ToList();
         }
 
-        /// <summary>Categories of the products transferred in the period (category at transfer time).</summary>
+        /// <summary>Uses the category a product had when it was transferred.</summary>
         private static List<CategoryDistribution> BuildCategoryDistribution(IReadOnlyList<TransferActivity> transfers)
             => transfers
                 .GroupBy(t => t.CategoryName)
@@ -159,7 +149,7 @@ namespace InventoryManagement.Web.Controllers
                 .Select(c => new CategoryDistribution { CategoryName = c.Name, Count = c.Count })
                 .ToList();
 
-        /// <summary>Completed/pending transfer counts per day, week, month or quarter depending on the period.</summary>
+        /// <summary>Bucket size grows with the period, from days up to quarters.</summary>
         private static TransferActivityData BuildTransferActivity(
             IReadOnlyList<TransferActivity> transfers, DateTime startDate, DateTime endDate, string period)
         {
@@ -186,7 +176,7 @@ namespace InventoryManagement.Web.Controllers
                     break;
 
                 case "last90days":
-                    // Weeks, labelled by their first day.
+                    // Weekly buckets labelled by their first day.
                     for (var from = startDate; from <= endDate; from = from.AddDays(7))
                         AddBucket(from.ToString("dd.MM"), from.Date, from.AddDays(7).Date);
                     break;
@@ -217,7 +207,7 @@ namespace InventoryManagement.Web.Controllers
             return data;
         }
 
-        // Chart labels in the interface language (the formatting culture stays en-US).
+        // Hand-written because the formatting culture stays en-US.
         private static readonly string[] AzMonths = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
         private static readonly string[] AzDays = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
         private static readonly string[] RuMonths = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];

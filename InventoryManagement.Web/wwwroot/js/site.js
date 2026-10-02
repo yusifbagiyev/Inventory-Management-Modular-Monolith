@@ -1,24 +1,16 @@
-/**
- * Interface language. The layout loads the Azerbaijani table as window.I18n (from
- * Resources/i18n/az.json, the same file the server's IStringLocalizer uses); in English it is absent.
- *
- *   t('Products')                        -> "Məhsullar"
- *   t('{0} selected', n)                 -> "{0} seçilib" with n filled in
- *
- * The English text is the key, so an untranslated string simply shows in English.
- */
+/** Translates a UI string from window.I18n. The English text is the key, so a missing one shows in English. */
 function t(key, ...args) {
     const table = window.I18n || {};
     const text = Object.prototype.hasOwnProperty.call(table, key) ? table[key] : key;
     return args.length ? String(text).replace(/\{(\d+)\}/g, (m, i) => (args[i] ?? m)) : text;
 }
 
-/** The locale for Intl / toLocale*String: follows the interface language. */
+/** Locale for Intl and toLocale*String, following the UI language. */
 function uiLocale() {
     return ({ az: 'az-Latn-AZ', ru: 'ru-RU' })[document.documentElement.lang] || 'en-US';
 }
 
-/** dd.MM.yyyy (and HH:mm when withTime): the one date format used across the UI. */
+/** Formats as dd.MM.yyyy, adding HH:mm when withTime. It is the only date format in the UI. */
 function formatDate(value, withTime) {
     if (!value) return '';
     const d = value instanceof Date ? value : new Date(value);
@@ -28,7 +20,7 @@ function formatDate(value, withTime) {
     return withTime ? `${date} ${pad(d.getHours())}:${pad(d.getMinutes())}` : date;
 }
 
-// DataTables texts for every table (a page's own `language` option still wins).
+// DataTables texts for every table. A page's own language option still wins.
 if (window.DataTable && window.DataTable.defaults) {
     window.DataTable.defaults.language = Object.assign({}, window.DataTable.defaults.language, {
         search: t('Search:'),
@@ -46,15 +38,7 @@ if (window.DataTable && window.DataTable.defaults) {
     });
 }
 
-/**
- * In-page confirmation dialog, replacing the browser's confirm() popup.
- * Enter confirms, Esc/Cancel dismisses (Bootstrap handles Esc).
- *
- *   confirmAction('Delete this route?', () => { ...proceed... });
- *   confirmAction({ message: '...', title: 'Delete route', okText: 'Delete', danger: true }, onOk);
- *
- * Falls back to window.confirm if the shared modal markup is missing (e.g. a layout-less page).
- */
+/** In-page confirm dialog. Falls back to window.confirm on pages without the shared modal. */
 function confirmAction(options, onConfirm) {
     const opts = typeof options === 'string' ? { message: options } : (options || {});
     const modalEl = document.getElementById('globalConfirmModal');
@@ -79,9 +63,8 @@ function confirmAction(options, onConfirm) {
 
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-    // Track the outcome on the element itself. Listeners left over from an earlier dialog can
-    // still fire on this shared modal; keying off a per-call token means only the current
-    // dialog's listener acts, and a stale one can never swallow or double-run the callback.
+    // Listeners from an earlier dialog can still fire on this shared modal.
+    // A per-call token makes sure only the current dialog's listener runs the callback.
     const token = Symbol('confirm');
     modalEl.__confirmToken = token;
     modalEl.__confirmAccepted = false;
@@ -91,7 +74,7 @@ function confirmAction(options, onConfirm) {
         modal.hide();
     });
 
-    // Enter anywhere in the dialog = confirm.
+    // Enter anywhere in the dialog confirms.
     function onKeydown(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -108,12 +91,11 @@ function confirmAction(options, onConfirm) {
     modalEl.addEventListener('hidden.bs.modal', function onHidden() {
         modalEl.removeEventListener('keydown', onKeydown);
         modalEl.removeEventListener('hidden.bs.modal', onHidden);
-        if (modalEl.__confirmToken !== token) return;   // a newer dialog owns the modal now
-        if (modalEl.__confirmAccepted) onConfirm?.();   // run after it is gone, so redirects are clean
+        if (modalEl.__confirmToken !== token) return;   // A newer dialog owns the modal now
+        if (modalEl.__confirmAccepted) onConfirm?.();   // Runs after the modal is gone so redirects are clean
     });
 
-    // Opening while a previous instance is still mid-hide leaves Bootstrap wedged (no dialog,
-    // stuck backdrop). Wait for that transition to finish before showing.
+    // Showing while the previous dialog is still hiding leaves Bootstrap stuck on its backdrop.
     if (modalEl.classList.contains('show')) {
         modalEl.addEventListener('hidden.bs.modal', () => modal.show(), { once: true });
     } else {
@@ -121,16 +103,13 @@ function confirmAction(options, onConfirm) {
     }
 }
 
-// Global site functionality
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // Add loading spinner for forms
-    // Layout forms (language switch, sign out) navigate at once and keep their button as it is.
+    // Layout forms like sign out navigate at once, so their buttons get no spinner.
     const forms = document.querySelectorAll('form:not(.no-spinner):not([data-no-ajax])');
     forms.forEach(function (form) {
         form.addEventListener('submit', function () {
@@ -142,30 +121,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Start session monitoring (only if user is authenticated)
     setupSessionMonitor();
 });
 
-// Toast notification (.ip-toast: surface card, bottom right, the icon carries the colour)
-/** The small copy of an uploaded photo for lists (ImageThumbnails on the server); other URLs unchanged. */
+/** Small server-made copy of an uploaded photo for lists. Other URLs come back unchanged. */
 function thumbUrl(url, width) {
     return typeof url === 'string' && url.startsWith('/images/') ? '/thumbs/' + (width || 160) + url : url;
 }
 
 function showToast(message, type = 'info', duration = 4000) {
     message = typeof message === 'string' ? t(message) : message;
-    // Ensure we have a valid type
     const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
     if (!validTypes.includes(type)) {
         type = 'info';
     }
 
-    // Map error to danger for Bootstrap compatibility
     if (type === 'error') {
         type = 'danger';
     }
 
-    // Create toast HTML with proper styling
     const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 
     const icon = getToastIcon(type);
@@ -180,7 +154,6 @@ function showToast(message, type = 'info', duration = 4000) {
         </div>
     `;
 
-    // Ensure toast container exists
     let container = document.getElementById('toastContainer');
     if (!container) {
         container = document.createElement('div');
@@ -189,10 +162,8 @@ function showToast(message, type = 'info', duration = 4000) {
     }
     container.className = 'toast-container position-fixed bottom-0 end-0 p-4';
 
-    // Add toast to container
     container.insertAdjacentHTML('beforeend', toastHtml);
 
-    // Initialize and show the toast
     const toastElement = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastElement, {
         delay: duration,
@@ -200,17 +171,15 @@ function showToast(message, type = 'info', duration = 4000) {
     });
     toast.show();
 
-    // Remove element after it's hidden
     toastElement.addEventListener('hidden.bs.toast', function () {
         toastElement.remove();
     });
 
-    // Returned so callers can attach their own handlers (e.g. click-to-refresh toasts).
+    // Returned so callers can attach their own handlers, like click-to-refresh.
     return toastElement;
 }
 
 
-// Helper function to get toast icon
 function getToastIcon(type) {
     const icons = {
         'success': 'circle-check',
@@ -223,8 +192,7 @@ function getToastIcon(type) {
 }
 
 
-// Helper function to escape HTML
-/** HTML-escapes text for insertion into markup. null/undefined become ''. */
+/** HTML-escapes text for markup. Null and undefined become an empty string. */
 function escapeHtml(value) {
     if (value === null || value === undefined) return '';
     return String(value)
@@ -268,11 +236,7 @@ function setupSessionMonitor() {
 }
 
 
-/** Pager buttons (_Pagination): same page with the current filters, a different pageNumber. */
-/**
- * While a list page loads its next state (filter, page, tab), the rows are replaced by skeleton
- * rows (design: .ip-skeleton). The list is the element marked [data-list-region].
- */
+/** Replaces the list's rows with skeleton rows while its next state loads. */
 function showListSkeleton() {
     const region = document.querySelector('[data-list-region]');
     if (!region) return;
@@ -283,20 +247,11 @@ function showListSkeleton() {
     region.innerHTML = `<div role="status"><span class="visually-hidden">${escapeHtml(t('Loading...'))}</span>${rows}</div>`;
 }
 
-/**
- * Lists change in place: a status tab, a page number, rows per page, a filter or a search fetch
- * the new page and swap only the list ([data-list-region]), its tabs, the count under the title,
- * the regions the page gave LiveUpdates.watch and the filter bar's buttons (quick filters,
- * Reset) - the filter controls themselves stay, so typing and open pickers are not disturbed.
- * The URL follows (Back/Forward work); pages without a list region simply navigate.
- *
- *   ListNav.go(url)                                   // tabs, pages, filters
- *   ListNav.go(url, { replace: true, quiet: true })   // live search: no history entry per letter
- * Fires 'listnav:loaded' on document afterwards (list-filters.js re-reads the URL).
- */
+/** Updates a list in place for tabs, paging, filters and search, and keeps the URL in step. */
 window.ListNav = (function () {
     'use strict';
 
+    // Filter controls are never swapped, so typing and open pickers are not disturbed.
     const SWAPPED = ['[data-list-region]', '[data-list-tabs]', '.ip-page-head .ip-sub'];
     let pending = null;
     let loadedAt = 0;
@@ -329,7 +284,7 @@ window.ListNav = (function () {
                 headers: { 'Accept': 'text/html' },
                 signal: request.signal
             });
-            // Redirected (signed out, no access) or failed: let the browser show the real page.
+            // A redirect or failure means sign-out or lost access, so let the browser show the real page.
             if (!response.ok || new URL(response.url).pathname !== window.location.pathname) throw new Error('reload');
             doc = new DOMParser().parseFromString(await response.text(), 'text/html');
         } catch (e) {
@@ -357,14 +312,14 @@ window.ListNav = (function () {
         if (window.LiveUpdates) LiveUpdates.afterSwap();
         document.dispatchEvent(new CustomEvent('listnav:loaded'));
 
-        // A new page of results starts at the top of the list, not wherever the old one was scrolled.
+        // New results start at the top of the list, not where the old ones were scrolled to.
         const list = document.querySelector('[data-list-region]');
         if (!options.quiet && list && list.getBoundingClientRect().top < 0)
             list.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
-    // Quick filters (on/off) and Reset come and go with the filters: take them from the new page,
-    // keep the controls (and the phone "Filters" button) as they are.
+    // Quick filter and Reset buttons depend on the filters, so they come from the new page.
+    // The controls and the phone Filters button stay as they are.
     function syncFilterButtons(doc) {
         const fresh = doc.querySelectorAll('.ip-filterbar');
         document.querySelectorAll('.ip-filterbar').forEach(function (bar, i) {
@@ -375,7 +330,7 @@ window.ListNav = (function () {
         });
     }
 
-    // Tabs, page numbers, Reset/clear links in the bar or the empty state: same page, new query.
+    // Tab, pager, reset and empty-state links stay on this page with a new query.
     document.addEventListener('click', function (e) {
         const link = e.target.closest('.ip-table-foot a[href], [data-list-tabs] a[href], .ip-filterbar a[href], [data-list-region] .ip-empty a[href]');
         if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || link.target) return;
@@ -384,7 +339,7 @@ window.ListNav = (function () {
         go(link.href);
     });
 
-    // GET filter forms (the audit log): submit in place.
+    // GET filter forms, like the audit log's, submit in place.
     document.addEventListener('submit', function (e) {
         const form = e.target;
         if (!form.matches('form.ip-filterbar') || (form.method || 'get').toLowerCase() !== 'get' || !available()) return;
@@ -394,7 +349,8 @@ window.ListNav = (function () {
         go(window.location.pathname + '?' + params.toString());
     });
 
-    // Search as you type: the list follows 350 ms after the last key (Enter: at once).
+    // Search as you type reloads 350 ms after the last key, or at once on Enter.
+    // It replaces the history entry so Back does not step through every letter.
     let typing = null;
     function searchNow(input) {
         clearTimeout(typing);
@@ -419,7 +375,6 @@ window.ListNav = (function () {
         searchNow(input);
     }, true);
 
-    // Back / Forward between list states of this page.
     history.replaceState(Object.assign({}, history.state, { listNav: true }), '');
     window.addEventListener('popstate', function (e) {
         if (e.state && e.state.listNav && available()) load({});
@@ -427,15 +382,15 @@ window.ListNav = (function () {
 
     return {
         go: go,
-        /** After this page's own change (approve, complete, cancel...): refresh the list in place. */
+        /** Refreshes the list in place after the page's own action, like an approval. */
         reload: () => load({ quiet: true }),
-        /** For LiveUpdates: a load is running, or one finished within <ms> (nothing left to refresh). */
+        /** Lets LiveUpdates skip a refresh while a load runs or just finished. */
         busy: () => pending !== null,
         freshWithin: ms => Date.now() - loadedAt < ms
     };
 })();
 
-/** Rows per page (the select in _Pagination): back to the first page with the new size. */
+/** Rows-per-page select. Goes back to the first page with the new size. */
 function changePageSize(size) {
     const params = new URLSearchParams(window.location.search);
     params.set('pageSize', size);
@@ -443,9 +398,8 @@ function changePageSize(size) {
     ListNav.go(window.location.pathname + '?' + params.toString());
 }
 
-// A table row with data-href opens that page (design: the whole row is clickable). Links,
-// buttons, form controls and cells marked data-no-row-link keep their own behaviour; selecting
-// text does not navigate; Ctrl/Cmd-click opens a new tab.
+// A row with data-href opens that page. Controls inside it keep their own behaviour.
+// Selecting text does not navigate, and Ctrl or Cmd click opens a new tab.
 document.addEventListener('click', function (e) {
     const row = e.target.closest('tr[data-href]');
     if (!row || e.button !== 0) return;
@@ -462,7 +416,7 @@ function showImageModal(imageUrl, title) {
     $('#globalImageModal').modal('show');
 }
 
-/** Placeholder lines while a panel's content loads (same markup as Views/Shared/_Skeleton.cshtml). */
+/** Placeholder lines while a panel loads. Keep the markup in step with _Skeleton.cshtml. */
 function skeletonHtml(lines) {
     const widths = ['100%', '92%', '78%', '96%', '68%', '88%'];
     let html = '<div class="skeleton-group" aria-busy="true" role="status">'
@@ -473,11 +427,8 @@ function skeletonHtml(lines) {
     return html + '</div>';
 }
 
-/**
- * Light/dark theme. The <head> script in _Layout already applied the saved choice (or the OS
- * setting) before first paint; this owns the toggle button and tells pages about a change
- * ('themechange' on window, e.g. the dashboard redraws its charts).
- */
+// Theme toggle. The head script in _Layout applies the saved theme before first paint.
+// A change fires themechange on window so pages like the dashboard can redraw.
 window.Theme = (function () {
     const KEY = 'theme';
     const root = document.documentElement;
@@ -502,7 +453,7 @@ window.Theme = (function () {
     function apply(theme, remember) {
         root.setAttribute('data-bs-theme', theme);
         if (remember) {
-            try { localStorage.setItem(KEY, theme); } catch (e) { /* private mode: this page only */ }
+            try { localStorage.setItem(KEY, theme); } catch (e) { /* Private mode keeps it for this page only */ }
         }
         syncButtons();
         window.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
@@ -512,7 +463,7 @@ window.Theme = (function () {
         if (e.target.closest('[data-theme-toggle]')) apply(current() === 'dark' ? 'light' : 'dark', true);
     });
 
-    // Follow the OS while the user has not picked a theme here.
+    // Follow the OS until a theme has been picked here.
     if (window.matchMedia) {
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
             if (!saved()) apply(e.matches ? 'dark' : 'light', false);
@@ -523,13 +474,8 @@ window.Theme = (function () {
     return { current: current, apply: apply };
 })();
 
-/**
- * The sidebar rail (_Sidebar.cshtml). Wide screens: expanded or collapsed to icons, the choice
- * kept in localStorage 'ip-rail' (the inline script in _Sidebar applies it before first paint).
- * 768-1024px: collapsed by default, the toggle opens it for the moment. Phones: a drawer opened
- * from the app bar ([data-rail-open]), closed by its X, the backdrop, Escape or following a link;
- * never remembered.
- */
+// Sidebar rail. Wide screens remember collapsed or expanded, tablets collapse it by default.
+// On phones it is a drawer and its state is never remembered.
 window.Rail = (function () {
     const KEY = 'ip-rail';
     const phone = window.matchMedia('(max-width: 767.98px)');
@@ -615,11 +561,7 @@ window.Rail = (function () {
     return { toggle: toggle, open: openDrawer, close: closeDrawer };
 })();
 
-/**
- * Opens an approval request in a dialog (Approvals, My Requests). The partial's
- * [data-approval-head] goes into the modal's [data-dialog-head], the rest into [data-dialog-body].
- * Resolves with the head element (its data-status says whether a decision is still open).
- */
+/** Opens an approval request in a dialog and resolves with its head element, which carries data-status. */
 function loadApprovalDetails(url, modalEl) {
     const head = modalEl.querySelector('[data-dialog-head]');
     const body = modalEl.querySelector('[data-dialog-body]');
@@ -643,12 +585,8 @@ function loadApprovalDetails(url, modalEl) {
     });
 }
 
-/**
- * The toolbar's "find by code" (_Layout, [data-code-finder]). Typing shows up to six matching
- * products (Products/Suggest) with a last row that searches the whole list; arrows move, Enter
- * opens the highlighted one. Enter with nothing highlighted, or the button, submits the form:
- * an exact inventory code opens that product, anything else the filtered product list.
- */
+// Toolbar find-by-code box with suggestions. Enter with nothing highlighted submits the form.
+// The server opens the product for an exact code and the filtered list for anything else.
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.querySelector('[data-code-finder]');
     if (!form) return;
@@ -696,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!response.ok) return;
             const list = await response.json();
             if (input.value.trim() === term) render(list, term);
-        } catch (e) { /* aborted by newer typing, or offline: the form still submits */ }
+        } catch (e) { /* Aborted by newer typing or offline. The form still submits */ }
     }
 
     function options() { return Array.from(menu.querySelectorAll('a')); }
@@ -726,14 +664,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-/**
- * Phones (CSS below 768px): every .ip-table is shown as cards, one per row. Cells with a design
- * role (td.thumb, .code, .title, .meta, .state, .date, .actions, .hide-sm - the list pages) are
- * placed by the CSS; this labels the other cells from the table's headers ("Header" over the
- * value) and marks photo, actions and empty cells. Filter bars without the design's filter sheet
- * (.ip-filter-more) get a "Filters (n)" button that folds all but the search away. Re-applied
- * when live updates or list refreshes swap content in.
- */
+// On phones tables become cards. Cells with a role class are placed by CSS, the rest get header labels here.
+// Filter bars without the filter sheet get a Filters button that folds everything but the search.
 window.MobileLayout = (function () {
     'use strict';
 
@@ -746,14 +678,14 @@ window.MobileLayout = (function () {
                 if (td.tagName !== 'TD') return;
                 if (ROLES.some(function (r) { return td.classList.contains(r); })) { delete td.dataset.label; return; }
                 const label = headers[i] || '';
-                // By content, not header: their headers are visually hidden texts ("Image", "Actions").
+                // Detected by content because these columns have visually hidden headers.
                 const media = !!td.querySelector('img, .ip-thumb') && !td.textContent.trim();
                 const onlyControls = td.children.length > 0 && Array.from(td.children).every(c => c.matches('a.ip-btn, a.ip-btn-icon, button, form'));
                 const actions = !media && (!!td.querySelector('.actions') || onlyControls || (!label && !!td.querySelector('a, button')));
                 if (label && td.colSpan === 1 && !media && !actions) td.dataset.label = label; else delete td.dataset.label;
                 td.classList.toggle('cell-media', media);
                 td.classList.toggle('cell-actions', actions);
-                // No text and nothing to use (an arrow between "from" and "to", an empty cell).
+                // No text and nothing to interact with, like the arrow cell in a transfer row.
                 td.classList.toggle('cell-empty', !media && !td.textContent.trim() && !td.querySelector('img, input, button, select, a[href]'));
             });
         });
@@ -803,7 +735,7 @@ window.MobileLayout = (function () {
 
     document.addEventListener('DOMContentLoaded', function () {
         apply(document);
-        // Live updates and list refreshes replace regions: label the new rows too.
+        // Live updates and list refreshes swap regions, so new rows need labels too.
         new MutationObserver(function (mutations) {
             if (mutations.some(function (m) { return Array.from(m.addedNodes).some(touchesLists); }))
                 schedule();
@@ -813,8 +745,8 @@ window.MobileLayout = (function () {
     return { apply: apply };
 })();
 
-// A transfer's failed WhatsApp message: "Send again" (Views/Routes/_WhatsAppStatus) queues it once
-// more; the route then shows "queued" and, a few seconds later, the outcome (live updates).
+// Send again on a failed WhatsApp message queues it once more.
+// Live updates then show the new outcome a few seconds later.
 document.addEventListener('click', async function (e) {
     const button = e.target.closest('[data-wa-resend]');
     if (!button) return;
@@ -837,11 +769,8 @@ document.addEventListener('click', async function (e) {
     }
 });
 
-/*
- * Back button on every page with a breadcrumb (details, timelines, forms): "← Back" before the
- * crumbs. It returns to the parent list as the user left it (filters, page, scroll) when they
- * came from it - history.back() - and otherwise opens the parent crumb's page.
- */
+// Back button before the breadcrumb. Coming from the parent page it uses history.back() to keep filters and scroll.
+// Otherwise it opens the parent crumb's page.
 (function () {
     function addBackButtons() {
         document.querySelectorAll('.ip-page-head ol.breadcrumb').forEach(function (crumbs) {
@@ -873,7 +802,7 @@ document.addEventListener('click', async function (e) {
             crumbs.parentNode.insertBefore(row, crumbs);
             row.append(back, crumbs);
 
-            // Phones: the app bar shows a back arrow instead of the menu button.
+            // On phones the app bar shows a back arrow instead of the menu button.
             const appBack = document.querySelector('.ip-appbar-back');
             if (appBack) {
                 appBack.href = back.href;
@@ -887,11 +816,11 @@ document.addEventListener('click', async function (e) {
     else addBackButtons();
 })();
 
-/** Dashboard figures count up from zero once, when the page opens (not on live refreshes). */
+// Dashboard figures count up once when the page opens, not on live refreshes.
 (function () {
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     document.addEventListener('DOMContentLoaded', function () {
-        if (document.hidden) return;   // a background tab gets no animation frames: show the figures as they are
+        if (document.hidden) return;   // Background tabs get no animation frames
         document.querySelectorAll('.ip-kpi .value').forEach(function (el) {
             const shown = el.textContent.trim();
             if (!/^[\d,]+$/.test(shown)) return;
@@ -905,16 +834,13 @@ document.addEventListener('click', async function (e) {
             }
             el.textContent = '0';
             requestAnimationFrame(step);
-            setTimeout(function () { el.textContent = shown; }, duration + 400);   // in case frames stop (tab hidden mid-way)
+            setTimeout(function () { el.textContent = shown; }, duration + 400);   // In case frames stop because the tab was hidden
         });
     });
 })();
 
-/**
- * A list thumbnail marked [data-image-preview] (data-image = the original, data-title): hovering
- * shows a larger preview beside it (mouse only), clicking or Enter opens the photo in the image
- * modal instead of the row's page.
- */
+// List thumbnails with data-image-preview show a larger peek on mouse hover.
+// Clicking or Enter opens the photo in the image modal instead of the row's page.
 (function () {
     let peek = null, timer = null;
     const canHover = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -964,7 +890,7 @@ document.addEventListener('click', async function (e) {
         const el = e.target.closest && e.target.closest('[data-image-preview]');
         if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showImageModal(el.dataset.image, el.dataset.title); }
     });
-    // Keyboard users reach the thumbnail too.
+    // Makes thumbnails reachable from the keyboard.
     function focusable() { document.querySelectorAll('[data-image-preview]:not([tabindex])').forEach(function (el) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', t('View image')); }); }
     document.addEventListener('DOMContentLoaded', focusable);
     document.addEventListener('listnav:loaded', focusable);

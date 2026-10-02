@@ -10,11 +10,7 @@ using SharedServices.Identity;
 
 namespace ApprovalService.API.Controllers
 {
-    /// <remarks>
-    /// Requests are created by the owning modules (products, routes) when a user lacks the direct
-    /// permission; there is deliberately no public "create" endpoint, which used to let any user
-    /// submit arbitrary action data that bypassed those modules' checks.
-    /// </remarks>
+    /// <remarks>There is no create endpoint on purpose. Only the owning modules submit requests, after their own checks.</remarks>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -27,7 +23,7 @@ namespace ApprovalService.API.Controllers
             _mediator = mediator;
         }
 
-        // 0 for callers whose id is not a user id (API-key clients such as ServiceDesk), never a 500.
+        // API-key clients have no numeric user id and get 0 instead of a 500.
         private int CurrentUserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
         private string CurrentUserName => User.Identity?.Name ?? "Unknown";
@@ -57,8 +53,7 @@ namespace ApprovalService.API.Controllers
         {
             var approvalRequest = await _mediator.Send(new GetRequestById.Query(id));
 
-            // Only the requester or an approval.view holder may read a request (NotFound avoids an
-            // existence oracle).
+            // Only the requester or an approver may read a request. NotFound hides whether it exists.
             var canViewAll = User.IsInRole(AllRoles.Admin) || User.HasClaim("permission", AllPermissions.ApprovalView)
                 || User.HasClaim("permission", AllPermissions.ApprovalDecide);
             if (approvalRequest == null || (!canViewAll && approvalRequest.RequestedById != CurrentUserId))

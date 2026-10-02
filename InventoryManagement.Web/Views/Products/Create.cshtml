@@ -43,7 +43,7 @@
     <script src="~/js/product-form.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // One product per click: later clicks are ignored until the request has an answer.
+            // Ignore further clicks until the request comes back, so one click makes one product.
             let isSubmitting = false;
             const $submitBtn = $('#productForm button[type="submit"]');
             const originalButtonHtml = $submitBtn.html();

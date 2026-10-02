@@ -41,7 +41,7 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task ApprovalRequestCreatedAsync(ApprovalRequestCreatedEvent e, CancellationToken cancellationToken)
         {
-            // Everyone who can decide on requests (Admins and approval.decide holders).
+            // Admins and approval.decide holders.
             var admins = await _users.GetActiveUserIdsWithPermissionAsync(AllPermissions.ApprovalDecide, cancellationToken);
             var data = Json(new { approvalRequestId = e.RequestId, requestType = e.RequestType, requestedBy = e.RequestedByName });
 
@@ -146,11 +146,11 @@ namespace NotificationService.Infrastructure.Services
                 $"Product {e.Model} (Code: {e.InventoryCode}) transfer to {e.ToDepartmentName} has been completed",
                 data)), cancellationToken);
 
-            // Queued in the WhatsApp outbox (paced, retried); the outcome is stored on the route.
+            // The outbox paces and retries it, and stores the outcome on the route.
             await _whatsApp.QueueRouteCompletedAsync(e, cancellationToken);
         }
 
-        /// <summary>Active users who may see the record (<paramref name="permission"/>), except the actor.</summary>
+        /// <summary>Active users with the given permission, except the actor.</summary>
         private async Task<IEnumerable<int>> OtherActiveUsersAsync(int? actorId, string permission, CancellationToken cancellationToken)
             => (await _users.GetActiveUserIdsWithPermissionAsync(permission, cancellationToken)).Where(id => id != actorId);
 
@@ -178,7 +178,7 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        /// <summary>Queues a WhatsApp group message (WhatsAppOutbox sends them paced and retries).</summary>
+        /// <summary>Queues a WhatsApp group message for the outbox.</summary>
         private Task SendWhatsAppAsync(WhatsAppProductNotification notification, string fallbackFileName, CancellationToken cancellationToken)
         {
             _whatsApp.Queue(notification, fallbackFileName, routeId: null);

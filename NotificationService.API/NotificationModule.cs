@@ -6,7 +6,7 @@ using NotificationService.Infrastructure;
 
 namespace NotificationService.API
 {
-    /// <summary>In-app notifications (stored + SignalR) and WhatsApp group messages.</summary>
+    /// <summary>Stored in-app notifications with SignalR pushes, and WhatsApp group messages.</summary>
     public static class NotificationModule
     {
         public const string HubPath = "/notificationHub";

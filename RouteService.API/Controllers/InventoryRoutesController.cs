@@ -11,10 +11,7 @@ using SharedServices.Identity;
 
 namespace RouteService.API.Controllers
 {
-    /// <remarks>
-    /// Errors (not found, approval required → 202, insufficient permissions → 403, rule
-    /// violations → 400) are mapped to JSON by the host's API exception middleware.
-    /// </remarks>
+    /// <remarks>Module exceptions are turned into status codes by the host's API exception middleware.</remarks>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -30,7 +27,7 @@ namespace RouteService.API.Controllers
         }
 
 
-        /// <summary>Direct with route.create.direct, otherwise queued for approval (202).</summary>
+        /// <summary>Transfers directly with route.create.direct, otherwise queues it for approval and answers 202.</summary>
         [HttpPost("transfer")]
         [Consumes("multipart/form-data")]
         [Permission(AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
@@ -60,7 +57,7 @@ namespace RouteService.API.Controllers
         }
 
 
-        // Also for the Transfer page, which checks for a pending transfer of the product.
+        // The Transfer page uses this too, to check for a pending transfer of the product.
         [HttpGet("product/{productId}")]
         [Permission(AllPermissions.RouteView, AllPermissions.RouteCreate, AllPermissions.RouteCreateDirect)]
         public async Task<ActionResult<IEnumerable<InventoryRouteDto>>> GetInventoryByProductId(int productId)
@@ -90,10 +87,7 @@ namespace RouteService.API.Controllers
         }
 
 
-        /// <summary>
-        /// The (department, category-name) pairs present across routes, used to cascade the list
-        /// filters. The status/type filters narrow the result so the options react to them.
-        /// </summary>
+        /// <summary>Department and category name pairs found on routes, so the list filters can cascade.</summary>
         [HttpGet("filter-facets")]
         [Permission(AllPermissions.RouteView)]
         public async Task<ActionResult<RouteFilterFacetsDto>> GetFilterFacets(

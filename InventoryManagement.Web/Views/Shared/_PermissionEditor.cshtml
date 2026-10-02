@@ -1,7 +1,6 @@
 @model PermissionEditorModel
-@* Permissions by page, in plain words (PermissionCatalog). Editable: switches, and for two-level
-   actions one choice of No / With approval / Direct; changes save at once (permission-editor.js).
-   What the role already grants is shown locked. Read-only (profile): only what is held. *@
+@* Built from PermissionCatalog. Permissions the role already grants are shown locked.
+   The read-only profile view lists only what the user holds. *@
 @{
     var own = Model.Own.ToHashSet(StringComparer.OrdinalIgnoreCase);
     var role = Model.FromRole.ToHashSet(StringComparer.OrdinalIgnoreCase);

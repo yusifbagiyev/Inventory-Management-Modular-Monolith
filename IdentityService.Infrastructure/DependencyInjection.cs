@@ -15,7 +15,7 @@ namespace IdentityService.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
             services.AddModuleDbContext<IdentityDbContext>(IdentityDbContext.Schema);
-            // Sign-ins stamp these; they are not changes anyone needs to see.
+            // Sign-ins touch these columns, and nobody needs to see that live.
             services.TrackLiveEntity<User>("user", "Id",
                 nameof(User.LastLoginAt), nameof(User.SecurityStamp), nameof(User.ConcurrencyStamp),
                 nameof(User.AccessFailedCount), nameof(User.LockoutEnd));
@@ -23,9 +23,7 @@ namespace IdentityService.Infrastructure
             services.TrackLiveEntity<IdentityUserRole<int>>("user", "UserId");
             services.TrackLiveEntity<UserPermission>("user", "UserId");
 
-            // AddIdentityCore rather than AddIdentity: the host owns the authentication schemes
-            // (cookie for the UI, JWT/API key for /api); AddIdentity would register its own
-            // cookie scheme and take over the defaults.
+            // Not AddIdentity, which would register its own cookie scheme over the host's schemes.
             services.AddIdentityCore<User>(options =>
                 {
                     options.Password.RequireDigit = true;
@@ -34,7 +32,7 @@ namespace IdentityService.Infrastructure
                     options.User.RequireUniqueEmail = true;
 
                     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-                    // Not lower: anyone can make wrong guesses at someone else's account.
+                    // Not lower, since anyone can lock someone else out with wrong guesses.
                     options.Lockout.MaxFailedAccessAttempts = 10;
                     options.Lockout.AllowedForNewUsers = true;
 

@@ -23,9 +23,7 @@ try
     // Uploaded images live under the web root so they are served as static files.
     builder.Configuration["ImageSettings:RootPath"] ??= Path.Combine(builder.Environment.WebRootPath, "images");
 
-    // Runtime Razor compilation is a development convenience (it watches the file system and
-    // recompiles views on the fly). In production it only costs memory and first-render latency,
-    // since the views are already compiled into the assembly at build time.
+    // Views are precompiled, so runtime compilation is only worth it while developing.
     builder.Services.AddUiLocalization();
     var mvcBuilder = builder.Services.AddControllersWithViews().AddDataAnnotationsLocalization();
     if (builder.Environment.IsDevelopment())
@@ -36,13 +34,11 @@ try
     builder.Services.AddAntiforgery(options =>
     {
         options.HeaderName = "RequestVerificationToken";
-        // Secure over HTTPS (every request through nginx is), like the auth cookie; the framework
-        // default never set it.
+        // The framework default never marks this cookie Secure.
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
-    // Keys protect the auth cookie and antiforgery tokens. Persisted outside the container so a
-    // redeploy does not sign everybody out.
+    // Keys live outside the container so a redeploy does not sign everybody out.
     var dataProtection = builder.Services.AddDataProtection().SetApplicationName("InventoryManagement");
     if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
         dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
@@ -50,15 +46,14 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddCustomServices();
 
-    // Polled by the container healthcheck; the deploy waits on it and rolls back if it never passes.
+    // The deploy script waits on this and rolls back if it never passes.
     builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
     var app = builder.Build();
 
     app.UseForwardedHeaders();
 
-    // Error details only on a developer's machine: any other environment name (a mistyped
-    // ENVIRONMENT in .env, "Staging") gets the plain error page, never stack traces.
+    // Any environment other than Development gets the plain error page, even a mistyped one.
     if (app.Environment.IsDevelopment())
     {
         app.UseDeveloperExceptionPage();
@@ -69,9 +64,7 @@ try
         app.UseHsts();
     }
 
-    // Versioned files (asp-append-version adds ?v=<hash>) never change under that URL: the browser
-    // keeps them for a year instead of asking again on every page. The rest (fonts, images
-    // referenced from CSS) for a day.
+    // A ?v= file never changes under that URL, so it is cached for a year. Everything else is cached for a day.
     app.UseStaticFiles(new StaticFileOptions
     {
         OnPrepareResponse = context =>
@@ -82,8 +75,7 @@ try
         }
     });
 
-    // One line per request with its duration ("HTTP GET /Products responded 200 in 12.3 ms"), after
-    // static files so those are not logged; the container healthcheck stays out of the log.
+    // Placed after static files so they are not logged. Health checks are logged at Verbose to stay out of the way.
     app.UseSerilogRequestLogging(options => options.GetLevel = (context, _, exception) =>
         exception != null || context.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
         : context.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
@@ -91,11 +83,8 @@ try
 
     app.UseUiLocalization();
 
-    // HTML error pages for page navigations only; /api and AJAX callers keep their status codes
-    // (an AJAX 401 re-executed into an HTML 404 page is useless to the client). Before routing,
-    // so the re-executed request is routed to /NotFound (anonymous) instead of reaching
-    // authorization without an endpoint, where the sign-in-required fallback turned a 404 into a
-    // redirect to the sign-in page.
+    // HTML error pages are for page navigations only. API and AJAX callers keep their status codes.
+    // This must run before routing, otherwise a 404 hits the sign-in fallback and turns into a login redirect.
     app.UseWhen(context => !ModuleHostExtensions.IsApiRequest(context)
                            && context.Request.Headers.XRequestedWith != "XMLHttpRequest",
         ui => ui.UseStatusCodePagesWithReExecute("/NotFound", "?statusCode={0}"));
@@ -110,7 +99,7 @@ try
     app.UseModules();
     app.MapControllers();
     app.MapHealthChecks("/health").AllowAnonymous();
-    // List thumbnails of uploaded photos (as public as the photos themselves, which nginx serves).
+    // Anonymous on purpose. The original photos are public through nginx anyway.
     app.MapGet("/thumbs/{width:int}/images/{**path}", async (int width, string path, InventoryManagement.Web.Services.ImageThumbnails thumbnails, HttpContext http, CancellationToken cancellationToken) =>
     {
         var file = await thumbnails.GetAsync(width, path, cancellationToken);

@@ -30,9 +30,8 @@ namespace ProductService.Application.Features.Departments.Commands
                 if (department == null)
                     throw new NotFoundException($"Department with ID {request.Id} not found");
 
-                // Refuse the delete while products still reference this department. The foreign key
-                // is Restrict, so the database would reject it anyway - this turns that into a clear
-                // message instead of a 500, and it keeps in-flight transfer events resolvable.
+                // The foreign key is Restrict, so the database would refuse anyway.
+                // Checking first gives a clear message instead of a 500.
                 var productCount = await _productRepository.CountByDepartmentIdAsync(request.Id, cancellationToken);
                 if (productCount > 0)
                     throw new ConflictException(

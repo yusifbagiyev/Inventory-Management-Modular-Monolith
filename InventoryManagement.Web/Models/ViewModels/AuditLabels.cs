@@ -2,15 +2,12 @@ using System.Text.RegularExpressions;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>
-    /// Audit log texts for people: the stored action ("UpdateProduct", "UserManagement.Edit") and
-    /// approval request types ("product.update") as English text keys for L[...].
-    /// </summary>
+    /// <summary>Readable English keys for stored audit actions and approval request types.</summary>
     public static class AuditLabels
     {
         private static readonly Dictionary<string, string> Actions = new(StringComparer.OrdinalIgnoreCase)
         {
-            // Commands (the first command of the request)
+            // The first command of the request.
             ["CreateProduct"] = "Added a product",
             ["UpdateProduct"] = "Edited a product",
             ["DeleteProduct"] = "Deleted a product",
@@ -30,7 +27,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             ["RejectRequest"] = "Rejected a request",
             ["CancelRequest"] = "Cancelled a request",
 
-            // Endpoints without a command (identity, sign-in)
+            // Endpoints without a command, mostly identity and sign-in.
             ["Account.Login"] = "Sign-in",
             ["Account.Logout"] = "Sign-out",
             ["Account.ChangePassword"] = "Changed own password",
@@ -66,7 +63,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             ["route.delete"] = "Route deletion",
         };
 
-        /// <summary>A known action's sentence, else the name split into words ("Products.Import" -> "Products: Import").</summary>
+        /// <summary>Known actions get a sentence. Unknown ones are split into words.</summary>
         public static string Action(string action)
         {
             if (Actions.TryGetValue(action, out var text)) return text;
@@ -74,7 +71,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             return words.Length > 1 ? char.ToUpperInvariant(words[0]) + words[1..].ToLowerInvariant() : words;
         }
 
-        /// <summary>"product.update" -> "Product update"; anything else unchanged.</summary>
+        /// <summary>Unknown request types come back unchanged.</summary>
         public static string RequestType(string? value)
             => value != null && RequestTypes.TryGetValue(value, out var text) ? text : value ?? "";
 

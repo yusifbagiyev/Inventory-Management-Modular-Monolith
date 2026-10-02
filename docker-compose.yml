@@ -1,6 +1,5 @@
-# Modular monolith: one app container behind nginx, one PostgreSQL database (a schema per module),
-# Seq for logs. Secrets come from .env (see .env.example). Cut-over from the old per-service stack:
-# deploy/MIGRATION.md.
+# One app container behind nginx, one PostgreSQL database with a schema per module, and Seq for logs.
+# Secrets come from .env, see .env.example.
 
 services:
   postgres:
@@ -25,8 +24,7 @@ services:
       retries: 5
 
   app:
-    # CD sets APP_IMAGE in .env to the deployed ghcr.io tag (deploy/CD.md). Without it,
-    # `docker compose up --build` builds a local image from this checkout.
+    # CD pins APP_IMAGE in .env to the deployed tag. Without it, up --build builds a local image.
     image: ${APP_IMAGE:-inventory-app:local}
     build:
       context: .
@@ -37,27 +35,26 @@ services:
       - ASPNETCORE_ENVIRONMENT=${ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=${DB_NAME:-inventory};Username=${DB_USER};Password=${DB_PASSWORD}
-      # JWT is only for external /api clients; the UI uses the auth cookie.
+      # JWT is only for external /api clients. The UI uses the auth cookie.
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=${JWT_ISSUER}
       - Jwt__Audience=${JWT_AUDIENCE}
       - WhatsApp__ApiUrl=https://wasenderapi.com/api/
       - WhatsApp__ApiToken=${WHATSAPP_API_TOKEN}
       - WhatsApp__DefaultGroupId=${WHATSAPP_GROUP_ID}
-      # ServiceDesk integration (X-Api-Key). Leave SERVICEDESK_API_KEY empty to disable.
+      # ServiceDesk integration. Leave SERVICEDESK_API_KEY empty to disable it.
       - ApiKeys__0__Key=${SERVICEDESK_API_KEY:-}
       - ApiKeys__0__ServiceName=ServiceDesk
       - ApiKeys__0__ServiceId=servicedesk-001
       - ApiKeys__0__Permissions__0=product.view
       - ImageSettings__RootPath=/app/wwwroot/images
-      # Persisted so sign-in cookies and antiforgery tokens survive container restarts.
+      # Persisted so sign-in cookies and antiforgery tokens survive a redeploy.
       - DataProtection__KeysPath=/app/keys
     volumes:
-      # The whole images folder: products/, routes/ and _thumbs/ (thumbnails and the photo
-      # cleanup marker), which lived in the container and were made again after every deploy.
+      # The whole images folder, so thumbnails survive a deploy too.
       - ./storage/images:/app/wwwroot/images:rw
       - ./storage/keys:/app/keys:rw
-    # Healthy once migrations ran and the database answers. deploy/deploy.sh waits on this.
+    # Healthy once migrations ran and the database answers. deploy.sh waits on this.
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/health"]
       interval: 15s
@@ -75,7 +72,7 @@ services:
     restart: always
 
   seq:
-    # Pinned: Seq keeps state in seq_data, so upgrade deliberately (change this tag).
+    # Pinned because Seq keeps state in seq_data. Upgrade it on purpose.
     image: datalust/seq:2025.2.14476
     container_name: inventory_seq
     environment:
@@ -98,11 +95,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      # Product API for ServiceDesk (X-Api-Key), as the old product-service offered it (nginx.conf).
+      # Product API for ServiceDesk on the LAN.
       - "5001:5001"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      # app.conf (locations) and headers.conf, included by nginx.conf.
+      # The files nginx.conf includes.
       - ./deploy/nginx:/etc/nginx/inventory:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./storage/images/products:/app/storage/images/products:ro
@@ -113,10 +110,8 @@ services:
       - frontend
     restart: always
 
-  # Public access (https://inventory.az) through a Cloudflare Tunnel: an outbound connection to
-  # Cloudflare, so no port is opened on the server or the firewall. It reaches nginx's tunnel entry
-  # (nginx:8080, not published). Runs only with COMPOSE_PROFILES=tunnel and the tunnel's token in
-  # .env; setup in deploy/CLOUDFLARE.md.
+  # Public access through a Cloudflare Tunnel. The connection is outbound, so no port is opened on the server.
+  # Runs only with COMPOSE_PROFILES=tunnel and the token in .env. Setup is in deploy/CLOUDFLARE.md.
   cloudflared:
     image: cloudflare/cloudflared:2026.9.3
     container_name: inventory_cloudflared

@@ -19,7 +19,7 @@ namespace RouteService.Application.DTOs
         public string? FromWorker { get; set; }
         public string ToWorker { get; set; } = string.Empty;
         public string? ImageUrl { get; set; }
-        /// <summary>All images, cover (= ImageUrl) first.</summary>
+        /// <summary>All images with the cover, equal to ImageUrl, first.</summary>
         public List<string> ImageUrls { get; set; } = [];
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }

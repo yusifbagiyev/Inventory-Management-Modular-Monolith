@@ -9,7 +9,7 @@ namespace ApprovalService.Application.Features.Commands
 {
     public class CancelRequest
     {
-        /// <param name="UserId">The caller; only the requester may cancel.</param>
+        /// <param name="UserId">The caller, who must be the requester.</param>
         public record Command(int RequestId, int UserId) : IRequest, ITransactionalRequest;
 
         public class Handler : IRequestHandler<Command>

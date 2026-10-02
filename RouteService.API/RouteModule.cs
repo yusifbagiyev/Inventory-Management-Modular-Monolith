@@ -4,7 +4,7 @@ using RouteService.Infrastructure;
 
 namespace RouteService.API
 {
-    /// <summary>Inventory routes: transfers and the product audit trail.</summary>
+    /// <summary>Inventory routes, which hold transfers and the product history.</summary>
     public static class RouteModule
     {
         /// <summary>Assemblies holding this module's controllers, handlers, validators and mappings.</summary>

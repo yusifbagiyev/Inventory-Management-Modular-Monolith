@@ -28,8 +28,7 @@ namespace NotificationService.Infrastructure.Repositories
 
             query = query.OrderByDescending(n => n.CreatedAt);
 
-            // Cap in SQL. Callers that render only the newest few used to pull the user's entire
-            // notification history and then Take(n) in memory.
+            // Cap in SQL so callers showing the newest few never load the whole history.
             if (limit.HasValue)
                 query = query.Take(limit.Value);
 
@@ -80,9 +79,7 @@ namespace NotificationService.Infrastructure.Repositories
                 .CountAsync(n => n.UserId == userId && !n.IsRead, cancellationToken);
         }
 
-        // Bulk mark-as-read. A set-based UPDATE, so it does not depend on change tracking - the
-        // previous controller loaded these rows with AsNoTracking(), mutated them, and SaveChanges
-        // persisted nothing. Mirrors Notification.MarkAsRead() (IsRead + ReadAt).
+        // A set-based UPDATE that does the same as Notification.MarkAsRead without loading rows.
         public async Task<int> MarkAllAsReadAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await _context.Notifications
@@ -97,8 +94,8 @@ namespace NotificationService.Infrastructure.Repositories
 
         public Task<int> DeleteByApprovalRequestAsync(int approvalRequestId, CancellationToken cancellationToken = default)
         {
-            // Data is compact JSON written by NotificationDispatcher, so the id is followed by ',' or
-            // '}'. Matching the delimiter keeps request 1 from also deleting requests 10-19, 100...
+            // Data is compact JSON, so the id is followed by a comma or a closing brace.
+            // Matching that delimiter keeps request 1 from also matching request 10.
             var withComma = $"\"approvalRequestId\":{approvalRequestId},";
             var atEnd = $"\"approvalRequestId\":{approvalRequestId}}}";
             return _context.Notifications

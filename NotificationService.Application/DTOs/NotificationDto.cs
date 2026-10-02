@@ -16,7 +16,7 @@ namespace NotificationService.Application.DTOs
     public record NotificationPageDto
     {
         public List<NotificationDto> Items { get; init; } = [];
-        /// <summary>How many match the current tab and type (for the pages).</summary>
+        /// <summary>How many match the current tab and type, used for paging.</summary>
         public int TotalCount { get; init; }
         public int AllCount { get; init; }
         public int UnreadCount { get; init; }

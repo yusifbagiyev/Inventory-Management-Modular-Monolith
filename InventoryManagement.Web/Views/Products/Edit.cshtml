@@ -46,7 +46,7 @@
     <script src="~/js/product-form.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
-            // One save per click: later clicks are ignored until the request has an answer.
+            // Ignore further clicks until the request comes back.
             let isSubmitting = false;
             const $submitBtn = $('#productForm button[type="submit"]');
             const originalButtonHtml = $submitBtn.html();
@@ -79,7 +79,7 @@
             });
         });
 
-        // Someone else saving or deleting this product while it is open: warn, never touch the form.
+        // If someone else changes this product while it is open, warn but leave the form alone.
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['product'],

@@ -1,5 +1,5 @@
 namespace ProductService.Domain.Entities
 {
-    /// <summary>One line of a product's specifications ("RAM" = "16 GB"), stored with the product.</summary>
+    /// <summary>One name and value line of a product's specifications.</summary>
     public sealed record ProductSpecification(string Name, string Value);
 }

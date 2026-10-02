@@ -4,9 +4,8 @@ namespace InventoryManagement.Web.Models.ViewModels
 {
     public class NotificationListViewModel
     {
-        /// <summary>This page's notifications, newest first.</summary>
         public List<NotificationDto> Notifications { get; set; } = new();
-        /// <summary>How many match the tab and type (for the pages); the tab counts; the types for the filter.</summary>
+        /// <summary>Matches for the current tab and type, used for paging.</summary>
         public int TotalCount { get; set; }
         public int AllCount { get; set; }
         public int UnreadCount { get; set; }

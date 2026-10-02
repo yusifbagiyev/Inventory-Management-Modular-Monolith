@@ -20,7 +20,7 @@ namespace NotificationService.API.Controllers
             _inbox = inbox;
         }
 
-        // 0 for callers whose id is not a user id (API-key clients such as ServiceDesk), never a 500.
+        // API-key clients have no numeric user id and get 0 instead of a 500.
         private int CurrentUserId => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
 
         [HttpGet]

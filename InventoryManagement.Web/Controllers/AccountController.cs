@@ -16,7 +16,7 @@ namespace InventoryManagement.Web.Controllers
 {
     public class AccountController : Controller
     {
-        /// <summary>The old prefill cookie of the "Remember me" box; deleted at sign-in (the account picker replaced it).</summary>
+        // Leftover username cookie from before the account picker. Deleted at sign-in.
         private const string OldUsernameCookie = "username";
 
         private readonly IdentityAuth _identity;
@@ -42,7 +42,7 @@ namespace InventoryManagement.Web.Controllers
             _throttle = throttle;
         }
 
-        /// <summary>Issues the auth cookie; also after a password change, whose new stamp would otherwise end this session too.</summary>
+        /// <summary>Issues the auth cookie. Also called after a password change so the new stamp does not end this session.</summary>
         private async Task SignInAsync(IdentityService.Application.DTOs.UserDto user, bool persistent, DateTimeOffset? signedInAt = null)
         {
             var stamp = await _identity.GetSessionStampAsync(user.Id);
@@ -57,16 +57,11 @@ namespace InventoryManagement.Web.Controllers
                 });
         }
 
-        /// <summary>Sign-in events in the audit log ("Session" rows).</summary>
         private Task AuditSessionAsync(string operation, int? userId, string? userName, string? username, string? reason = null)
             => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
                 reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
-        /// <summary>
-        /// The sign-in page in two steps: the accounts that signed in on this browser
-        /// (<see cref="RecentAccounts"/>), then the password. ?user= picks one, ?other=1 asks for
-        /// the username too; with no remembered accounts the page starts there.
-        /// </summary>
+        /// <summary>Two steps: pick an account remembered on this browser, then enter the password.</summary>
         [AllowAnonymous]
         [HttpGet]
         public IActionResult Login(string? returnUrl = null, string? user = null, int? other = null)
@@ -89,7 +84,7 @@ namespace InventoryManagement.Web.Controllers
             return View(Prepare(model));
         }
 
-        /// <summary>Fills the page's display parts (account list, the chosen account's name) for any step.</summary>
+        /// <summary>Fills the account list and the chosen account's name for any step.</summary>
         private LoginViewModel Prepare(LoginViewModel model)
         {
             ViewData["ReturnUrl"] = model.ReturnUrl;
@@ -102,7 +97,7 @@ namespace InventoryManagement.Web.Controllers
                 ? recent.FirstOrDefault(a => string.Equals(a.Login, model.Username, StringComparison.OrdinalIgnoreCase))
                 : null;
             if (model.Mode == "user" && chosen == null)
-                model.Mode = "other";   // removed from the list meanwhile: ask for the username
+                model.Mode = "other";   // Forgotten in the meantime, so ask for the username.
 
             if (chosen != null)
             {
@@ -111,11 +106,11 @@ namespace InventoryManagement.Web.Controllers
                 model.Initials = RecentAccounts.Initials(chosen.Name);
             }
             else if (!model.ShowPicker)
-                model.Mode = "other";   // username and password; the page shows a plain heading
+                model.Mode = "other";
             return model;
         }
 
-        /// <summary>Removes an account from this browser's list (shared computers).</summary>
+        /// <summary>Removes an account from this browser's list, for shared computers.</summary>
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -147,8 +142,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var user = await _identity.ValidateCredentialsAsync(model.Username, model.Password);
-                // A session cookie (ends with the browser), as the unticked "Remember me" was; the
-                // account itself is remembered in the picker list.
+                // Session cookie that ends with the browser. The account itself stays in the picker list.
                 await SignInAsync(user, persistent: false);
                 var displayName = $"{user.FirstName} {user.LastName}".Trim();
                 RecentAccounts.Remember(HttpContext, new RecentAccounts.Entry(user.Username,
@@ -172,8 +166,7 @@ namespace InventoryManagement.Web.Controllers
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
                 await AuditSessionAsync(AuditOperations.SignInFailed, null, model.Username, model.Username, ex.Message);
-                // One answer for every failure (unknown user, wrong password, locked account), so
-                // it cannot be used to find usernames.
+                // Same answer for every failure so it cannot be used to probe usernames.
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
                     "Invalid username or password. After repeated failed attempts, sign-in is suspended for 15 minutes."));
                 return View(Prepare(model));
@@ -185,7 +178,7 @@ namespace InventoryManagement.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            // Recorded only for a signed-in user: anyone can post here, and each call wrote a row.
+            // Anyone can post here, so only a signed-in user's sign-out is audited.
             if (User.Identity?.IsAuthenticated == true)
             {
                 _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
@@ -198,7 +191,7 @@ namespace InventoryManagement.Web.Controllers
         [AllowAnonymous]
         public IActionResult AccessDenied() => View();
 
-        /// <summary>Session check for the client-side monitor: 200 while signed in, 401 otherwise.</summary>
+        /// <summary>Lets the client-side session monitor see whether it is still signed in.</summary>
         [Authorize]
         [HttpGet]
         public IActionResult Ping() => NoContent();
@@ -212,7 +205,6 @@ namespace InventoryManagement.Web.Controllers
             return profile == null ? RedirectToAction(nameof(Login)) : View(profile);
         }
 
-        // Self-service password change for the signed-in user (any authenticated role).
         // Admins set other users' passwords from User Management.
         [Authorize]
         [HttpGet]
@@ -229,8 +221,7 @@ namespace InventoryManagement.Web.Controllers
             var (success, error) = await _userManagementService.ChangePasswordAsync(model.CurrentPassword, model.NewPassword);
             if (success)
             {
-                // The new password ends the user's other sessions (security stamp); this one is
-                // issued again so it stays.
+                // The new stamp ends the other sessions. Re-issue this one so it survives.
                 var auth = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 var me = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var myId)
                     ? await _identity.GetUserAsync(myId) : null;

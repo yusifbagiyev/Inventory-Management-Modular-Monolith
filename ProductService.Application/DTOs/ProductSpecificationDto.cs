@@ -1,6 +1,6 @@
 namespace ProductService.Application.DTOs
 {
-    /// <summary>One specification line ("RAM" = "16 GB"). Settable, so forms and JSON bind to it.</summary>
+    /// <summary>One specification line, with setters so forms and JSON can bind to it.</summary>
     public record ProductSpecificationDto
     {
         public string? Name { get; set; }

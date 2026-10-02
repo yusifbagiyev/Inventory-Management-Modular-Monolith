@@ -41,18 +41,15 @@ namespace RouteService.Infrastructure.Repositories
         {
             var scoped = _context.InventoryRoutes.AsNoTracking().AsQueryable();
 
-            // Apply the same status/type predicates the list uses, so the department and category
-            // options reflect only what the other active filters allow.
+            // Same status and type predicates as the list, so the options follow the other filters.
             if (isCompleted.HasValue)
                 scoped = scoped.Where(r => r.IsCompleted == isCompleted.Value);
 
             if (routeType.HasValue)
                 scoped = scoped.Where(r => r.RouteType == routeType.Value);
 
-            // A route keeps the department and category names as they were when it was written;
-            // departments renamed or deleted since then are still listed under those names. Distinct
-            // (from, to, category) rows are fanned out in memory to one pair per real department end
-            // (dept 0 is the "Removed" placeholder of a removal).
+            // Routes keep the names of the moment, so renamed or deleted departments still show up.
+            // Each row gives one pair per real end. Department 0 is the placeholder of a removal.
             var rows = await scoped
                 .Select(r => new
                 {
@@ -108,8 +105,8 @@ namespace RouteService.Infrastructure.Repositories
             CancellationToken cancellationToken = default,
             string? departmentName = null)
         {
-            // Page 0 or a size of 0 used to give a negative Skip (500). The API caps the size
-            // (200); pages and exports here ask for more on purpose.
+            // Clamp so a zero page or size never gives a negative Skip.
+            // Only the API caps the size, exports ask for more on purpose.
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
             var query = _context.InventoryRoutes.AsNoTracking().AsQueryable();
@@ -120,16 +117,15 @@ namespace RouteService.Infrastructure.Repositories
             if (routeType.HasValue)
                 query = query.Where(r => r.RouteType == routeType.Value);
 
-            // A route touches two departments, so "in this department" means either end - same rule
-            // as GetByDepartmentIdAsync.
+            // A route touches two departments, so either end matches.
             if (departmentId.HasValue)
                 query = query.Where(r => r.FromDepartmentId == departmentId.Value || r.ToDepartmentId == departmentId.Value);
 
-            // By the name written on the route: what the list shows, even for renamed/deleted departments.
+            // Match the name stored on the route, which is what the list shows for renamed or deleted departments.
             if (!string.IsNullOrEmpty(departmentName))
                 query = query.Where(r => r.FromDepartmentName == departmentName || r.ToDepartmentName == departmentName);
 
-            // Category lives on the product snapshot as a name (there is no id to match on).
+            // The snapshot stores only the category name, there is no id to match on.
             if (!string.IsNullOrEmpty(categoryName))
                 query = query.Where(r => r.ProductSnapshot.CategoryName == categoryName);
 
@@ -149,13 +145,10 @@ namespace RouteService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                // Multi-word search: split into words and require EVERY word to appear in SOME
-                // field (AND across words, OR across fields). Previously the whole phrase was one
-                // ILIKE, so "abdulqadir abdullayev hp" matched nothing - no single field holds that
-                // exact string, even though the worker is "Abdulqadir Abdullayev" and the vendor "HP".
+                // Each word must match some field, since the words of a phrase often sit in different columns.
                 var tokens = search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-                // Broad database prefilter, one AND-ed clause per word.
+                // Rough filter in the database first. ILIKE does not fold Azerbaijani letters.
                 var broadQuery = query;
                 foreach (var word in tokens)
                 {
@@ -175,13 +168,12 @@ namespace RouteService.Infrastructure.Repositories
                 var allFilteredItems = await broadQuery
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes all share CompletedAt = default, so without a tiebreaker
-                    // their order - and therefore paging - was nondeterministic.
+                    // Pending routes share the same CompletedAt, so these keep paging stable.
                     .ThenByDescending(r => r.CreatedAt)
                     .ThenByDescending(r => r.Id)
                     .ToListAsync(cancellationToken);
 
-                // Azerbaijani-aware refine in memory: every word must match at least one field.
+                // Then match in memory with Azerbaijani folding. Every word must hit some field.
                 items = allFilteredItems.Where(r =>
                 {
                     var fields = new[]
@@ -212,8 +204,7 @@ namespace RouteService.Infrastructure.Repositories
                 items = await query
                     .OrderByDescending(r => !r.IsCompleted)
                     .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes all share CompletedAt = default, so without a tiebreaker
-                    // their order - and therefore paging - was nondeterministic.
+                    // Pending routes share the same CompletedAt, so these keep paging stable.
                     .ThenByDescending(r => r.CreatedAt)
                     .ThenByDescending(r => r.Id)
                     .Skip((pageNumber - 1) * pageSize)

@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
-# Deploys one app image on the production server. The CD workflow runs it on the self-hosted
-# runner; it also works by hand (e.g. a rollback without GitHub):
+# Deploys one app image on the production server. CD runs it on the self-hosted runner, and it works by hand too.
 #
 #   DEPLOY_DIR=/opt/inventory deploy/deploy.sh ghcr.io/<owner>/inventory-app:sha-<commit>
 #
-# 1. pg_dump backup - migrations run at startup and an image rollback does not undo them.
+# 1. Back up with pg_dump. Migrations run at startup and an image rollback does not undo them.
 # 2. Pull the image and recreate only the app container.
-# 3. Wait for the container healthcheck (/health). If it never passes, put the previous image
-#    back and fail.
-# 4. Record the image as APP_IMAGE in .env, so a plain `docker compose up -d` keeps running it.
+# 3. Wait for the healthcheck. If it never passes, put the previous image back and fail.
+# 4. Pin the image as APP_IMAGE in .env so a plain docker compose up keeps running it.
 set -euo pipefail
 
 IMAGE="${1:?usage: deploy.sh <image>}"
 DEPLOY_DIR="${DEPLOY_DIR:-$(pwd)}"
-HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"   # seconds; migrations run before the app turns healthy
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"   # Seconds. Migrations run before the app turns healthy.
 KEEP_BACKUPS="${KEEP_BACKUPS:-14}"
 APP_CONTAINER=inventory_app
 PG_CONTAINER=inventory_postgres
@@ -21,7 +19,7 @@ PG_CONTAINER=inventory_postgres
 cd "$DEPLOY_DIR"
 [ -f .env ] || { echo "No .env in $DEPLOY_DIR" >&2; exit 1; }
 
-# .env may have Windows line endings (the server's does); compose ignores the \r, so must we.
+# The server's .env has Windows line endings. Compose ignores the \r, so this must too.
 env_value() { grep -E "^$1=" .env | tail -n 1 | cut -d= -f2- | tr -d '\r' || true; }
 
 set_env_value() {
@@ -33,7 +31,7 @@ set_env_value() {
 }
 
 run_app() {
-    # A locally built image (inventory-app:local) is not in the registry; `up` then uses it as is.
+    # A locally built image is not in the registry. The pull fails and up uses the local copy.
     APP_IMAGE="$1" docker compose pull --quiet app || echo "Pull of $1 failed; using a local copy if there is one"
     APP_IMAGE="$1" docker compose up -d --no-build --no-deps app
 }
@@ -58,7 +56,7 @@ echo "==> Deploying $IMAGE (running now: ${previous:-nothing})"
 
 # 1. Backup
 db_name=$(env_value DB_NAME)
-mkdir -p backups && chmod 700 backups   # full copies of the data
+mkdir -p backups && chmod 700 backups   # Full copies of the data
 backup="backups/pre-deploy-$(date +%Y%m%d-%H%M%S).dump"
 echo "==> Backup of database '${db_name:-inventory}' -> $backup"
 docker exec "$PG_CONTAINER" sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$1"' _ "${db_name:-inventory}" > "$backup" \
@@ -66,14 +64,13 @@ docker exec "$PG_CONTAINER" sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$1"' _ "${db
 [ -s "$backup" ] || { rm -f "$backup"; echo "Backup is empty; nothing was deployed" >&2; exit 1; }
 ls -1t backups/pre-deploy-*.dump | tail -n +"$((KEEP_BACKUPS + 1))" | xargs -r rm --
 
-# 2-3. Deploy, then wait for /health
+# 2-3. Deploy and wait for health
 if run_app "$IMAGE" && wait_healthy; then
-    # 4. Remember it
+    # 4. Pin the image
     set_env_value APP_IMAGE "$IMAGE"
     echo "$(date -Is) $IMAGE" >> deploy-history.log
 
-    # The other services pick up compose-file changes (no-op when nothing changed);
-    # nginx re-reads its config, which is a bind mount and does not trigger a recreate.
+    # Other services pick up compose file changes. The nginx config is a bind mount, so it needs a reload.
     docker compose up -d --no-build
     docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload
     docker image prune -f > /dev/null

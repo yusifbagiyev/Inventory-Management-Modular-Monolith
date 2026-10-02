@@ -4,10 +4,7 @@ using ProductService.Application.Features.Products.Queries;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>
-    /// The product total next to "Products" in the sidebar. Every page renders the sidebar, so
-    /// the count is cached for a minute instead of costing a query per page.
-    /// </summary>
+    /// <summary>Sidebar product total, cached for a minute because every page renders the sidebar.</summary>
     public sealed class RailCounts
     {
         private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(1);

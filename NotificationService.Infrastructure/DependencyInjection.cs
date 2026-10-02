@@ -21,7 +21,7 @@ namespace NotificationService.Infrastructure
             services.AddScoped<INotificationInbox, NotificationInbox>();
             services.AddSingleton<ILiveUpdatePublisher, LiveUpdatePublisher>();
 
-            // WhatsApp messages leave one at a time from an outbox (paced for the account's limit).
+            // WhatsApp messages leave one at a time from an outbox, paced for the account's rate limit.
             services.AddSingleton<WhatsAppOutbox>();
             services.AddHostedService<WhatsAppOutboxWorker>();
             services.AddScoped<WhatsAppRouteNotifier>();

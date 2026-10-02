@@ -7,9 +7,9 @@ namespace ProductService.Application.DTOs
         public int InventoryCode { get; set; }
         public string? Model { get; set; } = string.Empty;
         public string? Vendor { get; set; } = string.Empty;
-        /// <summary>Single image (older clients). Combined with <see cref="ImageFiles"/>, it comes first.</summary>
+        /// <summary>Single image from older clients, placed before <see cref="ImageFiles"/>.</summary>
         public IFormFile? ImageFile { get; set; }
-        /// <summary>Images in order; the first becomes the cover.</summary>
+        /// <summary>Images in order, the first one becomes the cover.</summary>
         public List<IFormFile>? ImageFiles { get; set; }
         public string? Worker { get; set; } = string.Empty;
         public string? Description { get; set; } = string.Empty;

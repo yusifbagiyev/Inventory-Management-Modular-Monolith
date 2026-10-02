@@ -30,14 +30,14 @@ namespace InventoryManagement.Web.Controllers
 
         public async Task<IActionResult> Details(int id)
         {
-            // Returns null for requests owned by someone else.
+            // Null for a request owned by someone else.
             var request = await _approvalService.GetRequestDetailsAsync(id);
             return request == null
                 ? RedirectToNotFound()
                 : PartialView("~/Views/Approvals/_ApprovalDetails.cshtml", request);
         }
 
-        /// <summary>Only the requester can cancel, and only while pending (enforced by the module).</summary>
+        /// <summary>The module only lets the requester cancel, and only while the request is pending.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id)

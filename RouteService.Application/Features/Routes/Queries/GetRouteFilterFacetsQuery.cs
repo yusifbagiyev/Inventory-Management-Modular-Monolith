@@ -5,11 +5,7 @@ using RouteService.Domain.Repositories;
 
 namespace RouteService.Application.Features.Routes.Queries
 {
-    /// <summary>
-    /// Returns the (department, category-name) pairs present across routes, so the route list filters
-    /// can cascade. The status/type filters narrow the result, so the department and category options
-    /// react to the other active filters. Cheap DISTINCT query.
-    /// </summary>
+    /// <summary>Department and category name pairs left by the status and type filters, so the list filters can cascade.</summary>
     public record GetRouteFilterFacetsQuery(
         bool? IsCompleted = null,
         RouteType? RouteType = null) : IRequest<RouteFilterFacetsDto>;

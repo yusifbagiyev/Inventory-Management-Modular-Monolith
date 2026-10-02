@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] is string pageTitle ? L[pageTitle] + " - " + L["166 Inventory"] : L["166 Inventory"])</title>
-    @* Tab icon: the rail logo (favicon.svg); .ico for older browsers, PNG for iOS home screens. *@
+    @* The .ico is for older browsers and the PNG for iOS home screens. *@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
-    @* Hovering a link (about 200 ms) fetches its page in the background, so the click opens it at
-       once (Speculation Rules, Chromium). Only plain pages: nothing with a side effect or a file. *@
+    @* Prefetches a page when its link is hovered, so the click opens it at once.
+       Exclude anything with a side effect or a file download. *@
     <script type="speculationrules">
         {
             "prefetch": [{
@@ -22,8 +22,8 @@
             }]
         }
     </script>
-    @* Page transitions (ip-components.css): name the rail and toolbar only while a view
-       transition captures them. Must run before the first render, hence inline in the head. *@
+    @* Names the rail and toolbar only while a view transition captures them.
+       It has to run before the first render, so it stays inline in the head. *@
     <script>
         (function () {
             var root = document.documentElement;
@@ -39,12 +39,12 @@
                 name(true);
                 e.viewTransition.finished.finally(function () { name(false); });
             });
-            // Back to a page kept in the back/forward cache: drop the names its swap left.
+            // A page restored from the back/forward cache still has the names from its swap.
             window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
         })();
     </script>
-    @* Theme before first paint (no light flash on dark pages): the saved choice, else the OS setting.
-       site.js (Theme) owns the toggle; keep the storage key in sync with it. *@
+    @* Sets the theme before first paint so dark pages don't flash light.
+       Keep the storage key in sync with Theme in site.js. *@
     <script>
         (function () {
             var t = null;
@@ -54,15 +54,12 @@
         })();
     </script>
 
-    <!-- Bootstrap 5, then the design tokens (design/tokens.css, light + dark) that everything below reads -->
+    <!-- Order matters: tokens.css must load before everything that reads its variables -->
     <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" asp-append-version="true">
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
-    <!-- DataTables -->
     <link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" asp-append-version="true">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/modern-ui.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
@@ -73,9 +70,8 @@
     <div class="ip-app" id="wrapper">
         @if (signedIn)
         {
-            @* Phones: an app bar with the menu, the page title and the bell; the
-               rail becomes a drawer. On pages with a breadcrumb the menu button gives way to a
-               back arrow (site.js, with the breadcrumb's back button). Hidden from 768px. *@
+            @* Phone app bar, hidden from 768px.
+               On pages with a breadcrumb site.js swaps the menu button for a back arrow. *@
             <header class="ip-appbar">
                 <button type="button" class="ip-btn-icon" data-rail-open aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
                 <a class="ip-btn-icon ip-appbar-back" href="/" hidden aria-label="@L["Back"]"><i class="fa-solid fa-arrow-left"></i></a>
@@ -94,12 +90,11 @@
         }
 
         <main class="ip-main page-content" id="page-content-wrapper">
-            @* Toolbar (design/: "IP Toolbar"): no bar of its own, it sits in the content area. *@
             <header class="ip-toolbar">
                 @if (signedIn)
                 {
-                    @* Suggestions while typing (site.js: CodeFinder); Enter or the button: an exact
-                       inventory code opens that product, anything else the filtered product list. *@
+                    @* An exact inventory code opens that product, anything else opens the filtered list.
+                       CodeFinder in site.js shows suggestions while typing. *@
                     @if (User.HasPermission("product.view"))
                     {
                     <form class="ip-toolbar-search" method="get" action="/Products/Find" role="search" data-no-ajax data-code-finder>
@@ -114,7 +109,6 @@
                     }
                 }
 
-                @* Interface language: posts to LanguageController.Set, which stores the cookie. *@
                 <partial name="_LanguageSwitch" />
 
                 @if (signedIn)
@@ -151,11 +145,9 @@
         </main>
     </div>
 
-    <!-- Toast Container -->
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-4">
     </div>
 
-    <!-- Global Image Modal -->
     <div class="modal fade ip-modal" id="globalImageModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content">
@@ -171,8 +163,7 @@
         </div>
     </div>
 
-    @* Shared confirmation dialog. Replaces the browser's confirm() popup, which cannot be styled
-       and reads as a system error. Enter confirms, Esc/Cancel dismisses. Use via confirmAction(). *@
+    @* Used through confirmAction() instead of the browser's confirm(), which cannot be styled. *@
     <div class="modal fade ip-modal" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm-plus">
             <div class="modal-content">
@@ -191,9 +182,7 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    @* Served from wwwroot/lib, not a CDN: the app works without internet access. Versions and
-       files are pinned in libman.json (update: edit it, then `libman restore`). *@
+    @* Self-hosted because the app must work without internet. Versions are pinned in libman.json. *@
     <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/lib/datatables/js/dataTables.min.js" asp-append-version="true"></script>
@@ -201,9 +190,8 @@
     <script src="~/lib/chart.js/dist/chart.umd.min.js" asp-append-version="true"></script>
     <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
 
-    @* Translations for scripts: t('English text') in site.js looks them up here (absent = English). *@
-    @* The language is in the URL too: the script is cached for good, and switching the language
-       must not keep the previous one's table. *@
+    @* Translation table for t() in site.js. Missing keys fall back to English.
+       The language is part of the URL because the script is cached for good. *@
     @if (JsonStringLocalizer.Language != "en")
     {
         <script src="/Language/Strings?lang=@JsonStringLocalizer.Language&amp;v=@JsonStringLocalizer.Version"></script>
@@ -214,7 +202,6 @@
     <script src="~/js/live-updates.js" asp-append-version="true"></script>
     <script src="~/js/image-manager.js" asp-append-version="true"></script>
 
-    @* The pending-approvals count: for whoever may see the approvals page. *@
     @if (User.HasPermission("approval.view") || User.HasPermission("approval.decide"))
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
@@ -225,29 +212,23 @@
                 const canSeeApprovals = @(User.HasPermission("approval.view") || User.HasPermission("approval.decide") ? "true" : "false");
                 NotificationManager.initialize(canSeeApprovals);
 
-                // Set up UI handlers for notifications
                 setupNotificationUIHandlers();
 
-                // Load initial data (the list request also refreshes the count; admin-approvals.js
-                // loads the pending-approvals count itself)
+                // Also refreshes the unread count. admin-approvals.js loads the pending count itself.
                 loadRecentNotifications();
         });
 
-        // Notification UI Handlers (separated from the manager)
         function setupNotificationUIHandlers() {
-            // Handle notification icon click
             $('#notificationIcon').on('click', function(e) {
                 e.preventDefault();
                 loadRecentNotifications();
             });
 
-            // Handle mark all as read
             $('#markAllAsRead').on('click', function(e) {
                 e.preventDefault();
                 markAllNotificationsAsRead();
             });
 
-            // Handle individual notification clicks
             $(document).on('click', '.ip-notif-item', function() {
                 const notificationId = $(this).data('id');
                 if (notificationId) {
@@ -256,7 +237,7 @@
             });
         }
 
-        // Notification UI Functions (keep these global for access from notification-manager)
+        // Global because notification-manager.js calls these.
         window.loadNotificationCount = function() {
             $.ajax({
                 url: '/Notifications/GetUnreadCount',
@@ -281,7 +262,6 @@
                 success: function(notifications) {
                     renderNotifications(notifications);
 
-                    // Also update the count after loading notifications
                     loadNotificationCount();
                 },
                 error: function(xhr, status, error) {
@@ -302,7 +282,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Failed to get current count:', error);
-                    // Fallback: try to increment from current displayed value
+                    // Without the server count, add one to the number already shown.
                     const $badge = $('#notificationBadge');
                     const currentText = $badge.text().trim();
 
@@ -310,7 +290,6 @@
                         const current = parseInt(currentText) || 0;
                         updateNotificationBadge(current + 1);
                     } else {
-                        // If we can't determine current count, just show indicator
                         updateNotificationBadge(1);
                     }
                 }
@@ -324,7 +303,7 @@
 
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
-                    // Browsers block autoplay until the user has interacted with the page; not an error.
+                    // Browsers block autoplay until the user interacts with the page. That is not an error.
                     playPromise.catch(() => { });
                 }
             } catch (error) {
@@ -345,14 +324,13 @@
             return types[type] || 'info';
         };
 
-        // Helper Functions
         function renderNotifications(notifications) {
             let html = '';
 
             if (!notifications || notifications.length === 0) {
                 html = `<div class="ip-notif-empty">${escapeHtml(t('No new notifications'))}</div>`;
             } else {
-                // The latest four; the rest is one click away (Notifications page).
+                // Only the latest four. The rest are on the Notifications page.
                 notifications.slice(0, 4).forEach(function(notification) {
                     html += createNotificationItem(notification);
                 });
@@ -361,7 +339,6 @@
             $('#notificationList').html(html);
         }
 
-        // Unread = accent dot + stronger title; the type icon sits on a neutral tile.
         // Same mapping as Icon() on the Notifications page.
         function notificationIcon(notification) {
             let status = null;
@@ -426,11 +403,9 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
-                    // Remove unread class from all items
                     $('.ip-notif-item').removeClass('unread');
                     updateNotificationBadge(0);
 
-                    // Reload the list and the count from the server
                     setTimeout(function() {
                         loadRecentNotifications();
                         loadNotificationCount();
@@ -448,7 +423,7 @@
         function updateNotificationBadge(count) {
             count = parseInt(count) || 0;
 
-            // The toolbar bell and the rail's Notifications count
+            // Toolbar bell, rail count and the phone app bar dot
             const badgeSelectors = ['#notificationBadge', '#sidebarUnreadCount', '[data-unread-dot]'];
 
             badgeSelectors.forEach(selector => {
@@ -488,8 +463,7 @@
 
     </script>
 
-    @* Surface server-side TempData messages (create/update/delete/password-reset) as toasts.
-       Nothing rendered these before, so redirect-based flows showed no confirmation at all. *@
+    @* Shows TempData messages from redirect-based actions as toasts. *@
     @{
         var tdSuccess = JsonStringLocalizer.TranslateMessage(TempData["Success"] as string);
         var tdError = JsonStringLocalizer.TranslateMessage((TempData["Error"] ?? TempData["ErrorMessage"]) as string);

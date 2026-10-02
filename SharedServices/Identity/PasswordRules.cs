@@ -1,18 +1,16 @@
 namespace SharedServices.Identity
 {
-    /// <summary>
-    /// Password rules shared by the identity options and every form or DTO that sets a password.
-    /// Applies when a password is set: existing shorter passwords keep working until changed.
-    /// </summary>
+    // Checked only when a password is set. Existing shorter passwords keep working until changed.
+    /// <summary>Password rules shared by the identity options and every form that sets a password.</summary>
     public static class PasswordRules
     {
-        /// <summary>The app is on the internet; 6 allowed passwords such as "Baku2025".</summary>
+        /// <summary>The site is public, so short guessable passwords are not allowed.</summary>
         public const int MinLength = 10;
 
-        /// <summary>English text key (az.json) of the length rule.</summary>
+        /// <summary>Also the translation key in the language files.</summary>
         public const string LengthMessage = "Password must be at least 10 characters long, with an uppercase letter, a lowercase letter and a digit.";
 
-        /// <summary>Longest username / password a sign-in accepts, so a failed attempt cannot write megabytes to the logs.</summary>
+        /// <summary>Caps sign-in input so a failed attempt cannot write megabytes to the logs.</summary>
         public const int MaxUsernameLength = 256;
         public const int MaxPasswordLength = 512;
     }

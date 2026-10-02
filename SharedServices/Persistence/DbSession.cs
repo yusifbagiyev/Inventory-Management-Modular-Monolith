@@ -6,11 +6,7 @@ using SharedServices.Background;
 
 namespace SharedServices.Persistence
 {
-    /// <summary>
-    /// One PostgreSQL connection per DI scope, shared by every module's DbContext. Because all
-    /// modules live in the same database, a single transaction on this connection can span
-    /// several modules (e.g. completing a route and moving the product it carries).
-    /// </summary>
+    /// <summary>One connection per scope shared by every module's DbContext, so one transaction can span modules.</summary>
     public sealed class DbSession : IAsyncDisposable
     {
         private readonly BackgroundWorkQueue _backgroundQueue;
@@ -70,16 +66,16 @@ namespace SharedServices.Persistence
                 await EndAsync();
                 _afterCommit.Clear();
 
-                // Compensations for side effects outside the database (e.g. uploaded files).
+                // Undo side effects outside the database, such as uploaded files.
                 foreach (var compensate in _onRollback)
                 {
-                    try { await compensate(); } catch { /* best effort */ }
+                    try { await compensate(); } catch { /* Best effort */ }
                 }
                 _onRollback.Clear();
             }
         }
 
-        /// <summary>Savepoint inside the active transaction (used to isolate a failing sub-step).</summary>
+        /// <summary>Marks a point in the active transaction that a failing sub-step can roll back to.</summary>
         public async Task SavepointAsync(string name, CancellationToken cancellationToken = default)
         {
             var transaction = Transaction ?? throw new InvalidOperationException("No active transaction");
@@ -87,12 +83,8 @@ namespace SharedServices.Persistence
             _savepoints[name] = (_afterCommit.Count, _onRollback.Count, _enlisted.Count);
         }
 
-        /// <summary>
-        /// Undoes the database work since <paramref name="name"/>, and with it the after-commit
-        /// work queued and the compensations registered in that span (the latter are run).
-        /// Only contexts that first saved after the savepoint are reset, so a context used on both
-        /// sides of it must not rely on its tracked state afterwards.
-        /// </summary>
+        // Only contexts that first saved after the savepoint are reset. A context used on both sides keeps stale tracked state.
+        /// <summary>Undoes the work since the savepoint, drops its after-commit work and runs its compensations.</summary>
         public async Task RollbackToSavepointAsync(string name, CancellationToken cancellationToken = default)
         {
             var transaction = Transaction ?? throw new InvalidOperationException("No active transaction");
@@ -102,8 +94,7 @@ namespace SharedServices.Persistence
 
             _afterCommit.RemoveRange(marks.AfterCommit, _afterCommit.Count - marks.AfterCommit);
 
-            // Contexts that first saved after the savepoint hold entities whose rows no longer
-            // exist; forget them so a later SaveChanges cannot resurrect them.
+            // Their tracked rows no longer exist. Clearing them stops a later SaveChanges from bringing them back.
             foreach (var context in _enlisted.Skip(marks.Enlisted))
                 context.ChangeTracker.Clear();
 
@@ -111,14 +102,11 @@ namespace SharedServices.Persistence
             _onRollback.RemoveRange(marks.OnRollback, compensations.Count);
             foreach (var compensate in compensations)
             {
-                try { await compensate(); } catch { /* best effort */ }
+                try { await compensate(); } catch { /* Best effort */ }
             }
         }
 
-        /// <summary>
-        /// Queues background work to run once the current transaction commits, or immediately
-        /// when there is no transaction. Discarded if the transaction rolls back.
-        /// </summary>
+        /// <summary>Queues work for after the commit, or right away outside a transaction. A rollback discards it.</summary>
         public void AfterCommit(BackgroundWorkItem work)
         {
             if (Transaction == null)
@@ -143,8 +131,7 @@ namespace SharedServices.Persistence
 
         private async Task EndAsync()
         {
-            // Detach every context from the finished transaction so a later SaveChanges on the
-            // same scope does not try to reuse it.
+            // Otherwise a later SaveChanges in the same scope would try to reuse the finished transaction.
             foreach (var context in _enlisted)
             {
                 try { context.Database.UseTransaction(null); } catch (ObjectDisposedException) { }

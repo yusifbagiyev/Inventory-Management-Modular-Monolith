@@ -2,23 +2,22 @@ namespace InventoryManagement.Web.Models.ViewModels
 {
     public class DashboardViewModel
     {
-        /// <summary>All products now (not the period): total, active, inactive, not working.</summary>
+        /// <summary>Product figures are the current state and ignore the period.</summary>
         public int TotalProducts { get; set; }
         public int ActiveProducts { get; set; }
         public int InactiveProducts => TotalProducts - ActiveProducts;
         public int NotWorking { get; set; }
-        /// <summary>Up to two not-working products, by model, for the tile's second line.</summary>
+        /// <summary>Up to two not-working products for the tile's second line.</summary>
         public List<string> NotWorkingNames { get; set; } = [];
-        /// <summary>Transfers completed in the period.</summary>
         public int? CompletedTransfers { get; set; }
-        /// <summary>Transfers waiting now (any age) and how many days the oldest has waited.</summary>
+        /// <summary>All open transfers regardless of the period.</summary>
         public int PendingTransfers { get; set; }
         public int? OldestPendingDays { get; set; }
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];
         public TransferActivityData TransferActivityData { get; set; } = new();
 
-        /// <summary>Period bounds as yyyy-MM-dd for links to the filtered lists (null for "all time").</summary>
+        /// <summary>Period bounds for links to the filtered lists. Null for all time.</summary>
         public string? PeriodStart { get; set; }
         public string? PeriodEnd { get; set; }
     }
@@ -35,7 +34,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<string> Labels { get; set; } = [];
         public List<int> CompletedData { get; set; } = [];
         public List<int> PendingData { get; set; } = [];
-        /// <summary>Each bucket's first and last day (yyyy-MM-dd), for links to the routes list.</summary>
+        /// <summary>First and last day of each bucket, used for links to the routes list.</summary>
         public List<string> BucketStarts { get; set; } = [];
         public List<string> BucketEnds { get; set; } = [];
     }

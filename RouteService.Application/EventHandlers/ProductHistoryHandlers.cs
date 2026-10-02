@@ -8,11 +8,8 @@ using SharedServices.Storage;
 
 namespace RouteService.Application.EventHandlers
 {
-    /// <summary>
-    /// Records every product change as a completed route, forming the product's audit trail.
-    /// Runs inside the product command's transaction, so a product change and its history row
-    /// are committed together. Images are copied so later product edits cannot alter history.
-    /// </summary>
+    /// <summary>Records every product change as a completed route, which forms the product's history.</summary>
+    /// <remarks>Runs in the product command's transaction. Images are copied so later edits cannot change history.</remarks>
     public class ProductHistoryHandlers :
         INotificationHandler<ProductCreatedEvent>,
         INotificationHandler<ProductUpdatedEvent>,

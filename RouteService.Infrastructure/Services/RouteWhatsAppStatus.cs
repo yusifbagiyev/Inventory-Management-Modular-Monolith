@@ -4,7 +4,7 @@ using SharedServices.Contracts;
 
 namespace RouteService.Infrastructure.Services
 {
-    /// <summary>Stores a transfer's WhatsApp delivery on its route (the routes list shows failures).</summary>
+    /// <summary>Stores a transfer's WhatsApp delivery result on its route, where the list shows failures.</summary>
     public sealed class RouteWhatsAppStatus : IRouteWhatsAppStatus
     {
         private readonly RouteDbContext _context;

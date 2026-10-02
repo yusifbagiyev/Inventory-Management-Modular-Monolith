@@ -14,7 +14,7 @@ namespace RouteService.Domain.Entities
         public string ToDepartmentName { get; private set; } = null!;
         public string? FromWorker { get; private set; }
         public string? ToWorker { get; private set; }
-        /// <summary>The cover image: always the first of <see cref="ImageUrls"/>.</summary>
+        /// <summary>The cover image, always the first of <see cref="ImageUrls"/>.</summary>
         public string? ImageUrl { get; private set; }
         /// <summary>All images, cover first.</summary>
         public List<string> ImageUrls { get; private set; } = [];
@@ -23,15 +23,15 @@ namespace RouteService.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime CompletedAt { get;private set; }
 
-        /// <summary>The transfer's WhatsApp group message: Queued, Sent or Failed (null: none sent).</summary>
+        /// <summary>Queued, Sent or Failed for the transfer's WhatsApp message, null when none was sent.</summary>
         public string? WhatsAppStatus { get; private set; }
         public string? WhatsAppError { get; private set; }
         public DateTime? WhatsAppAt { get; private set; }
 
-        //For EF Core
+        // For EF Core
         protected InventoryRoute() { }
 
-        // For new inventory (new or existing item)
+        // A product entering the inventory, new or second-hand.
         public static InventoryRoute CreateNewInventory(
             ProductSnapshot productSnapshot,
             int toDepartmentId,
@@ -144,10 +144,8 @@ namespace RouteService.Domain.Entities
             };
         }
 
-        /// <summary>
-        /// A change of the product's inventory code. The snapshot holds the new code; the old one is
-        /// in the notes. The product stays where it is, so there is no "from" place.
-        /// </summary>
+        /// <summary>An inventory code change, with the new code in the snapshot and the old one in the notes.</summary>
+        /// <remarks>The product stays where it is, so there is no source department.</remarks>
         public static InventoryRoute CreateCodeChange(
             ProductSnapshot productSnapshot,
             int departmentId,
@@ -180,7 +178,7 @@ namespace RouteService.Domain.Entities
             CompletedAt = DateTime.Now;
         }
 
-        /// <summary>Replaces the image list (cover first) and keeps <see cref="ImageUrl"/> in step.</summary>
+        /// <summary>Replaces the image list, cover first, and keeps <see cref="ImageUrl"/> in step.</summary>
         public void SetImages(IEnumerable<string> imageUrls)
         {
             ImageUrls = imageUrls.ToList();
@@ -192,10 +190,7 @@ namespace RouteService.Domain.Entities
             Notes = notes;
         }
 
-        /// <summary>
-        /// Re-points a pending route at a different destination. Id and name are kept in sync so the
-        /// denormalised name can never drift from the id it describes.
-        /// </summary>
+        /// <summary>Points a pending route at another destination, keeping the stored id and name in sync.</summary>
         public void UpdateDestination(int departmentId, string departmentName)
         {
             if (departmentId <= 0)

@@ -7,12 +7,8 @@ using Microsoft.Extensions.Options;
 
 namespace ProductService.API.Authentication
 {
-    /// <summary>
-    /// Authenticates internal integrations (e.g. ServiceDesk) by the X-Api-Key header against the
-    /// "ApiKeys" configuration list:
-    /// <code>"ApiKeys": [ { "Key": "...", "ServiceName": "ServiceDesk", "ServiceId": "servicedesk-001", "Permissions": [ "product.view" ] } ]</code>
-    /// Supply keys through environment variables (ApiKeys__0__Key=...), never appsettings.
-    /// </summary>
+    /// <summary>Authenticates internal integrations such as ServiceDesk by the X-Api-Key header against the ApiKeys config list.</summary>
+    /// <remarks>Keys come from environment variables (ApiKeys__0__Key), never from appsettings.</remarks>
     public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthenticationOptions>
     {
         private const string ApiKeyHeaderName = "X-Api-Key";

@@ -78,7 +78,7 @@ namespace ProductService.Application.Features.Products.Commands
                     ?? throw new NotFoundException($"Product with ID {request.Id} not found");
 
                 var dto = request.ProductDto;
-                // Moving a product into an inactive department is refused; staying in one is fine.
+                // Moving into an inactive department is refused, but staying in one is fine.
                 if (dto.DepartmentId != product.DepartmentId)
                     await ProductDetails.RequireActiveDepartmentAsync(_departmentRepository, dto.DepartmentId, cancellationToken);
                 var before = product.ToState();
@@ -93,7 +93,7 @@ namespace ProductService.Application.Features.Products.Commands
                     added.Add(uploaded);
                 }
 
-                // A single ImageFile (older clients) replaces the images, as it always did.
+                // A single ImageFile from older clients replaces all images.
                 var (images, removed) = ImageSet.Apply(
                     product.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });
@@ -116,7 +116,7 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Re-query so the Category/Department navigations follow the new ids.
+                // Re-query so the category and department navigations follow the new ids.
                 var after = (await _productRepository.GetByIdAsync(product.Id, cancellationToken))!.ToState();
 
                 await _publisher.Publish(new ProductUpdatedEvent(

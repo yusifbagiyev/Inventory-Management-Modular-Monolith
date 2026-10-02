@@ -3,11 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>
-    /// The sign-in page: with accounts remembered on this browser it first shows them
-    /// (<see cref="ShowPicker"/>); a picked account then asks only for the password
-    /// (<see cref="Mode"/> "user"), "use another account" asks for both ("other").
-    /// </summary>
+    /// <summary>Sign-in page that shows remembered accounts first, then asks for the password.</summary>
     public class LoginViewModel
     {
         [Required(ErrorMessage = "Username is required.")]
@@ -21,7 +17,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         [Display(Name = "Password")]
         public string Password { get; set; } = string.Empty;
 
-        /// <summary>"user": the account picked from the list (username is a hidden field); "other": both fields.</summary>
+        /// <summary>The value user means a picked account with the username hidden. The value other asks for both fields.</summary>
         public string? Mode { get; set; }
 
         public string? ReturnUrl { get; set; }

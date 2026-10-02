@@ -5,12 +5,7 @@ using InventoryManagement.Web.Localization;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>
-    /// The accounts that signed in on this browser, for the sign-in page's account picker: an
-    /// HttpOnly cookie with up to <see cref="Max"/> entries (login, name, role, last sign-in),
-    /// newest first. Never a password. Anyone at the same computer sees these names, so each card
-    /// can be removed from the list.
-    /// </summary>
+    /// <summary>Accounts that signed in on this browser, kept in a cookie for the sign-in picker. Never a password.</summary>
     public static class RecentAccounts
     {
         public const string Cookie = "ip_recent";
@@ -33,11 +28,11 @@ namespace InventoryManagement.Web.Services
             }
             catch (Exception ex) when (ex is FormatException or JsonException or ArgumentException)
             {
-                return [];   // an old or tampered cookie is simply ignored
+                return [];   // An old or tampered cookie is just ignored.
             }
         }
 
-        /// <summary>Puts the account first (replacing an older entry for the same login).</summary>
+        /// <summary>Moves the account to the top of the list.</summary>
         public static void Remember(HttpContext context, Entry entry)
         {
             var list = Read(context.Request);
@@ -72,7 +67,7 @@ namespace InventoryManagement.Web.Services
             });
         }
 
-        /// <summary>"AB" from "Anar Babayev"; the login's first letter when there is no name.</summary>
+        /// <summary>First and last initials, or the first letter for a single word.</summary>
         public static string Initials(string name)
         {
             var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -80,7 +75,7 @@ namespace InventoryManagement.Web.Services
             return letters.ToUpper(CultureInfo.CurrentUICulture);
         }
 
-        /// <summary>When the account last signed in: "today 08:51", "yesterday 18:02", else dd.MM (this year) or dd.MM.yyyy.</summary>
+        /// <summary>Today or yesterday with the time, otherwise just the date.</summary>
         public static string LastAtText(DateTime lastAtUtc)
         {
             var local = DateTime.SpecifyKind(lastAtUtc, DateTimeKind.Utc).ToLocalTime();
@@ -92,7 +87,7 @@ namespace InventoryManagement.Web.Services
             return local.Year == today.Year ? local.ToString("dd.MM") : local.ToString("dd.MM.yyyy");
         }
 
-        /// <summary>"Today" -> "today" / "bu gün", for use mid-sentence.</summary>
+        /// <summary>Translated and lowercased for use mid-sentence.</summary>
         private static string Word(string key) => JsonStringLocalizer.TranslateMessage(key).ToLower(CultureInfo.CurrentUICulture);
     }
 }

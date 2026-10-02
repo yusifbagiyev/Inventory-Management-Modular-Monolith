@@ -10,15 +10,12 @@ namespace InventoryManagement.Web.Extensions
 {
     public static class AuthenticationExtensions
     {
-        /// <summary>Selects cookie, JWT or API-key authentication per request.</summary>
+        /// <summary>Policy scheme that picks cookie, JWT or API key per request.</summary>
         public const string DefaultScheme = "CookieOrToken";
         public const string ApiKeyScheme = "ApiKey";
         public const string ApiKeyHeader = "X-Api-Key";
 
-        /// <summary>
-        /// The UI signs in with a cookie. /api additionally accepts a JWT bearer token (issued by
-        /// /api/auth/login) and, for internal integrations such as ServiceDesk, an X-Api-Key.
-        /// </summary>
+        /// <summary>Pages use the cookie only. The API also accepts a JWT or, for ServiceDesk, an API key.</summary>
         public static IServiceCollection AddCustomAuthentication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddAuthentication(options =>
@@ -37,13 +34,12 @@ namespace InventoryManagement.Web.Extensions
                 options.SlidingExpiration = true;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
-                // TLS terminates at nginx; with forwarded headers applied the request is HTTPS.
+                // TLS ends at nginx, but forwarded headers make the request look like HTTPS here.
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
                 options.Events.OnValidatePrincipal = UserPrincipalFactory.RefreshAsync;
 
-                // AJAX and /api callers get a status code they can act on instead of a redirect
-                // to the login page.
+                // AJAX and API callers get a status code instead of a redirect to the login page.
                 options.Events.OnRedirectToLogin = context =>
                 {
                     if (WantsStatusCode(context.Request))
@@ -76,9 +72,7 @@ namespace InventoryManagement.Web.Extensions
                         configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured"))),
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
-                // A token carries the user's permissions as they were when it was issued; it is
-                // refused once the user is deactivated or their password changes (session stamp),
-                // checked at most once a minute per user.
+                // A token is refused once the user's session stamp changes. The stamp is checked at most once a minute.
                 options.Events = new JwtBearerEvents { OnTokenValidated = ValidateTokenUserAsync };
             })
             .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(ApiKeyScheme, null);
@@ -86,12 +80,7 @@ namespace InventoryManagement.Web.Extensions
             return services;
         }
 
-        /// <summary>
-        /// The scheme for a request. Bearer tokens and API keys only count on /api: pages use the
-        /// cookie alone. The API key (ServiceDesk, product.view) only on the product API it was
-        /// made for, which it reaches on the LAN port 5001; nginx also drops the header on the
-        /// public and LAN entries.
-        /// </summary>
+        /// <summary>Bearer tokens and API keys count only on the API. The API key also only on the product endpoints.</summary>
         public static string SelectScheme(HttpContext context)
         {
             if (!ModuleHostExtensions.IsApiRequest(context))
@@ -134,7 +123,6 @@ namespace InventoryManagement.Web.Extensions
                 context.Fail("The user's session has ended");
         }
 
-        /// <summary>Claim holding the session stamp in cookies and tokens.</summary>
         public const string SessionStampClaim = "SessionStamp";
 
         private static bool WantsStatusCode(HttpRequest request)

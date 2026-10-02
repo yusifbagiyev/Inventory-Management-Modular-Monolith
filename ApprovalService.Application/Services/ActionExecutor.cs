@@ -4,10 +4,7 @@ using SharedServices.Contracts;
 
 namespace ApprovalService.Application.Services
 {
-    /// <summary>
-    /// Dispatches an approved request to the module that owns its request type. This replaced an
-    /// HTTP client that forged an Admin JWT and called back into the other services.
-    /// </summary>
+    /// <summary>Dispatches an approved request to the module that owns its request type.</summary>
     public class ActionExecutor : IActionExecutor
     {
         private readonly IEnumerable<IApprovalActionHandler> _handlers;

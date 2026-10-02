@@ -8,7 +8,7 @@ using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
-    /// <summary>The audit log: every change and sign-in, grouped by the request that made it.</summary>
+    /// <summary>Audit log of every change and sign-in, grouped by request.</summary>
     [Authorize]
     [PermissionAuthorize(AllPermissions.AuditView)]
     public class AuditController : BaseController
@@ -29,7 +29,7 @@ namespace InventoryManagement.Web.Controllers
                 pageNumber, pageSize, search, userId, entityType, operation,
                 startDate?.Date, endDate?.Date.AddDays(1).AddTicks(-1), entityId));
             ViewBag.Facets = await _mediator.Send(new GetAuditFacetsQuery());
-            // Department and category ids in the changes are shown by name.
+            // Changes store department and category ids, so the view needs the names.
             var lookups = await _mediator.Send(new GetLookupsQuery());
             ViewBag.DepartmentNames = lookups.Departments.ToDictionary(d => d.Id, d => d.Name);
             ViewBag.CategoryNames = lookups.Categories.ToDictionary(c => c.Id, c => c.Name);

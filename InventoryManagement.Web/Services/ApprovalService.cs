@@ -35,7 +35,7 @@ namespace InventoryManagement.Web.Services
             return ModelMapper.MapList<ApprovalRequestDto>(page.Items);
         }
 
-        /// <summary>Null when the request does not exist or belongs to someone else (without approval.view).</summary>
+        /// <summary>Null when the request is missing or belongs to someone else and the user cannot see all requests.</summary>
         public async Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id)
         {
             var request = await _mediator.Send(new GetRequestById.Query(id));

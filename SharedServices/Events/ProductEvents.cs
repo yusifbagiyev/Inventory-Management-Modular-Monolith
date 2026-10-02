@@ -2,10 +2,7 @@ using MediatR;
 
 namespace SharedServices.Events
 {
-    /// <summary>
-    /// State of a product at a point in time, as carried by product events. Image references are
-    /// site-relative URLs (e.g. /images/products/1234/x.jpg), never bytes.
-    /// </summary>
+    /// <summary>A product's state as carried by product events. Images are site-relative URLs, never bytes.</summary>
     public record ProductState
     {
         public int ProductId { get; init; }
@@ -24,16 +21,10 @@ namespace SharedServices.Events
         public string? ImageUrl { get; init; }
     }
 
-    /// <summary>
-    /// Published inside the creating transaction. The route module writes the history row in the
-    /// same transaction; notification handlers defer their work until after commit.
-    /// </summary>
+    // Published inside the creating transaction, so the route history row commits with the product.
     public record ProductCreatedEvent(ProductState Product, DateTime CreatedAt) : INotification;
 
-    /// <param name="Before">State before the update.</param>
-    /// <param name="After">State after the update.</param>
-    /// <param name="Changes">Human-readable change summary ("Model: A → B, ...").</param>
-    /// <param name="NewImageUrl">Set only when the update uploaded a new image.</param>
+    // Changes is a readable summary for notes and messages. NewImageUrl is set only when a new image was uploaded.
     public record ProductUpdatedEvent(
         ProductState Before,
         ProductState After,

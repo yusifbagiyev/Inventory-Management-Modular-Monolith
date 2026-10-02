@@ -12,11 +12,7 @@ namespace SharedServices.Persistence
 {
     public static class ModuleDbContextExtensions
     {
-        /// <summary>
-        /// Registers a module DbContext on the scope's shared <see cref="DbSession"/> connection,
-        /// with its migrations history kept in the module's own schema. Its changes are written to
-        /// the audit log (when the Audit module is present) unless <paramref name="audited"/> is false.
-        /// </summary>
+        /// <summary>Registers a module DbContext on the shared connection with migrations history in its own schema.</summary>
         public static IServiceCollection AddModuleDbContext<TContext>(this IServiceCollection services, string schema, bool audited = true)
             where TContext : DbContext
         {
@@ -26,20 +22,18 @@ namespace SharedServices.Persistence
                 options.UseNpgsql(session.Connection, npgsql => ConfigureNpgsql<TContext>(npgsql, schema));
                 options.AddInterceptors(new TransactionEnlistmentInterceptor(session));
 
-                // Committed changes to the types modules registered with TrackLiveEntity are pushed
-                // to open pages (see SharedServices.LiveUpdates).
                 var live = sp.GetService<IOptions<LiveUpdateOptions>>()?.Value;
                 if (live is { Entities.Count: > 0 })
                     options.AddInterceptors(new LiveUpdateInterceptor(session, live, sp.GetService<IHttpContextAccessor>()));
 
-                // Every created, changed and deleted row goes to the audit log (SharedServices.Auditing).
+                // The sink exists only when the Audit module is registered.
                 if (audited && sp.GetService<IAuditSink>() != null)
                     options.AddInterceptors(new AuditInterceptor(sp.GetRequiredService<AuditContext>(), session, sp));
             });
             return services;
         }
 
-        /// <summary>Options for design-time tooling (dotnet ef), which has no DI container.</summary>
+        /// <summary>Options for dotnet ef, which has no DI container.</summary>
         public static DbContextOptions<TContext> DesignTimeOptions<TContext>(string schema)
             where TContext : DbContext
         {

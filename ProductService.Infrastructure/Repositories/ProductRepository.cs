@@ -39,8 +39,8 @@ namespace ProductService.Infrastructure.Repositories
             bool? assigned = null,
             CancellationToken cancellationToken = default)
         {
-            // Page 0 or a size of 0 used to give a negative Skip (500). The API caps the size
-            // (200); pages and exports here ask for more on purpose.
+            // Clamp so a zero page or size never gives a negative Skip.
+            // Only the API caps the size, exports ask for more on purpose.
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
             var query = _context.Products
@@ -60,8 +60,7 @@ namespace ProductService.Infrastructure.Repositories
             if (availability.HasValue)
                 query = query.Where(p => p.IsActive == availability.Value);
 
-            // "No image" / "Unassigned" quick filters. A missing value is stored as either NULL or
-            // an empty string, so both count as "no image" / "unassigned".
+            // A missing image or worker is stored as NULL or as an empty string, so both count as missing.
             if (hasImage.HasValue)
             {
                 query = hasImage.Value
@@ -92,17 +91,13 @@ namespace ProductService.Infrastructure.Repositories
 
             if (!string.IsNullOrEmpty(search))
             {
-                // Multi-word search: each whitespace-separated term must match somewhere on the
-                // product (AND across terms, OR across fields). Matching the whole phrase as a
-                // single string meant "tp link router" could never hit, because no single column
-                // contains all of it - the vendor holds "Tp Link" and the category holds "Router".
+                // Each word must match some field, since the words of a phrase often sit in different columns.
                 var terms = search
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Distinct()
                     .ToArray();
 
-                // First, apply a broad database filter to reduce the dataset
-                // This uses standard SQL ILIKE which works but isn't perfect for Azerbaijani
+                // Narrow down in the database first. ILIKE does not fold Azerbaijani letters.
                 var broadQuery = query;
                 foreach (var term in terms)
                 {
@@ -118,13 +113,12 @@ namespace ProductService.Infrastructure.Repositories
                     );
                 }
 
-                // Load the filtered results into memory
                 var allFilteredItems = await broadQuery
                     .OrderByDescending(r => r.CreatedAt)
                     .ThenByDescending(r => r.UpdatedAt)
                     .ToListAsync(cancellationToken);
 
-                // Now apply Azerbaijani-aware search in memory for precision - every term must hit
+                // Then match in memory with Azerbaijani folding. Every word must hit.
                 items = allFilteredItems.Where(r => terms.All(t =>
                     SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), t) ||
                     SearchHelper.ContainsAzerbaijani(r.Vendor, t) ||
@@ -137,7 +131,6 @@ namespace ProductService.Infrastructure.Repositories
 
                 totalCount = items.Count();
 
-                // Apply pagination in memory
                 items = items
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
@@ -145,7 +138,6 @@ namespace ProductService.Infrastructure.Repositories
             }
             else
             {
-                // No search term - use standard database pagination
                 totalCount = await query.CountAsync(cancellationToken);
 
                 items = await query
@@ -175,8 +167,7 @@ namespace ProductService.Infrastructure.Repositories
         {
             var query = _context.Products.AsNoTracking().AsQueryable();
 
-            // Same predicates as GetAllAsync (minus department/category), so the pairs - and therefore
-            // the cascading dropdowns - reflect only what the other active filters allow.
+            // Same predicates as GetAllAsync without department and category, so the dropdowns follow the other filters.
             if (status.HasValue)
                 query = query.Where(p => p.IsWorking == status.Value);
 
@@ -197,8 +188,7 @@ namespace ProductService.Infrastructure.Repositories
                     : query.Where(p => p.Worker == null || p.Worker == "");
             }
 
-            // One row per (department, category) that occurs at least once. Projected to an anonymous
-            // type first because EF cannot translate a ValueTuple projection.
+            // Anonymous type first, because EF cannot translate a ValueTuple projection.
             var pairs = await query
                 .Select(p => new { p.DepartmentId, p.CategoryId })
                 .Distinct()
@@ -270,7 +260,7 @@ namespace ProductService.Infrastructure.Repositories
             if (createdFrom.HasValue) query = query.Where(p => p.CreatedAt >= createdFrom.Value);
             if (createdTo.HasValue) query = query.Where(p => p.CreatedAt <= createdTo.Value);
 
-            // One round trip: COUNT(*) with FILTER clauses.
+            // One round trip, translated to COUNT with FILTER clauses.
             var counts = await query
                 .GroupBy(_ => 1)
                 .Select(g => new { Total = g.Count(), Active = g.Count(p => p.IsActive), NotWorking = g.Count(p => !p.IsWorking) })

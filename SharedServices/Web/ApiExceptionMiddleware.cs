@@ -7,10 +7,7 @@ using SharedServices.Exceptions;
 
 namespace SharedServices.Web
 {
-    /// <summary>
-    /// Maps exceptions thrown by /api endpoints to JSON error responses
-    /// (<c>{ error, validationErrors? }</c>). Unexpected errors never leak their message.
-    /// </summary>
+    /// <summary>Turns /api exceptions into JSON errors. Unexpected errors never leak their message.</summary>
     public sealed class ApiExceptionMiddleware
     {
         private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -67,8 +64,7 @@ namespace SharedServices.Web
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, new { error = exception.Message }),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict,
                 new { error = "The record has been changed by another user. Please reload the page and try again." }),
-            // Domain rule violations ("route is already completed", "request is not pending"); the
-            // same types from the framework or the database driver keep their text in the log.
+            // Domain rule violations. The same types from the framework or the driver keep their text in the log.
             ArgumentException or InvalidOperationException
                 => (StatusCodes.Status400BadRequest, new { error = UserFacingErrors.MessageOf(exception) }),
             _ => (StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" })

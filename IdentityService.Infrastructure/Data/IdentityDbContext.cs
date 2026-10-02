@@ -35,7 +35,6 @@ namespace IdentityService.Infrastructure.Data
                       .HasColumnType("timestamp without time zone");
             });
 
-            // Configure RolePermission many-to-many
             builder.Entity<RolePermission>(entity =>
             {
                 entity.HasKey(r => new { r.RoleId, r.PermissionId });
@@ -49,7 +48,6 @@ namespace IdentityService.Infrastructure.Data
                     .HasForeignKey(rp => rp.PermissionId);
             });
 
-            // Fixed UserPermission configuration
             builder.Entity<UserPermission>(entity =>
             {
                 entity.Property(u => u.GrantedAt)
@@ -84,13 +82,12 @@ namespace IdentityService.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Seed initial data with static values
+            // Seed values must stay static, or every model build would differ and need a new migration.
             SeedData(builder);
         }
 
         private void SeedData(ModelBuilder builder)
         {
-            // Use static password hash to avoid dynamic values
             var user = new User
             {
                 Id = 1,
@@ -106,12 +103,11 @@ namespace IdentityService.Infrastructure.Data
                 LockoutEnabled = false,
                 EmailConfirmed = true,
                 AccessFailedCount = 0,
-                CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0) // Static date
+                CreatedAt = new DateTime(2025, 8, 1, 0, 0, 0)
             };
 
             builder.Entity<User>().HasData(user);
 
-            // Add user to Admin role
             builder.Entity<IdentityUserRole<int>>().HasData(
                 new IdentityUserRole<int> 
                 { 
@@ -126,7 +122,7 @@ namespace IdentityService.Infrastructure.Data
             };
             builder.Entity<Role>().HasData(roles);
 
-            // Seed Permissions (expanded)
+            // A new permission needs a row here and a migration.
             var permissions = new[]
             {
                 // Route permissions
@@ -148,7 +144,7 @@ namespace IdentityService.Infrastructure.Data
                 new Permission { Id = 14, Name = AllPermissions.ProductDelete, Category = "Product", Description = "Delete products (requires approval)" },
                 new Permission { Id = 15, Name = AllPermissions.ProductDeleteDirect, Category = "Product", Description = "Delete products directly" },
 
-                // Pages and functions that used to be Admin-only or open to everyone
+                // Page and function permissions
                 new Permission { Id = 16, Name = AllPermissions.ProductCodeUpdate, Category = "Product", Description = "Change inventory codes" },
                 new Permission { Id = 17, Name = AllPermissions.ProductExport, Category = "Product", Description = "Export products to PDF" },
                 new Permission { Id = 18, Name = AllPermissions.RouteExport, Category = "Route", Description = "Export routes and timelines to PDF" },
@@ -171,25 +167,22 @@ namespace IdentityService.Infrastructure.Data
             };
             builder.Entity<Permission>().HasData(permissions);
 
-            // Update Role Permissions
             var rolePermissions = new List<RolePermission>();
 
-            // Admin - All direct permissions
+            // Admin passes every check anyway. These rows cover only the route and product permissions.
             for (int i = 1; i <= 15; i++)
             {
                 rolePermissions.Add(new RolePermission { RoleId = 1, PermissionId = i });
             }
 
-            // Only Admin has role permissions (and passes every check anyway). Users hold exactly the
-            // permissions granted to them one by one; the Operator role was removed (see the
-            // UserPermissionsOnly migration, which turned role grants into per-user grants).
+            // Only Admin gets seeded role permissions.
 
             builder.Entity<RolePermission>().HasData(rolePermissions);
 
         }
     }
 
-    /// <summary>Used by `dotnet ef` only.</summary>
+    /// <summary>Used only by dotnet ef.</summary>
     public class IdentityDbContextFactory : IDesignTimeDbContextFactory<IdentityDbContext>
     {
         public IdentityDbContext CreateDbContext(string[] args)

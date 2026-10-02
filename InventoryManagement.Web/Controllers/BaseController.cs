@@ -26,17 +26,12 @@ namespace InventoryManagement.Web.Controllers
 
         protected string GetCurrentUserName() => User.Identity?.Name ?? "Unknown";
 
-        /// <summary>The "permission" claims of the signed-in user.</summary>
         protected List<string> GetCurrentUserPermissions()
             => User.Claims.Where(c => c.Type == "permission").Select(c => c.Value).ToList();
 
         protected IActionResult RedirectToNotFound() => RedirectToAction("NotFound", "Home", new { statusCode = 404 });
 
-        /// <summary>
-        /// Runs a module call and turns the expected outcomes into an <see cref="ApiResponse{T}"/>:
-        /// success, "submitted for approval", or a user-facing error message. Unexpected exceptions
-        /// propagate to the caller's catch / the exception middleware.
-        /// </summary>
+        /// <summary>Turns the expected module outcomes into an ApiResponse. Anything unexpected still throws.</summary>
         protected async Task<ApiResponse<T>> RunAsync<T>(Func<Task<T>> action, string? successMessage = null)
         {
             try
@@ -65,7 +60,7 @@ namespace InventoryManagement.Web.Controllers
                                           or InsufficientPermissionsException or InvalidOperationException
                                           or ArgumentException or UnauthorizedAccessException)
             {
-                // Framework and database exceptions of these types carry internal text: logged, not shown.
+                // Framework and database exceptions of these types carry internal text, so log them instead of showing it.
                 if (!SharedServices.Web.UserFacingErrors.IsUserFacing(ex))
                     HttpContext.RequestServices.GetRequiredService<ILogger<BaseController>>()
                         .LogWarning(ex, "Request failed: {Message}", ex.Message);
@@ -78,15 +73,11 @@ namespace InventoryManagement.Web.Controllers
 
         private static ApiResponse<T> Failure<T>(string message) => new() { IsSuccess = false, Message = message };
 
-        /// <summary>Translates a user-facing message into the interface language (see Resources/i18n/az.json).</summary>
         [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(message))]
         protected static string? Tr(string? message)
             => message is null ? null : JsonStringLocalizer.TranslateMessage(message);
 
-        /// <summary>
-        /// Handles a module response uniformly: JSON for AJAX callers; otherwise a redirect, with
-        /// the outcome surfaced through the layout's TempData toast.
-        /// </summary>
+        /// <summary>JSON for AJAX callers, otherwise a redirect with the outcome in a TempData toast.</summary>
         protected IActionResult HandleApiResponse<T>(ApiResponse<T> response, string redirectAction)
         {
             if (IsAjaxRequest())

@@ -53,11 +53,10 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 route.Complete();
                 await _repository.UpdateAsync(route, cancellationToken);
-                // The row version makes a concurrent second completion fail here instead of
-                // moving the product twice.
+                // The row version makes a concurrent second completion fail here, so the product never moves twice.
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Same transaction: the route is never marked complete without the product moving.
+                // Same transaction, so the route is never marked complete without the product moving.
                 if (route.RouteType == RouteType.Transfer)
                 {
                     await _productTransfers.ApplyTransferAsync(

@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26.04 from 2026-10-19; change deliberately
+    runs-on: ubuntu-24.04   # Pinned so the move of ubuntu-latest to 26.04 does not catch us by surprise
     steps:
       - uses: actions/checkout@v6
 
@@ -23,6 +23,7 @@ jobs:
 
       - name: Vulnerable packages
         run: |
+          # The command exits 0 either way, so fail on any listed package, which is marked with >.
           dotnet list InventoryManagement.sln package --vulnerable --include-transitive | tee vulnerable.txt
           ! grep -q '>' vulnerable.txt
 

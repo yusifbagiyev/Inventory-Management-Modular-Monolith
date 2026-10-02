@@ -52,7 +52,7 @@ namespace InventoryManagement.Web.Controllers
                 return HandleValidationErrors(model);
             }
 
-            // Only Admins choose the role; everyone else creates plain users.
+            // Only Admins choose the role. Everyone else creates plain users.
             if (!User.IsInRole(AllRoles.Admin))
                 model.SelectedRole = AllRoles.User;
 
@@ -83,7 +83,7 @@ namespace InventoryManagement.Web.Controllers
             if (user == null)
                 return RedirectToNotFound();
 
-            // The permission editor: Admins only, and not for Admin accounts (they hold everything).
+            // Only Admins get the permission editor. Admin accounts already hold everything.
             if (User.IsInRole(AllRoles.Admin) && !user.CurrentRoles.Contains(AllRoles.Admin))
             {
                 var own = (await _identity.GetUserDirectPermissionsAsync(id)).Select(p => p.Name);
@@ -95,10 +95,7 @@ namespace InventoryManagement.Web.Controllers
             return View(user);
         }
 
-        /// <summary>
-        /// What everyone with <paramref name="role"/> holds (users add their own on top). Changing a
-        /// user's role changes these for them. The Admin role holds everything and is not edited.
-        /// </summary>
+        /// <summary>Edits what every user of a role gets. The Admin role holds everything and is not editable.</summary>
         [HttpGet]
         [Authorize(Roles = AllRoles.Admin)]
         public async Task<IActionResult> RolePermissions(string role = AllRoles.User)
@@ -151,7 +148,7 @@ namespace InventoryManagement.Web.Controllers
                 return HandleValidationErrors(model);
             }
 
-            // Roles are changed by Admins only (the form shows them to Admins only).
+            // Only Admins change roles, even if someone posts the field anyway.
             if (!User.IsInRole(AllRoles.Admin))
                 model.SelectedRoles = null;
 
@@ -263,7 +260,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        /// <summary>Granting permissions is Admin-only: a holder could otherwise grant themselves anything.</summary>
+        /// <summary>Admin only, otherwise a user manager could grant themselves anything.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = AllRoles.Admin)]
@@ -279,15 +276,7 @@ namespace InventoryManagement.Web.Controllers
         }
 
 
-        /// <summary>
-        /// Admin accounts can be changed by Admins only: a user.manage holder must not be able to
-        /// reset an Admin's password or deactivate them.
-        /// </summary>
-        /// <summary>
-        /// Accounts a non-admin with user.manage may not change: Admins, and anyone holding a
-        /// permission the actor lacks - resetting such a user's password would hand the actor
-        /// that permission.
-        /// </summary>
+        /// <summary>Non-admins may not touch Admins or anyone holding a permission they lack, or a password reset would hand it over.</summary>
         private async Task<bool> IsProtectedAsync(int userId)
         {
             if (User.IsInRole(AllRoles.Admin))

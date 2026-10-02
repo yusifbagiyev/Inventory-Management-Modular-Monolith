@@ -6,7 +6,7 @@ using SharedServices.Auditing;
 
 namespace AuditService.Queries
 {
-    /// <summary>One action (the rows one request wrote), newest first.</summary>
+    /// <summary>One action, meaning the rows one request wrote.</summary>
     public sealed record AuditActionDto(
         string CorrelationId,
         DateTime At,
@@ -31,10 +31,8 @@ namespace AuditService.Queries
 
     public sealed record AuditFacets(IReadOnlyList<AuditUserOption> Users, IReadOnlyList<string> EntityTypes);
 
-    /// <summary>
-    /// The audit log, paged by action. Filters apply to the rows: an action is listed with the rows
-    /// that match (a product filter shows the product's rows, not the notifications around them).
-    /// </summary>
+    // Filters apply to rows, so an action is listed with only its matching rows.
+    /// <summary>The audit log, paged by action.</summary>
     public sealed record GetAuditLogQuery(
         int PageNumber = 1,
         int PageSize = 30,

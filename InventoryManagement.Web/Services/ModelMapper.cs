@@ -3,12 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace InventoryManagement.Web.Services
 {
-    /// <summary>
-    /// Maps module DTOs onto the UI's view models by property name. The view models used to be
-    /// deserialized from the backend's JSON with Newtonsoft; mapping through a JToken keeps exactly
-    /// those semantics (case-insensitive names, enums as numbers, lenient conversions) now that
-    /// the DTOs arrive in-process.
-    /// </summary>
+    /// <summary>Maps module DTOs to view models through a Newtonsoft JToken, keeping JSON semantics like case-insensitive names.</summary>
     public static class ModelMapper
     {
         private static readonly JsonSerializer Serializer = JsonSerializer.CreateDefault();

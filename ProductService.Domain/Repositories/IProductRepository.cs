@@ -20,12 +20,7 @@ namespace ProductService.Domain.Repositories
             bool? assigned=null,
             CancellationToken cancellationToken = default);
 
-        /// <summary>
-        /// Distinct (departmentId, categoryId) combinations that occur in the inventory. Drives the
-        /// cascading list filters so a department only offers the categories present in it. The
-        /// state/quick filters are applied first, so the options react to the other active filters
-        /// (e.g. picking "Not working" narrows the departments and categories accordingly).
-        /// </summary>
+        /// <summary>Distinct department and category pairs left after the state and quick filters, for the cascading list filters.</summary>
         Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
             bool? status = null,
             bool? availability = null,
@@ -41,12 +36,12 @@ namespace ProductService.Domain.Repositories
         Task DeleteAsync(Product product, CancellationToken cancellationToken = default);
         Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountAsync(CancellationToken cancellationToken = default);
-        /// <summary>Total and active products, optionally only those created in [createdFrom, createdTo].</summary>
+        /// <summary>Product counts, optionally only for products created in the given range.</summary>
         Task<(int Total, int Active, int NotWorking)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);
         Task<int> CountByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
 
-        // Deleted products (soft delete), which every other method leaves out.
+        // Soft-deleted products, which every other method leaves out.
         Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(string? search, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
         Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountDeletedByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);

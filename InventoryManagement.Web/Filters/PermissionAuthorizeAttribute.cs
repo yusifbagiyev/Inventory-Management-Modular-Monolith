@@ -4,10 +4,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace InventoryManagement.Web.Filters
 {
-    /// <summary>
-    /// UI gate: the user needs any one of the permissions (Admins pass every check). Several
-    /// attributes on one action must all pass. Pages redirect to Access denied; AJAX calls get 403.
-    /// </summary>
+    /// <summary>Passes if the user holds any one of the permissions. Several attributes on one action must all pass.</summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
     public class PermissionAuthorizeAttribute : Attribute, IAuthorizationFilter
     {

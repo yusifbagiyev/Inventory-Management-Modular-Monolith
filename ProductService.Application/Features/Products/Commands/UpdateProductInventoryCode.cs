@@ -54,8 +54,7 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // Previously this event was only sent when the code did NOT change, so real changes
-                // never reached the route history.
+                // The route history records the code change from this event.
                 await _publisher.Publish(new ProductUpdatedEvent(
                     before,
                     product.ToState(),

@@ -1,11 +1,11 @@
-/* Custom styles. Colours come from tokens.css (--ip-*) through the short names in modern-ui.css. */
+/* Colours come from tokens.css through the short names defined in modern-ui.css. */
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
 }
 
-/* Table Enhancements */
+/* Tables */
 .table {
     margin-bottom: 0;
 }
@@ -62,7 +62,7 @@ canvas {
         font-weight: 400;
     }
 
-/* live-updates.js: a region just refreshed because another user changed something */
+/* Short highlight on a region that live-updates.js just refreshed */
 @keyframes live-refreshed {
     from { box-shadow: 0 0 0 2px var(--ip-focus-ring); }
     to { box-shadow: 0 0 0 2px transparent; }

@@ -1,13 +1,10 @@
 name: CD
 
-# After CI passes on master: build the image once on GitHub, push it to ghcr.io, then deploy it on
-# the production server through the self-hosted runner there (deploy/deploy.sh).
-# The image is always built and pushed (harmless, and the cut-over needs it on the server first);
-# the deploy step stays off until the repository variable CD_ENABLED is 'true'.
-# Only pushes to this repository build and deploy: CI runs of pull requests (forks included) never
-# reach the self-hosted runner.
+# After CI passes on master, builds the image, pushes it to ghcr.io and deploys it through the self-hosted runner.
+# The deploy job runs only when the repository variable CD_ENABLED is true.
+# Pull requests, forks included, never reach the self-hosted runner.
 #
-# Rollback: Actions -> CD -> Run workflow, with image_tag set to an earlier tag (sha-<commit>).
+# To roll back, run this workflow by hand with image_tag set to an earlier sha-<commit> tag.
 
 on:
   workflow_run:
@@ -21,7 +18,7 @@ on:
         required: false
         default: ''
 
-# One deployment at a time, in order; never cancel one half-way.
+# One deployment at a time, in order. Never cancel one half-way.
 concurrency:
   group: production
   cancel-in-progress: false
@@ -36,7 +33,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' ||
        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
         github.event.workflow_run.head_repository.full_name == github.repository))
-    runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26.04 from 2026-10-19; change deliberately
+    runs-on: ubuntu-24.04   # Pinned so the move of ubuntu-latest to 26.04 does not catch us by surprise
     permissions:
       contents: read
       packages: write
@@ -71,7 +68,7 @@ jobs:
 
   deploy:
     needs: image
-    # Runs after a successful build, or on its own for a rollback to an existing tag.
+    # Runs after a successful build, or alone for a rollback to an existing tag.
     if: >-
       always() && vars.CD_ENABLED == 'true' &&
       (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master') &&
@@ -94,8 +91,7 @@ jobs:
           test -f "$DEPLOY_DIR/.env" || { echo "$DEPLOY_DIR/.env is missing"; exit 1; }
           [[ "$TAG" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "Invalid image tag: $TAG"; exit 1; }
 
-      # Compose file, nginx config and scripts come from the repository; server-specific values
-      # stay in .env and docker-compose.override.yml, which are never overwritten.
+      # Server-specific values belong in .env and docker-compose.override.yml, which are never overwritten.
       - name: Sync deployment files
         run: |
           cp docker-compose.yml "$DEPLOY_DIR/docker-compose.yml"

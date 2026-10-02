@@ -8,7 +8,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int Id { get; set; }
         public string RouteType { get; set; } = string.Empty;
         public string RouteTypeName { get; set; } = string.Empty;
-        /// <summary>The type as an English text key for L[...] ("CodeChange" reads "Code change").</summary>
+        /// <summary>English text key for the route type.</summary>
         public string RouteTypeLabel => RouteTypeName == "CodeChange" ? "Code change" : RouteTypeName;
         public int ProductId { get; set; }
         public int InventoryCode { get; set; }
@@ -21,16 +21,16 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string ToDepartmentName { get; set; } = string.Empty;
         public string? FromWorker { get; set; }
         public string? ToWorker { get; set; }
-        /// <summary>The cover image (first of <see cref="ImageUrls"/>).</summary>
+        /// <summary>Always the first of ImageUrls.</summary>
         public string? ImageUrl { get; set; }
         public List<string> ImageUrls { get; set; } = [];
         public string? Notes { get; set; }
         public bool IsCompleted { get; set; }
-        /// <summary>Images are served by this host, so the stored site-relative URL is used as-is.</summary>
+        /// <summary>Images are served by this host, so the stored relative URL works as is.</summary>
         public string? FullImageUrl => string.IsNullOrEmpty(ImageUrl) ? null : ImageUrl;
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
-        /// <summary>The transfer's WhatsApp message: Queued, Sent, Failed, or null (none).</summary>
+        /// <summary>Queued, Sent or Failed. Null when no message was sent.</summary>
         public string? WhatsAppStatus { get; set; }
         public string? WhatsAppError { get; set; }
         public DateTime? WhatsAppAt { get; set; }
@@ -56,7 +56,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         [MaxLength(500)]
         public string? Notes { get; set; }
 
-        // For dropdowns
         public List<SelectListItem>? Departments { get; set; }
     }
 
@@ -76,7 +75,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public record UpdateRouteViewModel
     {
-        /// <summary>Images added after the current ones; current ones to remove; the one to make the cover.</summary>
+        /// <summary>New files go after the current images.</summary>
         public List<IFormFile>? ImageFiles { get; set; }
         public List<string>? RemoveImageUrls { get; set; }
         public string? CoverImageUrl { get; set; }

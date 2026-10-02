@@ -25,11 +25,7 @@ namespace SharedServices.Contracts
     /// <summary>Write access used by the routes module when a transfer completes.</summary>
     public interface IProductTransfers
     {
-        /// <summary>
-        /// Moves the product to <paramref name="toDepartmentId"/>/<paramref name="toWorker"/>. When the
-        /// route has images, the product's images are replaced by copies of them.
-        /// Runs in the caller's transaction.
-        /// </summary>
+        /// <summary>Moves the product in the caller's transaction. Route images, if any, replace the product's.</summary>
         Task ApplyTransferAsync(
             int productId,
             int toDepartmentId,

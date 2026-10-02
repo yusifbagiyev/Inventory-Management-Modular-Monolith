@@ -1,6 +1,6 @@
-/* Inventory Pro — component layer. Requires tokens.css. Load after bootstrap.min.css. */
+/* Component layer. Needs tokens.css and loads after bootstrap.min.css. */
 
-/* ---------- base ---------- */
+/* Base */
 body { font-family: var(--ip-font-sans); font-size: var(--ip-fs-base); line-height: var(--ip-lh-base); color: var(--ip-text-1); background: var(--ip-surface); }
 a { color: var(--ip-accent-text); text-decoration: none; }
 a:hover { color: var(--ip-accent-active); text-decoration: underline; }
@@ -16,7 +16,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-section { border-top: var(--ip-rule-width) solid var(--ip-rule-soft); padding-top: var(--ip-space-4); }
 .ip-section-strong { border-top-color: var(--ip-rule); }
 
-/* ---------- layout ---------- */
+/* Layout */
 .ip-app { display: flex; min-height: 100vh; }
 .ip-main { flex: 1; min-width: 0; padding: var(--ip-space-6) var(--ip-space-12) var(--ip-space-12); }
 .ip-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--ip-space-4); flex-wrap: wrap; margin: var(--ip-space-6) 0 var(--ip-space-5); }
@@ -25,7 +25,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-breadcrumb i { font-size: 10px; }
 @media (max-width: 1200px) { .ip-main { padding-left: var(--ip-space-6); padding-right: var(--ip-space-6); } }
 
-/* ---------- rail (sidebar) — always dark ---------- */
+/* Rail, dark in both themes */
 .ip-rail { width: 232px; flex: none; position: sticky; top: 0; align-self: flex-start; height: 100vh; display: flex; flex-direction: column; background: var(--ip-sunken); color: var(--ip-text-1); transition: width .18s ease; }
 .ip-rail-brand { height: 72px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 21px; font-weight: 600; font-size: var(--ip-fs-md); white-space: nowrap; }
 .ip-logo { width: 30px; height: 30px; flex: none; border-radius: var(--ip-radius-lg); background: var(--ip-brand); color: var(--ip-on-brand); display: grid; place-items: center; font-size: 14px; }
@@ -44,7 +44,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-rail-user { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: var(--ip-radius-md); color: var(--ip-text-1); }
 .ip-rail-user:hover { background: var(--ip-surface-hover); text-decoration: none; color: var(--ip-text-1); }
 .ip-avatar { width: 34px; height: 34px; flex: none; border-radius: 50%; background: var(--ip-surface-active); display: grid; place-items: center; font-size: var(--ip-fs-sm); font-weight: 600; }
-/* collapsed */
+/* Collapsed rail */
 .ip-rail.collapsed { width: 72px; }
 .ip-rail.collapsed .ip-rail-brand span, .ip-rail.collapsed .ip-rail-title, .ip-rail.collapsed .ip-rail-link span, .ip-rail.collapsed .ip-rail-count, .ip-rail.collapsed .ip-rail-user > :not(.ip-avatar), .ip-rail.collapsed .ip-rail-toggle span { display: none; }
 .ip-rail.collapsed .ip-rail-link { justify-content: center; }
@@ -52,7 +52,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-rail.collapsed .ip-rail-link[data-alert]::after { content: ""; position: absolute; top: 8px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--ip-accent); }
 @media (max-width: 1024px) { .ip-rail:not(.expanded) { width: 72px; } }
 
-/* ---------- toolbar ---------- */
+/* Toolbar */
 .ip-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: var(--ip-space-2); position: relative; }
 .ip-toolbar-search { width: 320px; max-width: 40vw; height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-3); border: 1px solid transparent; }
 .ip-toolbar-search:focus-within { border-color: var(--ip-accent); }
@@ -62,7 +62,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-seg > .active { background: var(--ip-surface-active); color: var(--ip-text-1); }
 .ip-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--ip-accent); border: 2px solid var(--ip-surface); }
 
-/* ---------- buttons ---------- */
+/* Buttons */
 .ip-btn { height: var(--ip-control-md); min-height: var(--ip-control-md); display: inline-flex; align-items: center; justify-content: space-between; gap: var(--ip-space-3); padding: 0 var(--ip-space-4); border-radius: var(--ip-radius-md); border: 1px solid transparent; font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none; }
 .ip-btn:hover { text-decoration: none; }
 .ip-btn:disabled, .ip-btn.disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
@@ -83,7 +83,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-btn-icon:hover { background: var(--ip-surface-active); color: var(--ip-text-1); }
 .ip-btn-icon.lg { width: 38px; height: 38px; border-radius: var(--ip-radius-md); }
 
-/* ---------- form fields ---------- */
+/* Form fields */
 .ip-field { display: flex; flex-direction: column; gap: 6px; }
 .ip-field > label, .ip-label { font-weight: 500; }
 .ip-label .req { color: var(--ip-danger-text); }
@@ -98,7 +98,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-error { display: flex; gap: 6px; align-items: center; font-size: var(--ip-fs-sm); line-height: var(--ip-lh-sm); color: var(--ip-danger-text); }
 .ip-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--ip-space-5) var(--ip-space-6); }
 .ip-form-grid .span-2 { grid-column: 1 / -1; }
-/* switch (on <input type="checkbox" role="switch">) */
+/* Switch, used on a checkbox with role="switch" */
 .ip-switch { appearance: none; width: 40px; height: 24px; margin: 0; flex: none; border-radius: 12px; background: var(--ip-border-strong); position: relative; cursor: pointer; transition: background .15s; }
 .ip-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
 .ip-switch:checked { background: var(--ip-accent); }
@@ -106,7 +106,7 @@ h2, .ip-h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weig
 .ip-switch-row { display: flex; justify-content: space-between; align-items: center; gap: var(--ip-space-6); padding: var(--ip-space-3) 0; border-bottom: 1px solid var(--ip-border); }
 input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(--ip-accent); }
 
-/* ---------- filter bar ---------- */
+/* Filter bar */
 .ip-filterbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 14px 0; border-top: var(--ip-rule-width) solid var(--ip-rule); border-bottom: 1px solid var(--ip-border); }
 .ip-filter { height: var(--ip-control-md); display: flex; align-items: center; gap: var(--ip-space-2); padding: 0 4px 0 14px; border-radius: var(--ip-radius-md); background: var(--ip-sunken); border: 1px solid transparent; color: var(--ip-text-3); }
 .ip-filter:focus-within { border-color: var(--ip-accent); }
@@ -116,7 +116,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-filter input { flex: 1; min-width: 0; }
 .ip-filter select { height: 38px; font-weight: 500; padding-right: 8px; cursor: pointer; }
 
-/* ---------- table ---------- */
+/* Table */
 .ip-table-wrap { overflow-x: auto; }
 .ip-table { width: 100%; border-collapse: collapse; }
 .ip-table th { padding: 12px 16px; font-size: var(--ip-fs-xs); line-height: var(--ip-lh-xs); font-weight: 500; color: var(--ip-text-3); text-align: left; background: transparent; border: 0; white-space: nowrap; }
@@ -134,14 +134,14 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .ip-table-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--ip-space-4); flex-wrap: wrap; padding-top: var(--ip-space-4); border-top: var(--ip-rule-width) solid var(--ip-rule); font-size: var(--ip-fs-sm); color: var(--ip-text-2); }
 
-/* ---------- pagination ---------- */
+/* Pagination */
 .ip-pagination { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
 .ip-pagination a, .ip-pagination span { min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center; border-radius: var(--ip-radius-lg); color: var(--ip-text-2); font-size: var(--ip-fs-sm); font-variant-numeric: tabular-nums; text-decoration: none; }
 .ip-pagination a:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
 .ip-pagination .active > * { background: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
 .ip-pagination .disabled > * { opacity: .45; pointer-events: none; }
 
-/* ---------- badges ---------- */
+/* Badges */
 .ip-badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: var(--ip-radius-sm); font-size: var(--ip-fs-xs); font-weight: 500; white-space: nowrap; }
 .ip-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .ip-badge-success { background: var(--ip-success-soft); color: var(--ip-success-text); }
@@ -153,7 +153,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-status-text.warning { color: var(--ip-warning-text); }
 .ip-tag-plain { font-size: var(--ip-fs-xs); color: var(--ip-text-3); }
 
-/* ---------- tabs ---------- */
+/* Tabs */
 .ip-tabs { display: flex; gap: var(--ip-space-6); border-bottom: 1px solid var(--ip-border); }
 .ip-tabs.strong { border-bottom: var(--ip-rule-width) solid var(--ip-rule); }
 .ip-tab { display: flex; align-items: center; gap: var(--ip-space-2); height: 44px; padding: 0; border: 0; background: transparent; font: inherit; color: var(--ip-text-3); cursor: pointer; margin-bottom: -1px; border-bottom: 2px solid transparent; text-decoration: none; }
@@ -164,7 +164,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-tab .count { font-size: var(--ip-fs-xs); font-weight: 600; color: var(--ip-text-3); font-variant-numeric: tabular-nums; }
 .ip-tab .count.warning { color: var(--ip-warning-text); }
 
-/* ---------- KPI ---------- */
+/* KPI */
 .ip-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--ip-space-8); }
 .ip-kpi { display: flex; flex-direction: column; gap: 4px; padding-top: 14px; border-top: var(--ip-rule-width) solid var(--ip-rule); color: var(--ip-text-1); text-decoration: none; }
 .ip-kpi:hover { border-top-color: var(--ip-accent); text-decoration: none; color: var(--ip-text-1); }
@@ -182,14 +182,14 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--ip-surface-active); overflow: hidden; }
 .ip-bar > i { display: block; height: 100%; border-radius: 3px; background: var(--ip-chart-1); }
 
-/* ---------- alerts / banners ---------- */
+/* Banners */
 .ip-banner { display: flex; gap: var(--ip-space-3); align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: var(--ip-radius-md); }
 .ip-banner-warning { background: var(--ip-warning-soft); color: var(--ip-warning-text); }
 .ip-banner-danger { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
 .ip-banner-info { background: var(--ip-info-soft); color: var(--ip-info-text); }
 .ip-banner a { color: inherit; font-weight: 600; text-decoration: underline; }
 
-/* ---------- image manager / gallery ---------- */
+/* Image manager and gallery */
 .ip-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: var(--ip-space-4); }
 .ip-image-tile { position: relative; aspect-ratio: 4 / 3; border-radius: var(--ip-radius-lg); background: var(--ip-sunken); display: grid; place-items: center; overflow: hidden; border: 2px solid transparent; color: var(--ip-text-3); }
 .ip-image-tile img { width: 100%; height: 100%; object-fit: cover; }
@@ -217,13 +217,13 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-gallery-thumbs button.active { border-color: var(--ip-accent); opacity: 1; }
 .ip-gallery-thumbs img { width: 100%; height: 100%; object-fit: cover; }
 
-/* ---------- definition list ---------- */
+/* Definition list */
 .ip-dl { margin: 0; }
 .ip-dl > div { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--ip-space-4); padding: var(--ip-space-3) 0; border-bottom: 1px solid var(--ip-border); }
 .ip-dl dt { color: var(--ip-text-3); font-weight: 400; }
 .ip-dl dd { margin: 0; text-wrap: pretty; }
 
-/* ---------- modal (Bootstrap override) ---------- */
+/* Modal, overrides Bootstrap */
 .modal-backdrop.show { background: var(--ip-backdrop); opacity: 1; }
 .ip-modal .modal-content { background: var(--ip-surface); color: var(--ip-text-1); border: 0; border-radius: var(--ip-radius-xl); box-shadow: var(--ip-shadow-lg); }
 .ip-modal .modal-header { padding: 20px 24px 16px; border-bottom: var(--ip-rule-width) solid var(--ip-rule); align-items: flex-start; }
@@ -236,7 +236,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-diff .old { color: var(--ip-text-2); }
 .ip-diff .new { display: inline; padding: 2px 6px; margin: 0 -6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-text-1); font-weight: 600; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 
-/* ---------- dropdown (Bootstrap override) ---------- */
+/* Dropdown, overrides Bootstrap */
 .ip-dropdown.dropdown-menu { background: var(--ip-surface); color: var(--ip-text-1); border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); padding: 0; overflow: hidden; }
 .ip-dropdown .dropdown-item { color: var(--ip-text-1); padding: 10px 16px; }
 .ip-dropdown .dropdown-item:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
@@ -253,7 +253,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-notif-icon { display: none; }
 .ip-day-head { padding: 20px 0 8px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-text-2); }
 
-/* ---------- toast (Bootstrap override) ---------- */
+/* Toast, overrides Bootstrap */
 .ip-toast.toast { width: 380px; max-width: calc(100vw - 48px); background: var(--ip-surface); color: var(--ip-text-1); border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); }
 .ip-toast .toast-body { display: flex; gap: 12px; padding: 14px 16px; }
 .ip-toast .toast-body > i:first-child { margin-top: 2px; }
@@ -263,7 +263,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-toast .text { font-size: var(--ip-fs-sm); color: var(--ip-text-2); }
 .ip-toast .btn-close { width: 28px; height: 28px; padding: 0; margin: 0; border-radius: var(--ip-radius-lg); background: transparent; opacity: 1; color: var(--ip-text-3); }
 
-/* ---------- empty / skeleton ---------- */
+/* Empty state and skeleton */
 .ip-empty { padding: 72px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 440px; }
 .ip-empty .icon { width: 48px; height: 48px; border-radius: var(--ip-radius-lg); background: var(--ip-sunken); color: var(--ip-text-3); display: grid; place-items: center; font-size: 18px; }
 .ip-empty .title { font-size: var(--ip-fs-lg); line-height: var(--ip-lh-lg); font-weight: 600; }
@@ -272,17 +272,17 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-skeleton { border-radius: 5px; background: var(--ip-surface-active); animation: ipPulse 1.3s ease-in-out infinite; }
 .ip-skeleton-row { display: flex; align-items: center; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--ip-border); }
 
-/* ---------- sticky form footer ---------- */
+/* Sticky form footer */
 .ip-form-foot { position: sticky; bottom: 0; margin: 0 calc(-1 * var(--ip-space-12)); padding: 14px var(--ip-space-12); background: var(--ip-surface); border-top: var(--ip-rule-width) solid var(--ip-rule); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .ip-form-foot .note { flex: 1; min-width: 240px; font-size: var(--ip-fs-sm); color: var(--ip-text-3); }
 @media (max-width: 1200px) { .ip-form-foot { margin: 0 calc(-1 * var(--ip-space-6)); padding-left: var(--ip-space-6); padding-right: var(--ip-space-6); } }
 
-/* ---------- login ---------- */
+/* Sign-in */
 .ip-login { min-height: 100vh; display: flex; flex-direction: column; background: var(--ip-bg); }
 .ip-login-head { height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
 .ip-login-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--ip-space-6); }
 .ip-login-foot { padding: var(--ip-space-4) 28px; font-size: var(--ip-fs-sm); color: var(--ip-text-3); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-/* step 1: account picker */
+/* Account picker */
 .ip-account-pick { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: var(--ip-space-5); }
 .ip-account-pick h1 { font-size: 24px; line-height: 30px; }
 .ip-account-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ip-space-3); }
@@ -295,7 +295,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-account > i { font-size: 11px; color: var(--ip-text-3); }
 .ip-account-other { align-self: flex-start; height: 36px; padding: 0; border: 0; background: transparent; color: var(--ip-accent-text); font: inherit; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .ip-account-other:hover { color: var(--ip-accent-active); }
-/* step 2: password */
+/* Password step */
 .ip-login-form { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: var(--ip-space-5); }
 .ip-login-form .back { align-self: flex-start; height: 32px; padding: 0; border: 0; background: transparent; color: var(--ip-text-2); font: inherit; cursor: pointer; display: flex; align-items: center; gap: 8px; text-decoration: none; }
 .ip-login-form .back:hover { color: var(--ip-text-1); text-decoration: none; }
@@ -309,17 +309,15 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-pw-wrap .ip-input { padding-right: 44px; }
 .ip-pw-wrap .ip-btn-icon { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; color: var(--ip-text-3); }
 
-/* ---------- Bootstrap neutralisation ---------- */
+/* Bring leftover Bootstrap components in line with the tokens */
 .badge.bg-primary, .badge.bg-info, .badge.bg-warning, .badge.bg-danger { background: var(--ip-neutral-soft) !important; color: var(--ip-neutral-text) !important; }
 .card { background: var(--ip-surface); border-color: var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: none; }
 .form-control, .form-select { border-radius: var(--ip-radius-md); border-color: var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); }
 .form-control:focus, .form-select:focus { border-color: var(--ip-accent); box-shadow: 0 0 0 3px var(--ip-focus-ring); }
 
-/* =====================================================================
-   Responsive layer — tablet 768–1024, phone ≤767
-   ===================================================================== */
+/* Responsive layer. Tablets are 768 to 1024px, phones up to 767px. */
 
-/* ---------- phone app bar + drawer ---------- */
+/* Phone app bar and drawer */
 .ip-appbar { display: none; }
 .ip-rail-backdrop { display: none; }
 @media (max-width: 767px) {
@@ -328,7 +326,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-appbar .title { flex: 1; min-width: 0; font-weight: 600; font-size: var(--ip-fs-md); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .ip-appbar .title small { display: block; font-size: var(--ip-fs-xs); font-weight: 400; color: var(--ip-text-3); font-family: var(--ip-font-mono); line-height: 14px; }
   .ip-appbar .ip-btn-icon { width: 44px; height: 44px; font-size: 17px; }
-  /* rail becomes a left drawer */
+  /* The rail becomes a left drawer */
   .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { position: fixed; top: 0; bottom: 0; left: 0; z-index: 1045; width: 300px; max-width: 86vw; height: auto; transform: translateX(-100%); transition: transform .22s ease; box-shadow: var(--ip-shadow-lg); }
   .ip-rail.open { transform: translateX(0); }
   .ip-rail.collapsed .ip-rail-brand span, .ip-rail.collapsed .ip-rail-title, .ip-rail.collapsed .ip-rail-link span, .ip-rail.collapsed .ip-rail-count, .ip-rail.collapsed .ip-rail-user > :not(.ip-avatar) { display: initial; }
@@ -341,7 +339,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-rail-backdrop { display: block; position: fixed; inset: 0; z-index: 1040; background: var(--ip-backdrop); opacity: 0; pointer-events: none; transition: opacity .22s; }
   .ip-rail-backdrop.show { opacity: 1; pointer-events: auto; }
   body.ip-drawer-open { overflow: hidden; }
-  /* desktop toolbar hides; its controls live in the drawer footer and app bar */
+  /* The toolbar controls move to the drawer footer and the app bar */
   .ip-toolbar { display: none; }
   .ip-main { padding: 0 var(--ip-space-5) 96px; }
   .ip-page-head { margin: var(--ip-space-4) 0; }
@@ -350,11 +348,11 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 .ip-rail-close { display: none; width: 44px; height: 44px; margin-left: auto; place-items: center; border: 0; border-radius: var(--ip-radius-md); background: transparent; color: var(--ip-text-2); font-size: 16px; cursor: pointer; }
 .ip-rail-foot .ip-seg { display: none; }
 
-/* ---------- tablet ---------- */
+/* Tablet */
 @media (min-width: 768px) and (max-width: 1024px) {
   .ip-main { padding: var(--ip-space-5) var(--ip-space-6) var(--ip-space-10); }
   .ip-toolbar-search { width: 240px; }
-  .ip-filterbar .ip-filter:nth-child(n+3):not(.search) { display: none; }   /* extra filters go behind "Daha çox" */
+  .ip-filterbar .ip-filter:nth-child(n+3):not(.search) { display: none; }   /* Extra filters go behind the more button */
   .ip-filter-more { display: flex; }
   .ip-table-wrap { position: relative; }
   .ip-table-wrap::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 48px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--ip-surface)); }
@@ -362,7 +360,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
 }
 .ip-filter-more { display: none; }
 
-/* ---------- phone: tables → row cards ---------- */
+/* Phone, where table rows become cards */
 @media (max-width: 767px) {
   .ip-filterbar { border-top: 0; padding: var(--ip-space-3) 0; gap: var(--ip-space-2); flex-wrap: nowrap; }
   .ip-filterbar .ip-filter:not(.search) { display: none; }
@@ -387,7 +385,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-table td.state { display: flex; gap: var(--ip-space-2); align-items: center; flex-wrap: wrap; margin-top: 6px; }
   .ip-table td.date { position: absolute; right: 0; bottom: var(--ip-space-3); font-size: var(--ip-fs-xs); color: var(--ip-text-3); }
   .ip-table td.num { text-align: left; }
-  .ip-table td.actions, .ip-table td.hide-sm { display: none; }    /* row actions live on the details page */
+  .ip-table td.actions, .ip-table td.hide-sm { display: none; }    /* Row actions are on the details page */
   .ip-table tbody tr:hover { background: transparent; }
   .ip-table td[data-label]::before { content: attr(data-label); display: block; font-size: var(--ip-fs-xs); color: var(--ip-text-3); }
 
@@ -396,7 +394,7 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-pagination a, .ip-pagination span { min-width: 40px; height: 40px; }
   .ip-page-head .ip-btn-primary { position: fixed; right: var(--ip-space-5); bottom: calc(var(--ip-space-3) + env(safe-area-inset-bottom)); z-index: 1021; min-width: 0; height: var(--ip-control-lg); }
 
-  /* forms + sticky footer */
+  /* Forms and the fixed footer */
   .ip-form-grid { grid-template-columns: 1fr; gap: var(--ip-space-4); }
   .ip-input, .ip-select, .ip-btn { min-height: var(--ip-control-lg); }
   .ip-form-foot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1020; margin: 0; padding: var(--ip-space-3) var(--ip-space-5) calc(var(--ip-space-3) + env(safe-area-inset-bottom)); flex-wrap: nowrap; }
@@ -406,33 +404,33 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-form-foot .ip-btn-danger-ghost, .ip-form-foot .ip-btn-ghost { flex: none; width: 44px; padding: 0; justify-content: center; }
   .ip-form-foot .ip-btn-danger-ghost span, .ip-form-foot .ip-btn-ghost span { display: none; }
 
-  /* details */
+  /* Details */
   .ip-dl > div { grid-template-columns: 1fr; gap: 2px; padding: 10px 0; }
   .ip-dl dt { font-size: var(--ip-fs-xs); }
   .ip-gallery { margin: 0 calc(-1 * var(--ip-space-5)); border-radius: 0; }
-  .ip-gallery .nav { display: none; }                 /* swipe + dots instead */
+  .ip-gallery .nav { display: none; }                 /* Swipe and dots instead */
   .ip-gallery-dots { display: flex; gap: 6px; position: absolute; left: var(--ip-space-5); bottom: 12px; }
   .ip-gallery-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--ip-border-strong); }
   .ip-gallery-dots i.active { background: var(--ip-text-1); }
   .ip-gallery-thumbs { display: none; }
 
-  /* dashboard */
+  /* Dashboard */
   .ip-kpi-grid { grid-template-columns: 1fr 1fr; gap: var(--ip-space-4); }
   .ip-kpi .value { font-size: 30px; line-height: 36px; }
   .ip-kpi .label { font-size: var(--ip-fs-sm); }
   .ip-legend { gap: var(--ip-space-3); font-size: var(--ip-fs-xs); }
 
-  /* tabs scroll instead of wrapping */
+  /* Tabs scroll instead of wrapping */
   .ip-tabs { overflow-x: auto; scrollbar-width: none; gap: var(--ip-space-5); }
   .ip-tabs .ip-tab { flex: none; }
 
-  /* login */
+  /* Sign-in */
   .ip-login-head, .ip-login-foot { padding-left: var(--ip-space-5); padding-right: var(--ip-space-5); }
   .ip-login-main { align-items: flex-start; padding: var(--ip-space-8) var(--ip-space-5); }
   .ip-account-grid { grid-template-columns: 1fr; }
   .ip-account { min-height: 64px; }
 
-  /* modal → bottom sheet */
+  /* Modals become bottom sheets */
   .ip-modal .modal-dialog { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; max-width: none; max-height: 88vh; display: flex; }
   .ip-modal .modal-content { border-radius: 16px 16px 0 0; max-height: 88vh; }
   .ip-modal .modal-content::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--ip-border-strong); margin: 8px auto 0; }
@@ -449,31 +447,27 @@ input[type="checkbox"].ip-check { width: 18px; height: 18px; accent-color: var(-
   .ip-diff td.field { display: block; font-size: var(--ip-fs-xs); color: var(--ip-text-3); margin-bottom: 4px; }
   .ip-diff td.arrow { padding: 0 8px; color: var(--ip-text-3); }
 
-  /* filter sheet chips */
+  /* Filter sheet chips */
   .ip-chips { display: flex; flex-wrap: wrap; gap: var(--ip-space-2); }
   .ip-chip { min-height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: var(--ip-radius-md); border: 1px solid var(--ip-border-strong); background: var(--ip-surface); color: var(--ip-text-1); font: inherit; cursor: pointer; }
   .ip-chip.active { background: var(--ip-text-1); border-color: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
 
-  /* toast */
+  /* Toast */
   .toast-container { left: var(--ip-space-4); right: var(--ip-space-4); bottom: calc(80px + env(safe-area-inset-bottom)); top: auto !important; }
   .ip-toast.toast { width: 100%; }
 
-  /* notifications dropdown becomes a page link; hide the dropdown on phone */
+  /* Phones open the Notifications page instead of the dropdown */
   .ip-notif-menu { display: none !important; }
 }
 
-/* ==========================================================================
-   Additions for this app. Everything above is design/ip-components.css unchanged;
-   keep it that way, so a new version of the package can be dropped in.
-   ========================================================================== */
+/* App additions start here. Leave the package rules above as they are so a new version can be dropped in. */
 
-/* ---------- rail ---------- */
+/* Rail */
 button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inherit; cursor: pointer; text-align: left; }
-/* The package's `.ip-rail-count.alert` clashes with Bootstrap's .alert (padding, margin, and
-   site.js auto-closes alerts), so the markup uses .is-alert with the same look. */
+/* Uses .is-alert because .alert clashes with Bootstrap and site.js auto-closes alerts. */
 .ip-rail-count.is-alert { display: inline-block; min-width: 22px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-weight: 600; line-height: 20px; text-align: center; }
 .ip-rail-count:empty { display: none !important; }
-/* collapsed: a dot on links that have something pending (approvals, unread) */
+/* A collapsed rail shows a dot on links with something pending */
 .ip-rail.collapsed .ip-rail-link:has(.ip-rail-count.is-alert:not(:empty):not([style*="none"]))::after { content: ""; position: absolute; top: 8px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--ip-accent); }
 .ip-rail.collapsed .ip-rail-toggle i { transform: rotate(180deg); }
 .ip-rail-account { display: flex; align-items: center; gap: 4px; }
@@ -484,10 +478,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-rail.collapsed .ip-rail-logout { display: none; }
 .ip-rail.collapsed .ip-rail-account { justify-content: center; }
 .ip-rail.collapsed .ip-rail-brand { padding: 0 21px; }
-/* Phones: the drawer and app bar come from the design's responsive layer (above); these are the
-   app's parts of it: the brand is a link plus the close button, language and theme sit in the
-   drawer's foot, the app bar's bell dot carries no number, [hidden] beats the icon buttons'
-   inline-flex, and the breadcrumb's back button gives way to the app bar's arrow. */
+/* App parts of the phone drawer and app bar. The responsive layer above has the rest. */
 .ip-rail-home { display: flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
 .ip-rail-home:hover, .ip-rail-home:focus { color: inherit; text-decoration: none; }
 .ip-rail-prefs { display: none; }
@@ -496,19 +487,19 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 @media (max-width: 767.98px) {
   .ip-rail-prefs { display: flex; align-items: center; justify-content: space-between; gap: var(--ip-space-2); padding-bottom: var(--ip-space-2); }
   .ip-crumbs .ip-back { display: none; }
-  /* The design's base rules hiding these come after its phone rules showing them. */
+  /* The package hides these in base rules that come after its phone rules, so show them again. */
   .ip-rail .ip-rail-close { display: grid; }
   .ip-rail-prefs .ip-seg { display: flex; }
 }
 @media (prefers-reduced-motion: reduce) { .ip-rail { transition: none; } }
 
-/* ---------- toolbar ---------- */
+/* Toolbar */
 .ip-toolbar .ip-dot { font-size: 0; }
 .ip-toolbar-search input::-webkit-search-cancel-button { cursor: pointer; }
 .ip-seg > button:not(.active):hover { color: var(--ip-text-1); }
 .ip-seg > button.active { cursor: default; }
 
-/* ---------- notification menu ---------- */
+/* Notification menu */
 .ip-notif-menu .head .ip-btn-sm { height: 30px; margin-right: -8px; }
 .ip-notif-menu .head { font-size: var(--ip-fs-base); }
 .ip-notif-list { max-height: 420px; overflow-y: auto; }
@@ -519,8 +510,8 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-notif-foot:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); text-decoration: none; }
 @media (max-width: 575.98px) { .ip-notif-menu { width: calc(100vw - 32px); } }
 
-/* ---------- Bootstrap fixes ---------- */
-/* The neutralisation above sets the `background` shorthand, which also removes the select chevron. */
+/* Bootstrap fixes */
+/* The background shorthand set above also removes the select chevron. */
 .form-select {
   background-image: var(--bs-form-select-bg-img), var(--bs-form-select-bg-icon, none);
   background-repeat: no-repeat;
@@ -528,7 +519,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
   background-size: 16px 12px;
 }
 
-/* ---------- toast: warning / info icons (the package styles success and danger) ---------- */
+/* Warning and info toast icons. The package only styles success and danger. */
 .ip-toast.warning > .toast-body > i:first-child { color: var(--ip-warning-text); }
 .ip-toast.info > .toast-body > i:first-child, .ip-toast.secondary > .toast-body > i:first-child { color: var(--ip-info-text); }
 .ip-toast .toast-body { align-items: flex-start; }
@@ -536,12 +527,10 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-toast .btn-close { flex: none; background-size: 10px; opacity: .6; }
 .ip-toast .btn-close:hover { opacity: 1; background-color: var(--ip-surface-hover); }
 
-/* ---------- list pages ---------- */
+/* List pages */
 .ip-filterbar { margin-bottom: 0; }
 .ip-filter > span { white-space: nowrap; }
-/* A select is as wide as what is chosen ("All"), not its longest option (a long department name
-   pushed the filters onto a second line); a long choice is cut at 24ch. Browsers without
-   field-sizing keep the old width. */
+/* Size a select to its chosen option so long names don't push the filters onto a second line. */
 .ip-filter select { appearance: auto; field-sizing: content; max-width: 24ch; text-overflow: ellipsis; }
 .ip-filter.search { flex-basis: 220px; min-width: 200px; }
 .ip-filterbar > .ip-btn { flex: none; white-space: nowrap; }
@@ -558,7 +547,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-table-foot .ip-filter { height: 34px; }
 .ip-table-foot .ip-filter select { height: 32px; }
 
-/* ---------- forms (design: 05 Edit) ---------- */
+/* Forms */
 .ip-form { max-width: 1040px; }
 .ip-form-section { padding: var(--ip-space-6) 0; border-top: var(--ip-rule-width) solid var(--ip-rule-soft); }
 .ip-form-section:first-of-type { border-top-color: var(--ip-rule); }
@@ -567,11 +556,11 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-switch-list .ip-switch-row:last-child { border-bottom: 0; }
 .ip-error:empty, .ip-error.field-validation-valid { display: none; }
 .ip-label { display: flex; gap: 4px; align-items: baseline; margin: 0; }
-@media (min-width: 768px) { .ip-form-foot { z-index: 10; } }   /* phones: the design's fixed bar (1020) */
+@media (min-width: 768px) { .ip-form-foot { z-index: 10; } }   /* Phones keep the fixed bar at 1020 */
 .ip-form-foot .note:empty { visibility: hidden; }
-@media (min-width: 768px) { .ip-gallery .nav { display: grid; place-items: center; padding: 0; } }   /* phones: dots + swipe */
+@media (min-width: 768px) { .ip-gallery .nav { display: grid; place-items: center; padding: 0; } }   /* Phones use dots and swipe */
 
-/* ---------- routes / transfer (design: 06, 07) ---------- */
+/* Routes and transfer */
 .ip-tabs + .d-none + .ip-filterbar-soft, .ip-filterbar-soft { border-top: 0; }
 .ip-tabs { margin-bottom: 0; }
 .ip-btn-icon-danger:hover { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
@@ -586,7 +575,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-transfer-summary { color: var(--ip-text-3); font-size: var(--ip-fs-base) !important; }
 .ip-transfer-summary i { color: var(--ip-text-3); }
 
-/* ---------- approvals (design: 08) ---------- */
+/* Approvals */
 .ip-stats { display: flex; gap: var(--ip-space-8); flex-wrap: wrap; }
 .ip-stat-value { font-size: var(--ip-fs-xl); line-height: var(--ip-lh-xl); font-weight: 600; font-variant-numeric: tabular-nums; }
 .ip-stat-value.ip-status-text { font-size: var(--ip-fs-xl); }
@@ -595,19 +584,19 @@ tr.ip-clickable { cursor: pointer; }
 .ip-diff .new { white-space: pre-wrap; }
 .ip-diff td { vertical-align: top; }
 
-/* ---------- notifications page (design: 09) ---------- */
+/* Notifications page */
 .ip-notif-day .ip-notif-item { border-radius: 0; }
 .ip-notif-day .ip-notif-item:focus-visible { outline-offset: -2px; }
 .ip-notif-link { display: inline-block; margin-top: 4px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-accent-text); }
 .ip-tabs > .ip-filter { margin-bottom: 4px; }
 
-/* ---------- dashboard (design: 02) ---------- */
+/* Dashboard */
 .ip-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
 .ip-list-link .ip-bar { max-width: 50%; }
 .ip-kpi-grid { margin-bottom: var(--ip-space-8); }
 .ip-page-head .ip-tabs.border-0 { border-bottom: 0; }
 
-/* ---------- toolbar code finder ---------- */
+/* Toolbar code finder */
 .ip-toolbar-search { position: relative; }
 .ip-finder-go { border: 0; background: transparent; padding: 0; color: var(--ip-text-3); cursor: pointer; display: grid; place-items: center; }
 .ip-finder-go:hover { color: var(--ip-text-1); }
@@ -622,19 +611,17 @@ tr.ip-clickable { cursor: pointer; }
 .ip-finder-all { display: block; padding: 8px 12px; border-top: 1px solid var(--ip-border); font-size: var(--ip-fs-sm); color: var(--ip-accent-text); }
 .ip-finder-all:hover, .ip-finder-all.active { background: var(--ip-surface-hover); text-decoration: none; }
 
-/* ---------- contrast (WCAG AA) ----------
-   --ip-text-3 is 5.1:1 on the surface but 4.4:1 on --ip-sunken and --ip-surface-hover (light), so
-   text on those grounds uses --ip-text-2. */
+/* Contrast for WCAG AA. --ip-text-3 drops below 4.5:1 on sunken and hover grounds, so those use --ip-text-2. */
 .ip-filter, .ip-toolbar-search, .ip-filter input::placeholder, .ip-toolbar-search input::placeholder { color: var(--ip-text-2); }
 .ip-table tbody tr:hover .sub, .ip-table tbody tr:hover .cell-sub, .ip-table tbody tr:hover .ip-faint { color: var(--ip-text-2); }
 .ip-rail-link:hover .ip-rail-count { color: var(--ip-text-2); }
 .ip-empty .icon, .ip-notif-icon, .ip-thumb { color: var(--ip-text-2); }
 
-/* ---------- small input (inline edits, e.g. the product code in the list) ---------- */
+/* Small input for inline edits */
 .ip-input-sm { width: 8ch; min-width: 8ch; height: 32px; padding: 0 8px; }
 .inventory-code-edit .ip-input-sm { width: 9ch; }
 
-/* ---------- DataTables controls (details pages' product tables) ---------- */
+/* DataTables controls on the details pages */
 .dt-container { font-size: var(--ip-fs-sm); color: var(--ip-text-2); }
 .dt-container .dt-layout-row { margin: var(--ip-space-3) 0 !important; }
 .dt-container .dt-search input, .dt-container .dt-length select {
@@ -647,33 +634,31 @@ tr.ip-clickable { cursor: pointer; }
 .dt-container .dt-info { color: var(--ip-text-3); padding-top: 0 !important; }
 table.dataTable thead > tr > th.dt-orderable-asc:hover, table.dataTable thead > tr > th.dt-orderable-desc:hover { outline: none; color: var(--ip-text-1); }
 table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-align: left; }
-/* its Bootstrap rows have negative gutters, which overflowed .ip-table-wrap by 12px */
+/* Its Bootstrap rows have negative gutters that overflow .ip-table-wrap */
 .dt-container > .row { margin-left: 0; margin-right: 0; }
 .dt-container > .row > [class*="col"] { padding-left: 0; padding-right: 0; }
 
-/* Inside the width-capped .ip-form the sticky footer keeps the form's width: the package's
-   negative margins (made for a full-width page) pushed it under the rail on the left. */
+/* The package's negative margins assume a full-width page and push the footer under the rail. */
 .ip-form .ip-form-foot { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
 
-/* Absolutely positioned bits inside a table (visually-hidden header text, the inline code editor)
-   need a positioned ancestor inside the scroller, or they escape its clipping and widen the page
-   on phones. */
+/* Absolute children of a table need a positioned ancestor inside the scroller.
+   Otherwise they escape its clipping and widen the page on phones. */
 .ip-table-wrap { position: relative; }
 .ip-table td { position: relative; }
-/* phones: a filter sharing the tabs row goes onto its own line */
+/* On phones a filter in the tabs row moves to its own line */
 @media (max-width: 575.98px) {
   .ip-tabs { flex-wrap: wrap; }
   .ip-tabs > .ip-filter { margin-left: 0 !important; flex: 1 1 100%; order: 10; }
 }
 
-/* ---------- product specifications (name/value rows) ---------- */
+/* Product specification rows */
 .ip-spec-list { display: flex; flex-direction: column; gap: var(--ip-space-2); max-width: 760px; }
 .ip-spec-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto; gap: var(--ip-space-2); align-items: center; }
 .ip-spec-list:empty { display: none; }
 @media (min-width: 768px) { .ip-dl-wide > div { grid-template-columns: 220px minmax(0, 1fr); } }
 @media (max-width: 575.98px) { .ip-spec-row { grid-template-columns: 1fr auto; } .ip-spec-row input:nth-child(2) { grid-column: 1; } .ip-spec-row button { grid-row: 1 / span 2; grid-column: 2; } }
 
-/* Audit log (Views/Audit): one row per action, its records stacked, changed fields as old -> new */
+/* Audit log, one row per request with its records stacked */
 .ip-audit-table th.when { width: 8.5rem; }
 .ip-audit-table th.who { width: 14rem; }
 .ip-audit-table td { vertical-align: top; }
@@ -687,19 +672,15 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-audit-changes .old { color: var(--ip-text-2); text-decoration: line-through; text-decoration-color: var(--ip-border-strong, currentColor); }
 @media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
 
-/* Icon buttons center their glyph whatever the element: <button> does it by itself, an <a> did
-   not (the icon sat at the top of the 34px square). :where() keeps this at zero specificity, so
-   rules that hide a particular button ([hidden], d-none) still win. */
+/* Centers the icon in links too, not just buttons.
+   :where() keeps specificity at zero so [hidden] and d-none still win. */
 :where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
 
-/* Text areas can be dragged taller or back, never below about three lines (or off the page). */
+/* Resizing stops at about three lines and at 60% of the screen. */
 .ip-textarea { min-height: 88px; max-height: 60vh; }
 
-/* Page transitions. Same-origin navigations cross-fade (View Transitions, Chromium): the rail and
-   the toolbar stay put (names set only during the swap, by the inline script in the page heads,
-   so they never create stacking contexts that would trap dropdowns or modals); the content
-   fades out quickly and the new page rises in. Browsers without it get the rise-in on load
-   (html.no-vt). Nothing moves with reduced motion. */
+/* Page transitions keep the rail and toolbar still while the content cross-fades.
+   Their names are set only during the swap, so they never trap dropdowns or modals in a stacking context. */
 @view-transition { navigation: auto; }
 @keyframes ip-page-out { to { opacity: 0; } }
 @keyframes ip-page-in { from { opacity: 0; transform: translateY(8px); } }
@@ -714,15 +695,11 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .no-vt .ip-main > :not(.ip-toolbar), .no-vt .ip-login-main { animation: none; }
 }
 
-/* ---------- phones (< 768px) ----------
-   List rows are cards (the design's responsive layer, above): the list pages mark their cells
-   (td.thumb / code / title / meta / state / date / actions / hide-sm); in any other table
-   site.js MobileLayout labels the plain cells from the headers (td[data-label]) and marks the
-   photo (cell-media), actions (cell-actions) and empty cells. Filter bars without the design's
-   filter sheet fold behind a "Filters (n)" button. */
+/* Phones. List pages mark their cells by role, and MobileLayout in site.js labels cells in other tables.
+   Filter bars without the filter sheet fold behind a Filters button. */
 .ip-filter-toggle { display: none; }
 .ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--ip-accent); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
-/* Desktop: the actions cell stays a table cell (".ip-table .actions" makes its inner div a flex row). */
+/* On desktop the actions cell stays a table cell, since .ip-table .actions also matches it. */
 @media (min-width: 768px) { .ip-table td.actions { display: table-cell; } }
 @media (max-width: 767.98px) {
   /* Cards without a photo use the whole width. */
@@ -736,7 +713,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-table tr[data-href] td.cell-actions, .ip-table tr.ip-clickable td.cell-actions { display: none; }
   .ip-table td.cell-actions { margin-top: 8px; }
   .ip-table td[data-label] { margin-top: 4px; }
-  /* The app's two-line cells (.cell-text: title + sub) inside the design's roles. */
+  /* Two-line .cell-text cells inside the role cells */
   .ip-table td.title .cell-title { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 600; }
   .ip-table td.title .cell-sub { display: block; font-size: var(--ip-fs-sm); color: var(--ip-text-3); }
   .ip-table td.title .cell-item { display: flex; align-items: center; gap: var(--ip-space-3); min-width: 0; }
@@ -761,8 +738,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-kpi .trend { font-size: 12px; }
   .modal:not(.ip-modal) .modal-dialog { margin: var(--ip-space-2); }
 }
-/* Tablets: the design hides the bar's third and later filters behind its filter sheet; bars
-   without one keep them all. */
+/* Tablet bars without a filter sheet keep all their filters visible. */
 @media (min-width: 768px) and (max-width: 1024px) {
   .ip-filterbar:not(:has(.ip-filter-more)) .ip-filter { display: flex !important; }
 }
@@ -771,8 +747,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-btn-icon:not(.lg) { width: 40px; height: 40px; }
 }
 
-/* Permission editor (_PermissionEditor): one card per page, a row per action - its control on
-   the right (switch, or No / With approval / Direct). Two columns of cards on wide screens. */
+/* Permission editor, one card per page and one row per action */
 .ip-perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--ip-space-4); align-items: start; }
 .ip-perm-area { border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); background: var(--ip-surface); padding: var(--ip-space-2) var(--ip-space-4) var(--ip-space-1); }
 .ip-perm-head { display: flex; align-items: center; gap: var(--ip-space-3); padding: var(--ip-space-2) 0 var(--ip-space-3); border-bottom: 1px solid var(--ip-border); }
@@ -798,23 +773,22 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-perm-row .ip-seg-sm > * { flex: 1; justify-content: center; }
 }
 
-/* ListNav (site.js): the list while a live search loads - dimmed, not replaced by a skeleton. */
+/* ListNav dims the list while it loads instead of showing a skeleton. */
 [data-list-region].is-loading { opacity: .55; pointer-events: none; transition: opacity .15s; }
 .ip-audit-thumbs { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
 .ip-audit-thumbs img { width: 36px; height: 36px; object-fit: cover; border-radius: var(--ip-radius-sm); border: 1px solid var(--ip-border); background: var(--ip-sunken); }
 
-/* Empty values in change tables (approval dialog, audit log): words, not a bare dash. */
+/* Spelled-out empty values in the approval dialog and audit log */
 .ip-empty-value { color: var(--ip-text-3); font-style: italic; }
 .ip-removed-value { color: var(--ip-danger-text); font-style: italic; }
-/* Phones: a change table (approval dialog) reads "Field" over "old -> new" (the design's .ip-diff
-   rules; these undo the generic card grid the table would otherwise get). */
+/* Keeps the .ip-diff phone layout by undoing the generic card grid. */
 @media (max-width: 767.98px) {
   .ip-table.ip-diff tbody tr { display: block; grid-template-columns: none; }
   .ip-table.ip-diff td { display: inline; grid-column: auto; }
   .ip-table.ip-diff td.field { display: block; }
   .ip-table.ip-diff td::before { content: none; }
 }
-/* Phones: an audit card is time and user side by side, the changes full width below. */
+/* Audit cards on phones put time and user side by side with the changes below. */
 @media (max-width: 767.98px) {
   .ip-table.ip-audit-table tbody tr { display: flex; flex-wrap: wrap; gap: 0 12px; }
   .ip-table.ip-audit-table td { padding-left: 0 !important; }
@@ -824,20 +798,18 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
   .ip-table.ip-audit-table td:nth-child(3) { order: 3; flex: 1 1 100%; margin-top: 6px; padding-top: 8px !important; border-top: 1px solid var(--ip-border) !important; }
   .ip-audit-changes dl > div { grid-template-columns: 1fr; }
 }
-/* A dashboard figure without a link (no permission for the list): not clickable-looking. */
+/* Dashboard figures lose their link without the list permission, so drop the hover cue. */
 a.ip-kpi:not([href]), a.ip-list-link:not([href]) { cursor: default; }
 a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 
-/* A transfer's WhatsApp message state (Views/Routes/_WhatsAppStatus). */
+/* WhatsApp status of a transfer */
 .ip-wa { display: inline-flex; align-items: center; gap: 6px; font-size: var(--ip-fs-sm); color: var(--ip-text-2); white-space: nowrap; }
 .ip-wa-failed { color: var(--ip-danger-text); font-weight: 600; cursor: help; }
 .ip-wa-queued { color: var(--ip-text-3); }
 .ip-wa-resend { height: 26px; padding: 0 8px; gap: 6px; }
 
-/* ---------- category colours (dashboard donut and its legend) ----------
-   Eight clearly different hues for categorical data; the design's --ip-chart-1..5 are close
-   blue-grey shades meant for one series, and repeated after five, so neighbouring slices looked
-   alike. Brighter versions for the dark theme. Not status colours: no plain red or green. */
+/* Category colours for the dashboard donut. The chart tokens are too similar to tell slices apart.
+   Plain red and green are left out so they don't read as status. */
 :root, [data-bs-theme="light"] {
   --ip-cat-1: #1D6A85; --ip-cat-2: #D98E2B; --ip-cat-3: #7B5CC4; --ip-cat-4: #2563EB;
   --ip-cat-5: #D0579A; --ip-cat-6: #6E8F2E; --ip-cat-7: #B4562F; --ip-cat-8: #5E6873;
@@ -847,7 +819,7 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
   --ip-cat-5: #EB86BE; --ip-cat-6: #A5C25A; --ip-cat-7: #E08A5F; --ip-cat-8: #A9B3BD;
 }
 
-/* ---------- back button before the breadcrumb (site.js) ---------- */
+/* Back button that site.js puts before the breadcrumb */
 .ip-crumbs { display: flex; align-items: center; gap: var(--ip-space-3); flex-wrap: wrap; margin-bottom: var(--ip-space-2); }
 .ip-crumbs .breadcrumb { margin-bottom: 0; }
 .ip-back { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-md); color: var(--ip-text-1); font-size: var(--ip-fs-sm); font-weight: 500; text-decoration: none; }
@@ -855,25 +827,22 @@ a.ip-kpi:not([href]):hover { border-top-color: var(--ip-rule); }
 .ip-back:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
 .ip-back i { font-size: 12px; }
 
-/* ---------- native dropdown lists ----------
-   Chromium on Windows paints an open <select> list with the select's own background, and the
-   design's selects are transparent: the list came out white with the light text of the dark
-   theme on it. Options get the theme's colours explicitly. */
+/* Chromium on Windows paints an open select list with the select's own background, which is transparent here.
+   Without these colours the dark theme shows light text on a white list. */
 select option, select optgroup { background-color: var(--ip-surface); color: var(--ip-text-1); }
 select option:checked { background-color: var(--ip-surface-active); }
 select option:disabled { color: var(--ip-text-3); }
 
-/* ---------- transfer: the found product as a plain row ---------- */
+/* Found product on the transfer page, shown as a plain row */
 .ip-found.ip-found-row { padding: 14px 0; border-radius: 0; background: none; border-top: 1px solid var(--ip-border); border-bottom: 1px solid var(--ip-border); }
 .ip-found-row .ip-found-thumb { width: 44px; height: 44px; background: var(--ip-sunken); font-size: 16px; }
 
-/* A destructive action as plain text (product details: "Delete product"). */
+/* Destructive action styled as a text link */
 .ip-link-danger { padding: 0; border: 0; background: none; font: inherit; font-size: var(--ip-fs-sm); color: var(--ip-danger-text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .ip-link-danger:hover { color: var(--ip-danger-solid); }
 .ip-link-danger:disabled { opacity: .6; cursor: default; }
 
-/* The filter sheet's button and chips (list-filters.js) at every width where they show: the
-   design styles them inside its phone block only, but tablets use the sheet too. */
+/* The package styles the filter sheet only for phones, but tablets use it too. */
 @media (min-width: 768px) { .ip-filter-more { height: var(--ip-control-md); } }
 .ip-filter-more { align-items: center; gap: var(--ip-space-2); padding: 0 14px; border: 0; border-radius: var(--ip-radius-md); background: var(--ip-sunken); color: var(--ip-text-1); font: inherit; font-weight: 500; cursor: pointer; }
 .ip-filter-more .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-size: var(--ip-fs-xs); font-weight: 600; line-height: 20px; text-align: center; }
@@ -883,60 +852,54 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-chip.active { background: var(--ip-text-1); border-color: var(--ip-text-1); color: var(--ip-surface); font-weight: 600; }
 #filterSheet .modal-title { font-size: var(--ip-fs-lg); font-weight: 600; margin: 0; }
 
-/* Gallery dots: phones only (the design's phone block shows them; a plain rule here would win over it). */
+/* Gallery dots are for phones only. A rule without the media query would override the phone block. */
 @media (min-width: 768px) { .ip-gallery-dots { display: none; } }
 .ip-gallery { touch-action: pan-y; }
 
-/* Dashboard: the activity chart's height, smaller on phones; there the
-   "needs attention" list comes right after the figures. */
+/* On phones the chart is shorter and the attention list moves above it. */
 .ip-chart { position: relative; height: 220px; }
 @media (max-width: 767.98px) {
   .ip-chart { height: 160px; }
   #dashboardCharts > .ip-dash-attention { order: -1; }
 }
 
-/* Phones: a route card reads "Finance · worker →" / "IT · worker" (routes list). */
+/* Arrow between the from and to lines of a route card */
 @media (max-width: 767.98px) {
   .ip-table td.route-from::after { content: " →"; }
 }
 
-/* Phones: a centred dialog (modal-dialog-centered) is a bottom sheet too - Bootstrap's full-height
-   centring would float it mid-screen. */
+/* Centred dialogs are bottom sheets on phones too. Bootstrap's centring would float them mid-screen. */
 @media (max-width: 767.98px) {
   .ip-modal .modal-dialog-centered { min-height: 0; align-items: flex-end; }
-  /* A scrollable dialog keeps its content's height (the sheet scrolls inside), so a tap above
-     the sheet reaches the backdrop and closes it. */
+  /* Without this a scrollable dialog covers the backdrop, so a tap above the sheet can't close it. */
   .ip-modal .modal-dialog-scrollable { height: auto; }
 }
 
-/* Tablets, bars with the filter sheet: search and the first two dropdowns stay, the rest are in
-   the sheet, whose button shows. (The design counts children, which the inserted button shifts,
-   and its base ".ip-filter-more { display: none }" comes after its tablet rule.) */
+/* Tablet bars with a filter sheet keep search and two dropdowns, the rest go in the sheet.
+   The package rule counts children, which the inserted sheet button throws off. */
 @media (min-width: 768px) and (max-width: 1024px) {
   .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(-n+3) { display: flex !important; }
   .ip-filterbar[data-filter-sheet] > label.ip-filter:nth-of-type(n+4) { display: none !important; }
   .ip-filterbar[data-filter-sheet] > .ip-filter-more { display: flex; }
-  .ip-filterbar[data-filter-sheet] > .ip-btn[data-flag] { display: none; }   /* in the sheet's "Other" */
+  .ip-filterbar[data-filter-sheet] > .ip-btn[data-flag] { display: none; }   /* Shown in the sheet instead */
 }
 
-/* The rail's link list scrolls when the rail is shorter than its links (the phone drawer, a low
-   window): a flex item does not shrink below its content without min-height 0, so the list ran
-   off the bottom and nothing scrolled. The scroll stays in the drawer, not the page behind it. */
+/* A flex item won't shrink below its content without min-height 0, so the links could not scroll.
+   overscroll-behavior keeps the scroll inside the drawer. */
 .ip-rail-nav { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 @media (max-width: 767.98px) {
   .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { overflow: hidden; }
   .ip-rail-foot { flex: none; padding-bottom: calc(var(--ip-space-3) + env(safe-area-inset-bottom)); }
 }
 
-/* Phones: bars with the filter sheet keep only the search and the sheet's button (quick flags
-   and Reset are in the sheet); Bootstrap rows use a gutter that fits the page's 20px margin
-   (g-5's -24px stuck out of the screen). */
+/* Phone bars with a filter sheet keep only search and the sheet button.
+   The smaller gutter stops g-5 rows from sticking out past the page margin. */
 @media (max-width: 767.98px) {
   .ip-filterbar[data-filter-sheet] > .ip-btn { display: none; }
   .ip-main .row { --bs-gutter-x: 1rem; }
 }
 
-/* Touch screens: small controls get a finger-sized hit area (44px). */
+/* Finger-sized hit areas on touch screens */
 @media (pointer: coarse) {
   .ip-link-danger { min-height: 44px; display: inline-flex; align-items: center; }
   .ip-image-tile .ctl { width: 40px; height: 40px; }
@@ -945,8 +908,7 @@ select option:disabled { color: var(--ip-text-3); }
   div.dt-container .dt-length select, div.dt-container .dt-search input { min-height: 40px; }
 }
 
-/* Phones: the fixed list foot only when there are pages to switch (range and page size are hidden
-   there), not as an empty bar under a one-page list. */
+/* On phones the fixed list foot only shows when there is more than one page. */
 @media (max-width: 767.98px) {
   .ip-table-foot:not(:has(.ip-pagination)) { display: none; }
   .ip-table td.title > .cell-title, .ip-table td.meta > .cell-title { display: inline; }
@@ -955,54 +917,50 @@ select option:disabled { color: var(--ip-text-3); }
   .ip-table td.meta > .cell-sub::before { content: " · "; }
 }
 
-/* Phones: details lists keep label and value side by side (half the height of one over the
-   other); an empty second line of a card cell leaves no stray " · ". */
+/* Details lists keep label and value side by side on phones to save height.
+   Empty second lines in card cells are hidden so no stray separator shows. */
 @media (max-width: 767.98px) {
   .ip-dl > div, .ip-dl-wide > div { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--ip-space-3); padding: 10px 0; }
   .ip-dl dt { font-size: var(--ip-fs-sm); }
   .ip-table td .sub:empty, .ip-table td .cell-sub:empty { display: none; }
 }
 
-/* Phones: tabs stay on one line and scroll sideways (the design's intent; a wrap rule from the
-   wider layout put the last tabs on a second line). A filter inside the tab row keeps its own
-   line below. */
+/* Tabs stay on one line and scroll sideways on phones. A filter in the tab row still gets its own line. */
 @media (max-width: 767.98px) {
   .ip-tabs:not(:has(> .ip-filter)) { flex-wrap: nowrap; }
   .ip-tabs > .ip-tab { flex: none; }
 }
-/* ...and no " · " in front of a second line that has no first line before it. */
+/* No separator before a second line that has no first line */
 @media (max-width: 767.98px) {
   .ip-table td.meta .sub:first-child::before, .ip-table td.meta .cell-sub:first-child::before,
   .ip-table td.meta > .cell-text > .cell-sub:first-child::before { content: none; }
 }
 
-/* The company mark (_BrandMark): no tile; the big chevron follows the text colour (white on the dark rail). */
+/* Company mark without a tile. The big chevron follows the text colour. */
 .ip-logo.brand { background: none; border-radius: 0; color: var(--ip-text-1); }
 .ip-logo.brand svg { width: 100%; height: 100%; display: block; }
 .ip-rail.collapsed .ip-rail-brand .ip-logo { display: grid; }
 
-/* Toolbar: the code search leads on the left, language / theme / bell stay on the right
-   (with everything pushed right the bar read as empty). */
+/* Code search on the left of the toolbar, the other controls on the right */
 .ip-toolbar-search { margin-right: auto; }
 @media (min-width: 1025px) { .ip-toolbar-search { width: 440px; } }
-/* Product name with the department under it (rail, sign-in). */
+/* Product name with the department under it */
 .ip-rail-name { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
 .ip-rail-name small { font-size: var(--ip-fs-xs, 11px); font-weight: 400; color: var(--ip-text-3); }
 
 
-/* Banners: a long message wraps beside its icon instead of dropping below it (the row still wraps for buttons). */
+/* A long banner message wraps beside its icon instead of dropping below it. */
 .ip-banner > i { flex: none; }
 .ip-banner > div { flex: 1 1 200px; min-width: 0; }
 
-/* Notification type icon (page and bell dropdown): neutral tile; an approval answer in its status colour. */
+/* Notification icons are neutral. Only approval answers use status colours. */
 .ip-notif-icon { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--ip-sunken); color: var(--ip-text-2); font-size: 14px; }
 .ip-notif-icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
 .ip-notif-icon.bad { background: var(--ip-danger-soft); color: var(--ip-danger-text); }
-.ip-notif-item .unread-dot { margin-top: 12px; }   /* level with the icon centre */
+.ip-notif-item .unread-dot { margin-top: 12px; }   /* Level with the icon centre */
 
-/* ---------- Motion ----------
-   Short and quiet: things arrive (rise and fade), nothing loops except the empty-state mark.
-   Everything here stops under prefers-reduced-motion (end of this block). */
+/* Motion. Only the empty-state mark loops.
+   Everything here is switched off for reduced motion at the end of the block. */
 @keyframes ip-rise { from { opacity: 0; transform: translateY(6px); } }
 @keyframes ip-fade { from { opacity: 0; } }
 @keyframes ip-pop-in { from { opacity: 0; transform: scale(.8); } }
@@ -1010,7 +968,7 @@ select option:disabled { color: var(--ip-text-3); }
 @keyframes ip-ripple { from { transform: scale(1); opacity: .55; } to { transform: scale(2.2); opacity: 0; } }
 @keyframes ip-menu-in { from { opacity: 0; translate: 0 -4px; } }
 
-/* Empty states: centred; the mark pops in, floats, and sends out soft rings; the words follow. */
+/* Empty states */
 .ip-empty { align-items: center; text-align: center; margin-inline: auto; padding: 72px 16px 80px; }
 .ip-empty .icon { position: relative; width: 64px; height: 64px; margin-bottom: 12px; border-radius: 50%; font-size: 24px;
                   animation: ip-pop-in .45s cubic-bezier(.2, .9, .3, 1.25) both, ip-float 4.5s ease-in-out .6s infinite; }
@@ -1023,8 +981,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-empty > :nth-child(n+4) { animation-delay: .28s; }
 .ip-empty .icon.ok { background: var(--ip-success-soft); color: var(--ip-success-text); }
 
-/* List rows arrive one after another (page load, tabs, filters, page numbers). A live refresh
-   ([data-quiet], live-updates.js), DataTables redraws and the bell menu stay still. */
+/* List rows arrive one after another. Live refreshes, DataTables redraws and the bell menu stay still. */
 .ip-table tbody tr, .ip-notif-item, .ip-list-link { animation: ip-rise .32s cubic-bezier(.2, .7, .2, 1) backwards; }
 :is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(2) { animation-delay: 25ms; }
 :is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(3) { animation-delay: 50ms; }
@@ -1036,15 +993,14 @@ select option:disabled { color: var(--ip-text-3); }
 :is(.ip-table tbody tr, .ip-notif-item, .ip-list-link):nth-child(n+9) { animation-delay: 200ms; }
 [data-quiet] :is(tr, .ip-notif-item, .ip-list-link), table.dataTable tbody tr, .ip-notif-list .ip-notif-item { animation: none; }
 
-/* Pressed buttons give a little; menus open with a short drop. */
+/* Button press and menu drop */
 .ip-btn, .ip-btn-icon { transition: transform 90ms ease, background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
 .ip-btn:active:not(:disabled), .ip-btn-icon:active:not(:disabled) { transform: scale(.97); }
 .dropdown-menu.show, .ip-finder-menu:not([hidden]) { animation: ip-menu-in 140ms cubic-bezier(.2, .8, .2, 1); }
 .ip-kpi { transition: transform 160ms ease; }
 .ip-kpi:hover { transform: translateY(-2px); }
 
-/* Page blocks arrive in reading order: form / details sections, dashboard figures, timeline steps,
-   the accounts on the sign-in page. Same quiet rule as the rows. */
+/* Page blocks arrive in reading order. Live refreshes stay still here too. */
 .ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap, .ip-account-other { animation: ip-rise .38s cubic-bezier(.2, .7, .2, 1) backwards; }
 :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(2) { animation-delay: 50ms; }
 :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item, .ip-account-wrap):nth-child(3) { animation-delay: 100ms; }
@@ -1053,7 +1009,7 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-account-other { animation-delay: 220ms; }
 [data-quiet] :is(.ip-form-section, .ip-section, .ip-kpi, .timeline-item), [data-quiet]:is(.ip-form-section, .ip-section) { animation: none; }
 
-/* Toasts slide in from the side; hover and selection changes ease instead of jumping. */
+/* Toast slide-in and hover transitions */
 @keyframes ip-toast-in { from { opacity: 0; translate: 16px 0; } }
 .ip-toast.show { animation: ip-toast-in .26s cubic-bezier(.2, .8, .2, 1); }
 .ip-tab { transition: color 140ms ease, border-color 180ms ease; }
@@ -1071,7 +1027,7 @@ select option:disabled { color: var(--ip-text-3); }
 
 @media print { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
-/* List thumbnails with a photo: zoom cursor, hover preview card (site.js), "N found" in list counts. */
+/* Hover preview for list thumbnails, shown by site.js */
 [data-image-preview] { cursor: zoom-in; }
 [data-image-preview]:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
 .ip-img-peek { position: fixed; z-index: 1085; width: 264px; height: 264px; padding: 6px; background: var(--ip-surface); border: 1px solid var(--ip-border);

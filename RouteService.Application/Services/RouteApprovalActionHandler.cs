@@ -9,7 +9,7 @@ using SharedServices.Exceptions;
 
 namespace RouteService.Application.Services
 {
-    /// <summary>Executes approved transfer / route update / route delete requests in-process.</summary>
+    /// <summary>Executes approved transfer, route update and route delete requests in-process.</summary>
     public class RouteApprovalActionHandler : IApprovalActionHandler
     {
         private readonly IMediator _mediator;
@@ -53,15 +53,13 @@ namespace RouteService.Application.Services
             var existing = await _mediator.Send(new GetRouteByIdQuery(routeId), cancellationToken)
                 ?? throw new NotFoundException($"Route with ID {routeId} not found");
 
-            // The request only carries the fields that changed; everything else keeps its current
-            // value. The previous HTTP-based executor forwarded notes alone, which cleared the
-            // worker and dropped approved destination/image changes.
+            // The request carries only the changed fields. Everything else keeps its current value.
             var dto = new UpdateRouteDto
             {
                 Notes = data.Has("notes") ? data.GetString("notes") : existing.Notes,
                 ToWorker = data.Has("toWorker") ? data.GetString("toWorker") : existing.ToWorker,
                 ToDepartmentId = data.Has("toDepartmentId") ? data.GetInt("toDepartmentId") : null,
-                // Older requests carry one "imageData" image, which replaced the image.
+                // Older requests carry a single image that replaces all images.
                 ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
                 ImageFiles = data.GetImages(),
                 RemoveImageUrls = data.GetStrings("removeImageUrls"),

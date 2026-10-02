@@ -4,18 +4,14 @@ using Microsoft.Extensions.Localization;
 
 namespace InventoryManagement.Web.Localization
 {
-    /// <summary>
-    /// Interface language: Azerbaijani by default, English on request (cookie). Only the UI culture
-    /// changes: the formatting culture stays en-US, so numbers keep a "." decimal separator in forms,
-    /// model binding and JS; dates are always formatted explicitly (dd.MM.yyyy).
-    /// </summary>
+    /// <summary>Only the UI culture changes. Formatting stays en-US so forms and JS keep a decimal point.</summary>
     public static class LocalizationSetup
     {
         public const string DefaultUiCulture = "az-Latn-AZ";
         public const string FormattingCulture = "en-US";
         public static readonly string[] UiCultures = [DefaultUiCulture, "en-US", "ru-RU"];
 
-        /// <summary>The language switch: each culture and its short label, in display order.</summary>
+        // Language switch entries in display order.
         public static readonly (string Culture, string Label)[] Languages = [(DefaultUiCulture, "AZ"), ("en-US", "EN"), ("ru-RU", "RU")];
 
         public static string CookieValue(string uiCulture)
@@ -37,7 +33,7 @@ namespace InventoryManagement.Web.Localization
                 DefaultRequestCulture = new RequestCulture(FormattingCulture, DefaultUiCulture),
                 SupportedCultures = [new CultureInfo(FormattingCulture)],
                 SupportedUICultures = UiCultures.Select(c => new CultureInfo(c)).ToList(),
-                // The cookie only; the browser's Accept-Language must not override the Azerbaijani default.
+                // Cookie only, so the browser's Accept-Language never overrides the Azerbaijani default.
                 RequestCultureProviders = [new CookieRequestCultureProvider()]
             };
             return app.UseRequestLocalization(options);

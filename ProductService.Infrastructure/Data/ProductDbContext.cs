@@ -24,8 +24,8 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                // Deleted products are kept but out of sight everywhere (IgnoreQueryFilters to see
-                // them), and their inventory code can be given to a new product.
+                // Deleted products stay hidden unless a query calls IgnoreQueryFilters.
+                // The unique index skips them, so their inventory code can be reused.
                 entity.HasQueryFilter(e => !e.IsDeleted);
                 entity.HasIndex(e => e.InventoryCode).IsUnique().HasFilter("\"IsDeleted\" = false");
                 entity.Property(e => e.DeletedBy).HasMaxLength(200);
@@ -34,7 +34,7 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.Model).HasMaxLength(50);
                 entity.Property(e => e.Vendor).HasMaxLength(30);
                 entity.Property(e => e.Color).HasMaxLength(30);
-                // Specifications live with the product as a jsonb array of {Name, Value}.
+                // Specifications are stored on the product row as a jsonb array.
                 entity.Property(e => e.Specifications)
                       .HasColumnType("jsonb")
                       .HasDefaultValueSql("'[]'::jsonb")
@@ -50,9 +50,7 @@ namespace ProductService.Infrastructure.Data
                 entity.Property(e => e.UpdatedAt)
                       .HasColumnType("timestamp without time zone");
 
-                // Restrict, not the EF default of Cascade: deleting a category or department
-                // must never silently delete the products assigned to it. The delete commands
-                // check for referencing products first and return a 409 with the count.
+                // Restrict instead of Cascade, so deleting a category or department never deletes its products.
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(e => e.CategoryId)
@@ -67,8 +65,7 @@ namespace ProductService.Infrastructure.Data
             modelBuilder.Entity<Category>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                // Matches the 100-character limit the create/update validators enforce; the column
-                // used to be 20, so longer names passed validation and then failed with a 500.
+                // Keep in step with the validators' 100-character limit.
                 entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");
@@ -88,7 +85,7 @@ namespace ProductService.Infrastructure.Data
         }
     }
 
-    /// <summary>Used by `dotnet ef` only.</summary>
+    /// <summary>Used only by dotnet ef.</summary>
     public class ProductDbContextFactory : IDesignTimeDbContextFactory<ProductDbContext>
     {
         public ProductDbContext CreateDbContext(string[] args)

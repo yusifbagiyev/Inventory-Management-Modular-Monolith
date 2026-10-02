@@ -5,11 +5,11 @@ using ProductService.Domain.Repositories;
 
 namespace ProductService.Application.Features.Products.Queries
 {
-    /// <summary>Deleted products (soft delete), most recently deleted first.</summary>
+    /// <summary>Soft-deleted products, most recently deleted first.</summary>
     public record GetDeletedProductsQuery(string? Search = null, int PageNumber = 1, int PageSize = 30)
         : IRequest<PagedResultDto<ProductDto>>;
 
-    /// <summary>One deleted product; null when it does not exist or is not deleted.</summary>
+    /// <summary>One deleted product, or null when it does not exist or is not deleted.</summary>
     public record GetDeletedProductByIdQuery(int Id) : IRequest<ProductDto?>;
 
     public class GetDeletedProductsHandler :

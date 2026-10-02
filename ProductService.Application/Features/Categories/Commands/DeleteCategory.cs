@@ -29,7 +29,7 @@ namespace ProductService.Application.Features.Categories.Commands
                 var category = await _categoryRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Category with ID {request.Id} not found");
 
-                // Same rule as departments: never let a delete silently take products with it.
+                // Never let a delete silently take products with it, same as for departments.
                 var productCount = await _productRepository.CountByCategoryIdAsync(request.Id, cancellationToken);
                 if (productCount > 0)
                     throw new ConflictException(

@@ -1,12 +1,9 @@
 namespace SharedServices.Auditing
 {
-    /// <summary>One field of an audited change. Values are display strings (null: empty).</summary>
+    /// <summary>One field of an audited change. Values are display strings, null when empty.</summary>
     public sealed record AuditFieldChange(string Field, string? Old, string? New);
 
-    /// <summary>
-    /// One audited change to one record (or an event such as a sign-in), with who did it and in
-    /// which request. Records of one request share <see cref="CorrelationId"/>.
-    /// </summary>
+    /// <summary>One audited change or sign-in event. Records of one request share a CorrelationId.</summary>
     public sealed record AuditRecord(
         DateTime At,
         string CorrelationId,
@@ -31,10 +28,7 @@ namespace SharedServices.Auditing
         public const string SignedOut = "SignedOut";
     }
 
-    /// <summary>
-    /// Stores audit records (implemented by the Audit module). Called inside the request's
-    /// transaction, so the records commit or roll back with the change they describe.
-    /// </summary>
+    /// <summary>Stores audit records inside the request's transaction, so they commit with the change.</summary>
     public interface IAuditSink
     {
         Task WriteAsync(IReadOnlyList<AuditRecord> records, CancellationToken cancellationToken = default);

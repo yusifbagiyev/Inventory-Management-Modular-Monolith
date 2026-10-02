@@ -10,7 +10,7 @@ namespace InventoryManagement.Web.Services.Interfaces
         Task<bool> ApproveRequestAsync(int id);
         Task RejectRequestAsync(int id, string reason);
         Task<ApprovalStatisticsDto> GetStatisticsAsync();
-        /// <summary>Latest approved (true) or rejected (false) requests, or none (null); always the tab counts.</summary>
+        /// <summary>Latest approved or rejected requests, or no items when approved is null. Tab counts are always filled.</summary>
         Task<(List<ApprovalRequestDto> Items, int ApprovedCount, int RejectedCount)> GetDecidedRequestsAsync(bool? approved, int take);
         Task<List<ApprovalRequestDto>> GetMyRequestsAsync();
         Task CancelRequestAsync(int id);

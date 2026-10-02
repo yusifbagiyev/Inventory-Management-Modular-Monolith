@@ -64,8 +64,7 @@ namespace RouteService.Application.Features.Routes.Commands
                 if (!toDepartment.IsActive)
                     throw new RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
 
-                // Two open transfers for one product could be completed in either order, leaving the
-                // product wherever the last one pointed.
+                // Two open transfers could complete in either order and leave the product in the wrong place.
                 if (await _repository.HasPendingRouteForProductAsync(product.Id, cancellationToken))
                     throw new RouteException("This product already has a pending transfer. Complete or delete it first.");
 

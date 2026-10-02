@@ -15,19 +15,17 @@ namespace NotificationService.Infrastructure.Services
         private readonly ILogger<WhatsAppService> _logger;
         private readonly WhatsAppSettings _settings;
 
-        // Response models for parsing API responses
         private class UploadResponse
         {
             [JsonPropertyName("success")]
             public bool Success { get; set; }
 
             [JsonPropertyName("publicUrl")]
-            public string? PublicUrl { get; set; }  // WaSender returns 'publicUrl', not nested in 'data'
+            public string? PublicUrl { get; set; }  // WaSender puts publicUrl at the top level, not inside data.
 
             [JsonPropertyName("message")]
             public string? Message { get; set; }
 
-            // These might be returned as well, based on typical API patterns
             [JsonPropertyName("fileId")]
             public string? FileId { get; set; }
 
@@ -55,8 +53,7 @@ namespace NotificationService.Infrastructure.Services
             _httpClient = httpClient;
             _logger = logger;
 
-            // Missing settings must not break construction: the notification dispatcher depends on
-            // this service, and a throwing constructor would stop in-app notifications too.
+            // Missing settings must not throw here, or the dispatcher would stop in-app notifications too.
             _settings = configuration.GetSection("WhatsApp").Get<WhatsAppSettings>() ?? new WhatsAppSettings();
 
             if (Uri.TryCreate(_settings.ApiUrl, UriKind.Absolute, out var apiUrl))
@@ -67,14 +64,12 @@ namespace NotificationService.Infrastructure.Services
                 new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        /// <summary>
-        /// Sends a text-only message to a WhatsApp group
-        /// </summary>
+        /// <summary>Sends a text-only message to a WhatsApp group.</summary>
         public async Task<bool> SendGroupMessageAsync(string groupId, string message)
         {
             try
             {
-                // Ensure group ID has the correct format for WhatsApp groups
+                // Group ids need the @g.us suffix.
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
 
@@ -115,14 +110,13 @@ namespace NotificationService.Infrastructure.Services
                 if (!groupId.EndsWith("@g.us"))
                     groupId = $"{groupId}@g.us";
 
-                // Validate message length
                 if (message.Length > 2048)
                 {
                     _logger.LogWarning("Caption exceeds 2048 characters. Truncating to fit limit.");
                     message = message.Substring(0, 2045) + "...";
                 }
 
-                // Check against WaSender's 16MB limit for images
+                // Images over 5 MB go as text only.
                 var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
                 _logger.LogInformation($"Processing image: {fileName} ({imageSizeInMB:F2} MB)");
 
@@ -132,7 +126,7 @@ namespace NotificationService.Infrastructure.Services
                     return await SendGroupMessageAsync(groupId, message);
                 }
 
-                // Step 1: Upload the image to get a temporary URL
+                // The message needs a URL, so upload the image first to get a temporary one.
                 var imageUrl = await UploadImageToWaSender(imageData, fileName);
 
                 if (string.IsNullOrEmpty(imageUrl))
@@ -141,13 +135,12 @@ namespace NotificationService.Infrastructure.Services
                     return await SendGroupMessageAsync(groupId, message);
                 }
 
-                // Step 2: Send the message with the uploaded image
                 _logger.LogInformation($"Successfully uploaded image. Now sending WhatsApp message with image URL: {imageUrl}");
 
                 var requestPayload = new
                 {
                     to = groupId,
-                    text = message,  // This becomes the caption for the image
+                    text = message,  // Shown as the image caption.
                     imageUrl = imageUrl
                 };
 
@@ -167,7 +160,6 @@ namespace NotificationService.Infrastructure.Services
 
                 _logger.LogError($"Failed to send WhatsApp image message. Status: {response.StatusCode}, Response: {responseContent}");
 
-                // Fallback to text-only if image message fails
                 _logger.LogInformation("Attempting fallback to text-only message");
                 return await SendGroupMessageAsync(groupId, message);
             }
@@ -178,12 +170,8 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// One attempt to post a group message, with the image when there is one (uploaded once:
-        /// pass <paramref name="uploadedImageUrl"/> back in on a retry). Reports a rate limit
-        /// (HTTP 429, "1 message every 5 seconds") with the wait the service asks for, so the
-        /// outbox can retry instead of losing the message.
-        /// </summary>
+        /// <summary>One attempt to post a group message, with the image when there is one.</summary>
+        /// <remarks>Pass uploadedImageUrl back in on a retry so the image is uploaded once. A 429 comes back with the wait the service asks for.</remarks>
         public async Task<WhatsAppSendResult> SendAsync(string groupId, string message, byte[]? imageData, string fileName,
             string? uploadedImageUrl = null, CancellationToken cancellationToken = default)
         {
@@ -194,7 +182,7 @@ namespace NotificationService.Infrastructure.Services
 
             var imageUrl = uploadedImageUrl;
             if (imageUrl == null && imageData is { Length: > 0 } && imageData.Length <= 5 * 1024 * 1024)
-                imageUrl = await UploadImageToWaSender(imageData, fileName);   // null: send the text alone
+                imageUrl = await UploadImageToWaSender(imageData, fileName);   // On failure the text goes alone.
 
             object payload = imageUrl == null ? new { to = groupId, text = message } : new { to = groupId, text = message, imageUrl };
             try
@@ -239,7 +227,7 @@ namespace NotificationService.Infrastructure.Services
             {
                 var mimeType = GetMimeType(fileName);
 
-                // Convert to Base64 with data URL prefix (WaSender's recommended format)
+                // WaSender expects the image as a base64 data URL.
                 var base64String = Convert.ToBase64String(imageData);
                 var dataUrl = $"data:{mimeType};base64,{base64String}";
 
@@ -262,7 +250,6 @@ namespace NotificationService.Infrastructure.Services
                     return null;
                 }
 
-                // Parse the response to extract the public URL
                 try
                 {
                     _logger.LogDebug($"Upload response received: {responseContent}");
@@ -270,21 +257,18 @@ namespace NotificationService.Infrastructure.Services
                     var uploadResponse = JsonSerializer.Deserialize<UploadResponse>(responseContent,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    // Check if upload was successful and we have a URL
                     if (uploadResponse?.Success == true && !string.IsNullOrEmpty(uploadResponse.PublicUrl))
                     {
                         _logger.LogInformation($"Image uploaded successfully. Public URL: {uploadResponse.PublicUrl}");
 
-                        // Log expiry if available
                         if (uploadResponse.ExpiresAt.HasValue)
                         {
                             _logger.LogDebug($"Image URL expires at: {uploadResponse.ExpiresAt}");
                         }
 
-                        return uploadResponse.PublicUrl;  // Return the public URL for use in the message
+                        return uploadResponse.PublicUrl;
                     }
 
-                    // If success is false or URL is missing
                     _logger.LogError($"Upload failed. Success: {uploadResponse?.Success}, " +
                                     $"PublicUrl: {uploadResponse?.PublicUrl ?? "null"}, " +
                                     $"Message: {uploadResponse?.Message ?? "none"}");
@@ -303,15 +287,10 @@ namespace NotificationService.Infrastructure.Services
             }
         }
 
-        /// <summary>
-        /// Determines MIME type based on file extension
-        /// </summary>
         private string GetMimeType(string fileName)
         {
             var extension = Path.GetExtension(fileName)?.ToLowerInvariant() ?? "";
 
-            // Return appropriate MIME type based on file extension
-            // These are the common image formats WhatsApp supports
             return extension switch
             {
                 ".jpg" or ".jpeg" => "image/jpeg",
@@ -320,18 +299,15 @@ namespace NotificationService.Infrastructure.Services
                 ".webp" => "image/webp",
                 ".bmp" => "image/bmp",
                 ".svg" => "image/svg+xml",
-                _ => "image/jpeg"  // Default to JPEG if unknown
+                _ => "image/jpeg"
             };
         }
 
-        /// <summary>
-        /// Formats a product notification into a WhatsApp-friendly message with formatting
-        /// </summary>
+        /// <summary>Formats a product notification as a WhatsApp message.</summary>
         public string FormatNotification(WhatsAppProductNotification notification)
         {
             var message = new StringBuilder();
 
-            // Choose emoji based on notification type for visual distinction
             var emoji = notification.NotificationType switch
             {
                 "created" => "✅",
@@ -340,18 +316,16 @@ namespace NotificationService.Infrastructure.Services
                 _ => "📌"
             };
 
-            // Build the formatted message with WhatsApp markdown
+            // Text between asterisks is bold in WhatsApp.
             message.AppendLine($"{emoji} *Product {notification.NotificationType.ToUpper()}*");
             message.AppendLine();
 
-            // Product details section
             message.AppendLine($"📦 *Product Details:*");
             message.AppendLine($"• *Inventory Code:* {notification.InventoryCode}");
             message.AppendLine($"• *Category:* {notification.CategoryName}");
             message.AppendLine($"• *Vendor:* {notification.Vendor}");
             message.AppendLine($"• *Model:* {notification.Model}");
 
-            // Add type-specific information
             if (notification.NotificationType == "created")
             {
                 message.AppendLine($"• *Department:* {notification.ToDepartmentName}");
@@ -359,7 +333,6 @@ namespace NotificationService.Infrastructure.Services
                 if (!string.IsNullOrEmpty(notification.ToWorker))
                     message.AppendLine($"• *Assigned Worker:* {notification.ToWorker}");
 
-                // Add status indicators
                 if (notification.IsNewItem)
                     message.AppendLine($"• *Status:* 🆕 New Item");
 
@@ -368,7 +341,6 @@ namespace NotificationService.Infrastructure.Services
             }
             else if (notification.NotificationType == "transferred")
             {
-                // Show transfer details
                 message.AppendLine($"• *From Department:* {notification.FromDepartmentName}");
 
                 if (!string.IsNullOrEmpty(notification.FromWorker))
@@ -380,11 +352,9 @@ namespace NotificationService.Infrastructure.Services
                     message.AppendLine($"• *Assigned Worker:* {notification.ToWorker}");
             }
 
-            // Add notes if present
             if (!string.IsNullOrEmpty(notification.Notes))
                 message.AppendLine($"• *Notes:* {notification.Notes}");
 
-            // Add timestamp
             message.AppendLine();
             message.AppendLine($"⏰ *Time:* {notification.CreatedAt:dd/MM/yyyy HH:mm}");
 

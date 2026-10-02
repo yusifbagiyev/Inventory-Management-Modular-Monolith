@@ -1,12 +1,8 @@
-/* ============================================================================
-   Inventory Pro - design layer. Loaded AFTER tokens.css and site.css.
-   The palette lives in tokens.css (--ip-*, light and dark, from design/). The short names
-   below are what this file and the views were written against; they only point at the
-   tokens, so there is exactly one place where a colour is defined.
-   ========================================================================== */
+/* Restyles the Bootstrap classes the older markup uses. Load it after tokens.css and site.css.
+   The short names below only point at the tokens, so every colour is defined in one place. */
 
-/* Re-declared on every [data-bs-theme] element, not only :root: a custom property inherits
-   its computed value, so without this a dark island (the sidebar) would keep the light values. */
+/* Declared on every [data-bs-theme] element, not only :root.
+   Custom properties inherit computed values, so the dark sidebar would otherwise keep the light ones. */
 :root, [data-bs-theme] {
     --ground: var(--ip-surface);
     --surface: var(--ip-surface);
@@ -27,7 +23,7 @@
     --warn-weak: var(--ip-warning-soft);
     --crit: var(--ip-danger-text);
     --crit-weak: var(--ip-danger-soft);
-    /* "new" is plain information, not a status: neutral */
+    /* The New tag is not a status, so it stays neutral */
     --violet: var(--ip-neutral-text);
     --violet-weak: var(--ip-neutral-soft);
     --shadow: var(--ip-shadow-sm);
@@ -44,8 +40,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── typography / page header ──────────────────────────────────────────────
-   Page head (every view): breadcrumb, then a 32px title, actions on the right. */
+/* Typography and page header */
 .ip-main > .container-fluid, .ip-main > .container { padding-left: 0 !important; padding-right: 0 !important; max-width: none; }
 h1, .h1 { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
 h2, .h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weight: 600; }
@@ -62,7 +57,7 @@ h5, .h5 { font-size: 14px; font-weight: 600; }
 .breadcrumb-item.active { color: var(--ink-3); }
 .breadcrumb-item + .breadcrumb-item::before { color: var(--ink-3); }
 
-/* ── forms (Bootstrap labels and validation messages the views still render) ── */
+/* Bootstrap form labels and validation messages */
 .form-label, label.form-label { font-size: var(--ip-fs-base); font-weight: 500; color: var(--ink); margin-bottom: 6px; }
 .form-label .text-danger { color: var(--ip-danger-text) !important; }
 .field-validation-error, .text-danger.small, span.text-danger {
@@ -71,7 +66,7 @@ h5, .h5 { font-size: 14px; font-weight: 600; }
 
 .field-validation-error::before { content: "\f06a"; font-family: "Font Awesome 7 Free", "Font Awesome 6 Free"; font-weight: 900; margin-right: 6px; }
 
-/* ── tables (.ip-table look) ─────────────────────────────────────────────── */
+/* Tables, styled like .ip-table */
 .table {
     --bs-table-bg: transparent;
     --bs-table-hover-bg: var(--ip-surface-hover);
@@ -105,13 +100,13 @@ h5, .h5 { font-size: 14px; font-weight: 600; }
 .table > thead > tr > th:last-child, .table > tbody > tr > td:last-child { padding-right: 0; }
 .table > tbody > tr:hover > td { background: var(--ip-surface-hover); }
 
-/* sortable headers (DataTables) */
+/* DataTables sortable headers */
 table.dataTable > thead > tr > th { color: var(--ink-3); }
 
-/* numbers and identifiers line up */
+/* Tabular digits so codes line up */
 .mono, .inventory-code-display { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* compact item cell: thumbnail + title + meta */
+/* Item cell with thumbnail, title and meta */
 .cell-item { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
 .cell-text { min-width: 0; display: flex; flex-direction: column; line-height: 1.35; }
@@ -123,7 +118,7 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 
 .border, .border-top, .border-bottom { border-color: var(--line) !important; }
 
-/* ── pagination (.ip-pagination look) ────────────────────────────────────── */
+/* Pagination, styled like .ip-pagination */
 .pagination { gap: 4px; margin: 0; }
 .page-link {
     min-width: 34px; height: 34px; padding: 0 8px; display: grid; place-items: center;
@@ -135,7 +130,7 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 .page-item.active .page-link { background: var(--ink); color: var(--surface); font-weight: 600; }
 .page-item.disabled .page-link { background: transparent; opacity: .45; }
 
-/* ── dropdown (.ip-dropdown look) ────────────────────────────────────────── */
+/* Dropdowns, styled like .ip-dropdown */
 .dropdown-menu {
     background: var(--surface); color: var(--ink); border: 1px solid var(--line);
     border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); padding: 4px 0;
@@ -144,7 +139,7 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 .dropdown-item:hover, .dropdown-item:focus { background: var(--ip-surface-hover); color: var(--ink); }
 .dropdown-item.active, .dropdown-item:active { background: var(--ip-surface-active); color: var(--ink); }
 
-/* ── modal (.ip-modal look on every Bootstrap modal) ─────────────────────── */
+/* Every Bootstrap modal gets the .ip-modal look */
 .modal-backdrop.show { background: var(--ip-backdrop); opacity: 1; }
 .modal-content { background: var(--surface); color: var(--ink); border: 0; border-radius: var(--ip-radius-xl); box-shadow: var(--ip-shadow-lg); }
 .modal-header { padding: 20px 24px 16px; border-bottom: var(--ip-rule-width) solid var(--ip-rule); background: transparent; align-items: flex-start; }
@@ -157,7 +152,7 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 .modal-header .btn-close:hover { background-color: var(--ip-surface-hover); opacity: 1; }
 [data-bs-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 
-/* ── toast (.ip-toast look; built by showToast in site.js) ───────────────── */
+/* Toasts built by showToast in site.js */
 .toast-container { z-index: 1090; }
 .ip-toast.toast { width: 380px; }
 
@@ -165,7 +160,7 @@ hr { border-color: var(--line); opacity: 1; }
 
 .spinner-border { color: var(--ink-3); }
 
-/* inline inventory-code editor: floats above the narrow Code column instead of wrapping */
+/* The inline code editor floats above the narrow Code column instead of wrapping */
 .table td { position: relative; }
 .inventory-code-edit {
     position: absolute; top: 50%; left: 0; transform: translateY(-50%); z-index: 6;
@@ -173,8 +168,7 @@ hr { border-color: var(--line); opacity: 1; }
     padding: 4px; box-shadow: var(--ip-shadow-md);
 }
 
-/* ── responsive ──────────────────────────────────────────────────────────────
-   Wide data tables scroll inside their own container while everything around them reflows. */
+/* Responsive */
 @media (max-width: 1400px) {
     .table > thead > tr > th, .table > tbody > tr > td { padding-left: 12px; padding-right: 12px; }
 }
@@ -187,7 +181,7 @@ hr { border-color: var(--line); opacity: 1; }
     * { animation: none !important; transition: none !important; }
 }
 
-/* Skeleton placeholders while content loads (_Skeleton.cshtml / skeletonHtml in site.js). */
+/* Loading placeholders from _Skeleton.cshtml and skeletonHtml() in site.js */
 .skeleton-group { padding: 4px 0; }
 .skeleton {
     display: block; height: .75rem; margin: .6rem 0; border-radius: 5px;
@@ -197,12 +191,8 @@ hr { border-color: var(--line); opacity: 1; }
 .skeleton-title { height: 1rem; width: 42% !important; margin-bottom: .9rem; }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
-/* ============================================================================
-   Dark theme. <html data-bs-theme="dark"> is set before first paint (_Layout <head>) from the
-   saved choice or the OS; the toggle is Theme in site.js. The palette itself swaps in
-   tokens.css; this only points the Bootstrap variables tokens.css leaves out at it, on every
-   dark element (the sidebar is dark in both themes).
-   ========================================================================== */
+/* tokens.css swaps the dark palette, and this block maps the Bootstrap variables it leaves out.
+   It applies to every dark element because the sidebar is dark in both themes. */
 [data-bs-theme="dark"] {
     color-scheme: dark;
     --bs-body-bg: var(--ip-surface);
@@ -217,9 +207,8 @@ hr { border-color: var(--line); opacity: 1; }
     --bs-link-hover-color: var(--ip-accent-hover);
 }
 
-/* Air Datepicker (date-range.js) in the app palette, both themes. "body" outranks the library's
-   own .air-datepicker variables, whose stylesheet loads later: without it the calendar stayed
-   white with orange day names, in the dark theme too. */
+/* Air Datepicker in the app palette.
+   The body prefix outranks the library's own variables, whose stylesheet loads later. */
 body .air-datepicker {
     --adp-background-color: var(--surface);
     --adp-border-color: var(--line-2);
@@ -229,7 +218,7 @@ body .air-datepicker {
     --adp-color-other-month: var(--ink-3);
     --adp-color-current-date: var(--ip-accent-text);
     --adp-accent-color: var(--accent);
-    /* Readable in both themes: --accent-2 was 2.1:1 on the dark surface. */
+    /* The accent text is too faint on the dark surface */
     --adp-day-name-color: var(--ip-text-3);
     --adp-nav-arrow-color: var(--ink-3);
     --adp-background-color-hover: var(--surface-2);
@@ -243,12 +232,11 @@ body .air-datepicker {
     --adp-btn-background-color-hover: var(--surface-2);
     --adp-font-family: inherit;
 }
-/* The library animates "all" on the calendar body, colour included: after a theme switch the
-   days kept the old theme's colour. Only the month-change animation is kept. */
+/* The library transitions every property, so day colours lagged after a theme switch.
+   Only the month-change animation is kept. */
 body .air-datepicker-body { transition-property: opacity, transform; }
 
-/* Multi-image picker (_ImageManager / image-manager.js) on the design's image tiles
-   (.ip-images / .ip-image-tile / .ip-image-add). The first tile is the cover. */
+/* Image picker from _ImageManager and image-manager.js. The first tile is the cover. */
 .image-manager.im-dragover .ip-image-add { border-color: var(--accent); color: var(--ip-accent-text); background: var(--ip-accent-soft); }
 .im-tile { min-width: 0; }
 .im-tile .ip-image-tile img { cursor: zoom-in; }
@@ -259,7 +247,7 @@ body .air-datepicker-body { transition-property: opacity, transform; }
 .ip-image-add { position: relative; margin: 0; }
 .ip-image-add input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .ip-image-add:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* the gallery chip is hidden while another image than the cover is shown */
+/* The cover chip hides while another image is shown */
 .ip-gallery .chip[hidden] { display: none; }
 .ip-gallery img[data-ig-main] { background: var(--ip-sunken); }
 

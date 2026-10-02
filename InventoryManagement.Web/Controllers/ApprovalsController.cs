@@ -20,7 +20,6 @@ namespace InventoryManagement.Web.Controllers
 
         private const int DecidedPageSize = 50;
 
-        /// <param name="status">The tab: pending (default), approved or rejected.</param>
         [PermissionAuthorize(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Index(string? status = null)
         {
@@ -61,7 +60,7 @@ namespace InventoryManagement.Web.Controllers
             if (response.Data)
                 return Json(new { success = true, message = Tr("Request approved successfully") });
 
-            // Say why: the stored reason ("Execution error: Product with inventory code 1003 already exists").
+            // Show the stored failure reason so the approver knows why.
             var failed = await _approvalService.GetRequestDetailsAsync(id);
             var reason = failed?.RejectionReason;
             return Json(new

@@ -117,7 +117,7 @@
         });
 
 
-        // Someone else saving or deleting this department while it is open: warn, never touch the form.
+        // If someone else changes this department while it is open, warn but leave the form alone.
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['department'],

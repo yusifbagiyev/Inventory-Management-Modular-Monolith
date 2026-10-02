@@ -175,13 +175,12 @@
                     infoEmpty: t('No products to show'),
                     infoFiltered: t('(filtered from _MAX_ total)')
                 }
-                // No `dom`/`layout`: DataTables' default (length + search above, info + paging below)
-                // is what the old `dom` string spelled out, and DataTables 3 dropped `dom`.
+                // The default DataTables layout is the one this table needs.
             });
         }
 
 
-        // Changes by other users refresh this page in place; a deletion shows a notice (live-updates.js).
+        // Other users' changes refresh the page in place. A deletion shows a notice.
         LiveUpdates.watch({
             entities: ['department', 'product'],
             ids: { department: @Model.Id },

@@ -7,7 +7,7 @@ namespace ProductService.Domain.Entities
         public string Model { get; private set; } = string.Empty;
         public string Vendor { get; private set; } = string.Empty;
         public string? Worker { get; private set; } = string.Empty;
-        /// <summary>The cover image: always the first of <see cref="ImageUrls"/> (empty when there are none).</summary>
+        /// <summary>The cover image, always the first of <see cref="ImageUrls"/> or empty.</summary>
         public string? ImageUrl { get; private set; } = string.Empty;
         /// <summary>All images, cover first.</summary>
         public List<string> ImageUrls { get; private set; } = [];
@@ -17,7 +17,7 @@ namespace ProductService.Domain.Entities
         public int CategoryId { get; private set; }
         public int DepartmentId { get; private set; }
         public bool IsNewItem { get; private set; }
-        /// <summary>Free text ("Black", "Silver"); null when not set.</summary>
+        /// <summary>Free text, null when not set.</summary>
         public string? Color { get; private set; }
         /// <summary>Name/value lines in the order they were entered.</summary>
         public List<ProductSpecification> Specifications { get; private set; } = [];
@@ -26,11 +26,7 @@ namespace ProductService.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime? UpdatedAt { get; private set; }
 
-        /// <summary>
-        /// Deleted products are kept (soft delete): hidden from every list and lookup by the
-        /// DbContext's query filter, shown on the Deleted products page, and their inventory code
-        /// is free for a new product.
-        /// </summary>
+        /// <summary>Soft delete flag. The query filter hides these products and their inventory code can be reused.</summary>
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedAt { get; private set; }
         public string? DeletedBy { get; private set; }
@@ -80,11 +76,8 @@ namespace ProductService.Domain.Entities
             IsNewItem=isNewItem ?? IsNewItem;
             UpdatedAt = DateTime.Now;
         }
-        /// <summary>
-        /// Sets the colour and the specifications. Blank colours become null, lines without a name
-        /// are dropped and the rest are trimmed. These belong to the product only: transfers and
-        /// routes never change them.
-        /// </summary>
+        /// <summary>Sets colour and specifications, trimmed, with blank colour as null and unnamed lines dropped.</summary>
+        /// <remarks>Transfers never change these.</remarks>
         public void SetDetails(string? color, IEnumerable<ProductSpecification>? specifications)
         {
             Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
@@ -102,7 +95,7 @@ namespace ProductService.Domain.Entities
             Worker = worker;
             UpdatedAt = DateTime.Now;
         }
-        /// <summary>Replaces the image list (cover first) and keeps <see cref="ImageUrl"/> in step.</summary>
+        /// <summary>Replaces the image list, cover first, and keeps <see cref="ImageUrl"/> in step.</summary>
         public void SetImages(IEnumerable<string> imageUrls)
         {
             ImageUrls = imageUrls.ToList();

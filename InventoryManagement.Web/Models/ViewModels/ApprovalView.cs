@@ -3,12 +3,8 @@ using Newtonsoft.Json.Linq;
 
 namespace InventoryManagement.Web.Models.ViewModels
 {
-    /// <summary>
-    /// What an approval request is about, read from its stored ActionData (camelCase or the old
-    /// PascalCase shapes): a kind and subject for the list ("Product update: Latitude 5420 · 1042"),
-    /// and the fields it changes as current -> proposed pairs for the decision dialog.
-    /// Field names and <see cref="Change.Localize"/> values are English keys, translated by the view.
-    /// </summary>
+    // ActionData comes in camelCase and older PascalCase shapes. Field names are English keys that the view translates.
+    /// <summary>Reads a request's stored ActionData into a title and a list of field changes for the approval UI.</summary>
     public sealed class ApprovalView
     {
         public sealed record Change(string Field, string? Current, string? Proposed, bool Localize = false);
@@ -16,9 +12,9 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string Kind { get; private init; } = "";
         public string Subject { get; private init; } = "";
         public List<Change> Changes { get; } = [];
-        /// <summary>The object that carries image changes (images, replaceImages, removeImageUrls, coverImageUrl).</summary>
+        /// <summary>The part of ActionData that carries the image changes.</summary>
         public JObject? ImageData { get; private init; }
-        /// <summary>Set for deletions: the dialog warns instead of showing a diff.</summary>
+        /// <summary>For deletions the dialog shows a warning instead of a diff.</summary>
         public bool IsDeletion { get; private init; }
 
         private static readonly Regex FieldChange = new(@"^(Vendor|Model|Category|Department|Worker|Description|Color|Destination): (.*?) (?:→|->) (.*)$", RegexOptions.Singleline);
@@ -51,7 +47,6 @@ namespace InventoryManagement.Web.Models.ViewModels
             };
         }
 
-        /// <summary>The changed field names, for the list row.</summary>
         public IEnumerable<string> FieldNames => Changes.Select(c => c.Field).Distinct();
 
         private static ApprovalView ProductCreate(JObject d)
@@ -96,7 +91,7 @@ namespace InventoryManagement.Web.Models.ViewModels
                     view.Changes.Add(new("Specifications", null, update is null ? null : SpecificationText(update)));
                 else if (Sentences.TryGetValue(line.Trim(), out var change))
                     view.Changes.Add(change);
-                // "Product images were updated": shown by the images block.
+                // The image change line is skipped here because the images block shows it.
             }
             if (HasImageChanges(update) && view.Changes.All(c => c.Field != "Images"))
                 view.Changes.Add(new("Images", null, null));
@@ -179,15 +174,13 @@ namespace InventoryManagement.Web.Models.ViewModels
             return view;
         }
 
-        // ---- helpers --------------------------------------------------------------------
-
         private static void Add(ApprovalView view, string field, string? current, string? proposed)
         {
             if (!string.IsNullOrWhiteSpace(current) || !string.IsNullOrWhiteSpace(proposed))
                 view.Changes.Add(new(field, current, proposed));
         }
 
-        /// <summary>"RAM: 16 GB; Colour: ..." from a stored specifications array (null when empty).</summary>
+        /// <summary>Joins the specification lines into one name and value text, or null when there are none.</summary>
         private static string? SpecificationText(JObject d)
         {
             if (Get(d, "specifications") is not JArray lines || lines.Count == 0) return null;
@@ -226,7 +219,7 @@ namespace InventoryManagement.Web.Models.ViewModels
                                  || Get(d, "removeImageUrls") is JArray { Count: > 0 } || Get(d, "coverImageUrl") is JValue
                                  || Get(d, "imageData") is JValue);
 
-        /// <summary>New files and removed current images in <see cref="ImageData"/> (the "Images" row).</summary>
+        /// <summary>Counts of added and removed images for the Images row.</summary>
         public (int Added, int Removed) ImageCounts()
         {
             if (ImageData is null) return (0, 0);

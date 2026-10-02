@@ -24,7 +24,7 @@ using SharedServices.Web;
 
 namespace InventoryManagement.Web.Extensions
 {
-    /// <summary>Wires the backend modules into this host (the modular monolith's composition root).</summary>
+    /// <summary>Composition root that wires the backend modules into this host.</summary>
     public static class ModuleHostExtensions
     {
         private static readonly Assembly[] ModuleAssemblies =
@@ -37,7 +37,7 @@ namespace InventoryManagement.Web.Extensions
             .. AuditModule.Assemblies
         ];
 
-        /// <summary>Module DbContexts in migration order.</summary>
+        // In migration order.
         private static readonly Type[] ModuleDbContexts =
         [
             typeof(IdentityDbContext),
@@ -76,19 +76,15 @@ namespace InventoryManagement.Web.Extensions
             services.AddSignalR(options =>
             {
                 options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-                // Browsers throttle timers in background tabs to about once a minute, so the
-                // client's 15 s ping can arrive a minute late; 30 s dropped those connections.
+                // Background tabs throttle timers to about once a minute, so pings can arrive a minute late.
                 options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
             });
 
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-                // A coarse brake on sign-in requests per address, successful ones included. It is
-                // generous because a whole office signs in from one public address; failed sign-ins
-                // are limited by LoginThrottle, accounts by the identity lockout.
-                // Keyed on RemoteIpAddress, which UseForwardedHeaders sets from the proxy-appended
-                // X-Forwarded-For entry; the header itself is client-controlled.
+                // Coarse brake on sign-in posts per address. It is generous because a whole office shares one public IP.
+                // Keyed on RemoteIpAddress, never the raw X-Forwarded-For header, which the client controls.
                 options.AddPolicy(IdentityModule.LoginRateLimitPolicy, context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -101,17 +97,14 @@ namespace InventoryManagement.Web.Extensions
             });
             services.AddSingleton<LoginThrottle>();
 
-            // Every endpoint needs a signed-in user unless it says [AllowAnonymous] (sign-in,
-            // error pages, language, /health, thumbnails), so a controller that forgets its
-            // [Authorize] is not open to the internet.
+            // Anything not marked [AllowAnonymous] needs a signed-in user, so a forgotten [Authorize] is not a hole.
             services.Configure<AuthorizationOptions>(options =>
                 options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-                // The app is only reachable through nginx on the compose network, whose address is
-                // not fixed. Trust one hop: the entry nginx appended, never the client's own.
+                // Only nginx can reach the app, but its compose address is not fixed. Trust exactly one hop.
                 options.KnownIPNetworks.Clear();
                 options.KnownProxies.Clear();
                 options.ForwardLimit = 1;
@@ -130,11 +123,11 @@ namespace InventoryManagement.Web.Extensions
                 await context.Database.MigrateAsync();
             }
 
-            // Seeded rows (HasData) and copied production data carry explicit ids, which do not
-            // advance identity sequences; the first insert would then collide. Only ever raises.
+            // Seeded and copied rows have explicit ids that don't advance the sequences, so the next insert would collide.
+            // This only ever moves a sequence forward.
             var db = (DbContext)scope.ServiceProvider.GetRequiredService(ModuleDbContexts[0]);
             var schemas = string.Join(",", ModuleSchemas.Select(s => $"'{s}'"));
-            // The only interpolated value is the fixed schema list above - no user input.
+            // Only the fixed schema list is interpolated here, never user input.
             var alignSequences = $$"""
                 DO $$
                 DECLARE
@@ -156,7 +149,7 @@ namespace InventoryManagement.Web.Extensions
             await db.Database.ExecuteSqlRawAsync(alignSequences);
         }
 
-        /// <summary>/api error handling, CSRF protection for cookie-authenticated API calls, SignalR.</summary>
+        /// <summary>Adds API error handling, CSRF checks for cookie API calls and the SignalR hub.</summary>
         public static WebApplication UseModules(this WebApplication app)
         {
             app.UseWhen(IsApiRequest, api =>
@@ -171,18 +164,12 @@ namespace InventoryManagement.Web.Extensions
 
         public static bool IsApiRequest(HttpContext context) => context.Request.Path.StartsWithSegments("/api");
 
-        /// <summary>
-        /// Browser calls to /api authenticate with the auth cookie, which the browser also attaches
-        /// to cross-site requests; unsafe methods must therefore carry the antiforgery token.
-        /// Bearer-token and API-key clients are not exposed to CSRF and are exempt.
-        /// </summary>
+        /// <summary>Unsafe API calls made with the cookie need the antiforgery token. Bearer and API key callers are exempt.</summary>
         private static async Task ValidateAntiforgeryForCookieCalls(HttpContext context, Func<Task> next)
         {
             var method = context.Request.Method;
             var safe = HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method);
-            // Exactly the requests the scheme selector sends to JWT or the API key; any other
-            // Authorization header (e.g. "Basic x") still authenticates with the cookie, so it
-            // must not skip the check.
+            // Ask the scheme selector. Any other Authorization header still falls back to the cookie and must be checked.
             var usesCredentialHeader = AuthenticationExtensions.SelectScheme(context) != CookieAuthenticationDefaults.AuthenticationScheme;
 
             if (!safe && !usesCredentialHeader && context.User.Identity?.IsAuthenticated == true)
@@ -200,11 +187,7 @@ namespace InventoryManagement.Web.Extensions
         }
     }
 
-    /// <summary>
-    /// Puts the modules' API controllers in the "Api" area. Their URLs are attribute routes and do
-    /// not change, but the area keeps MVC link generation (asp-action="Create" on the Products
-    /// page) from resolving to the same-named API action (/api/Products) instead of the UI one.
-    /// </summary>
+    /// <summary>Puts module API controllers in the Api area so UI links never resolve to a same-named API action.</summary>
     internal sealed class ModuleApiAreaConvention : IControllerModelConvention
     {
         private readonly HashSet<Assembly> _moduleAssemblies;

@@ -60,13 +60,11 @@ namespace RouteService.Application.Features.Routes.Commands
 
                 var dto = request.Dto;
 
-                // Worker/notes. Applied whenever either was supplied - the edit form posts both,
-                // so this also lets a worker or note be cleared.
+                // The edit form posts both fields, so this also lets a worker or note be cleared.
                 if (dto.ToWorker != null || dto.Notes != null)
                     route.UpdateExistingRoute(dto.ToWorker, dto.Notes);
 
-                // Destination department. The name is looked up here rather than taken from the
-                // caller so the stored id and name cannot disagree.
+                // Look the name up here so the stored id and name cannot disagree.
                 if (dto.ToDepartmentId.HasValue && dto.ToDepartmentId.Value != route.ToDepartmentId)
                 {
                     var department = await _productCatalog.GetDepartmentAsync(dto.ToDepartmentId.Value, cancellationToken)
@@ -86,7 +84,7 @@ namespace RouteService.Application.Features.Routes.Commands
                     added.Add(uploaded);
                 }
 
-                // A single ImageFile (older clients) replaces the images, as it always did.
+                // A single ImageFile from older clients replaces all images.
                 var (images, removed) = ImageSet.Apply(
                     route.ImageUrls, dto.RemoveImageUrls, added, ImageSet.ResolveCover(dto.CoverImageUrl, added),
                     replaceAll: dto.ImageFile is { Length: > 0 });

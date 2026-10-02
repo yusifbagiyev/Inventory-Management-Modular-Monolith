@@ -1,21 +1,15 @@
-// XSS guard: these exporters read rendered values back out with textContent (plain text) and
-// re-inject them through innerHTML / document.write, which would turn any HTML inside that
-// text into live markup. Everything derived from textContent must go through this first.
+// Exporters read text with textContent and write it back as HTML, so markup in it would go live.
+// Everything taken from textContent must pass through this first.
 function escapePdfText(value) {
     return String(value ?? '').replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
 }
 
-/**
- * Reads a rendered list table into plain data.
- * Driven by header NAMES, not column indexes - the old exporters hard-coded positions like
- * "4th column = Location" and silently produced blank columns whenever a table changed.
- * Only text is collected, so images never reach the PDF.
- */
+/** Reads a rendered table into plain text rows, picking columns by header name so layout changes do not shift them. */
 function collectTableData(table, excludeHeaders = []) {
-    // Headers are rendered in the interface language: match the English name and its translation.
-    // The actions column is also recognised by its class, whatever its caption says.
+    // Headers are shown in the UI language, so both the English name and its translation match.
+    // The actions column is recognised by its class, whatever its caption says.
     const skip = excludeHeaders.flatMap(h => [h, t(h)]).map(h => h.toLowerCase());
     const allHeaders = Array.from(table.querySelectorAll('thead th'));
     const keep = allHeaders
@@ -36,7 +30,7 @@ function collectTableData(table, excludeHeaders = []) {
     return { headers: keep.map(c => c.name), rows };
 }
 
-/** Joins a cell's distinct text blocks so "Surface" + "Microsoft" does not become "SurfaceMicrosoft". */
+/** Joins a cell's separate text blocks so they do not run together into one word. */
 function readCellText(td) {
     if (!td) return '';
     const parts = [];
@@ -45,8 +39,7 @@ function readCellText(td) {
         if (text && !parts.includes(text)) parts.push(text);
     };
 
-    // Placeholder spans (e.g. "Unassigned", "No description") are marked .pdf-omit so the
-    // exported value prints blank instead of a filler word.
+    // Placeholder text is marked .pdf-omit so the export prints a blank instead of a filler word.
     const textWithoutPlaceholders = el => {
         const clone = el.cloneNode(true);
         clone.querySelectorAll('.pdf-omit').forEach(p => p.remove());
@@ -62,12 +55,7 @@ function readCellText(td) {
     return parts.join(' - ');
 }
 
-/**
- * Renders collected data as a clean, printable document and opens the print dialog.
- * Prints from a hidden same-page iframe rather than a popup window: a popup gets blocked by
- * default, steals focus, and on returning to the list left the page unresponsive until a
- * reload (selects stopped opening) - the iframe has none of those side effects.
- */
+/** Builds a printable document from collected rows and opens the print dialog. */
 function renderPrintDocument({ title, headers, rows, filters }) {
     title = t(title);
     const printed = formatDate(new Date(), true);
@@ -78,6 +66,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
         `<tr>${cells.map(c => `<td>${escapePdfText(c) || '<span class="empty">-</span>'}</td>`).join('')}</tr>`
     ).join('');
 
+    // A hidden iframe, because a popup gets blocked, steals focus and can leave the list unresponsive.
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
@@ -101,8 +90,7 @@ function renderPrintDocument({ title, headers, rows, filters }) {
   th { background: #EFEFEC; text-align: left; font-size: 7.5pt; text-transform: uppercase;
        letter-spacing: .04em; color: #4F5358; padding: 5px 6px; border-bottom: 1.2px solid #CFCFCB;
        white-space: nowrap; }
-  /* overflow-wrap only breaks a word that cannot fit at all; word-break: break-word let the
-     table squeeze short columns until words split ("Tamamlan|ıb"). */
+  /* overflow-wrap only breaks words that cannot fit. word-break would split short words in narrow columns. */
   td { padding: 4px 6px; border-bottom: .8px solid #E4E4E1; vertical-align: top;
        overflow-wrap: break-word; hyphens: none; }
   tbody tr { page-break-inside: avoid; }
@@ -122,8 +110,7 @@ ${filterLine}
 
     printWindow.document.close();
 
-    // Give the iframe a tick to lay out, print, then always clean up - even if the user
-    // cancels the dialog - so no stray node is left behind on the page.
+    // Give the iframe a tick to lay out. It is removed afterwards even if printing is cancelled.
     const cleanup = () => { if (frame.parentNode) frame.parentNode.removeChild(frame); };
     setTimeout(() => {
         try {
@@ -136,11 +123,7 @@ ${filterLine}
     }, 250);
 }
 
-/**
- * Prints an HTML document from a hidden same-page iframe.
- * Used by the timeline export, which prints its own markup rather than a table. Replaces window.open:
- * popups get blocked, steal focus, and left the list page unresponsive on return.
- */
+/** Prints a full HTML document from a hidden iframe, for exports that are not a table. */
 function openPrintFrame(html) {
     const frame = document.createElement('iframe');
     frame.setAttribute('aria-hidden', 'true');
@@ -163,10 +146,7 @@ function openPrintFrame(html) {
     }, 350);
 }
 
-/**
- * Reads the list's filter bar (and its status tab) so the export states what it was filtered by:
- * "Pending | Search: hp | Department: IT | Created: 01.09.2026 - 30.09.2026 | No image".
- */
+/** Summarises the active status tab and filters so the export says what it was filtered by. */
 function currentFilterSummary() {
     const clean = s => (s || '').replace(/\s+/g, ' ').trim();
     const parts = [];
@@ -187,11 +167,7 @@ function currentFilterSummary() {
     return parts.length ? t('Filters:') + ' ' + parts.filter(Boolean).join('   |   ') : '';
 }
 
-/**
- * The same list with every row that matches the current filters: the page on screen holds one
- * page (20-30 rows), so the list is re-read from the server as a single page. Falls back to the
- * rows on screen if that fails.
- */
+/** Re-reads every matching row from the server as one page, falling back to the rows on screen. */
 async function loadWholeList(table) {
     const key = table.id || table.querySelector('tbody[id]')?.id;
     if (!key) return table;
@@ -210,7 +186,7 @@ async function loadWholeList(table) {
     }
 }
 
-/** Exports one list table, columns picked by header name; `title` also names the toast target. */
+/** Exports one list table. The title also appears in the not-found toast. */
 async function exportListTable(table, title) {
     title = t(title);
     if (!table) {
@@ -235,11 +211,7 @@ function exportRoutesToPDF() {
     exportListTable(document.getElementById('routesTable'), 'Routes');
 }
 
-/**
- * Prints the product's route history. Each `.timeline-item` carries its values as data-*
- * attributes (Routes/Timeline.cshtml), so the printout does not depend on the on-screen markup;
- * images and links are left out.
- */
+/** Prints the route history from each item's data-* attributes, so it does not depend on the screen markup. */
 function exportTimelineToPDF() {
     const timeline = document.querySelector('.timeline');
     if (!timeline) {
@@ -319,7 +291,7 @@ function exportDepartmentsToPDF() {
 }
 
 function exportCategoriesToPDF() {
-    // The id sits on the <tbody> (the list's client-side search uses it).
+    // The id is on the tbody because the list's client-side search uses it.
     const body = document.getElementById('categoriesTable');
     exportListTable(body && body.closest('table'), 'Categories');
 }

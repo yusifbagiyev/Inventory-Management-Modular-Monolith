@@ -92,7 +92,7 @@
                     }
                     else
                     {
-                        @* Department list unavailable - keep the current value rather than posting an empty one. *@
+                        @* Without the department list, post the current value instead of an empty one. *@
                         <input type="text" id="ToDepartmentId" class="ip-input" value="@Model.ToDepartmentName" readonly disabled />
                         <input type="hidden" name="ToDepartmentId" value="@Model.ToDepartmentId" />
                         <span class="ip-error"><i class="fa-solid fa-circle-exclamation"></i>@L["The department list could not be loaded. Please reload the page."]</span>
@@ -100,7 +100,6 @@
                 </div>
                 <div class="ip-field">
                     <label class="ip-label" for="ToWorker">@L["To Worker"]</label>
-                    @* The visible input itself is bound (a hidden shadow field used to post the original value). *@
                     <input type="text" name="ToWorker" id="ToWorker" class="ip-input" value="@Model.ToWorker"
                            placeholder="@L["Not assigned"]" />
                 </div>
@@ -163,57 +162,48 @@
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
-        // Create a namespace for this page to avoid global conflicts
         (function() {
             'use strict';
 
-            // Track if form is currently being submitted
+            // Shared by save and delete so only one request runs at a time.
             let isSubmitting = false;
-            let routeId = @Model.Id;  // Store the route ID for use in delete function
+            let routeId = @Model.Id;
 
-            // Initialize the form handler when document is ready
             $(document).ready(function() {
                 initializeEditForm();
                 initializeDeleteHandlers();
             });
 
-            // Function to initialize the edit form with proper safeguards
             function initializeEditForm() {
                 const $form = $('#editRouteForm');
 
-                // Ensure the form exists before proceeding
                 if (!$form.length) {
                     console.error('Edit form not found');
                     return;
                 }
 
-                // Get the submit button and remember its original appearance
                 const $submitBtn = $('#submitBtn');
                 const originalButtonHtml = $submitBtn.html();
 
-                // This is crucial to prevent duplicate handlers
+                // Drop handlers bound earlier, otherwise the form is sent twice.
                 $form.off('submit');
                 $form.off('submit.ajaxHandler');
                 $submitBtn.off('click');
 
-                // Initialize the AjaxHandler with proper configuration
                 AjaxHandler.handleForm('#editRouteForm', {
                     successMessage: t('Route updated successfully!'),
                     successRedirect: '/Routes',
                     redirectDelay: 2000,
 
                     onBeforeSubmit: function(form) {
-                        // Check if already submitting
                         if (isSubmitting) {
                             return false;
                         }
 
-                        // Set the submission flag
                         isSubmitting = true;
 
-                        // Log for debugging
 
-                        return true; // Allow submission to proceed
+                        return true;
                     },
 
                     // Approval-required responses are handled by AjaxHandler before onSuccess runs.
@@ -223,37 +213,29 @@
                             window.location.href = '/Routes';
                         }, 1500);
 
-                        return false; // We're handling the redirect ourselves
+                        return false; // Skips AjaxHandler's own redirect
                     },
 
                     onError: function(errorMessage, response) {
                         console.error('Route update error:', errorMessage, response);
 
-                        // Reset submission flag on error
                         isSubmitting = false;
 
-                        // Also restore the button to its original state
                         $submitBtn.prop('disabled', false)
                             .html(originalButtonHtml);
 
-                        // Show error message
                         showToast(errorMessage || t('Failed to update route'), 'error');
                     }
                 });
             }
 
-            // Function to handle delete operations
             function initializeDeleteHandlers() {
-                // Confirm delete function
                 window.confirmDelete = function(id) {
-                    // Store the route ID for use in deleteRoute
                     window.currentDeleteRouteId = id;
                     $('#deleteModal').modal('show');
                 };
 
-                // Delete route function
                 window.deleteRoute = function() {
-                    // Prevent multiple delete attempts
                     if (isSubmitting) {
                         return;
                     }
@@ -300,16 +282,14 @@
                     });
                 };
 
-                // Ensure delete modal doesn't interfere with form submission
                 $('#deleteModal').on('hidden.bs.modal', function() {
-                    // Clear any stored route ID
                     window.currentDeleteRouteId = null;
                 });
             }
-        })(); // End of page-specific namespace
+        })();
 
 
-        // Someone else saving or deleting this route while it is open: warn, never touch the form.
+        // If someone else changes this route while it is open, warn but leave the form alone.
         LiveUpdates.watch({
             mode: 'warn',
             entities: ['route'],

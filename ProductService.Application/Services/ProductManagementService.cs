@@ -45,23 +45,19 @@ namespace ProductService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // First, we validate that the product doesn't already exist
             await ValidateProductDoesNotExist(dto.InventoryCode);
 
-            // Check if user has direct permission to bypass approval
             if (userPermissions.Contains(AllPermissions.ProductCreateDirect))
             {
                 _logger.LogInformation($"User {userName} creating product {dto.InventoryCode} directly");
                 return await _mediator.Send(new CreateProduct.Command(dto));
             }
 
-            // Check if user has permission to create with approval
             if (!userPermissions.Contains(AllPermissions.ProductCreate))
             {
                 throw new InsufficientPermissionsException("You don't have permission to create products");
             }
 
-            // Build the approval request with enriched data
             var actionData = await BuildCreateProductActionData(dto);
             var approvalRequest = new CreateApprovalRequestDto
             {
@@ -89,20 +85,16 @@ namespace ProductService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // First, get the existing product to compare changes
             var existingProduct = await GetProductById(id);
 
-            // Build comprehensive change tracking
             var changeComparison = await TrackWhatChanges(existingProduct, dto);
 
-            // Only proceed if there are actual changes
             if (!changeComparison.Any())
             {
                 _logger.LogInformation($"No changes detected for product {id}");
                 return existingProduct;
             }
 
-            // Check if user has direct update permission
             if (userPermissions.Contains(AllPermissions.ProductUpdateDirect))
             {
                 _logger.LogInformation($"User {userName} updating product {id} directly");
@@ -111,13 +103,11 @@ namespace ProductService.Application.Services
             }
 
 
-            // Check if user has permission to update with approval
             if (!userPermissions.Contains(AllPermissions.ProductUpdate))
             {
                 throw new InsufficientPermissionsException("You don't have permission to update products");
             }
 
-            // Create the update data and approval request
             var updateData = await BuildUpdateProductActionData(dto, existingProduct);
             var approvalRequest = new CreateApprovalRequestDto
             {
@@ -147,10 +137,8 @@ namespace ProductService.Application.Services
             string userName,
             List<string> userPermissions)
         {
-            // Get product information for the approval request
             var product = await GetProductById(id);
 
-            // Check if user has direct delete permission
             if (userPermissions.Contains(AllPermissions.ProductDeleteDirect))
             {
                 _logger.LogInformation($"User {userName} deleting product {id} directly");
@@ -158,13 +146,12 @@ namespace ProductService.Application.Services
                 return;
             }
 
-            // Check if user has permission to delete with approval
             if (!userPermissions.Contains(AllPermissions.ProductDelete))
             {
                 throw new InsufficientPermissionsException("You don't have permission to delete products");
             }
 
-            // Create approval request with product details for audit trail
+            // The product details let the approver see what would be deleted.
             var approvalRequest = new CreateApprovalRequestDto
             {
                 RequestType = RequestType.DeleteProduct,
@@ -201,7 +188,6 @@ namespace ProductService.Application.Services
         {
             var existingProduct = await _mediator.Send(new GetProductByInventoryCodeQuery(inventoryCode));
 
-            // Double-check with a small delay to avoid race conditions
             if (existingProduct != null)
             {
                 _logger.LogWarning($"Attempt to create duplicate product with inventory code {inventoryCode}");
@@ -229,7 +215,7 @@ namespace ProductService.Application.Services
                 ["specifications"] = SpecificationData(dto.Specifications)
             };
 
-            // Enrich with category and department names for better approval context
+            // Names make the request readable for the approver. A failed lookup is not fatal.
             try
             {
                 var category = await _mediator.Send(new GetCategoryByIdQuery(dto.CategoryId));
@@ -273,7 +259,7 @@ namespace ProductService.Application.Services
                 updateData["specifications"] = SpecificationData(dto.Specifications);
             }
 
-            // A single legacy ImageFile keeps its "replace the images" meaning.
+            // A single legacy ImageFile still means replace all images.
             if (dto.ImageFile is { Length: > 0 })
                 updateData["replaceImages"] = await ApprovalActionData.EncodeImagesAsync([dto.ImageFile]);
             if (dto.ImageFiles?.Any(f => f.Length > 0) == true)
@@ -283,15 +269,14 @@ namespace ProductService.Application.Services
             if (!string.IsNullOrEmpty(dto.CoverImageUrl))
                 updateData["coverImageUrl"] = dto.CoverImageUrl;
 
-            // The fields this request changes. On approval only these are applied, on top of the
-            // product as it is then: approving a description edit must not undo a transfer made
-            // while the request waited (the form sends every field).
+            // The form sends every field, but approval applies only these on top of the product as it is then.
+            // That way approving an edit does not undo a transfer made while the request waited.
             updateData["changed"] = ChangedFields(existing, dto);
 
             return updateData;
         }
 
-        /// <summary>Keys (as in the request data) of the fields <paramref name="dto"/> changes; "details" = colour and specifications.</summary>
+        /// <summary>Request data keys of the changed fields, where details covers colour and specifications.</summary>
         private static List<string> ChangedFields(ProductDto existing, UpdateProductDto dto)
         {
             var changed = new List<string>();
@@ -362,7 +347,7 @@ namespace ProductService.Application.Services
 
 
 
-        /// <summary>Form posts send "" where the stored value is null; that is not a change.</summary>
+        /// <summary>Treats null and empty as equal, since form posts send an empty string for a null value.</summary>
         private static bool TextDiffers(string? current, string? updated)
             => !string.Equals((current ?? "").Trim(), (updated ?? "").Trim(), StringComparison.Ordinal);
 
@@ -386,8 +371,8 @@ namespace ProductService.Application.Services
 
         public int GetUserId(ClaimsPrincipal User)
         {
-            // API-key clients (ServiceDesk) carry a service id such as "servicedesk-001", not a
-            // user id; they get 0 and the permission check answers them with 403, not a 500.
+            // API-key clients carry a service id, not a user id.
+            // They get 0, so the permission check answers 403 instead of failing with a 500.
             return int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : 0;
         }
 

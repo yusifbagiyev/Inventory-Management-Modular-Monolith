@@ -33,8 +33,7 @@
         </div>
     </div>
 
-    @* The whole user list is rendered at once, so every filter here narrows the rows
-       instantly in the browser - there is no Apply step to wait for. *@
+    @* All users are rendered at once, so these filters run in the browser. *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -182,7 +181,6 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
 <div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -210,7 +208,6 @@
 @section Scripts {
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Every filter narrows the already-rendered rows, so results update as you type/select.
         function applyUserFilters() {
             const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             const role = document.getElementById('roleFilter').value;
@@ -269,8 +266,7 @@
 
         document.getElementById('searchInput').addEventListener('input', applyUserFilters);
 
-        // Toggle user status. Razor renders the flag unquoted, so it arrives as a real boolean -
-        // the old `isActive === 'true'` string compare was always false and mislabelled the prompt.
+        // Razor renders the flag unquoted, so isActive is usually a real boolean.
         function toggleUserStatus(userId, isActive) {
             const deactivating = (isActive === true || isActive === 'true');
             confirmAction({
@@ -303,7 +299,6 @@
             });
         }
 
-        // Delete user
         function deleteUser(userId, username) {
             document.getElementById('deleteUsername').textContent = username;
             document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + userId;
@@ -312,7 +307,7 @@
             modal.show();
         }
 
-        // Other users' changes refresh the count and the table in place (live-updates.js).
+        // Other users' changes refresh the count and the table in place.
         LiveUpdates.watch({
             entities: ['user'],
             regions: ['#usersSummary', '#usersRegion'],

@@ -3,14 +3,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace SharedServices.Contracts
 {
-    /// <summary>
-    /// Readers for stored approval ActionData. Requests written by older versions use both
-    /// camelCase and PascalCase and sometimes nest the payload (ProductData / UpdateData), so every
-    /// accessor tolerates all of those shapes.
-    /// </summary>
+    /// <summary>Reads stored approval ActionData in any casing, nested or flat, since older rows differ.</summary>
     public static class ApprovalActionData
     {
-        /// <summary>Returns the nested object <paramref name="name"/> if present, else the element itself.</summary>
+        /// <summary>Returns the nested object with this name if present, else the element itself.</summary>
         public static JsonElement Section(this JsonElement element, string name)
         {
             if (element.ValueKind != JsonValueKind.Object) return element;
@@ -53,9 +49,7 @@ namespace SharedServices.Contracts
             };
         }
 
-        /// <summary>
-        /// Rebuilds the uploaded image stored as base64 ("imageData" + "imageFileName"), or null.
-        /// </summary>
+        /// <summary>Rebuilds an uploaded image stored as base64, or null.</summary>
         public static IFormFile? GetImage(this JsonElement element)
         {
             var base64 = new[] { "imageData", "image" }
@@ -67,7 +61,7 @@ namespace SharedServices.Contracts
             if (string.IsNullOrEmpty(base64) || string.IsNullOrEmpty(fileName)) return null;
 
             var comma = base64.IndexOf(',');
-            if (comma >= 0) base64 = base64[(comma + 1)..]; // data-URL prefix
+            if (comma >= 0) base64 = base64[(comma + 1)..]; // Strip a data URL prefix
 
             var bytes = Convert.FromBase64String(base64);
             return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "ImageFile", fileName)
@@ -77,10 +71,7 @@ namespace SharedServices.Contracts
             };
         }
 
-        /// <summary>
-        /// The uploaded images stored under <paramref name="name"/> by <see cref="EncodeImagesAsync"/>.
-        /// (Requests from before multiple images carry one image, read with <see cref="GetImage"/>.)
-        /// </summary>
+        /// <summary>The images stored by EncodeImagesAsync. Older single-image requests are read with GetImage.</summary>
         public static List<IFormFile> GetImages(this JsonElement element, string name = "images")
         {
             var files = new List<IFormFile>();
@@ -95,23 +86,19 @@ namespace SharedServices.Contracts
             return files;
         }
 
-        /// <summary>A string array ("removeImageUrls"), empty when absent.</summary>
+        /// <summary>A string array, empty when absent.</summary>
         public static List<string> GetStrings(this JsonElement element, string name)
             => TryGet(element, name, out var value) && value.ValueKind == JsonValueKind.Array
                 ? value.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.String).Select(v => v.GetString()!).ToList()
                 : [];
 
-        /// <summary>An array of objects ("specifications"), empty when absent.</summary>
+        /// <summary>An array of objects, empty when absent.</summary>
         public static List<JsonElement> GetObjects(this JsonElement element, string name)
             => TryGet(element, name, out var value) && value.ValueKind == JsonValueKind.Array
                 ? value.EnumerateArray().Where(v => v.ValueKind == JsonValueKind.Object).ToList()
                 : [];
 
-        /// <summary>Uploaded files as stored ActionData: [{ imageData (base64), imageFileName, imageSize }].</summary>
-        /// <remarks>
-        /// Checked and cleaned like a stored photo (type, size, count, metadata) before it goes into
-        /// the request: an approval request must not carry what a direct upload would refuse.
-        /// </remarks>
+        /// <summary>Encodes uploads as base64 for ActionData, checked and cleaned like a direct upload.</summary>
         public static async Task<List<Dictionary<string, object>>> EncodeImagesAsync(IEnumerable<IFormFile> files)
         {
             var list = files.Where(f => f.Length > 0).ToList();

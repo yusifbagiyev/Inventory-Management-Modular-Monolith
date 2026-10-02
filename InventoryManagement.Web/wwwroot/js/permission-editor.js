@@ -1,11 +1,5 @@
-// InventoryManagement.Web/wwwroot/js/permission-editor.js
-//
-// The permission editor (Views/Shared/_PermissionEditor.cshtml). Every change saves at once:
-// POST {permissionName, isGranting} to the editor's data-save-url (a user's or a role's).
-//  - switches grant or remove one permission;
-//  - two-level actions (No / With approval / Direct) hold at most one of "x" and "x.direct";
-//  - granting anything in an area also grants viewing it (no editing what you cannot see).
-// A failed save puts the control back and says so. Search (#permissionSearch) filters the rows.
+// Permission editor for a user or a role. Every change is saved at once to data-save-url.
+// A failed save puts the control back and shows the error.
 
 window.PermissionEditor = (function () {
     'use strict';
@@ -86,7 +80,7 @@ window.PermissionEditor = (function () {
             select(to);
             seg.classList.add('is-saving');
             try {
-                // At most one of the two is held: "x" means with approval, "x.direct" directly.
+                // A user holds at most one of the base permission and its .direct pair.
                 if ((to === 'approval') !== (from === 'approval')) await post(url, seg.dataset.base, to === 'approval');
                 if ((to === 'direct') !== (from === 'direct')) await post(url, seg.dataset.direct, to === 'direct');
                 seg.dataset.own = to;

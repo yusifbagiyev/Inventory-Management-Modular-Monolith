@@ -1,11 +1,5 @@
-// InventoryManagement.Web/wwwroot/js/product-form.js
-//
-// Product create/edit form (Views/Products/_ProductFormFields.cshtml):
-//  - [data-char-count-for="Field"] shows how many characters the field holds;
-//  - the specifications list adds and removes name/value rows, named Specifications[i].Name/Value
-//    in order so model binding gets a gap-free list;
-//  - on Create, the inventory code is checked as soon as it is typed: a code that is taken shows
-//    "This code is already in use: <model>" under the field instead of failing on save.
+// Product create and edit form: character counters, specification rows and the inventory code check.
+// A taken code shows under the field while typing, so the save does not fail later.
 
 window.ProductForm = (function () {
     'use strict';
@@ -47,12 +41,12 @@ window.ProductForm = (function () {
                     credentials: 'same-origin',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
-                if (String(code) !== String(parseInt(input.value, 10))) return;   // typed on meanwhile
+                if (String(code) !== String(parseInt(input.value, 10))) return;   // Input changed while waiting
                 if (response.ok) {
                     const product = await response.json();
                     show(t('This code is already in use: {0}', product.model || product.Model || code));
                 } else {
-                    show('');   // 404: free (other statuses: let the server decide on save)
+                    show('');   // 404 means free. Other errors are left to the save
                 }
             } catch (e) {
                 show('');
@@ -76,6 +70,7 @@ window.ProductForm = (function () {
         if (!list || !template || !add) return;
         const max = parseInt(list.dataset.max, 10) || 30;
 
+        // Names must stay gap-free or model binding drops the rows after a gap.
         function renumber() {
             list.querySelectorAll('[data-spec-row]').forEach(function (row, i) {
                 const inputs = row.querySelectorAll('input');

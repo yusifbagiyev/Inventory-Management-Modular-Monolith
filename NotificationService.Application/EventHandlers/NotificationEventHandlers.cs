@@ -8,11 +8,8 @@ using SharedServices.Persistence;
 
 namespace NotificationService.Application.EventHandlers
 {
-    /// <summary>
-    /// Subscribes to other modules' events. Nothing happens inline: the work is queued to run once
-    /// the originating transaction commits (and dropped if it rolls back), so slow WhatsApp calls
-    /// or notification failures never delay or fail the user's request.
-    /// </summary>
+    /// <summary>Queues notification work for other modules' events to run after the transaction commits.</summary>
+    /// <remarks>Nothing runs inline, so slow WhatsApp calls or failures never delay or fail the request.</remarks>
     public class NotificationEventHandlers :
         INotificationHandler<ApprovalRequestCreatedEvent>,
         INotificationHandler<ApprovalRequestProcessedEvent>,
@@ -37,7 +34,7 @@ namespace NotificationService.Application.EventHandlers
         public Task Handle(ProductDeletedEvent e, CancellationToken _) => Defer(e, ActorId(), (d, ev, actor, ct) => d.ProductDeletedAsync(ev, actor, ct));
         public Task Handle(RouteCompletedEvent e, CancellationToken _) => Defer(e, ActorId(), (d, ev, actor, ct) => d.RouteCompletedAsync(ev, actor, ct));
 
-        /// <summary>The signed-in user of the request raising the event (read now: the work runs later, without it).</summary>
+        /// <summary>Reads the acting user now, because the deferred work runs without the request.</summary>
         private int? ActorId()
             => int.TryParse(_httpContext.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var id) ? id : null;
 
