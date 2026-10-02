@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace InventoryManagement.Web.Models.ViewModels
 {
     /// <summary>
-    /// The sign-in page (design 2a): with accounts remembered on this browser it first shows them
+    /// The sign-in page: with accounts remembered on this browser it first shows them
     /// (<see cref="ShowPicker"/>); a picked account then asks only for the password
     /// (<see cref="Mode"/> "user"), "use another account" asks for both ("other").
     /// </summary>

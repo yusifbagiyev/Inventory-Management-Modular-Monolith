@@ -1,51 +1,106 @@
-# Inventory Pro
+# 166 Inventory
 
-An inventory management system for tracking an organisation's equipment: what each item is, which department and person has it, how it moved, and who approved each change. It has a web UI (Azerbaijani and English, light and dark) and a JSON API for other systems.
+Inventory system for the IT department I work in. We use it to keep track of our equipment: every
+laptop, monitor, printer or switch has an inventory code, a department and the person it is given
+to, and every time something moves to another department it goes into that device's history.
 
-Built with **.NET 10** as a **modular monolith**: one ASP.NET Core host serves the MVC/Razor UI and the `/api`, on PostgreSQL.
+It is a **modular monolith** on .NET 10 and PostgreSQL. The UI is in Azerbaijani, English and
+Russian, works on phones too, and there is a JSON API that our ServiceDesk app uses.
 
-## Features
+This is the third version of the project:
 
-- **Products.** Each item has an inventory code, category, department, worker, colour, free-form specifications (name/value) and several photos with a cover. There is a working / not working state and active / inactive availability. Lists have search, filters, a date range and column-selectable PDF export.
-- **Transfers and history.** Moving a product between departments or workers creates a transfer that is completed later, optionally with photos. Every create, update, transfer and delete goes into the product's timeline. A transfer keeps the department and category *names of that moment*, so renaming or deleting a department never rewrites history.
-- **Approvals (two-tier permissions).** Every write permission comes in two levels:
-  - `x.direct` acts immediately.
-  - `x` alone submits an approval request.
-  
-  An admin sees the proposed change field by field and approves or rejects it. Approval executes the action in the same transaction.
-- **Live updates.** When someone changes a record, every open list and details page refreshes itself through SignalR. Edit forms only show a warning instead of refreshing.
-- **Notifications.** Users get in-app notifications and a bell with an unread count. New products and completed transfers can also be posted, with a photo, to a WhatsApp group.
-- **Users, roles and permissions.** Admin, Operator and User roles plus per-user permissions. Changes apply without signing in again.
-- **Dashboard.** Transfer activity, categories and the busiest departments for 7 / 30 / 90 days or all time, plus a "needs attention" panel.
-- **Exports.** Department inventory as a Word document, and lists and timelines as PDF.
-- **Offline-friendly.** All frontend libraries are self-hosted, so the app works without internet access.
+1. [inventory-system-desktop](https://github.com/yusifbagiyev/inventory-system-desktop) - the first
+   one, a Windows Forms app on SQL Server.
+2. [Inventory-Management-Microservices](https://github.com/yusifbagiyev/Inventory-Management-Microservices) -
+   an earlier version of this web app. I wrote it as microservices (API gateway, RabbitMQ, a database
+   per service) mostly to get experience with that architecture.
+3. This repository. For an app of this size the microservices were more trouble than they were worth,
+   so I merged them into one application but kept the same module boundaries. Things that used to be
+   messages between services are now plain transactions, and the deployment went from eleven
+   containers to four.
 
-## Architecture
+Screenshots are from a demo database with made-up data.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+| | |
+|---|---|
+| ![Products](docs/screenshots/products.png) | ![Product](docs/screenshots/product-details.png) |
+| ![Transfers](docs/screenshots/routes.png) | ![History](docs/screenshots/product-history.png) |
+| ![Approvals](docs/screenshots/approvals.png) | ![Edit](docs/screenshots/product-edit.png) |
+| ![Audit log](docs/screenshots/audit-log.png) | ![Permissions](docs/screenshots/role-permissions.png) |
+| ![Dark theme](docs/screenshots/products-dark.png) | ![Notifications](docs/screenshots/notifications.png) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile-dashboard.png" width="250" alt="Dashboard on a phone">
+  <img src="docs/screenshots/mobile-products.png" width="250" alt="Products on a phone">
+  <img src="docs/screenshots/mobile-product.png" width="250" alt="Product on a phone">
+</p>
+
+## What it does
+
+Products have an inventory code, category, department, the person using them, colour, any number of
+specifications and photos. Lists can be searched and filtered, exported to PDF, and any device can be
+opened from the search box at the top by its code.
+
+Moving a device creates a transfer, which is completed when the device arrives. The product page
+shows everything that happened to it: created, edited, moved, deleted. Transfers store the department
+and category names as they were at that moment, so renaming a department later doesn't change old
+records.
+
+Not everyone can change data directly. Each write permission has two levels: with `product.update`
+your change becomes a request that someone has to approve, with `product.update.direct` it is applied
+right away. The approver sees exactly which fields change. Nobody can approve their own request.
+
+Other things worth mentioning:
+
+- pages update by themselves when someone else changes a record (SignalR);
+- an audit log of every change with the old and new value of each field, who did it and from where;
+- notifications in the app, and completed transfers posted to a WhatsApp group;
+- roles and per-user permissions, edited by an admin on a simple page;
+- dashboard with transfer activity, categories and the most active departments;
+- Word export of a department's inventory;
+- all frontend libraries are served locally, it doesn't need internet access to work.
+
+## How it is built
 
 ```
-InventoryManagement.Web        host: MVC + Razor UI, /api, SignalR hub, composition root
-├── IdentityService.*          users, roles, permissions, JWT            schema: identity
-├── ProductService.*           products, categories, departments, images schema: product
-├── RouteService.*             transfers and the product audit trail     schema: route
-├── ApprovalService.*          approval requests and their execution     schema: approval
-├── NotificationService.*      stored notifications, SignalR, WhatsApp   schema: notification
-└── SharedServices             shared kernel: contracts, events, transactions, auth, storage
+InventoryManagement.Web        the host: MVC + Razor UI, /api, SignalR hub
+├── IdentityService.*          users, roles, permissions, JWT
+├── ProductService.*           products, categories, departments, images
+├── RouteService.*             transfers and product history
+├── ApprovalService.*          approval requests
+├── NotificationService.*      notifications, SignalR, WhatsApp
+├── AuditService               audit log
+└── SharedServices             contracts between modules, events, transactions, auth
 ```
 
-- **Module layout.** Each module keeps a clean-architecture split: `Domain`, `Application`, `Infrastructure`, and `API` (a class library with the module's controllers). Inside a module, CQRS goes through **MediatR** and validation through **FluentValidation**.
-- **No cross-references.** Modules never reference each other's internals. They talk through contracts in `SharedServices/Contracts` and through in-process MediatR events.
-- **One transaction per request.** All module `DbContext`s share one connection per request, and a transactional request spans modules. For example, an approval and the action it executes commit or roll back together.
-- **History.** The project names (`ProductService`, …) come from an earlier version that ran as five microservices behind an API gateway with RabbitMQ.
+Each module has its own Domain / Application / Infrastructure / API projects and its own schema in
+the database. Commands and queries go through MediatR, validation through FluentValidation. Modules
+don't reference each other's internals; they talk through interfaces in `SharedServices/Contracts`
+and in-process events. All module DbContexts share one connection per request, so an operation that
+touches several modules (approving a request runs the requested action, completing a transfer moves
+the product) is a single transaction. The audit log and the live updates are EF Core interceptors.
 
-**Tech:**
-- ASP.NET Core 10, EF Core 10 + Npgsql (PostgreSQL 15), MediatR, FluentValidation, SignalR, Serilog → Seq.
-- UI: Bootstrap 5.3, jQuery, DataTables, Chart.js and Font Awesome, with its own design system in `design/` and `wwwroot/css/tokens.css`.
+Stack: ASP.NET Core 10, EF Core 10, PostgreSQL 15, MediatR, FluentValidation, SignalR, Serilog + Seq,
+SkiaSharp, Docker, nginx, GitHub Actions. The UI is Razor with Bootstrap, jQuery, DataTables and
+Chart.js and a small design system of my own on top (`wwwroot/css`).
 
-## Getting started
+Since the app is open to the internet I spent some time on security: sign-in errors don't reveal
+whether a user exists, accounts lock after repeated failures and addresses get throttled, changing a
+password ends the user's other sessions, refresh tokens are stored hashed, uploaded files are checked
+by content and their metadata (GPS etc.) is removed, and the usual headers (CSP and friends) are set.
 
-### Run locally
+## Running it
 
-Requirements: the .NET 10 SDK and a PostgreSQL server.
+With Docker:
+
+```bash
+cp .env.example .env        # set DB_PASSWORD, JWT_SECRET_KEY, ...
+docker compose up -d --build
+```
+
+Or locally with the .NET 10 SDK and a PostgreSQL server:
 
 ```bash
 dotnet user-secrets --project InventoryManagement.Web set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=inventory;Username=postgres;Password=<password>"
@@ -53,77 +108,36 @@ dotnet user-secrets --project InventoryManagement.Web set "Jwt:Key" "<at least 3
 dotnet run --project InventoryManagement.Web
 ```
 
-Open http://localhost:5051. `GET /health` reports whether the database is reachable.
+The app runs at http://localhost:5051 and creates its database on the first start, with roles,
+permissions and an initial admin account seeded in
+`IdentityService.Infrastructure/Data/IdentityDbContext.cs` - replace that seed before using it.
 
-- The database and every module's schema are created by migrations at startup. Roles and permissions are seeded, along with an initial Admin account (`IdentityService.Infrastructure/Data/IdentityDbContext.cs`).
-- Change that account's password after the first sign-in, or replace the seed before deploying.
-
-### Run with Docker
-
-```bash
-cp .env.example .env        # fill in DB_PASSWORD, JWT_SECRET_KEY, SEQ_ADMIN_PASSWORD, ...
-docker compose up -d --build
-```
-
-The stack runs:
-
-| Service | Purpose | Port |
-|---|---|---|
-| `postgres` | the database | 5432 |
-| `app` | the application | — |
-| `nginx` | reverse proxy | 80 / 443; 5001 for API-key clients (product API only) |
-| `seq` | logs | 5342 |
-| `cloudflared` | optional public access through a Cloudflare Tunnel (`COMPOSE_PROFILES=tunnel`) | — (outbound only) |
-
-- Uploaded images go to `./storage/images` and data-protection keys to `./storage/keys`. Both must be writable by the container user (uid 1654).
-- Without the keys folder, every redeploy signs everyone out.
-
-### Configuration
-
-| Setting | Environment variable | Notes |
-|---|---|---|
-| Database | `ConnectionStrings__DefaultConnection` | compose builds it from `DB_*` |
-| JWT signing key | `Jwt__Key` (`JWT_SECRET_KEY`) | 32+ characters |
-| API keys | `ApiKeys__0__Key`, `…ServiceName`, `…Permissions__0` | for system-to-system clients |
-| WhatsApp | `WHATSAPP_API_TOKEN`, `WHATSAPP_GROUP_ID` | optional |
-| Time zone | `TZ` | timestamps are stored in local time |
-
-## API
-
-The JSON API lives under `/api` and accepts three kinds of authentication:
-- `Authorization: Bearer <jwt>`, issued by `POST /api/auth/login`;
-- `X-Api-Key` for configured services;
-- the UI's cookie, which also needs the anti-forgery header for unsafe methods.
-
-| Area | Endpoints |
-|---|---|
-| Products | `GET/POST /api/products`, `GET/PUT/DELETE /api/products/{id}`, `GET /api/products/search/inventory-code/{code}`, `PUT /api/products/{id}/inventory-code` |
-| Categories, departments | `GET/POST /api/categories`, `/api/departments` (+ `/paged`, `/{id}`) |
-| Transfers | `POST /api/inventoryroutes/transfer`, `PUT /api/inventoryroutes/{id}/complete`, `GET /api/inventoryroutes/product/{productId}` |
-| Approvals | `GET /api/approvalrequests`, `POST /api/approvalrequests/{id}/approve` / `reject` |
-| Auth and users | `POST /api/auth/login`, `/refresh`, `GET /api/auth/me`, user and role management |
-| Notifications | `GET /api/notifications`, `/unread-count`, `POST /api/notifications/mark-all-read` |
-
-The API applies the same two-tier permission rule as the UI:
-- with only the base permission, a write returns **202** with `{ approvalRequestId }`;
-- without any permission it returns **403**;
-- a concurrent change returns **409**.
-
-## Development
+To add a migration:
 
 ```bash
-dotnet build InventoryManagement.sln
-
-# add a migration (each Infrastructure project is its own startup project)
 dotnet ef migrations add <Name> --project ProductService.Infrastructure --startup-project ProductService.Infrastructure
 ```
 
-- **Translations.** The UI text is keyed by its English wording. Azerbaijani translations are in `InventoryManagement.Web/Resources/i18n/az.json`.
-- **Frontend libraries.** They are pinned in `InventoryManagement.Web/libman.json` (`libman restore`).
-- **Architecture notes.** `CLAUDE.md` has detailed notes on the conventions: module boundaries, transactions, approvals, live updates and localisation.
+UI texts are keyed by their English wording; the translations are in
+`InventoryManagement.Web/Resources/i18n/az.json` and `ru.json`.
 
-## CI/CD
+## API
 
-GitHub Actions:
-- `ci.yml` builds the solution, checks NuGet packages for known vulnerabilities and builds the Docker image on every pull request and every push to `master`.
-- `cd.yml` publishes the image to GHCR after a green build on `master`. A self-hosted runner then deploys it with `deploy/deploy.sh`, which takes a database backup, recreates the app, waits for the health check and rolls back automatically on failure.
+Everything under `/api` accepts a JWT from `POST /api/auth/login`, an API key (for other systems) or
+the browser's cookie. Main endpoints:
+
+- `GET/POST /api/products`, `GET/PUT/DELETE /api/products/{id}`, `GET /api/products/search/inventory-code/{code}`
+- `GET/POST /api/categories`, `/api/departments`
+- `POST /api/inventoryroutes/transfer`, `PUT /api/inventoryroutes/{id}/complete`
+- `GET /api/approvalrequests`, `POST /api/approvalrequests/{id}/approve`, `/reject`
+- `POST /api/auth/login`, `/refresh`, `GET /api/auth/me`
+
+The same permission rules apply as in the UI: if your change needs approval you get `202` with the
+request id, without permission `403`, and `409` if someone changed the record in the meantime.
+
+## Deployment
+
+`ci.yml` builds the solution, checks the NuGet packages for known vulnerabilities and builds the
+Docker image. `cd.yml` pushes the image to GHCR and a runner on the server deploys it with
+`deploy/deploy.sh`: it backs up the database, recreates the app container, waits for the health check
+and rolls back if it fails.

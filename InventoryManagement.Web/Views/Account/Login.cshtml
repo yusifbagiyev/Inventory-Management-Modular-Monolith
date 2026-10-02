@@ -8,7 +8,7 @@
     var plus = info.IndexOf('+');
     var version = plus < 0 ? info : info[..plus] + " · " + info[(plus + 1)..].Substring(0, Math.Min(7, info.Length - plus - 1));
 }
-@* Sign-in (design 2a, CLAUDE_CODE_PROMPT_5): pick one of the accounts that signed in on this
+@* Sign-in: pick one of the accounts that signed in on this
    browser, then type only the password; "Another account" asks for the username too.
    AccountController.Login / RecentAccounts. *@
 <!DOCTYPE html>

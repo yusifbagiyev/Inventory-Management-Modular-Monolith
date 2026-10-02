@@ -95,7 +95,7 @@
                     <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
                 }
             </dl>
-            @* Delete is a quiet text action under the details, not a header button (design prompt 4). *@
+            @* Delete is a quiet text action under the details, not a header button. *@
             @if (canDelete)
             {
                 <button type="button" class="ip-link-danger mt-3" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">@L["Delete product"]</button>

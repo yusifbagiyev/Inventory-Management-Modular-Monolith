@@ -863,7 +863,7 @@ select option, select optgroup { background-color: var(--ip-surface); color: var
 select option:checked { background-color: var(--ip-surface-active); }
 select option:disabled { color: var(--ip-text-3); }
 
-/* ---------- transfer: the found product as a plain row (design prompt 4) ---------- */
+/* ---------- transfer: the found product as a plain row ---------- */
 .ip-found.ip-found-row { padding: 14px 0; border-radius: 0; background: none; border-top: 1px solid var(--ip-border); border-bottom: 1px solid var(--ip-border); }
 .ip-found-row .ip-found-thumb { width: 44px; height: 44px; background: var(--ip-sunken); font-size: 16px; }
 
@@ -887,7 +887,7 @@ select option:disabled { color: var(--ip-text-3); }
 @media (min-width: 768px) { .ip-gallery-dots { display: none; } }
 .ip-gallery { touch-action: pan-y; }
 
-/* Dashboard (design prompt 3): the activity chart's height, smaller on phones; there the
+/* Dashboard: the activity chart's height, smaller on phones; there the
    "needs attention" list comes right after the figures. */
 .ip-chart { position: relative; height: 220px; }
 @media (max-width: 767.98px) {

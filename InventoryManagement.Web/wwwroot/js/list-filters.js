@@ -16,7 +16,7 @@
 //       sheet: true                               // phones/tablets: the "Filter" sheet (below)
 //   });
 //
-// The sheet (design prompt 3): a "Filter (n)" button after the search opens a bottom sheet with
+// The sheet: a "Filter (n)" button after the search opens a bottom sheet with
 // one group of chips per dropdown of the bar, date presets, and the bar's quick-flag buttons
 // ([data-flag]) as on/off chips; "Show" applies them all at once. It is built from the bar, so
 // the bar stays the one place where filters are defined. CSS shows the button on phones, and on
