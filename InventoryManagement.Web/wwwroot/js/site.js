@@ -449,7 +449,7 @@ function changePageSize(size) {
 document.addEventListener('click', function (e) {
     const row = e.target.closest('tr[data-href]');
     if (!row || e.button !== 0) return;
-    if (e.target.closest('a, button, input, select, textarea, label, [data-no-row-link]')) return;
+    if (e.target.closest('a, button, input, select, textarea, label, [data-no-row-link], [data-image-preview]')) return;
     if (String(window.getSelection ? window.getSelection() : '').length) return;
     if (e.ctrlKey || e.metaKey) window.open(row.dataset.href, '_blank');
     else window.location.href = row.dataset.href;
@@ -908,5 +908,65 @@ document.addEventListener('click', async function (e) {
             setTimeout(function () { el.textContent = shown; }, duration + 400);   // in case frames stop (tab hidden mid-way)
         });
     });
+})();
+
+/**
+ * A list thumbnail marked [data-image-preview] (data-image = the original, data-title): hovering
+ * shows a larger preview beside it (mouse only), clicking or Enter opens the photo in the image
+ * modal instead of the row's page.
+ */
+(function () {
+    let peek = null, timer = null;
+    const canHover = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    function hide() {
+        clearTimeout(timer);
+        if (peek) peek.classList.remove('show');
+    }
+    function show(el) {
+        if (!peek) {
+            peek = document.createElement('div');
+            peek.className = 'ip-img-peek';
+            peek.setAttribute('aria-hidden', 'true');
+            peek.innerHTML = '<img alt="">';
+            document.body.appendChild(peek);
+        }
+        const img = peek.firstChild;
+        img.src = thumbUrl(el.dataset.image, 480);
+        const r = el.getBoundingClientRect(), size = 264, gap = 12;
+        let left = r.right + gap, top = r.top + r.height / 2 - size / 2;
+        if (left + size > window.innerWidth - 8) left = r.left - gap - size;
+        top = Math.max(8, Math.min(top, window.innerHeight - size - 8));
+        peek.style.left = left + 'px';
+        peek.style.top = top + 'px';
+        peek.classList.add('show');
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        if (!canHover) return;
+        const el = e.target.closest('[data-image-preview]');
+        if (!el || el.contains(e.relatedTarget)) return;
+        clearTimeout(timer);
+        timer = setTimeout(function () { show(el); }, 180);
+    });
+    document.addEventListener('mouseout', function (e) {
+        const el = e.target.closest('[data-image-preview]');
+        if (el && !el.contains(e.relatedTarget)) hide();
+    });
+    window.addEventListener('scroll', hide, true);
+    document.addEventListener('click', function (e) {
+        const el = e.target.closest('[data-image-preview]');
+        if (!el) return;
+        hide();
+        showImageModal(el.dataset.image, el.dataset.title);
+    });
+    document.addEventListener('keydown', function (e) {
+        const el = e.target.closest && e.target.closest('[data-image-preview]');
+        if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showImageModal(el.dataset.image, el.dataset.title); }
+    });
+    // Keyboard users reach the thumbnail too.
+    function focusable() { document.querySelectorAll('[data-image-preview]:not([tabindex])').forEach(function (el) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', t('View image')); }); }
+    document.addEventListener('DOMContentLoaded', focusable);
+    document.addEventListener('listnav:loaded', focusable);
 })();
 

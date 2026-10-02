@@ -1418,5 +1418,7 @@
   "At least one digit": "Ən azı bir rəqəm",
   "At least {0} characters, with an uppercase letter, a lowercase letter and a digit. Choose a password you do not use for other services.": "Ən azı {0} simvol; tərkibində böyük hərf, kiçik hərf və rəqəm olmalıdır. Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin.",
   "All notifications have been read": "Bütün bildirişlər oxunub",
-  "There are no unread notifications.": "Oxunmamış bildiriş yoxdur."
+  "There are no unread notifications.": "Oxunmamış bildiriş yoxdur.",
+  "{0} found": "{0} nəticə tapıldı",
+  "View image": "Şəkli göstər"
 }

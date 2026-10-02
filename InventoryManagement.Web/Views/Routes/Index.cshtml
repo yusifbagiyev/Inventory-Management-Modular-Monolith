@@ -41,6 +41,10 @@
         <div>
             <h1>@L["Routes"]</h1>
             <div class="ip-sub ip-num" id="routesSummary">
+                @if (hasFilters)
+                {
+                    <strong class="ip-found">@L["{0} found", Model.TotalCount]</strong><span> · </span>
+                }
                 @if (curStart.HasValue || curEnd.HasValue)
                 {
                     <span>@(curStart?.ToString("dd.MM.yyyy")) – @(curEnd?.ToString("dd.MM.yyyy")) · </span>

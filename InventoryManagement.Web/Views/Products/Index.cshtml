@@ -32,6 +32,10 @@
             @if (counts != null)
             {
                 <div class="ip-sub ip-num" id="productsCounts">
+                    @if (hasFilters)
+                    {
+                        <strong class="ip-found">@L["{0} found", Model.TotalCount]</strong><span> · </span>
+                    }
                     @L["{0} products", counts.Total] · @L["{0} active", counts.Active] · @L["{0} not working", counts.NotWorking]
                 </div>
             }
@@ -137,7 +141,8 @@
                         {
                             <tr data-href="@Url.Action("Details", new { id = product.Id })">
                                 <td class="thumb">
-                                    <span class="ip-thumb">
+                                    <span class="ip-thumb" @(string.IsNullOrEmpty(product.ImageUrl) ? "" : "data-image-preview")
+                                          data-image="@product.FullImageUrl" data-title="@product.Model">
                                         @if (!string.IsNullOrEmpty(product.ImageUrl))
                                         {
                                             <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(product.FullImageUrl)" alt="" loading="lazy" />
