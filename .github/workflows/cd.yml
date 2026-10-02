@@ -3,7 +3,9 @@ name: CD
 # After CI passes on master: build the image once on GitHub, push it to ghcr.io, then deploy it on
 # the production server through the self-hosted runner there (deploy/deploy.sh).
 # The image is always built and pushed (harmless, and the cut-over needs it on the server first);
-# the deploy step stays off until the repository variable CD_ENABLED is 'true' - see deploy/CD.md.
+# the deploy step stays off until the repository variable CD_ENABLED is 'true'.
+# Only pushes to this repository build and deploy: CI runs of pull requests (forks included) never
+# reach the self-hosted runner.
 #
 # Rollback: Actions -> CD -> Run workflow, with image_tag set to an earlier tag (sha-<commit>).
 
@@ -32,7 +34,8 @@ jobs:
     if: >-
       !inputs.image_tag &&
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master' ||
-       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26.04 from 2026-10-19; change deliberately
     permissions:
       contents: read
