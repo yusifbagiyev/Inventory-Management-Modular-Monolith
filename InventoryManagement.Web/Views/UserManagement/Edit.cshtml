@@ -74,7 +74,7 @@
             <section class="ip-form-section">
                 <h2>@L["Role"]</h2>
                 <div class="d-flex flex-column">
-                    @foreach (var (role, hint) in new[] { ("User", "The role's permissions, plus those granted below."), ("Admin", "Every page and action; permissions are not needed.") })
+                    @foreach (var (role, hint) in new[] { ("User", "The role's permissions, plus those granted below."), ("Admin", "All pages and actions; no permissions need to be granted.") })
                     {
                         <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
                             <input type="radio" class="ip-check" name="SelectedRoles" value="@role" id="role_@role"

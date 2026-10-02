@@ -54,7 +54,7 @@ namespace ApprovalService.Application.Features.Commands
                 // Someone holding both the approval-level permission and approval.decide would
                 // otherwise have the direct permission in effect, with nobody else involved.
                 if (approvalRequest.RequestedById == request.UserId && !request.ApproverIsAdmin)
-                    throw new InsufficientPermissionsException("You cannot approve your own request. Another approver has to decide it.");
+                    throw new InsufficientPermissionsException("You cannot approve your own request. The decision must be made by another approver.");
 
                 approvalRequest.Approve(request.UserId, request.UserName);
                 await _repository.UpdateAsync(approvalRequest, cancellationToken);

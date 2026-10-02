@@ -175,7 +175,7 @@ namespace InventoryManagement.Web.Controllers
                 // One answer for every failure (unknown user, wrong password, locked account), so
                 // it cannot be used to find usernames.
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
-                    "Invalid username or password. After repeated wrong attempts, sign-in is paused for 15 minutes."));
+                    "Invalid username or password. After repeated failed attempts, sign-in is suspended for 15 minutes."));
                 return View(Prepare(model));
             }
         }

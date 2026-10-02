@@ -68,7 +68,7 @@ window.LiveUpdates = (function () {
                 if (Date.now() < ownSaveUntil) return;
                 showNotice(describe(w, update) + ' ' + (isDeletion(w, update)
                     ? t('Saving is no longer possible.')
-                    : t('Reload to see the latest version; saving now may overwrite it.')));
+                    : t('Please reload the page to see the latest version; saving now may overwrite it.')));
             } else {
                 schedule(w, update);
             }

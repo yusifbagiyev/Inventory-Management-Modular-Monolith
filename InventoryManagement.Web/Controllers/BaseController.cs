@@ -59,7 +59,7 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                return Failure<T>(Tr("The record was changed by someone else. Reload and try again."));
+                return Failure<T>(Tr("The record has been changed by another user. Please reload the page and try again."));
             }
             catch (Exception ex) when (ex is NotFoundException or DuplicateEntityException or ConflictException
                                           or InsufficientPermissionsException or InvalidOperationException

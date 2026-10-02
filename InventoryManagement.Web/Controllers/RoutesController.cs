@@ -212,13 +212,13 @@ namespace InventoryManagement.Web.Controllers
         {
             var route = await _mediator.Send(new GetRouteByIdQuery(id));
             if (route == null || !route.IsCompleted || route.RouteType != RouteService.Domain.Enums.RouteType.Transfer)
-                return Json(new { isSuccess = false, message = Tr("Only a completed transfer has a WhatsApp message.") });
+                return Json(new { isSuccess = false, message = Tr("WhatsApp messages are sent only for completed transfers.") });
             if (!whatsApp.Enabled)
                 return Json(new { isSuccess = false, message = Tr("WhatsApp is not configured.") });
             // Only a failed message: sending one that went out (or is waiting) again would let
             // anyone with route.complete flood the group, and WaSender bans flooding accounts.
             if (route.WhatsAppStatus != SharedServices.Contracts.WhatsAppStatus.Failed)
-                return Json(new { isSuccess = false, message = Tr("Only a message that failed can be sent again.") });
+                return Json(new { isSuccess = false, message = Tr("Only a message that failed to send can be resent.") });
 
             await status.SetAsync(id, SharedServices.Contracts.WhatsAppStatus.Queued, null);
             await whatsApp.QueueRouteCompletedAsync(new SharedServices.Events.RouteCompletedEvent

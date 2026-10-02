@@ -375,7 +375,7 @@ namespace IdentityService.Infrastructure.Services
             var check = await _signInManager.CheckPasswordSignInAsync(user, currentPassword, lockoutOnFailure: true);
             if (!check.Succeeded)
                 return (false, check.IsLockedOut
-                    ? "Too many wrong attempts. Try again in 15 minutes."
+                    ? "Too many failed attempts. Please try again in 15 minutes."
                     : "The current password is incorrect.");
 
             var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);

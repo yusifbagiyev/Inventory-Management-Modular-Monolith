@@ -38,7 +38,7 @@
     <div class="ip-banner ip-banner-danger mb-4">
         <i class="fa-solid fa-trash-can"></i>
         <span class="flex-grow-1">
-            @L["Deleted on {0} by {1}. This is the product as it was at that moment.",
+            @L["Deleted on {0} by {1}. The product is shown as it was at the time of deletion.",
                 Model.DeletedAt?.ToString("dd.MM.yyyy HH:mm") ?? "-", Or(Model.DeletedBy, L["Unknown"].Value)]
         </span>
     </div>
