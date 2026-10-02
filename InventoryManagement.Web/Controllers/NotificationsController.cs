@@ -1,8 +1,10 @@
+using InventoryManagement.Web.Extensions;
 using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
 {
@@ -17,6 +19,22 @@ namespace InventoryManagement.Web.Controllers
             _notificationService = notificationService;
         }
 
+        /// <summary>
+        /// The type filter offers every kind of notification this user can receive (who gets which is
+        /// decided in NotificationDispatcher), not only the kinds already in their list, plus any older
+        /// kind they still have.
+        /// </summary>
+        private List<string> FilterTypes(IEnumerable<string> held)
+        {
+            var types = new List<string>();
+            if (User.HasPermission(AllPermissions.ProductView)) types.Add("ProductUpdate");
+            if (User.HasPermission(AllPermissions.RouteView)) types.Add("RouteUpdate");
+            if (User.HasPermission(AllPermissions.ApprovalDecide)) types.Add("ApprovalRequest");
+            types.Add("ApprovalResponse");
+            types.AddRange(held.Where(t => !string.IsNullOrEmpty(t) && !types.Contains(t)));
+            return types;
+        }
+
         /// <summary>Paged, newest first; the tabs (all / unread) and the type filter are query parameters (ListNav updates the list in place).</summary>
         public async Task<IActionResult> Index(string? status = null, string? type = null, int pageNumber = 1, int pageSize = 30)
         {
@@ -24,6 +42,7 @@ namespace InventoryManagement.Web.Controllers
             {
                 pageSize = Math.Clamp(pageSize, 1, 100);
                 var model = await _notificationService.GetPageAsync(status == "unread", string.IsNullOrEmpty(type) ? null : type, Math.Max(1, pageNumber), pageSize);
+                model.Types = FilterTypes(model.Types);
 
                 ViewBag.StatusFilter = status;
                 ViewBag.TypeFilter = type;
