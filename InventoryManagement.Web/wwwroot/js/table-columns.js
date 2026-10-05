@@ -1,7 +1,7 @@
 // Sorting and per-column filters in table headers, on the server for paged lists and in the page otherwise
 //
 // A header opts in with data-sort="key" and/or data-filter="text|list|date|range" (+ data-param, data-options,
-// data-param-from/to, data-param-min/max). Tables marked data-columns="client" sort and filter their own rows.
+// data-param-from/to, data-param-min/max). Tables marked data-column-filters="client" sort and filter their own rows.
 window.TableColumns = (function () {
     'use strict';
 
@@ -29,7 +29,7 @@ window.TableColumns = (function () {
 
     function isClient(th) {
         const table = th.closest('table');
-        return !!table && table.dataset.columns === 'client';
+        return !!table && table.dataset.columnFilters === 'client';
     }
 
     function dataTableOf(table) {
@@ -79,10 +79,18 @@ window.TableColumns = (function () {
             th.classList.add('ip-th-cell');
             // Own listener, so a DataTables header does not sort when its filter opens
             const filterButton = wrap.querySelector('[data-th-filter]');
-            if (filterButton) filterButton.addEventListener('click', function (e) {
-                e.stopPropagation();
-                if (panel && panelHeader === th) close(); else open(th, filterButton);
-            });
+            if (filterButton) {
+                filterButton.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (panel && panelHeader === th) close(); else open(th, filterButton);
+                });
+                // DataTables sorts on Enter in a header, so the key stays with the button
+                ['keydown', 'keypress'].forEach(function (type) {
+                    filterButton.addEventListener(type, function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+                    });
+                });
+            }
         });
         fresh.forEach(function (th) { if (isClient(th)) restore(th); });
         syncHeaders();
@@ -226,10 +234,12 @@ window.TableColumns = (function () {
 
     // DataTables tables run the same filters through their search hook
     if (window.jQuery && $.fn.dataTable) {
+        // Read through the public API, since the settings object's own fields change between DataTables versions
         $.fn.dataTable.ext.search.push(function (settings, data, index) {
-            const table = settings.nTable;
-            if (table.dataset.columns !== 'client') return true;
-            const row = settings.aoData[index] && settings.aoData[index].nTr;
+            const api = new $.fn.dataTable.Api(settings);
+            const table = api.table().node();
+            if (!table || table.dataset.columnFilters !== 'client') return true;
+            const row = api.row(index).node();
             return !row || rowMatches(row, table);
         });
     }
@@ -402,7 +412,7 @@ window.TableColumns = (function () {
     }
 
     function clearAll() {
-        document.querySelectorAll('table[data-columns="client"] th[data-decorated]').forEach(function (th) {
+        document.querySelectorAll('table[data-column-filters="client"] th[data-decorated]').forEach(function (th) {
             remember(th, { values: null });
             if (clientFilters.has(th)) { th._clientValues = []; applyClient(th, null); }
         });
