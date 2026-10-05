@@ -1435,5 +1435,7 @@
   "Maximum": "Максимум",
   "No values": "Нет значений",
   "The image no longer exists": "Изображение больше не существует",
-  "Change or clear the filters to see more.": "Измените или сбросьте фильтры, чтобы увидеть больше."
+  "Change or clear the filters to see more.": "Измените или сбросьте фильтры, чтобы увидеть больше.",
+  "Sent": "Отправлено",
+  "WhatsApp": "WhatsApp"
 }

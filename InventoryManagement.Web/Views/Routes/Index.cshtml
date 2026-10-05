@@ -342,80 +342,12 @@
             sheet: true
         });
 
-        // Several categories or types picked in a header show in the bar's single select as one joined choice
-        const SEVERAL = '__several';
-        const barLists = { categoryName: '#categoryFilter', routeType: '#typeFilter' };
-        // Only the headers set these, so the bar has no control to rebuild them from
-        const headerOnly = ['sort', 'dir', 'product', 'fromDepartment', 'toDepartment', 'whatsApp'];
-        let resetting = false;
-
-        function showSeveral() {
-            const params = new URLSearchParams(window.location.search);
-            Object.entries(barLists).forEach(function ([param, selector]) {
-                const select = document.querySelector(selector);
-                if (!select) return;
-                select.querySelectorAll('option[data-several]').forEach(function (o) { o.remove(); });
-                const values = params.getAll(param).filter(Boolean);
-                if (values.length < 2) return;
-                const labels = values.map(function (v) {
-                    const match = Array.from(select.options).find(function (o) { return o.value === v; });
-                    return match ? match.textContent.trim() : v;
-                });
-                const option = new Option(labels.join(', '), SEVERAL, true, true);
-                option.dataset.several = '';
-                select.appendChild(option);
-                select.value = SEVERAL;
-            });
-        }
-
-        // The bar builds its query from its own controls, so its changes carry over the sort and the header filters
-        const listGo = ListNav.go;
-        ListNav.go = function (url, options) {
-            const target = new URL(url, window.location.href);
-            const p = target.searchParams;
-            const current = new URLSearchParams(window.location.search);
-            if (!resetting && target.pathname === window.location.pathname) {
-                // Header changes drop the page number while the bar starts again from page 1, which tells them apart
-                if (p.get('pageNumber') === '1') {
-                    headerOnly.forEach(function (name) {
-                        if (!p.has(name)) current.getAll(name).forEach(function (v) { p.append(name, v); });
-                    });
-                }
-                Object.keys(barLists).forEach(function (name) {
-                    if (p.get(name) !== SEVERAL) return;
-                    p.delete(name);
-                    current.getAll(name).forEach(function (v) { p.append(name, v); });
-                });
-                url = target.pathname + '?' + p.toString();
-            }
-            return listGo.call(ListNav, url, options);
-        };
-
-        $(function () {
-            showSeveral();
-            // Registered after the bar's own handler, which first restores the selects from the URL
-            document.addEventListener('listnav:loaded', showSeveral);
-        });
-
-        // The sheet's reset clears everything, the headers' filters included
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('#filterSheet [data-filter-reset]')) return;
-            resetting = true;
-            setTimeout(function () { resetting = false; });
-        }, true);
-
         // Names used by the markup's onclick and onchange handlers
         function applyRouteFilters() { routeFilters.apply(); }
-        // Several categories have no single pair to check against the department, so they are kept as they are
-        function onDepartmentChange() {
-            if ($('#categoryFilter').val() === SEVERAL) routeFilters.apply(); else routeFilters.onDepartmentChange();
-        }
+        function onDepartmentChange() { routeFilters.onDepartmentChange(); }
         function onCategoryChange() { routeFilters.onCategoryChange(); }
         function removeRouteFilter(key) { routeFilters.remove(key); }
-        function resetFilters() {
-            resetting = true;
-            try { routeFilters.reset(); } finally { resetting = false; }
-        }
+        function resetFilters() { routeFilters.reset(); }
 
         function completeRoute(id) {
             confirmAction({
