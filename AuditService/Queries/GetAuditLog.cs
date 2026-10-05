@@ -1,3 +1,4 @@
+using SharedServices.Persistence;
 using System.Text.Json;
 using AuditService.Data;
 using MediatR;
@@ -79,14 +80,13 @@ namespace AuditService.Queries
                 rows = rows.Where(e => e.At <= request.To.Value);
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
-                // Escape the LIKE wildcards so the search matches the text literally
-                var pattern = "%" + request.Search.Trim().Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_") + "%";
+                var pattern = SearchSql.Contains(request.Search);
                 rows = rows.Where(e =>
-                    EF.Functions.ILike(e.Label ?? "", pattern) ||
-                    EF.Functions.ILike(e.UserName ?? "", pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(e.Label ?? ""), pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(e.UserName ?? ""), pattern) ||
                     EF.Functions.ILike(e.Action, pattern) ||
                     EF.Functions.ILike(e.EntityId ?? "", pattern) ||
-                    EF.Functions.ILike(e.Changes, pattern));
+                    EF.Functions.ILike(SearchSql.Fold(e.Changes), pattern));
             }
 
             var total = await rows.Select(e => e.CorrelationId).Distinct().CountAsync(cancellationToken);

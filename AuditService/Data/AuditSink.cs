@@ -1,4 +1,6 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Unicode;
 using Microsoft.Extensions.DependencyInjection;
 using SharedServices.Auditing;
 
@@ -7,7 +9,11 @@ namespace AuditService.Data
     /// <summary>Saves audit records on the request's connection, inside its transaction.</summary>
     public sealed class AuditSink : IAuditSink
     {
-        private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+        // Letters are stored as they are rather than escaped, so the log can be searched for them
+        private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+        {
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
         private readonly IServiceProvider _services;
 
         // Resolved lazily because module DbContexts ask for the sink while their options are built

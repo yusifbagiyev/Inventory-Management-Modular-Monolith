@@ -15,6 +15,7 @@ namespace RouteService.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.AddSearchFold();
             modelBuilder.HasDefaultSchema(Schema);
 
             modelBuilder.Entity<InventoryRoute>(entity =>

@@ -1,3 +1,4 @@
+using SharedServices.Persistence;
 using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
@@ -54,10 +55,10 @@ namespace ProductService.Infrastructure.Repositories
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim();
-                // ILIKE doesn't fold Azerbaijani letters, so the final match happens in memory
+                // The database match folds Azerbaijani letters, and the same rule runs again in memory
                 var broadQuery = query.Where(r =>
-                    EF.Functions.ILike(r.Name, $"%{search}%") ||
-                    EF.Functions.ILike(r.Description, $"%{search}%")
+                    EF.Functions.ILike(SearchSql.Fold(r.Name), SearchSql.Contains(search)) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.Description), SearchSql.Contains(search))
                 );
 
                 var allFilteredItems = await broadQuery

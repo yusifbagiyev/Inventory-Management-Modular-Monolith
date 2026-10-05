@@ -19,6 +19,7 @@ namespace ProductService.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.AddSearchFold();
             modelBuilder.HasDefaultSchema(Schema);
 
             modelBuilder.Entity<Product>(entity =>

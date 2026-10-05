@@ -1,3 +1,4 @@
+using SharedServices.Persistence;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Common;
@@ -101,25 +102,25 @@ namespace ProductService.Infrastructure.Repositories
 
             if (terms.Length > 0 || filter?.HasText == true)
             {
-                // ILIKE doesn't fold Azerbaijani letters, so the database only narrows the rows down
+                // Every word has to match some field, with Azerbaijani letters folded in the database
                 var broadQuery = query;
                 foreach (var term in terms)
                 {
                     var t = term;
                     broadQuery = broadQuery.Where(r =>
                         EF.Functions.ILike(r.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(r.Vendor, $"%{t}%") ||
-                        EF.Functions.ILike(r.Model, $"%{t}%") ||
-                        (r.Category != null && EF.Functions.ILike(r.Category.Name, $"%{t}%")) ||
-                        (r.Department != null && EF.Functions.ILike(r.Department.Name, $"%{t}%")) ||
-                        EF.Functions.ILike(r.Description ?? "", $"%{t}%") ||
-                        EF.Functions.ILike(r.Worker ?? "", $"%{t}%")
+                        EF.Functions.ILike(SearchSql.Fold(r.Vendor), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.Model), SearchSql.Contains(t)) ||
+                        (r.Category != null && EF.Functions.ILike(SearchSql.Fold(r.Category.Name), SearchSql.Contains(t))) ||
+                        (r.Department != null && EF.Functions.ILike(SearchSql.Fold(r.Department.Name), SearchSql.Contains(t))) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.Description ?? ""), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.Worker ?? ""), SearchSql.Contains(t))
                     );
                 }
 
                 var allFilteredItems = await Order(broadQuery, filter, NewestFirst).ToListAsync(cancellationToken);
 
-                // Then match every word in memory with Azerbaijani folding
+                // The same rule again in memory, together with the column text filters
                 items = allFilteredItems.Where(r => MatchesText(r, filter) && terms.All(t =>
                     SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), t) ||
                     SearchHelper.ContainsAzerbaijani(r.Vendor, t) ||
@@ -210,13 +211,13 @@ namespace ProductService.Infrastructure.Repositories
             if (!string.IsNullOrWhiteSpace(filter.Product))
             {
                 var product = filter.Product.Trim();
-                query = query.Where(p => EF.Functions.ILike(p.Model, $"%{product}%") || EF.Functions.ILike(p.Vendor, $"%{product}%"));
+                query = query.Where(p => EF.Functions.ILike(SearchSql.Fold(p.Model), SearchSql.Contains(product)) || EF.Functions.ILike(SearchSql.Fold(p.Vendor), SearchSql.Contains(product)));
             }
 
             if (!string.IsNullOrWhiteSpace(filter.Worker))
             {
                 var worker = filter.Worker.Trim();
-                query = query.Where(p => EF.Functions.ILike(p.Worker ?? "", $"%{worker}%"));
+                query = query.Where(p => EF.Functions.ILike(SearchSql.Fold(p.Worker ?? ""), SearchSql.Contains(worker)));
             }
 
             return query;
@@ -400,11 +401,11 @@ namespace ProductService.Infrastructure.Repositories
                     var t = term;
                     query = query.Where(p =>
                         EF.Functions.ILike(p.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(p.Model, $"%{t}%") ||
-                        EF.Functions.ILike(p.Vendor, $"%{t}%") ||
-                        EF.Functions.ILike(p.Worker ?? "", $"%{t}%") ||
-                        EF.Functions.ILike(p.DeletedBy ?? "", $"%{t}%") ||
-                        (p.Department != null && EF.Functions.ILike(p.Department.Name, $"%{t}%")));
+                        EF.Functions.ILike(SearchSql.Fold(p.Model), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(p.Vendor), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(p.Worker ?? ""), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(p.DeletedBy ?? ""), SearchSql.Contains(t)) ||
+                        (p.Department != null && EF.Functions.ILike(SearchSql.Fold(p.Department.Name), SearchSql.Contains(t))));
                 }
             }
             query = ApplyColumnFilters(query, filter);

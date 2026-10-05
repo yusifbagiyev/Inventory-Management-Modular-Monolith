@@ -1,3 +1,4 @@
+using SharedServices.Persistence;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RouteService.Domain.Common;
@@ -152,7 +153,7 @@ namespace RouteService.Infrastructure.Repositories
 
             if (tokens.Length > 0 || productWords.Length > 0)
             {
-                // ILIKE doesn't fold Azerbaijani letters, so the database only does a rough first pass
+                // Every word has to match some field, with Azerbaijani letters folded in the database
                 var broadQuery = query;
 
                 // Each word must match some field, since the words of a phrase often sit in different columns
@@ -161,13 +162,13 @@ namespace RouteService.Infrastructure.Repositories
                     var t = word;
                     broadQuery = broadQuery.Where(r =>
                         EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(r.ProductSnapshot.CategoryName, $"%{t}%") ||
-                        EF.Functions.ILike(r.ProductSnapshot.Vendor, $"%{t}%") ||
-                        EF.Functions.ILike(r.ProductSnapshot.Model, $"%{t}%") ||
-                        (r.FromDepartmentName != null && EF.Functions.ILike(r.FromDepartmentName, $"%{t}%")) ||
-                        EF.Functions.ILike(r.ToDepartmentName, $"%{t}%") ||
-                        (r.FromWorker != null && EF.Functions.ILike(r.FromWorker, $"%{t}%")) ||
-                        (r.ToWorker != null && EF.Functions.ILike(r.ToWorker, $"%{t}%"))
+                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.CategoryName), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Vendor), SearchSql.Contains(t)) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), SearchSql.Contains(t)) ||
+                        (r.FromDepartmentName != null && EF.Functions.ILike(SearchSql.Fold(r.FromDepartmentName), SearchSql.Contains(t))) ||
+                        EF.Functions.ILike(SearchSql.Fold(r.ToDepartmentName), SearchSql.Contains(t)) ||
+                        (r.FromWorker != null && EF.Functions.ILike(SearchSql.Fold(r.FromWorker), SearchSql.Contains(t))) ||
+                        (r.ToWorker != null && EF.Functions.ILike(SearchSql.Fold(r.ToWorker), SearchSql.Contains(t)))
                     );
                 }
 
@@ -177,12 +178,12 @@ namespace RouteService.Infrastructure.Repositories
                     var t = word;
                     broadQuery = broadQuery.Where(r =>
                         EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(r.ProductSnapshot.Model, $"%{t}%"));
+                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), SearchSql.Contains(t)));
                 }
 
                 var allFilteredItems = await Sort(broadQuery, filter).ToListAsync(cancellationToken);
 
-                // Then match every word in memory with Azerbaijani folding
+                // The same rule again in memory, together with the column text filters
                 items = allFilteredItems.Where(r =>
                 {
                     var code = r.ProductSnapshot.InventoryCode.ToString();

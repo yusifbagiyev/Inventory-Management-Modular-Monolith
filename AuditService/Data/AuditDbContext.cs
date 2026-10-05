@@ -14,6 +14,7 @@ namespace AuditService.Data
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+            builder.AddSearchFold();
             builder.HasDefaultSchema(Schema);
             builder.Entity<AuditEntry>(entity =>
             {
