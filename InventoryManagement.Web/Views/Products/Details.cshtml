@@ -143,25 +143,25 @@
         else
         {
             <div class="ip-table-wrap">
-                <table class="ip-table">
+                <table class="ip-table" id="productTransfersTable" data-columns="client">
                     <thead>
                         <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["From"]</th>
+                            <th data-sort="date" data-sort-first="desc" data-filter="date">@L["Date"]</th>
+                            <th data-sort="from" data-filter="list">@L["From"]</th>
                             <th></th>
-                            <th>@L["To"]</th>
-                            <th>@L["Status"]</th>
+                            <th data-sort="to" data-filter="list">@L["To"]</th>
+                            <th data-sort="status" data-filter="list">@L["Status"]</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var route in transfers)
                         {
                             <tr data-href="@Url.Action("Details", "Routes", new { id = route.Id })">
-                                <td class="date ip-num text-nowrap">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
-                                <td class="meta route-from">@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
+                                <td class="date ip-num text-nowrap" data-order="@route.CreatedAt.ToString("yyyy-MM-dd HH:mm")">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
+                                <td class="meta route-from" data-filter-value="@(route.FromDepartmentName ?? "-")" data-filter-label="@(route.FromDepartmentName ?? "-")">@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
                                 <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
-                                <td class="meta route-to">@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
-                                <td class="state">
+                                <td class="meta route-to" data-filter-value="@route.ToDepartmentName" data-filter-label="@route.ToDepartmentName">@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
+                                <td class="state" data-filter-value="@(route.IsCompleted ? "completed" : "pending")">
                                     @if (route.IsCompleted)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Completed"]</span>
@@ -245,12 +245,38 @@
             });
         }
 
+        let transfersTable = null;
+        let transfersSnapshot = '';
+
+        // Only read from untouched rows, because header sorting reorders the rows of a table in use
+        function transfersText(table) {
+            return table ? Array.from(table.tBodies[0].rows, row => row.dataset.href + ' ' + row.textContent.replace(/\s+/g, ' ')).join('\n') : '';
+        }
+
+        function rememberTransfers() {
+            transfersTable = document.getElementById('productTransfersTable');
+            transfersSnapshot = transfersText(transfersTable);
+        }
+
+        rememberTransfers();
+
         // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
             entities: ['product', 'route'],
             ids: { product: @Model.Id },
             regions: ['#detailsRegion'],
-            label: 'product'
+            label: 'product',
+            // An open header filter belongs to the table it was opened on
+            isEditing: () => !!document.querySelector('.ip-colfilter'),
+            afterRefresh() {
+                // Any transfer anywhere refreshes this page, so unchanged transfers keep their header sort and filters
+                const fresh = document.getElementById('productTransfersTable');
+                if (fresh && transfersTable && transfersText(fresh) === transfersSnapshot) fresh.replaceWith(transfersTable);
+                else rememberTransfers();
+            }
         });
     </script>
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
 }

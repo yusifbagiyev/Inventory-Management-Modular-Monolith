@@ -68,13 +68,13 @@
         @if (products.Any())
         {
             <div class="ip-table-wrap">
-                <table class="ip-table" id="categoryProductsTable">
+                <table class="ip-table" id="categoryProductsTable" data-columns="client">
                     <thead>
                         <tr>
-                            <th>@L["Code"]</th>
-                            <th>@L["Product"]</th>
-                            <th>@L["Department and worker"]</th>
-                            <th>@L["State"]</th>
+                            <th data-filter="text">@L["Code"]</th>
+                            <th data-filter="text">@L["Product"]</th>
+                            <th data-filter="list">@L["Department and worker"]</th>
+                            <th data-filter="list">@L["State"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -83,19 +83,19 @@
                         {
                             <tr data-href="@(canProducts ? Url.Action("Details", "Products", new { id = product.Id }) : null)">
                                 <td class="code ip-mono" data-order="@product.InventoryCode">@product.InventoryCode</td>
-                                <td class="title">
+                                <td class="title" data-filter-value="@($"{product.Model} {product.Vendor}".Trim())">
                                     <div class="cell-text">
                                         <span class="cell-title">@(product.Model ?? L["N/A"].Value)</span>
                                         <span class="cell-sub">@product.Vendor</span>
                                     </div>
                                 </td>
-                                <td class="meta">
+                                <td class="meta" data-filter-value="@product.DepartmentName" data-filter-label="@product.DepartmentName">
                                     <div class="cell-text">
                                         <span class="cell-title fw-normal">@product.DepartmentName</span>
                                         <span class="cell-sub">@(string.IsNullOrEmpty(product.Worker) ? L["Unassigned"].Value : product.Worker)</span>
                                     </div>
                                 </td>
-                                <td class="state">
+                                <td class="state" data-filter-value="@(product.IsWorking ? "working" : "not-working")">
                                     @if (product.IsWorking)
                                     {
                                         <span class="ip-badge ip-badge-success">@L["Working"]</span>
@@ -134,17 +134,28 @@
 
 @section Scripts {
     <script>
+        const productsTable = '#categoryProductsTable';
+        let keptTable = null;
+
         $(document).ready(initProductsTable);
 
-        // Runs on load and again after live-updates.js swaps in a fresh table
+        // Runs on load and when a live refresh brings the first products
         function initProductsTable() {
-            $('#categoryProductsTable').DataTable({
+            const table = document.querySelector(productsTable);
+            if (!table) return;
+            // Header filter buttons go in before DataTables wraps the header content
+            TableColumns.decorate();
+            // DataTables sorts on Enter anywhere in a header cell, which would swallow the filter button's own Enter
+            $(table).find('.ip-th-filter').on('keypress', e => e.stopPropagation());
+            // DataTables reads data-columns as its own columns option, so the header filter marker waits until it has started
+            delete table.dataset.columns;
+            $(table).DataTable({
                 pageLength: 10,
                 responsive: true,
                 columnDefs: [{ targets: -1, orderable: false, searchable: false }]
             });
+            table.dataset.columns = 'client';
         }
-
 
         // Other users' changes refresh the page in place, and a deletion shows a notice
         LiveUpdates.watch({
@@ -152,10 +163,25 @@
             ids: { category: @Model.Id },
             regions: ['#detailsRegion'],
             label: 'category',
+            // An open header filter belongs to the table it was opened on
+            isEditing: () => !!document.querySelector('.ip-colfilter'),
             beforeRefresh() {
-                if ($.fn.DataTable.isDataTable('#categoryProductsTable')) $('#categoryProductsTable').DataTable().destroy();
+                keptTable = $.fn.DataTable.isDataTable(productsTable) ? $(productsTable).DataTable() : null;
             },
-            afterRefresh: initProductsTable
+            afterRefresh() {
+                const kept = keptTable;
+                keptTable = null;
+                const fresh = document.querySelector(productsTable);
+                if (kept && fresh) {
+                    // The current table takes the fresh rows, so its header filters, sorting, search and page stay
+                    const rows = Array.from(fresh.tBodies[0].rows);
+                    fresh.replaceWith(kept.table().container());
+                    kept.clear().rows.add(rows).draw(false);
+                    return;
+                }
+                if (kept) kept.destroy();
+                if (fresh) initProductsTable();
+            }
         });
     </script>
 }
