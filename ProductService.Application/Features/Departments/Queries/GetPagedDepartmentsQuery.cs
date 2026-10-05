@@ -8,7 +8,8 @@ namespace ProductService.Application.Features.Departments.Queries
     public record GetPagedDepartmentsQuery(
         int? pageNumber=1,
         int? pageSize=20,
-        string? search=null) : IRequest<PagedResultDto<DepartmentDto>>;
+        string? search=null,
+        CatalogListFilter? filter=null) : IRequest<PagedResultDto<DepartmentDto>>;
     public class  GetPagedDepartmentsQueryHandler : IRequestHandler<GetPagedDepartmentsQuery, PagedResultDto<DepartmentDto>>
     {
         private readonly IDepartmentRepository _departmentRepository;
@@ -19,6 +20,13 @@ namespace ProductService.Application.Features.Departments.Queries
 
         public async Task<PagedResultDto<DepartmentDto>> Handle(GetPagedDepartmentsQuery request, CancellationToken cancellationToken)
         {
+            // Column filters and sorts need every row's counts, which is cheap for a list of this size
+            if (request.filter != null)
+            {
+                var all = await (await _departmentRepository.GetAllAsync(cancellationToken)).ToDtosAsync(_departmentRepository, cancellationToken);
+                return CatalogListing.Page(all, request.search, request.filter, request.pageNumber ?? 1, request.pageSize ?? 20);
+            }
+
             var departments = await _departmentRepository.GetPagedAsync(
                 request.pageNumber ?? 1,
                 request.pageSize ?? 20,

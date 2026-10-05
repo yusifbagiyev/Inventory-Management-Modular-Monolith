@@ -60,15 +60,18 @@ window.DateRange = (function () {
         const opts = options || {};
 
         // The calendar is the only way to enter a range, the class keeps the field looking editable
-        input.readOnly = true;
-        input.classList.add('date-range-input');
+        if (!opts.inline) {
+            input.readOnly = true;
+            input.classList.add('date-range-input');
+        }
 
         const picker = new AirDatepicker(input, {
             locale: ({ az: localeAz, ru: localeRu })[document.documentElement.lang] || localeEn,
             range: true,
             multipleDatesSeparator: SEPARATOR,
-            autoClose: true,
-            buttons: ['clear'],
+            inline: !!opts.inline,
+            autoClose: !opts.inline,
+            buttons: opts.inline ? false : ['clear'],
             position: opts.position || 'bottom left',
             // Only real picks arrive here because set() and clear() are silent
             onSelect: function ({ date }) {
@@ -91,6 +94,12 @@ window.DateRange = (function () {
     function clear(target) {
         const picker = pickers.get(element(target));
         if (picker) picker.clear({ silent: true });
+    }
+
+    /** The picked dates, two for a complete range. */
+    function selected(target) {
+        const picker = pickers.get(element(target));
+        return picker ? picker.selectedDates.slice() : [];
     }
 
     function parseDay(text) {
@@ -119,5 +128,5 @@ window.DateRange = (function () {
         return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
     }
 
-    return { attach: attach, set: set, clear: clear, parse: parse, iso: iso, fromIso: fromIso };
+    return { attach: attach, set: set, clear: clear, selected: selected, parse: parse, iso: iso, fromIso: fromIso };
 })();

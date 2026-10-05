@@ -1029,3 +1029,39 @@ select option:disabled { color: var(--ip-text-3); }
 .ip-found { color: var(--ip-text-1); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .ip-img-peek { transition: none; } }
 
+/* Column headers that sort and filter (table-columns.js) */
+.ip-table th.ip-th-cell { padding-top: 8px; padding-bottom: 8px; }
+.ip-th { display: inline-flex; align-items: center; gap: 2px; }
+.ip-th-sort { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px; margin-left: -6px; border: 0; border-radius: var(--ip-radius-sm); background: transparent; color: inherit; font: inherit; font-weight: inherit; cursor: pointer; white-space: nowrap; }
+.ip-th-sort:hover, .ip-th-filter:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
+.ip-th-sort-icon { font-size: 10px; opacity: .45; }
+th.is-sorted .ip-th-sort { color: var(--ip-text-1); }
+th.is-sorted .ip-th-sort-icon { opacity: 1; }
+.ip-th-filter { position: relative; width: 24px; height: 24px; display: inline-grid; place-items: center; padding: 0; border: 0; border-radius: var(--ip-radius-sm); background: transparent; color: var(--ip-text-3); font-size: 10px; cursor: pointer; opacity: .6; }
+th:hover .ip-th-filter, .ip-th-filter:focus-visible, .ip-th-filter[aria-expanded="true"] { opacity: 1; }
+.ip-th-filter.is-active { opacity: 1; color: var(--ip-text-1); }
+.ip-th-filter.is-active::after { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ip-accent); }
+.ip-colfilter { position: absolute; z-index: 1070; width: 280px; background: var(--ip-surface); color: var(--ip-text-1); border: 1px solid var(--ip-border); border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); animation: ip-colfilter-in .14s ease-out; }
+.ip-colfilter:has([data-colfilter-calendar]) { width: auto; }
+.ip-colfilter-head { padding: 12px 14px 0; font-size: var(--ip-fs-sm); font-weight: 600; }
+.ip-colfilter-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px; }
+.ip-colfilter .ip-input-sm { height: 34px; font-size: var(--ip-fs-sm); }
+.ip-colfilter-list { max-height: 260px; overflow-y: auto; margin: 0 -6px; }
+.ip-colfilter-opt { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: var(--ip-radius-sm); font-size: var(--ip-fs-sm); cursor: pointer; }
+.ip-colfilter-opt:hover { background: var(--ip-surface-hover); }
+.ip-colfilter-opt input { flex: none; width: 16px; height: 16px; accent-color: var(--ip-accent); }
+.ip-colfilter-opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-colfilter-range { display: flex; align-items: center; gap: 8px; color: var(--ip-text-3); }
+.ip-colfilter [data-colfilter-calendar] .air-datepicker { border: 0; box-shadow: none; }
+.ip-colfilter-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid var(--ip-border); }
+.ip-colfilter-foot .ip-btn { min-width: 0; justify-content: center; }
+.ip-colfilter.is-sheet { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; border-radius: var(--ip-radius-xl) var(--ip-radius-xl) 0 0; padding-bottom: env(safe-area-inset-bottom); }
+.ip-colfilter-empty td { padding: 32px 0; text-align: center; color: var(--ip-text-3); }
+.ip-table tr.ip-empty-row td { padding: 0; border: 0; }
+.ip-table tbody tr.ip-empty-row:hover { background: transparent; }
+@media (max-width: 767.98px) { .ip-table tr.ip-empty-row { display: block; border-top: 0; } }
+@keyframes ip-colfilter-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .ip-colfilter { animation: none; } }
+
+/* A thumbnail whose file is gone, such as an old photo in the audit log */
+.ip-img-missing { width: 36px; height: 36px; display: inline-grid; place-items: center; border: 1px dashed var(--ip-border-strong); border-radius: var(--ip-radius-sm); color: var(--ip-text-3); font-size: 13px; vertical-align: middle; }

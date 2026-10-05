@@ -1429,5 +1429,11 @@
   "{0} action": "Действий: {0}",
   "{0} deleted product": "Удалённых товаров: {0}",
   "Enter the new worker to transfer within the same department.": "Для перемещения внутри того же отдела укажите нового сотрудника.",
-  "The product is already with this worker. Enter another worker or choose another department.": "Товар уже закреплён за этим сотрудником. Укажите другого сотрудника или выберите другой отдел."
+  "The product is already with this worker. Enter another worker or choose another department.": "Товар уже закреплён за этим сотрудником. Укажите другого сотрудника или выберите другой отдел.",
+  "Filter by {0}": "Фильтр: {0}",
+  "Minimum": "Минимум",
+  "Maximum": "Максимум",
+  "No values": "Нет значений",
+  "The image no longer exists": "Изображение больше не существует",
+  "Change or clear the filters to see more.": "Измените или сбросьте фильтры, чтобы увидеть больше."
 }

@@ -35,9 +35,19 @@ namespace InventoryManagement.Web.Controllers
         }
 
         [PermissionAuthorize(AllPermissions.DepartmentView)]
-        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
+        public async Task<IActionResult> Index(
+            int pageNumber = 1, int pageSize = 30, string? search = null, string? sort = null, string? dir = null,
+            string? name = null, string? head = null, string? description = null, bool[]? active = null,
+            int? productsMin = null, int? productsMax = null, int? workersMin = null, int? workersMax = null,
+            DateTime? createdFrom = null, DateTime? createdTo = null)
         {
-            var page = await _mediator.Send(new GetPagedDepartmentsQuery(pageNumber, pageSize, search));
+            var filter = new ModuleDtos.CatalogListFilter
+            {
+                Sort = sort, Descending = dir == "desc", Name = name, Head = head, Description = description, Active = active,
+                ProductsMin = productsMin, ProductsMax = productsMax, WorkersMin = workersMin, WorkersMax = workersMax,
+                CreatedFrom = createdFrom, CreatedTo = createdTo
+            };
+            var page = await _mediator.Send(new GetPagedDepartmentsQuery(pageNumber, pageSize, search, filter));
             var stats = await _mediator.Send(new GetDepartmentStatsQuery());
 
             ViewBag.ActiveDepartments = stats.Active;

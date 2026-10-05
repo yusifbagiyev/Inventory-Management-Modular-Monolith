@@ -1429,5 +1429,11 @@
   "{0} action": "{0} əməliyyat",
   "{0} deleted product": "{0} silinmiş məhsul",
   "Enter the new worker to transfer within the same department.": "Eyni şöbə daxilində transfer üçün yeni işçini daxil edin.",
-  "The product is already with this worker. Enter another worker or choose another department.": "Məhsul artıq bu işçidədir. Başqa işçi daxil edin və ya başqa şöbə seçin."
+  "The product is already with this worker. Enter another worker or choose another department.": "Məhsul artıq bu işçidədir. Başqa işçi daxil edin və ya başqa şöbə seçin.",
+  "Filter by {0}": "{0} üzrə filtr",
+  "Minimum": "Minimum",
+  "Maximum": "Maksimum",
+  "No values": "Dəyər yoxdur",
+  "The image no longer exists": "Şəkil artıq mövcud deyil",
+  "Change or clear the filters to see more.": "Daha çox nəticə üçün filtrləri dəyişin və ya təmizləyin."
 }

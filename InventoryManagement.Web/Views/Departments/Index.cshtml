@@ -2,10 +2,14 @@
 @{
     ViewData["Title"] = "Departments";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
-    var hasSearch = !string.IsNullOrEmpty(currentSearch);
     object activeCount = Model.ActiveItems ?? ViewBag.ActiveDepartments ?? 0;
     object inactiveCount = Model.InActiveItems ?? ViewBag.InActiveDepartments ?? 0;
     object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.DepartmentsInWithProducts ?? 0;
+    // Any query value besides paging is a filter or sort the reset button undoes
+    var hasFilters = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
+    var activeParam = Context.Request.Query["active"].ToString();
+    var currentSort = $"{Context.Request.Query["sort"]}:{Context.Request.Query["dir"]}";
+    var statusOptions = Json.Serialize(new[] { new { value = "true", label = L["Active"].Value }, new { value = "false", label = L["Inactive"].Value } }).ToString();
 }
 
 <div class="container-fluid px-4">
@@ -29,7 +33,7 @@
         </div>
     </div>
 
-    @* Status and sort work on the rows already on screen, while search on Enter goes to the server *@
+    @* The same filters and sort as the column headers, for phones where the headers are hidden *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -40,50 +44,43 @@
             <span>@L["Status"]</span>
             <select id="statusFilter">
                 <option value="">@L["All"]</option>
-                <option value="active">@L["Active"]</option>
-                <option value="inactive">@L["Inactive"]</option>
+                <option value="true" selected="@(activeParam == "true")">@L["Active"]</option>
+                <option value="false" selected="@(activeParam == "false")">@L["Inactive"]</option>
             </select>
         </label>
         <label class="ip-filter">
             <span>@L["Sort"]</span>
             <select id="sortBy">
-                <option value="name">@L["Sort by Name"]</option>
-                <option value="products">@L["Sort by Products"]</option>
-                <option value="workers">@L["Sort by Workers"]</option>
-                <option value="created">@L["Sort by Date"]</option>
+                <option value="name:asc">@L["Sort by Name"]</option>
+                <option value="products:desc" selected="@(currentSort == "products:desc")">@L["Sort by Products"]</option>
+                <option value="workers:desc" selected="@(currentSort == "workers:desc")">@L["Sort by Workers"]</option>
+                <option value="created:desc" selected="@(currentSort == "created:desc")">@L["Sort by Date"]</option>
             </select>
         </label>
-        <button type="button" class="ip-btn ip-btn-ghost @(hasSearch ? "" : "d-none")" id="resetFiltersBtn" onclick="resetFilters()">
+        <button type="button" class="ip-btn ip-btn-ghost @(hasFilters ? "" : "d-none")" id="resetFiltersBtn" onclick="resetFilters()">
             <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
     <div id="departmentsRegion" data-list-region>
         <div class="ip-table-wrap">
-            @if (Model.Items.Any())
-            {
                 <table class="ip-table" id="departmentsTable">
                     <thead>
                         <tr>
-                            <th>@L["Department"]</th>
-                            <th>@L["Department Head"]</th>
-                            <th>@L["Description"]</th>
-                            <th>@L["Products"]</th>
-                            <th>@L["Workers"]</th>
-                            <th>@L["Status"]</th>
-                            <th>@L["Created"]</th>
+                            <th data-sort="name" data-filter="text" data-param="name">@L["Department"]</th>
+                            <th data-sort="head" data-filter="text" data-param="head">@L["Department Head"]</th>
+                            <th data-sort="description" data-filter="text" data-param="description">@L["Description"]</th>
+                            <th data-sort="products" data-sort-first="desc" data-filter="range" data-param-min="productsMin" data-param-max="productsMax">@L["Products"]</th>
+                            <th data-sort="workers" data-sort-first="desc" data-filter="range" data-param-min="workersMin" data-param-max="workersMax">@L["Workers"]</th>
+                            <th data-sort="status" data-filter="list" data-param="active" data-options="@statusOptions">@L["Status"]</th>
+                            <th data-sort="created" data-sort-first="desc" data-filter="date" data-param-from="createdFrom" data-param-to="createdTo">@L["Created"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var department in Model.Items)
                         {
-                            <tr data-href="@Url.Action("Details", new { id = department.Id })"
-                                data-name="@department.Name"
-                                data-status="@(department.IsActive ? "active" : "inactive")"
-                                data-products="@department.ProductCount"
-                                data-workers="@department.WorkerCount"
-                                data-created="@department.CreatedAt.Ticks">
+                            <tr data-href="@Url.Action("Details", new { id = department.Id })">
                                 <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = department.Id })">@department.Name</a>
@@ -147,27 +144,31 @@
                                 </td>
                             </tr>
                         }
+                        @* The headers stay when nothing matches, so their filters can be changed *@
+                        @if (!Model.Items.Any())
+                        {
+                            <tr class="ip-empty-row">
+                                <td class="empty" colspan="8">
+                                    <div class="ip-empty">
+                                        <span class="icon"><i class="fa-solid fa-building"></i></span>
+                                        <div class="title">@L[hasFilters ? "No departments match these filters" : "No departments found"]</div>
+                                        @if (hasFilters)
+                                        {
+                                            <div class="text">@L["Change or clear the filters to see more."]</div>
+                                            <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
+                                                <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="text">@L["Departments you create will be listed here."]</div>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <div class="ip-empty">
-                    <span class="icon"><i class="fa-solid fa-building"></i></span>
-                    <div class="title">@L["No departments found"]</div>
-                    @if (hasSearch)
-                    {
-                        <div class="text">@L["Clear the search to see every department, or add a new one."]</div>
-                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
-                            <span>@L["Clear search"]</span><i class="fa-solid fa-xmark"></i>
-                        </button>
-                    }
-                    else
-                    {
-                        <div class="text">@L["Departments you create will be listed here."]</div>
-                    }
-                </div>
-            }
         </div>
         <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
@@ -201,107 +202,17 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Kept so the status filter can be undone without going back to the server
-        let allDepartmentRows = [];
-        const serverSearchActive = @(hasSearch ? "true" : "false");
-
-        $(document).ready(function() {
-            allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr[data-status]'));
-
-            $('#statusFilter, #sortBy').on('change', function() {
-                filterDepartments();
-            });
-
-            restoreFilterValues();
-        });
-
-        function filterDepartments() {
-            const statusFilter = $('#statusFilter').val();
-            const sortBy = $('#sortBy').val();
-
-            $('#resetFiltersBtn').toggleClass('d-none', !serverSearchActive && !statusFilter);
-
-            // The table body is missing when the server returned no rows at all
-            const tbody = document.querySelector('#departmentsTable tbody');
-            if (!tbody) {
-                return;
-            }
-
-            let visibleRows = allDepartmentRows.filter(row => {
-                const isActive = row.dataset.status === 'active';
-                return !statusFilter ||
-                    (statusFilter === 'active' && isActive) ||
-                    (statusFilter === 'inactive' && !isActive);
-            });
-
-            visibleRows.sort((a, b) => {
-                switch(sortBy) {
-                    case 'name':
-                        return (a.dataset.name || '').localeCompare(b.dataset.name || '');
-                    case 'products':
-                        return (Number(b.dataset.products) || 0) - (Number(a.dataset.products) || 0);
-                    case 'workers':
-                        return (Number(b.dataset.workers) || 0) - (Number(a.dataset.workers) || 0);
-                    case 'created':
-                        return (Number(b.dataset.created) || 0) - (Number(a.dataset.created) || 0);
-                    default:
-                        return 0;
-                }
-            });
-
-            tbody.innerHTML = '';
-            visibleRows.forEach(row => tbody.appendChild(row));
-
-            if (visibleRows.length === 0) {
-                tbody.innerHTML = `
-                    <tr id="noResults">
-                        <td colspan="8">
-                            <div class="ip-empty">
-                                <span class="icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                <div class="title">${t('No departments match these filters')}</div>
-                                <div class="text">${t('Pick a different status or clear the filters.')}</div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(search);
-            }
-        }
-
-        function applyFilters() {
-            const searchTerm = $('#searchInput').val().trim();
-            const params = new URLSearchParams();
-
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-
-            params.append('pageSize', '@Model.PageSize');
-            params.append('pageNumber', '1');
-
-            ListNav.go(window.location.pathname + '?' + params.toString());
-        }
+        // The filter bar writes the same query values as the column headers
+        TableColumns.bindBar({ fields: { '#statusFilter': 'active' }, sort: '#sortBy', search: '#searchInput', reset: '#resetFiltersBtn' });
 
         function resetFilters() {
-            $('#searchInput').val('');
             ListNav.go(window.location.pathname);
         }
-
-        // Search on Enter
-        $('#searchInput').on('keypress', function(e) {
-            if (e.which === 13) {
-                applyFilters();
-            }
-        });
 
         function deleteDepartment(id, name) {
             $('#departmentName').text(name);
@@ -312,11 +223,7 @@
         // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['department', 'product'],
-            regions: ['#departmentsSummary', '#departmentsRegion'],
-            afterRefresh() {
-                allDepartmentRows = Array.from(document.querySelectorAll('#departmentsTable tbody tr[data-status]'));
-                filterDepartments();
-            }
+            regions: ['#departmentsSummary', '#departmentsRegion']
         });
     </script>
 }

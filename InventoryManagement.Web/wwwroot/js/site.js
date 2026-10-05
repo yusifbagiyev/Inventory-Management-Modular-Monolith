@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
 window.MobileLayout = (function () {
     'use strict';
 
-    const ROLES = ['thumb', 'code', 'title', 'meta', 'state', 'date', 'actions', 'hide-sm', 'field', 'old', 'arrow'];
+    const ROLES = ['thumb', 'code', 'title', 'meta', 'state', 'date', 'actions', 'hide-sm', 'field', 'old', 'arrow', 'empty'];
 
     function labelTable(table) {
         const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.replace(/\s+/g, ' ').trim());
@@ -885,3 +885,26 @@ document.addEventListener('click', async function (e) {
     document.addEventListener('listnav:loaded', focusable);
 })();
 
+// Thumbnails marked data-fallback whose file is gone show a placeholder instead of a broken image
+(function () {
+    function replace(img) {
+        const box = document.createElement('span');
+        box.className = 'ip-img-missing';
+        box.title = t('The image no longer exists');
+        box.setAttribute('role', 'img');
+        box.setAttribute('aria-label', box.title);
+        box.innerHTML = '<i class="fa-regular fa-image" aria-hidden="true"></i>';
+        (img.closest('a') || img).replaceWith(box);
+    }
+    document.addEventListener('error', function (e) {
+        if (e.target instanceof HTMLImageElement && e.target.hasAttribute('data-fallback')) replace(e.target);
+    }, true);
+    // Images that failed before this script ran
+    function scan() {
+        document.querySelectorAll('img[data-fallback]').forEach(function (img) {
+            if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) replace(img);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', scan);
+    document.addEventListener('listnav:loaded', scan);
+})();

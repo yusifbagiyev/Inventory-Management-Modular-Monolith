@@ -29,9 +29,17 @@ namespace InventoryManagement.Web.Controllers
         }
 
         [PermissionAuthorize(AllPermissions.CategoryView)]
-        public async Task<IActionResult> Index(int pageNumber = 1, int pageSize = 20, string? search = null)
+        public async Task<IActionResult> Index(
+            int pageNumber = 1, int pageSize = 30, string? search = null, string? sort = null, string? dir = null,
+            string? name = null, string? description = null, bool[]? active = null,
+            int? productsMin = null, int? productsMax = null, DateTime? createdFrom = null, DateTime? createdTo = null)
         {
-            var page = await _mediator.Send(new GetPagedCategoriesQuery(pageNumber, pageSize, search));
+            var filter = new ModuleDtos.CatalogListFilter
+            {
+                Sort = sort, Descending = dir == "desc", Name = name, Description = description, Active = active,
+                ProductsMin = productsMin, ProductsMax = productsMax, CreatedFrom = createdFrom, CreatedTo = createdTo
+            };
+            var page = await _mediator.Send(new GetPagedCategoriesQuery(pageNumber, pageSize, search, filter));
             var stats = await _mediator.Send(new GetCategoryStatsQuery());
 
             ViewBag.ActiveCategories = stats.Active;

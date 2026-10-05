@@ -2,10 +2,12 @@
 @{
     ViewData["Title"] = "Categories";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
-    var hasSearch = !string.IsNullOrEmpty(currentSearch);
     object activeCount = Model.ActiveItems ?? ViewBag.ActiveCategories ?? 0;
     object inactiveCount = Model.InActiveItems ?? ViewBag.InActiveCategories ?? 0;
     object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.CategoriesInWithProducts ?? 0;
+    // Any query value besides paging is a filter or sort the reset button undoes
+    var hasFilters = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
+    var statusOptions = Json.Serialize(new[] { new { value = "true", label = L["Active"].Value }, new { value = "false", label = L["Inactive"].Value } }).ToString();
 }
 
 <div class="container-fluid px-4">
@@ -29,7 +31,7 @@
         </div>
     </div>
 
-    @* Status and sort work on the rows already on screen, while search on Enter goes to the server *@
+    @* The same filters and sort as the column headers, for phones where the headers are hidden *@
     <div class="ip-filterbar">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -40,47 +42,40 @@
             <span>@L["Status"]</span>
             <select id="statusFilter">
                 <option value="">@L["All"]</option>
-                <option value="active">@L["Active"]</option>
-                <option value="inactive">@L["Inactive"]</option>
+                <option value="true">@L["Active"]</option>
+                <option value="false">@L["Inactive"]</option>
             </select>
         </label>
         <label class="ip-filter">
             <span>@L["Sort"]</span>
             <select id="sortBy">
-                <option value="name">@L["Sort by Name"]</option>
-                <option value="products">@L["Sort by Products"]</option>
-                <option value="created">@L["Sort by Date"]</option>
+                <option value="name:asc">@L["Sort by Name"]</option>
+                <option value="products:desc">@L["Sort by Products"]</option>
+                <option value="created:desc">@L["Sort by Date"]</option>
             </select>
         </label>
-        <button type="button" class="ip-btn ip-btn-ghost @(hasSearch ? "" : "d-none")" id="resetFiltersBtn" onclick="resetFilters()">
+        <button type="button" class="ip-btn ip-btn-ghost @(hasFilters ? "" : "d-none")" id="resetFiltersBtn" onclick="resetFilters()">
             <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
         </button>
     </div>
 
     <div id="categoriesRegion" data-list-region>
         <div class="ip-table-wrap">
-            @if (Model.Items.Any())
-            {
                 <table class="ip-table">
                     <thead>
                         <tr>
-                            <th>@L["Category"]</th>
-                            <th>@L["Description"]</th>
-                            <th>@L["Products"]</th>
-                            <th>@L["Status"]</th>
-                            <th>@L["Created"]</th>
+                            <th data-sort="name" data-filter="text" data-param="name">@L["Category"]</th>
+                            <th data-sort="description" data-filter="text" data-param="description">@L["Description"]</th>
+                            <th data-sort="products" data-sort-first="desc" data-filter="range" data-param-min="productsMin" data-param-max="productsMax">@L["Products"]</th>
+                            <th data-sort="status" data-filter="list" data-param="active" data-options="@statusOptions">@L["Status"]</th>
+                            <th data-sort="created" data-sort-first="desc" data-filter="date" data-param-from="createdFrom" data-param-to="createdTo">@L["Created"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
                     <tbody id="categoriesTable">
                         @foreach (var category in Model.Items)
                         {
-                            <tr class="category-item" data-href="@Url.Action("Details", new { id = category.Id })"
-                                data-name="@category.Name.ToLower()"
-                                data-description="@category.Description?.ToLower()"
-                                data-status="@(category.IsActive ? "active" : "inactive")"
-                                data-products="@category.ProductCount"
-                                data-created="@category.CreatedAt.Ticks">
+                            <tr class="category-item" data-href="@Url.Action("Details", new { id = category.Id })">
                                 <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = category.Id })" title="@category.Name">@category.Name</a>
@@ -134,23 +129,31 @@
                                 </td>
                             </tr>
                         }
+                        @* The headers stay when nothing matches, so their filters can be changed *@
+                        @if (!Model.Items.Any())
+                        {
+                            <tr class="ip-empty-row">
+                                <td class="empty" colspan="6">
+                                    <div class="ip-empty">
+                                        <span class="icon"><i class="fa-solid fa-tags"></i></span>
+                                        <div class="title">@L[hasFilters ? "No categories match these filters" : "No categories found"]</div>
+                                        @if (hasFilters)
+                                        {
+                                            <div class="text">@L["Change or clear the filters to see more."]</div>
+                                            <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
+                                                <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="text">@L["Categories you create will be listed here."]</div>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <div class="ip-empty">
-                    <span class="icon"><i class="fa-solid fa-tags"></i></span>
-                    <div class="title">@L["No categories found"]</div>
-                    <div class="text">@(hasSearch ? L["Nothing matches \"{0}\".", currentSearch!] : L["Categories you create will be listed here."])</div>
-                    @if (hasSearch)
-                    {
-                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
-                            <span>@L["Clear search"]</span><i class="fa-solid fa-xmark"></i>
-                        </button>
-                    }
-                </div>
-            }
         </div>
         <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
@@ -184,104 +187,17 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
-        // Kept so the status filter can be undone without going back to the server
-        let allCategoryRows = [];
-        const serverSearchActive = @(hasSearch ? "true" : "false");
-
-        $(document).ready(function() {
-            allCategoryRows = Array.from(document.querySelectorAll('#categoriesTable tr.category-item'));
-
-            $('#statusFilter, #sortBy').on('change', function() {
-                filterCategories();
-            });
-
-            restoreFilterValues();
-        });
-
-        function filterCategories() {
-            const statusFilter = $('#statusFilter').val();
-            const sortBy = $('#sortBy').val();
-
-            $('#resetFiltersBtn').toggleClass('d-none', !serverSearchActive && !statusFilter);
-
-            let visibleRows = allCategoryRows.filter(row => {
-                const isActive = row.dataset.status === 'active';
-                return !statusFilter ||
-                    (statusFilter === 'active' && isActive) ||
-                    (statusFilter === 'inactive' && !isActive);
-            });
-
-            visibleRows.sort((a, b) => {
-                switch(sortBy) {
-                    case 'name':
-                        return (a.dataset.name || '').localeCompare(b.dataset.name || '');
-                    case 'products':
-                        return (parseInt(b.dataset.products) || 0) - (parseInt(a.dataset.products) || 0);
-                    case 'created':
-                        return (Number(b.dataset.created) || 0) - (Number(a.dataset.created) || 0);
-                    default:
-                        return 0;
-                }
-            });
-
-            // The table body is missing when the server returned no rows at all
-            const tbody = document.getElementById('categoriesTable');
-            if (!tbody) {
-                return;
-            }
-            tbody.innerHTML = '';
-            visibleRows.forEach(row => tbody.appendChild(row));
-
-            if (visibleRows.length === 0) {
-                tbody.innerHTML = `
-                    <tr id="noResults">
-                        <td colspan="6">
-                            <div class="ip-empty">
-                                <span class="icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                <div class="title">${t('No categories match these filters')}</div>
-                                <div class="text">${t('Reset the status filter to see the full list.')}</div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        function restoreFilterValues() {
-            const params = new URLSearchParams(window.location.search);
-            const search = params.get('search');
-            if (search) {
-                $('#searchInput').val(search);
-            }
-        }
-
-        function applyFilters() {
-            const searchTerm = $('#searchInput').val().trim();
-            const params = new URLSearchParams();
-
-            if (searchTerm) {
-                params.append('search', searchTerm);
-            }
-
-            params.append('pageSize', '@Model.PageSize');
-            params.append('pageNumber', '1');
-
-            ListNav.go(window.location.pathname + '?' + params.toString());
-        }
+        // The filter bar writes the same query values as the column headers
+        TableColumns.bindBar({ fields: { '#statusFilter': 'active' }, sort: '#sortBy', search: '#searchInput', reset: '#resetFiltersBtn' });
 
         function resetFilters() {
-            $('#searchInput').val('');
             ListNav.go(window.location.pathname);
         }
-
-        // Search on Enter
-        $('#searchInput').on('keypress', function(e) {
-            if (e.which === 13) {
-                applyFilters();
-            }
-        });
 
         function deleteCategory(id, name) {
             $('#categoryName').text(name);
@@ -292,11 +208,7 @@
         // Other users' changes refresh the count and the table in place
         LiveUpdates.watch({
             entities: ['category', 'product'],
-            regions: ['#categoriesSummary', '#categoriesRegion'],
-            afterRefresh() {
-                allCategoryRows = Array.from(document.querySelectorAll('#categoriesTable tr.category-item'));
-                filterCategories();
-            }
+            regions: ['#categoriesSummary', '#categoriesRegion']
         });
     </script>
 }
