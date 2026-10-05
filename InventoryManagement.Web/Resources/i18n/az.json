@@ -1104,7 +1104,6 @@
   "Handover photos (optional)": "Təhvil şəkilləri (istəyə bağlı)",
   "When the transfer is completed they become the product images; the starred one becomes the cover.": "Transfer tamamlandıqdan sonra bu şəkillər məhsulun şəkilləri kimi təyin olunur; ulduzla işarələnmiş şəkil əsas şəkil olur.",
   "Start transfer": "Transferi başlat",
-  "The product is already there. Choose another department or worker.": "Məhsul artıq həmin yerdədir. Başqa şöbə və ya işçi seçin.",
   "Approved, but the change could not be carried out.": "Təsdiqləndi, lakin dəyişikliyi icra etmək mümkün olmadı.",
   "Approving this deletes the record below.": "Təsdiqlənərsə, aşağıdakı qeyd silinəcək.",
   "Back": "Geri",
@@ -1428,5 +1427,7 @@
   "{0} department": "{0} şöbə",
   "{0} category": "{0} kateqoriya",
   "{0} action": "{0} əməliyyat",
-  "{0} deleted product": "{0} silinmiş məhsul"
+  "{0} deleted product": "{0} silinmiş məhsul",
+  "Enter the new worker to transfer within the same department.": "Eyni şöbə daxilində transfer üçün yeni işçini daxil edin.",
+  "The product is already with this worker. Enter another worker or choose another department.": "Məhsul artıq bu işçidədir. Başqa işçi daxil edin və ya başqa şöbə seçin."
 }

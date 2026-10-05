@@ -1104,7 +1104,6 @@
   "Handover photos (optional)": "Фото при передаче (необязательно)",
   "When the transfer is completed they become the product images; the starred one becomes the cover.": "После завершения перемещения эти фото станут фотографиями товара; отмеченное звёздочкой станет основным.",
   "Start transfer": "Начать перемещение",
-  "The product is already there. Choose another department or worker.": "Товар уже находится в указанном месте. Выберите другой отдел или сотрудника.",
   "Approved, but the change could not be carried out.": "Одобрено, но изменение выполнить не удалось.",
   "Approving this deletes the record below.": "При одобрении запись ниже будет удалена.",
   "Back": "Назад",
@@ -1428,5 +1427,7 @@
   "{0} department": "Отделов: {0}",
   "{0} category": "Категорий: {0}",
   "{0} action": "Действий: {0}",
-  "{0} deleted product": "Удалённых товаров: {0}"
+  "{0} deleted product": "Удалённых товаров: {0}",
+  "Enter the new worker to transfer within the same department.": "Для перемещения внутри того же отдела укажите нового сотрудника.",
+  "The product is already with this worker. Enter another worker or choose another department.": "Товар уже закреплён за этим сотрудником. Укажите другого сотрудника или выберите другой отдел."
 }

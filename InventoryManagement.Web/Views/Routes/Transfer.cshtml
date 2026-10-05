@@ -125,9 +125,14 @@
                         $('#ToDepartmentId').focus();
                         return false;
                     }
+                    if (sameDepartment() && !newWorker()) {
+                        showDepartmentError(t('Enter the new worker to transfer within the same department.'));
+                        $('#ToWorker').focus();
+                        return false;
+                    }
                     if (isNoChange()) {
-                        showDepartmentError(t('The product is already there. Choose another department or worker.'));
-                        $('#ToDepartmentId').focus();
+                        showDepartmentError(t('The product is already with this worker. Enter another worker or choose another department.'));
+                        $('#ToWorker').focus();
                         return false;
                     }
                     isSubmitting = true;
@@ -172,16 +177,24 @@
             $('#searchBtn').on('click', searchProduct);
             $('#ToDepartmentId, #ToWorker').on('change input', function() {
                 hideDepartmentError();
-                if (isNoChange()) showDepartmentError(t('The product is already there. Choose another department or worker.'));
+                if (isNoChange()) showDepartmentError(t('The product is already with this worker. Enter another worker or choose another department.'));
                 updateSummary();
             });
 
-            // A transfer within the same department needs a new worker, otherwise nothing would move
+            function sameDepartment() {
+                return !!currentProductData
+                    && $('#ToDepartmentId').val() === String(currentProductData.departmentId ?? '');
+            }
+
+            function newWorker() {
+                return ($('#ToWorker').val() || '').trim();
+            }
+
+            // Within the same department only a different worker makes it a transfer
             function isNoChange() {
-                if (!currentProductData
-                    || $('#ToDepartmentId').val() !== String(currentProductData.departmentId ?? '')) return false;
-                const worker = ($('#ToWorker').val() || '').trim().toLocaleLowerCase();
-                return !worker || worker === (currentProductData.worker || '').trim().toLocaleLowerCase();
+                const worker = newWorker().toLocaleLowerCase();
+                return sameDepartment() && !!worker
+                    && worker === (currentProductData.worker || '').trim().toLocaleLowerCase();
             }
 
             async function searchProduct() {
