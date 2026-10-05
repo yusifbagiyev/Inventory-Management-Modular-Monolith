@@ -467,6 +467,8 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 /* Uses .is-alert because .alert clashes with Bootstrap and site.js auto-closes alerts */
 .ip-rail-count.is-alert { display: inline-block; min-width: 22px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-weight: 600; line-height: 20px; text-align: center; }
 .ip-rail-count:empty { display: none !important; }
+/* jQuery show() writes an inline display, so the collapsed rail needs !important to keep just the dot */
+@media (min-width: 768px) { .ip-rail.collapsed .ip-rail-count { display: none !important; } }
 /* A collapsed rail shows a dot on links with something pending */
 .ip-rail.collapsed .ip-rail-link:has(.ip-rail-count.is-alert:not(:empty):not([style*="none"]))::after { content: ""; position: absolute; top: 8px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--ip-accent); }
 .ip-rail.collapsed .ip-rail-toggle i { transform: rotate(180deg); }
