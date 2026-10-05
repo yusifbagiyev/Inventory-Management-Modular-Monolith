@@ -152,8 +152,7 @@ window.NotificationManager = (function () {
 
             // A short delay so reconnecting tabs do not all hit the server at once
             setTimeout(() => {
-                loadRecentNotifications();
-                loadNotificationCount();
+                window.refreshNotifications();
 
                 if (window.isAdmin) {
                     debouncedLoadPendingApprovalsCount();
@@ -197,10 +196,9 @@ window.NotificationManager = (function () {
             connectionState = 'connected';
             connectionRetryCount = 0;
 
-            // The list also reloads the unread count
             if (connectedBefore) {
                 setTimeout(() => {
-                    window.loadRecentNotifications();
+                    window.refreshNotifications();
                     if (window.isAdmin && typeof debouncedLoadPendingApprovalsCount === 'function') {
                         debouncedLoadPendingApprovalsCount();
                     }
@@ -360,10 +358,10 @@ window.NotificationManager = (function () {
 
         window.incrementNotificationCount();
 
-        // Several notifications in a row reload the list once
+        // Several notifications in a row reload an open list once, and a closed one loads when the bell opens
         clearTimeout(window.notificationListReloadTimeout);
         window.notificationListReloadTimeout = setTimeout(() => {
-            window.loadRecentNotifications();
+            if ($('#notificationList').closest('.dropdown-menu').hasClass('show')) window.loadRecentNotifications();
         }, 500);
 
         handleSpecialNotifications(notification);

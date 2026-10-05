@@ -1,3 +1,4 @@
+@inject InventoryManagement.Web.Services.RailCounts RailCounts
 <!DOCTYPE html>
 <html lang="@JsonStringLocalizer.Language">
 <head>
@@ -201,21 +202,36 @@
     {
         <script src="~/js/admin-approvals.js" asp-append-version="true"></script>
     }
+    @{
+        var canSeeApprovals = User.HasPermission("approval.view") || User.HasPermission("approval.decide");
+        // Read with the page, so loading it does not send two more requests for the badges
+        int? unreadCount = signedIn ? await RailCounts.UnreadAsync() : null;
+        int? pendingCount = signedIn && canSeeApprovals ? await RailCounts.PendingApprovalsAsync() : null;
+    }
     <script>
         $(document).ready(function() {
                 // Whoever may see the approvals page also follows the pending-approvals count
-                const canSeeApprovals = @(User.HasPermission("approval.view") || User.HasPermission("approval.decide") ? "true" : "false");
-                NotificationManager.initialize(canSeeApprovals);
+                NotificationManager.initialize(@(canSeeApprovals ? "true" : "false"));
 
                 setupNotificationUIHandlers();
 
-                // Also refreshes the unread count, while admin-approvals.js loads the pending count itself
-                loadRecentNotifications();
+                // The list itself loads when the bell is opened
+                @if (unreadCount.HasValue) { <text>updateNotificationBadge(@unreadCount);</text> } else { <text>loadNotificationCount();</text> }
+                @if (canSeeApprovals)
+                {
+                    if (pendingCount.HasValue) { <text>updatePendingApprovalsCount(@pendingCount);</text> } else { <text>loadPendingApprovalsCount();</text> }
+                }
         });
 
+        // A reconnect or a new notification refreshes the count, and the list only while the bell is open
+        window.refreshNotifications = function () {
+            if ($('#notificationList').closest('.dropdown-menu').hasClass('show')) loadRecentNotifications();
+            else loadNotificationCount();
+        };
+
         function setupNotificationUIHandlers() {
-            $('#notificationIcon').on('click', function(e) {
-                e.preventDefault();
+            // Loaded on each opening, not when the bell closes
+            $('#notificationIcon').closest('.dropdown').on('show.bs.dropdown', function() {
                 loadRecentNotifications();
             });
 

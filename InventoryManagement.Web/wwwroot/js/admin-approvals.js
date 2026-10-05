@@ -1,4 +1,4 @@
-// Pending-approvals badge on the rail, reloaded on start and whenever an approval request changes
+// Pending-approvals badge on the rail, which the page renders and this reloads whenever an approval request changes
 
 let isLoadingApprovals = false;
 
@@ -37,4 +37,3 @@ window.addEventListener('live:changed', function (e) {
     if (changes.some(c => c.entity === 'approval')) debouncedLoadPendingApprovalsCount();
 });
 
-$(loadPendingApprovalsCount);
