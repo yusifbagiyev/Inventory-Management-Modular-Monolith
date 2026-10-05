@@ -260,11 +260,8 @@
             if (empty) empty.style.display = shown === 0 && !headerEmpty ? '' : 'none';
         }
 
-        // Column filters and sorting change the rows without an event, so the count follows the table itself
-        function watchUserRows() {
-            const body = document.querySelector('#usersTable tbody');
-            if (body) new MutationObserver(updateUserCount).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
-        }
+        // Column filters and sorting announce each change, so the count follows them
+        document.addEventListener('tablecolumns:change', updateUserCount);
 
         function resetUserFilters() {
             document.getElementById('searchInput').value = '';
@@ -278,10 +275,7 @@
         function exportUsersToPDF() {
             const table = document.getElementById('usersTable');
             if (!table || typeof collectTableData !== 'function') return;
-            // The export skips rows hidden by display only, so rows the column filters hide are left out of a copy
-            const copy = table.cloneNode(true);
-            copy.querySelectorAll('tbody tr[hidden], tbody tr.ip-colfilter-empty').forEach(row => row.remove());
-            const data = collectTableData(copy, [t('Actions')]);
+            const data = collectTableData(table, [t('Actions')]);
             if (!data.rows.length) { showToast(t('Nothing to export'), 'warning'); return; }
             renderPrintDocument({ title: t('Users'), headers: data.headers, rows: data.rows });
         }
@@ -334,10 +328,8 @@
             entities: ['user'],
             regions: ['#usersSummary', '#usersRegion'],
             afterRefresh() {
-                watchUserRows();
                 applyUserFilters();
             }
         });
-        watchUserRows();
     </script>
 }

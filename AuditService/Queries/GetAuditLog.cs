@@ -31,10 +31,7 @@ namespace AuditService.Queries
 
     public sealed record AuditFacets(IReadOnlyList<AuditUserOption> Users, IReadOnlyList<string> EntityTypes);
 
-    /// <summary>
-    /// The audit log paged by action, where filters apply to rows so an action lists only its matches.
-    /// An empty list means no filter, and Sort is when (the default), user or action.
-    /// </summary>
+    /// <summary>The audit log paged by action, where filters apply to rows and an empty list means no filter.</summary>
     public sealed record GetAuditLogQuery(
         int PageNumber = 1,
         int PageSize = 30,

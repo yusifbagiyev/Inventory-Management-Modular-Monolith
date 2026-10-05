@@ -189,12 +189,8 @@
             $('#myRequestsFilterEmpty').toggleClass('d-none', !none || headerEmpty);
         }
 
-        // Column filters change the rows without an event, so the empty note follows the table itself
-        function watchRequestRows() {
-            const body = document.querySelector('#myRequestsTable tbody');
-            if (body) new MutationObserver(updateFilterEmpty).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
-        }
-        watchRequestRows();
+        // Column filters announce each change, so the empty note follows them
+        document.addEventListener('tablecolumns:change', updateFilterEmpty);
 
         // A decision on one of these requests refreshes its status and the counts but keeps the active tab
         let activeFilter = 'all';
@@ -206,7 +202,6 @@
             },
             afterRefresh() {
                 $('.filter-btn').removeClass('active').filter(`[data-filter="${activeFilter}"]`).addClass('active');
-                watchRequestRows();
                 applyStatusFilter();
             }
         });
