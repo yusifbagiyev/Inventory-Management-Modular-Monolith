@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RouteService.Domain.Common;
 using RouteService.Domain.Entities;
@@ -102,8 +103,10 @@ namespace RouteService.Infrastructure.Repositories
             string? categoryName = null,
             RouteType? routeType = null,
             CancellationToken cancellationToken = default,
-            string? departmentName = null)
+            string? departmentName = null,
+            RouteListFilter? filter = null)
         {
+            filter ??= new RouteListFilter();
             // Clamp against a negative Skip but leave the size uncapped, since exports ask for more on purpose
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
@@ -139,16 +142,20 @@ namespace RouteService.Infrastructure.Repositories
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
+            query = ApplyColumnFilters(query, filter);
+
             IEnumerable<InventoryRoute> items;
             int totalCount;
 
-            if (!string.IsNullOrEmpty(search))
-            {
-                // Each word must match some field, since the words of a phrase often sit in different columns
-                var tokens = search.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var tokens = Words(search);
+            var productWords = Words(filter.Product);
 
+            if (tokens.Length > 0 || productWords.Length > 0)
+            {
                 // ILIKE doesn't fold Azerbaijani letters, so the database only does a rough first pass
                 var broadQuery = query;
+
+                // Each word must match some field, since the words of a phrase often sit in different columns
                 foreach (var word in tokens)
                 {
                     var t = word;
@@ -164,20 +171,24 @@ namespace RouteService.Infrastructure.Repositories
                     );
                 }
 
-                var allFilteredItems = await broadQuery
-                    .OrderByDescending(r => !r.IsCompleted)
-                    .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes share the same CompletedAt, so these keep paging stable
-                    .ThenByDescending(r => r.CreatedAt)
-                    .ThenByDescending(r => r.Id)
-                    .ToListAsync(cancellationToken);
+                // The product column filter matches the code or the model the same way
+                foreach (var word in productWords)
+                {
+                    var t = word;
+                    broadQuery = broadQuery.Where(r =>
+                        EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{t}%") ||
+                        EF.Functions.ILike(r.ProductSnapshot.Model, $"%{t}%"));
+                }
+
+                var allFilteredItems = await Sort(broadQuery, filter).ToListAsync(cancellationToken);
 
                 // Then match every word in memory with Azerbaijani folding
                 items = allFilteredItems.Where(r =>
                 {
+                    var code = r.ProductSnapshot.InventoryCode.ToString();
                     var fields = new[]
                     {
-                        r.ProductSnapshot.InventoryCode.ToString(),
+                        code,
                         r.ProductSnapshot.CategoryName,
                         r.ProductSnapshot.Vendor,
                         r.ProductSnapshot.Model,
@@ -186,7 +197,9 @@ namespace RouteService.Infrastructure.Repositories
                         r.FromWorker,
                         r.ToWorker
                     };
-                    return tokens.All(word => fields.Any(f => SearchHelper.ContainsAzerbaijani(f, word)));
+                    return tokens.All(word => fields.Any(f => SearchHelper.ContainsAzerbaijani(f, word)))
+                        && productWords.All(word => SearchHelper.ContainsAzerbaijani(code, word)
+                                                    || SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.Model, word));
                 }).ToList();
 
                 totalCount = items.Count();
@@ -200,12 +213,7 @@ namespace RouteService.Infrastructure.Repositories
             {
                 totalCount = await query.CountAsync(cancellationToken);
 
-                items = await query
-                    .OrderByDescending(r => !r.IsCompleted)
-                    .ThenByDescending(r => r.CompletedAt)
-                    // Pending routes share the same CompletedAt, so these keep paging stable
-                    .ThenByDescending(r => r.CreatedAt)
-                    .ThenByDescending(r => r.Id)
+                items = await Sort(query, filter)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync(cancellationToken);
@@ -219,6 +227,85 @@ namespace RouteService.Infrastructure.Repositories
                 PageSize = pageSize
             };
         }
+
+
+        private static string[] Words(string? text)
+            => string.IsNullOrWhiteSpace(text) ? [] : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        /// <summary>The list's column filters, matched against the names stored on the route like the other filters.</summary>
+        private static IQueryable<InventoryRoute> ApplyColumnFilters(IQueryable<InventoryRoute> query, RouteListFilter filter)
+        {
+            if (filter.FromDepartments is { Length: > 0 } fromNames)
+                query = query.Where(r => r.FromDepartmentName != null && fromNames.Contains(r.FromDepartmentName));
+
+            if (filter.ToDepartments is { Length: > 0 } toNames)
+                query = query.Where(r => toNames.Contains(r.ToDepartmentName));
+
+            if (filter.Categories is { Length: > 0 } categories)
+                query = query.Where(r => categories.Contains(r.ProductSnapshot.CategoryName));
+
+            if (filter.RouteTypes is { Length: > 0 } types)
+                query = query.Where(r => types.Contains(r.RouteType));
+
+            if (filter.WhatsApp is { Length: > 0 } statuses)
+            {
+                // Routes that never sent a message have no status, which the filter calls None
+                var orNone = statuses.Contains(RouteListFilter.NoWhatsApp);
+                query = query.Where(r => r.WhatsAppStatus == null ? orNone : statuses.Contains(r.WhatsAppStatus));
+            }
+
+            return query;
+        }
+
+        /// <summary>Orders by the chosen column, newest first within equal values, with the id keeping pages stable.</summary>
+        private static IQueryable<InventoryRoute> Sort(IQueryable<InventoryRoute> query, RouteListFilter filter)
+        {
+            var desc = filter.Descending;
+            if (filter.Sort == "date")
+            {
+                return desc
+                    ? query.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+                    : query.OrderBy(r => r.CreatedAt).ThenBy(r => r.Id);
+            }
+
+            var ordered = filter.Sort switch
+            {
+                "product" => Then(By(query, r => r.ProductSnapshot.Model, desc), r => r.ProductSnapshot.InventoryCode, desc),
+                // Routes into the inventory have no sending end, and they stay last in both directions
+                "from" => Then(Then(query.OrderBy(r => r.FromDepartmentName == null), r => r.FromDepartmentName, desc), r => r.FromWorker, desc),
+                "to" => Then(By(query, r => r.ToDepartmentName, desc), r => r.ToWorker, desc),
+                "category" => By(query, r => r.ProductSnapshot.CategoryName, desc),
+                // The type is stored as its English name, so the order follows the filter's list instead of that spelling
+                "type" => By(query, r => r.RouteType == RouteType.New ? 0
+                    : r.RouteType == RouteType.Existing ? 1
+                    : r.RouteType == RouteType.Update ? 2
+                    : r.RouteType == RouteType.CodeChange ? 3
+                    : r.RouteType == RouteType.Transfer ? 4 : 5, desc),
+                "status" => By(query, r => r.IsCompleted, desc),
+                "whatsapp" => Then(query.OrderBy(r => r.WhatsAppStatus == null), r => r.WhatsAppStatus, desc),
+                _ => null
+            };
+
+            if (ordered == null)
+            {
+                return query
+                    .OrderByDescending(r => !r.IsCompleted)
+                    .ThenByDescending(r => r.CompletedAt)
+                    // Pending routes share the same CompletedAt, so these keep paging stable
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ThenByDescending(r => r.Id);
+            }
+
+            return ordered.ThenByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id);
+        }
+
+        private static IOrderedQueryable<InventoryRoute> By<TKey>(
+            IQueryable<InventoryRoute> query, Expression<Func<InventoryRoute, TKey>> key, bool descending)
+            => descending ? query.OrderByDescending(key) : query.OrderBy(key);
+
+        private static IOrderedQueryable<InventoryRoute> Then<TKey>(
+            IOrderedQueryable<InventoryRoute> query, Expression<Func<InventoryRoute, TKey>> key, bool descending)
+            => descending ? query.ThenByDescending(key) : query.ThenBy(key);
 
 
         public async Task<IReadOnlyList<TransferActivity>> GetTransferActivityAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)

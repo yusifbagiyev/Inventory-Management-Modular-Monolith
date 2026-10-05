@@ -10,6 +10,7 @@ using ProductService.Application.Features.Lookups;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
+using RouteService.Domain.Common;
 using RouteService.Domain.Enums;
 using SharedServices.Identity;
 using ModuleDtos = RouteService.Application.DTOs;
@@ -41,16 +42,34 @@ namespace InventoryManagement.Web.Controllers
             DateTime? startDate = null,
             DateTime? endDate = null,
             int? departmentId = null,
-            string? categoryName = null,
-            string? routeType = null,
-            string? departmentName = null)
+            string[]? categoryName = null,
+            string[]? routeType = null,
+            string? departmentName = null,
+            string? sort = null,
+            string? dir = null,
+            string? product = null,
+            string[]? fromDepartment = null,
+            string[]? toDepartment = null,
+            string[]? whatsApp = null)
         {
-            var type = ParseRouteType(routeType);
+            // The filter bar sends one value and the column headers several, so both arrive as lists
+            var types = (routeType ?? []).Select(ParseRouteType).OfType<RouteType>().Distinct().ToArray();
+            var filter = new RouteListFilter
+            {
+                Sort = sort,
+                Descending = dir == "desc",
+                Product = product,
+                FromDepartments = NonEmpty(fromDepartment),
+                ToDepartments = NonEmpty(toDepartment),
+                Categories = NonEmpty(categoryName),
+                RouteTypes = types,
+                WhatsApp = NonEmpty(whatsApp)
+            };
 
             // The department filter matches either end of a route, and routes store only the category name
             var result = await _mediator.Send(new GetAllRoutesQuery(
                 pageNumber, pageSize, search, isCompleted, startDate, endDate,
-                departmentId, categoryName, type, departmentName));
+                departmentId, null, null, departmentName, filter));
             var routes = ModelMapper.Map<PagedResultDto<RouteViewModel>>(result);
             foreach (var r in routes.Items)
                 TranslateNotes(r);
@@ -65,18 +84,22 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.PageSize = pageSize ?? 30;
             ViewBag.CurrentDepartmentId = departmentId;
             ViewBag.CurrentDepartmentName = departmentName;
-            ViewBag.CurrentCategoryName = categoryName;
-            ViewBag.CurrentRouteType = routeType;
 
-            await LoadFilterLists(isCompleted, type);
+            await LoadFilterLists(isCompleted, types.Length == 1 ? types[0] : null);
 
             // Tab counts use the same filters with each completion state
             ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, null, null, departmentName, filter))).TotalCount;
             ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, categoryName, type, departmentName))).TotalCount;
+                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, null, null, departmentName, filter))).TotalCount;
 
             return View(routes);
+        }
+
+        private static string[]? NonEmpty(string[]? values)
+        {
+            var kept = values?.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToArray();
+            return kept is { Length: > 0 } ? kept : null;
         }
 
 

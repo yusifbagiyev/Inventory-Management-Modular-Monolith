@@ -1,5 +1,6 @@
 using MediatR;
 using RouteService.Application.DTOs;
+using RouteService.Domain.Common;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Repositories;
 using RouteService.Application.Mappings;
@@ -16,7 +17,8 @@ namespace RouteService.Application.Features.Routes.Queries
         int? DepartmentId = null,
         string? CategoryName = null,
         RouteType? RouteType = null,
-        string? DepartmentName = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
+        string? DepartmentName = null,
+        RouteListFilter? Filter = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
 
     public class GetAllRoutesHandler : IRequestHandler<GetAllRoutesQuery, PagedResultDto<InventoryRouteDto>>
     {
@@ -40,7 +42,8 @@ namespace RouteService.Application.Features.Routes.Queries
                 request.CategoryName,
                 request.RouteType,
                 cancellationToken,
-                request.DepartmentName);
+                request.DepartmentName,
+                request.Filter);
 
             return new PagedResultDto<InventoryRouteDto>
             {

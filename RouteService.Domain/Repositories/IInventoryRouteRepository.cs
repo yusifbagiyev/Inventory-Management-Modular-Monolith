@@ -25,7 +25,8 @@ namespace RouteService.Domain.Repositories
             string? categoryName = null,
             RouteType? routeType = null,
             CancellationToken cancellationToken = default,
-            string? departmentName = null);
+            string? departmentName = null,
+            RouteListFilter? filter = null);
 
         /// <summary>Distinct department and category name pairs from both ends of the routes left by the filters.</summary>
         Task<IReadOnlyList<(string DepartmentName, string CategoryName)>> GetDepartmentCategoryPairsAsync(

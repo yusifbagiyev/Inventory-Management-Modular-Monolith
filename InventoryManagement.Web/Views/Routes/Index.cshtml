@@ -5,19 +5,40 @@
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
     var filterCategories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
     var filterDepartments = ViewBag.FilterDepartments as List<SelectListItem> ?? new List<SelectListItem>();
-    var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
     var curDepartmentName = ViewBag.CurrentDepartmentName as string;
-    var curCategoryName = ViewBag.CurrentCategoryName as string;
 
+    // Headers can send several values where the bar sends one, so the query is read as lists
+    string[] QueryValues(string key) => Context.Request.Query[key].Where(v => !string.IsNullOrEmpty(v)).Select(v => v!).ToArray();
+    var curCategories = QueryValues("categoryName");
+    var curRouteTypes = QueryValues("routeType");
+    var routeTypes = new[] { ("New", "New"), ("Existing", "Existing"), ("Update", "Update"), ("CodeChange", "Code change"), ("Transfer", "Transfer"), ("Removal", "Removal") };
+
+    // Department and category choices are the names stored on routes, plus any chosen one the lists no longer hold
+    string NameOptions(IEnumerable<string?> names, string[] chosen) => Json.Serialize(names
+        .Concat(chosen).Where(n => !string.IsNullOrEmpty(n)).Distinct()
+        .Select(n => new { value = n, label = n })).ToString() ?? "[]";
+    var fromOptions = NameOptions(filterDepartments.Select(d => d.Value), QueryValues("fromDepartment"));
+    var toOptions = NameOptions(filterDepartments.Select(d => d.Value), QueryValues("toDepartment"));
+    var categoryOptions = NameOptions(filterCategories.Select(c => c.Value), curCategories);
+    var typeOptions = Json.Serialize(routeTypes.Select(t => new { value = t.Item1, label = L[t.Item2].Value })).ToString();
+    var statusOptions = Json.Serialize(new[] { new { value = "false", label = L["Pending"].Value }, new { value = "true", label = L["Completed"].Value } }).ToString();
+    var whatsAppOptions = Json.Serialize(new[]
+    {
+        new { value = "Sent", label = L["Sent"].Value },
+        new { value = "Queued", label = L["Queued"].Value },
+        new { value = "Failed", label = L["Failed"].Value },
+        new { value = "None", label = L["None"].Value }
+    }).ToString();
 }
 <div class="container-fluid px-4">
     @{
         var curCompleted = ViewBag.CurrentFilter as bool?;
         var curStart = ViewBag.StartDate as DateTime?;
         var curEnd = ViewBag.EndDate as DateTime?;
-        var curRouteType = ViewBag.CurrentRouteType as string;
-        var hasFilters = !string.IsNullOrEmpty(currentSearch) || curStart.HasValue || curEnd.HasValue
-            || curDepartmentId.HasValue || !string.IsNullOrEmpty(curDepartmentName) || !string.IsNullOrEmpty(curCategoryName) || !string.IsNullOrEmpty(curRouteType);
+        // The completion tabs and the sort are not filters, so they neither show the found count nor need clearing
+        var hasFilters = new[] { "search", "startDate", "endDate", "departmentId", "departmentName", "categoryName", "routeType", "product", "fromDepartment", "toDepartment", "whatsApp" }
+            .Any(k => QueryValues(k).Length > 0);
+        var hasSort = QueryValues("sort").Length > 0;
         var pendingCount = (int)(ViewBag.PendingCount ?? 0);
         var completedCount = (int)(ViewBag.CompletedCount ?? 0);
         var canComplete = User.HasPermission("route.complete");
@@ -102,7 +123,7 @@
                 <option value="">@L["All"]</option>
                 @foreach (var c in filterCategories)
                 {
-                    <option value="@c.Value" selected="@(c.Value == curCategoryName)">@c.Text</option>
+                    <option value="@c.Value" selected="@(curCategories.Length == 1 && c.Value == curCategories[0])">@c.Text</option>
                 }
             </select>
         </label>
@@ -110,9 +131,9 @@
             <span>@L["Type"]</span>
             <select id="typeFilter" onchange="applyRouteFilters()">
                 <option value="">@L["All"]</option>
-                @foreach (var (type, label) in new[] { ("New", "New"), ("Existing", "Existing"), ("Update", "Update"), ("CodeChange", "Code change"), ("Transfer", "Transfer"), ("Removal", "Removal") })
+                @foreach (var (type, label) in routeTypes)
                 {
-                    <option value="@type" selected="@(type == curRouteType)">@L[label]</option>
+                    <option value="@type" selected="@(curRouteTypes.Length == 1 && type == curRouteTypes[0])">@L[label]</option>
                 }
             </select>
         </label>
@@ -120,7 +141,7 @@
             <i class="fa-regular fa-calendar"></i>
             <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" aria-label="@L["Created between"]" />
         </label>
-        @if (hasFilters)
+        @if (hasFilters || hasSort)
         {
             <button type="button" class="ip-btn ip-btn-ghost" onclick="resetFilters()">
                 <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
@@ -130,122 +151,154 @@
 
     <div id="routesRegion" data-list-region>
         <div class="ip-table-wrap">
-            @if (Model.Items.Any())
-            {
-                <table class="ip-table" id="routesTable">
-                    <thead>
-                        <tr>
-                            <th>@L["Date"]</th>
-                            <th>@L["Product"]</th>
-                            <th>@L["From"]</th>
-                            <th></th>
-                            <th>@L["To"]</th>
-                            <th>@L["Type"]</th>
-                            <th class="d-none">@L["Notes"]</th>
-                            <th>@L["Status"]</th>
-                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
-                        </tr>
-                    </thead>
-                    <tbody id="routesTableBody">
-                        @foreach (var route in Model.Items)
-                        {
-                            <tr data-href="@Url.Action("Details", new { id = route.Id })">
-                                <td class="date ip-num text-nowrap">
-                                    @route.CreatedAt.ToString("dd.MM.yyyy")
-                                    <div class="sub">@route.CreatedAt.ToString("HH:mm")</div>
-                                </td>
-                                <td class="title">
-                                    <div class="cell-item">
-                                        <span class="ip-thumb">
-                                            @if (!string.IsNullOrEmpty(route.ImageUrl))
-                                            {
-                                                <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(route.FullImageUrl)" alt="" loading="lazy" />
-                                            }
-                                            else
-                                            {
-                                                <i class="fa-solid fa-box" aria-hidden="true"></i>
-                                            }
-                                        </span>
-                                        <div class="cell-text">
-                                            <a class="cell-title text-reset" href="@Url.Action("Details", new { id = route.Id })">@route.Model</a>
-                                            <span class="cell-sub ip-mono">@route.InventoryCode</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="meta route-from">
+            <table class="ip-table" id="routesTable">
+                <thead>
+                    <tr>
+                        <th data-sort="date" data-sort-first="desc" data-filter="date" data-param-from="startDate" data-param-to="endDate">@L["Date"]</th>
+                        <th data-sort="product" data-filter="text" data-param="product">@L["Product"]</th>
+                        <th data-sort="from" data-filter="list" data-param="fromDepartment" data-options="@fromOptions">@L["From"]</th>
+                        <th></th>
+                        <th data-sort="to" data-filter="list" data-param="toDepartment" data-options="@toOptions">@L["To"]</th>
+                        <th class="route-category" data-sort="category" data-filter="list" data-param="categoryName" data-options="@categoryOptions">@L["Category"]</th>
+                        <th data-sort="type" data-filter="list" data-param="routeType" data-options="@typeOptions">@L["Type"]</th>
+                        <th class="d-none">@L["Notes"]</th>
+                        <th data-sort="status" data-filter="list" data-param="isCompleted" data-multi="false" data-options="@statusOptions">@L["Status"]</th>
+                        <th class="route-whatsapp" data-sort="whatsapp" data-filter="list" data-param="whatsApp" data-options="@whatsAppOptions">@L["WhatsApp"]</th>
+                        <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody id="routesTableBody">
+                    @foreach (var route in Model.Items)
+                    {
+                        <tr data-href="@Url.Action("Details", new { id = route.Id })">
+                            <td class="date ip-num text-nowrap">
+                                @route.CreatedAt.ToString("dd.MM.yyyy")
+                                <div class="sub">@route.CreatedAt.ToString("HH:mm")</div>
+                            </td>
+                            <td class="title">
+                                <div class="cell-item">
+                                    <span class="ip-thumb">
+                                        @if (!string.IsNullOrEmpty(route.ImageUrl))
+                                        {
+                                            <img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(route.FullImageUrl)" alt="" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-box" aria-hidden="true"></i>
+                                        }
+                                    </span>
                                     <div class="cell-text">
-                                        <span class="cell-title fw-normal">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
-                                        @if (!string.IsNullOrEmpty(route.FromWorker))
-                                        {
-                                            <span class="cell-sub">@route.FromWorker</span>
-                                        }
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = route.Id })">@route.Model</a>
+                                        <span class="cell-sub ip-mono">@route.InventoryCode</span>
                                     </div>
-                                </td>
-                                <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
-                                <td class="meta route-to">
-                                    <div class="cell-text">
-                                        <span class="cell-title">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
-                                        @if (!string.IsNullOrEmpty(route.ToWorker))
-                                        {
-                                            <span class="cell-sub">@route.ToWorker</span>
-                                        }
-                                    </div>
-                                </td>
-                                <td class="meta ip-muted">@L[route.RouteTypeLabel]</td>
-                                <td class="d-none">@route.Notes</td>
-                                <td class="state">
-                                    @if (route.IsCompleted)
+                                </div>
+                            </td>
+                            <td class="meta route-from">
+                                <div class="cell-text">
+                                    <span class="cell-title fw-normal">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
+                                    @if (!string.IsNullOrEmpty(route.FromWorker))
                                     {
-                                        <span class="ip-badge ip-badge-success">@L["Completed"]</span>
+                                        <span class="cell-sub">@route.FromWorker</span>
                                     }
-                                    else
+                                </div>
+                            </td>
+                            <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
+                            <td class="meta route-to">
+                                <div class="cell-text">
+                                    <span class="cell-title">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
+                                    @if (!string.IsNullOrEmpty(route.ToWorker))
                                     {
-                                        <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                                        <span class="cell-sub">@route.ToWorker</span>
                                     }
-                                    @if (!string.IsNullOrEmpty(route.WhatsAppStatus))
-                                    {
-                                        <div class="mt-1" data-no-row-link><partial name="_WhatsAppStatus" model="route" /></div>
-                                    }
-                                </td>
-                                <td class="actions" data-no-row-link>
-                                    <div class="actions align-items-center">
-                                        @if (canComplete && !route.IsCompleted)
+                                </div>
+                            </td>
+                            <td class="hide-sm route-category ip-muted">@route.CategoryName</td>
+                            <td class="meta ip-muted">@L[route.RouteTypeLabel]</td>
+                            <td class="d-none">@route.Notes</td>
+                            <td class="state">
+                                @if (route.IsCompleted)
+                                {
+                                    <span class="ip-badge ip-badge-success">@L["Completed"]</span>
+                                }
+                                else
+                                {
+                                    <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
+                                }
+                                @* Shown here only while the WhatsApp column does not fit, as on phone cards *@
+                                @if (!string.IsNullOrEmpty(route.WhatsAppStatus))
+                                {
+                                    <div class="mt-1 route-wa-inline" data-no-row-link><partial name="_WhatsAppStatus" model="route" /></div>
+                                }
+                            </td>
+                            <td class="hide-sm route-whatsapp">
+                                @if (route.WhatsAppStatus == "Failed")
+                                {
+                                    <div class="d-flex align-items-center gap-1" data-no-row-link>
+                                        <span class="ip-wa ip-wa-failed" title="@route.WhatsAppError"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Failed"]</span></span>
+                                        @if (canComplete)
                                         {
-                                            <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" onclick="completeRoute(@route.Id)">@L["Complete"]</button>
-                                        }
-                                        @if (canUpdate && !route.IsCompleted)
-                                        {
-                                            <a asp-action="Edit" asp-route-id="@route.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </a>
-                                        }
-                                        @if (canDelete && !route.IsCompleted)
-                                        {
-                                            <button type="button" class="ip-btn-icon ip-btn-icon-danger" onclick="deleteRoute(@route.Id)" title="@L["Delete"]" aria-label="@L["Delete"]">
-                                                <i class="fa-solid fa-trash-can"></i>
+                                            <button type="button" class="ip-btn-icon pdf-omit" data-wa-resend="@route.Id" title="@L["Send again"]" aria-label="@L["Send again"]">
+                                                <i class="fa-solid fa-rotate-right"></i>
                                             </button>
                                         }
                                     </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-            else
-            {
-                <div class="ip-empty">
-                    <span class="icon"><i class="fa-solid fa-route"></i></span>
-                    <div class="title">@L["Nothing found"]</div>
-                    <div class="text">@(hasFilters || curCompleted.HasValue ? L["No routes match these filters."] : L["No transfers yet."])</div>
-                    @if (hasFilters)
-                    {
-                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
-                            <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
-                        </button>
+                                }
+                                else if (route.WhatsAppStatus == "Queued")
+                                {
+                                    <span class="ip-wa ip-wa-queued"><i class="fa-regular fa-clock" aria-hidden="true"></i><span>@L["Queued"]</span></span>
+                                }
+                                else if (route.WhatsAppStatus == "Sent")
+                                {
+                                    <span class="ip-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Sent"]</span></span>
+                                }
+                                else
+                                {
+                                    <span class="ip-faint pdf-omit">—</span>
+                                }
+                            </td>
+                            <td class="actions" data-no-row-link>
+                                <div class="actions align-items-center">
+                                    @if (canComplete && !route.IsCompleted)
+                                    {
+                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" onclick="completeRoute(@route.Id)">@L["Complete"]</button>
+                                    }
+                                    @if (canUpdate && !route.IsCompleted)
+                                    {
+                                        <a asp-action="Edit" asp-route-id="@route.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                    }
+                                    @if (canDelete && !route.IsCompleted)
+                                    {
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" onclick="deleteRoute(@route.Id)" title="@L["Delete"]" aria-label="@L["Delete"]">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
                     }
-                </div>
-            }
+                    @* The headers stay when nothing matches, so their filters can be changed *@
+                    @if (!Model.Items.Any())
+                    {
+                        <tr class="ip-empty-row">
+                            <td class="empty" colspan="11">
+                                <div class="ip-empty pdf-omit">
+                                    <span class="icon"><i class="fa-solid fa-route"></i></span>
+                                    <div class="title">@L["Nothing found"]</div>
+                                    <div class="text">@(hasFilters || curCompleted.HasValue ? L["No routes match these filters."] : L["No transfers yet."])</div>
+                                    @if (hasFilters || curCompleted.HasValue)
+                                    {
+                                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
+                                            <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
         <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
@@ -254,6 +307,16 @@
         @Html.AntiForgeryToken()
     </form>
 </div>
+
+@section Styles {
+    <style>
+        /* The list's own width decides which optional columns fit, so a collapsed menu or a wide screen shows more */
+        #routesRegion .ip-table-wrap { container: routes / inline-size; }
+        @@container routes (max-width: 1279.98px) { #routesTable .route-category { display: none; } }
+        @@container routes (max-width: 1139.98px) { #routesTable .route-whatsapp { display: none; } }
+        @@container routes (min-width: 1140px) { #routesTable .route-wa-inline { display: none; } }
+    </style>
+}
 
 @section Scripts {
     <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
@@ -279,12 +342,80 @@
             sheet: true
         });
 
+        // Several categories or types picked in a header show in the bar's single select as one joined choice
+        const SEVERAL = '__several';
+        const barLists = { categoryName: '#categoryFilter', routeType: '#typeFilter' };
+        // Only the headers set these, so the bar has no control to rebuild them from
+        const headerOnly = ['sort', 'dir', 'product', 'fromDepartment', 'toDepartment', 'whatsApp'];
+        let resetting = false;
+
+        function showSeveral() {
+            const params = new URLSearchParams(window.location.search);
+            Object.entries(barLists).forEach(function ([param, selector]) {
+                const select = document.querySelector(selector);
+                if (!select) return;
+                select.querySelectorAll('option[data-several]').forEach(function (o) { o.remove(); });
+                const values = params.getAll(param).filter(Boolean);
+                if (values.length < 2) return;
+                const labels = values.map(function (v) {
+                    const match = Array.from(select.options).find(function (o) { return o.value === v; });
+                    return match ? match.textContent.trim() : v;
+                });
+                const option = new Option(labels.join(', '), SEVERAL, true, true);
+                option.dataset.several = '';
+                select.appendChild(option);
+                select.value = SEVERAL;
+            });
+        }
+
+        // The bar builds its query from its own controls, so its changes carry over the sort and the header filters
+        const listGo = ListNav.go;
+        ListNav.go = function (url, options) {
+            const target = new URL(url, window.location.href);
+            const p = target.searchParams;
+            const current = new URLSearchParams(window.location.search);
+            if (!resetting && target.pathname === window.location.pathname) {
+                // Header changes drop the page number while the bar starts again from page 1, which tells them apart
+                if (p.get('pageNumber') === '1') {
+                    headerOnly.forEach(function (name) {
+                        if (!p.has(name)) current.getAll(name).forEach(function (v) { p.append(name, v); });
+                    });
+                }
+                Object.keys(barLists).forEach(function (name) {
+                    if (p.get(name) !== SEVERAL) return;
+                    p.delete(name);
+                    current.getAll(name).forEach(function (v) { p.append(name, v); });
+                });
+                url = target.pathname + '?' + p.toString();
+            }
+            return listGo.call(ListNav, url, options);
+        };
+
+        $(function () {
+            showSeveral();
+            // Registered after the bar's own handler, which first restores the selects from the URL
+            document.addEventListener('listnav:loaded', showSeveral);
+        });
+
+        // The sheet's reset clears everything, the headers' filters included
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#filterSheet [data-filter-reset]')) return;
+            resetting = true;
+            setTimeout(function () { resetting = false; });
+        }, true);
+
         // Names used by the markup's onclick and onchange handlers
         function applyRouteFilters() { routeFilters.apply(); }
-        function onDepartmentChange() { routeFilters.onDepartmentChange(); }
+        // Several categories have no single pair to check against the department, so they are kept as they are
+        function onDepartmentChange() {
+            if ($('#categoryFilter').val() === SEVERAL) routeFilters.apply(); else routeFilters.onDepartmentChange();
+        }
         function onCategoryChange() { routeFilters.onCategoryChange(); }
         function removeRouteFilter(key) { routeFilters.remove(key); }
-        function resetFilters() { routeFilters.reset(); }
+        function resetFilters() {
+            resetting = true;
+            try { routeFilters.reset(); } finally { resetting = false; }
+        }
 
         function completeRoute(id) {
             confirmAction({
