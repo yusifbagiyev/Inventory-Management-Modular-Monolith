@@ -18,7 +18,9 @@ function collectTableData(table, excludeHeaders = []) {
             && !skip.includes(col.name.toLowerCase()));
 
     const rows = Array.from(table.querySelectorAll('tbody tr'))
-        .filter(tr => tr.style.display !== 'none')
+        // Rows hidden by a filter and the empty-state rows are not data
+        .filter(tr => tr.style.display !== 'none' && !tr.hidden
+            && !tr.classList.contains('ip-colfilter-empty') && !tr.classList.contains('ip-empty-row'))
         .map(tr => {
             const cells = Array.from(tr.children);
             return keep.map(col => readCellText(cells[col.index]));

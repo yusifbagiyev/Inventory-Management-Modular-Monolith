@@ -36,13 +36,14 @@
         @if (Model.Requests.Any())
         {
             <div class="ip-table-wrap">
-                <table class="ip-table" id="myRequestsTable">
+                @* Every request is in the page, so the column headers sort and filter these rows in the browser *@
+                <table class="ip-table" id="myRequestsTable" data-columns="client">
                     <thead>
                         <tr>
-                            <th>@L["Request"]</th>
-                            <th>@L["What changes"]</th>
-                            <th>@L["Date"]</th>
-                            <th>@L["Status"]</th>
+                            <th data-sort="id" data-sort-first="desc" data-filter="text">@L["Request"]</th>
+                            <th data-sort="what" data-filter="text">@L["What changes"]</th>
+                            <th data-sort="date" data-sort-first="desc" data-filter="date">@L["Date"]</th>
+                            <th data-sort="status" data-filter="list">@L["Status"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -51,8 +52,9 @@
                         {
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
+                            var statusLabel = L[StatusLabel(request.Status)].Value;
                             <tr data-status="@GetStatusFilter(request.Status)" data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
-                                <td class="code ip-mono ip-muted">#@request.Id</td>
+                                <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
                                         <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
@@ -62,11 +64,12 @@
                                         }
                                     </div>
                                 </td>
-                                <td class="date ip-num text-nowrap">
+                                <td class="date ip-num text-nowrap" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">
                                     @request.CreatedAt.ToString("dd.MM.yyyy")
                                     <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
                                 </td>
-                                <td class="state">
+                                @* The reason and decider under the badge are left out of the status filter *@
+                                <td class="state" data-filter-value="@statusLabel" data-filter-label="@statusLabel">
                                     @switch (request.Status)
                                     {
                                         case "Pending":
@@ -158,6 +161,9 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script>
         // Delegated because live updates replace the tabs
         $(document).on('click', '.filter-btn', function () {
@@ -168,16 +174,27 @@
 
         function applyStatusFilter() {
             const filter = $('.filter-btn.active').data('filter') || 'all';
-            const $rows = $('#myRequestsTable tr[data-status]');
-
-            $rows.each(function () {
+            $('#myRequestsTable tr[data-status]').each(function () {
                 $(this).toggleClass('d-none', filter !== 'all' && this.dataset.status !== filter);
             });
-
-            const none = $rows.length > 0 && $rows.filter(':not(.d-none)').length === 0;
-            $('#myRequestsTable').closest('.ip-table-wrap').toggleClass('d-none', none);
-            $('#myRequestsFilterEmpty').toggleClass('d-none', !none);
+            updateFilterEmpty();
         }
+
+        // The tabs hide rows with d-none and the column headers with hidden, and the headers stay in view either way
+        function updateFilterEmpty() {
+            const rows = Array.from(document.querySelectorAll('#myRequestsTable tr[data-status]'));
+            const none = rows.length > 0 && !rows.some(row => !row.classList.contains('d-none') && !row.hidden);
+            // The column filters show their own empty row when they alone match nothing
+            const headerEmpty = !!document.querySelector('#myRequestsTable .ip-colfilter-empty');
+            $('#myRequestsFilterEmpty').toggleClass('d-none', !none || headerEmpty);
+        }
+
+        // Column filters change the rows without an event, so the empty note follows the table itself
+        function watchRequestRows() {
+            const body = document.querySelector('#myRequestsTable tbody');
+            if (body) new MutationObserver(updateFilterEmpty).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+        }
+        watchRequestRows();
 
         // A decision on one of these requests refreshes its status and the counts but keeps the active tab
         let activeFilter = 'all';
@@ -189,6 +206,7 @@
             },
             afterRefresh() {
                 $('.filter-btn').removeClass('active').filter(`[data-filter="${activeFilter}"]`).addClass('active');
+                watchRequestRows();
                 applyStatusFilter();
             }
         });
@@ -287,6 +305,13 @@
 }
 
 @functions {
+    // An English text key, translated through L
+    string StatusLabel(string status) => status switch
+    {
+        "Executed" => "Approved",
+        _ => status
+    };
+
     string GetStatusFilter(string status)
     {
         return status switch

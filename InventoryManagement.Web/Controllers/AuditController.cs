@@ -20,14 +20,17 @@ namespace InventoryManagement.Web.Controllers
             _mediator = mediator;
         }
 
+        // The arrays take the column headers' several choices and the filter bar's single one alike
         public async Task<IActionResult> Index(
-            int pageNumber = 1, int pageSize = 30, string? search = null, int? userId = null,
-            string? entityType = null, string? operation = null, DateTime? startDate = null, DateTime? endDate = null,
-            string? entityId = null)
+            int pageNumber = 1, int pageSize = 30, string? search = null, int[]? userId = null,
+            string[]? entityType = null, string[]? operation = null, DateTime? startDate = null, DateTime? endDate = null,
+            string? entityId = null, string? sort = null, string? dir = null)
         {
+            // Newest first unless a header asks otherwise
+            var descending = sort == null || dir == "desc";
             var page = await _mediator.Send(new GetAuditLogQuery(
                 pageNumber, pageSize, search, userId, entityType, operation,
-                startDate?.Date, endDate?.Date.AddDays(1).AddTicks(-1), entityId));
+                startDate?.Date, endDate?.Date.AddDays(1).AddTicks(-1), entityId, sort, descending));
             ViewBag.Facets = await _mediator.Send(new GetAuditFacetsQuery());
             // Changes store department and category ids, so the view needs the names
             var lookups = await _mediator.Send(new GetLookupsQuery());

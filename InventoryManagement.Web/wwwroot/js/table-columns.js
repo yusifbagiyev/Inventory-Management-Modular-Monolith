@@ -11,6 +11,22 @@ window.TableColumns = (function () {
     // Client tables keep their filters here, keyed by header cell
     const clientFilters = new WeakMap();
 
+    // Filter values and sort of client tables by table and column, so a live refresh that swaps the table keeps them
+    const clientState = new Map();
+
+    function stateKey(th) {
+        const table = th.closest('table');
+        return (table.id || window.location.pathname) + ':' + columnIndex(th);
+    }
+
+    function remember(th, change) {
+        clientState.set(stateKey(th), Object.assign({}, clientState.get(stateKey(th)), change));
+    }
+
+    function changed(table) {
+        table.dispatchEvent(new CustomEvent('tablecolumns:change', { bubbles: true }));
+    }
+
     function isClient(th) {
         const table = th.closest('table');
         return !!table && table.dataset.columns === 'client';
@@ -68,6 +84,7 @@ window.TableColumns = (function () {
                 if (panel && panelHeader === th) close(); else open(th, filterButton);
             });
         });
+        fresh.forEach(function (th) { if (isClient(th)) restore(th); });
         syncHeaders();
     }
 
@@ -123,12 +140,16 @@ window.TableColumns = (function () {
         return String(a).localeCompare(String(b), document.documentElement.lang || 'az', { sensitivity: 'base', numeric: true });
     }
 
-    function sortClient(th) {
+    function sortClient(th, dir) {
         const table = th.closest('table');
         const first = th.dataset.sortFirst === 'desc' ? 'desc' : 'asc';
         const current = th.dataset.sortDir || '';
-        const next = !current ? first : current === first ? (first === 'asc' ? 'desc' : 'asc') : '';
-        table.querySelectorAll('th[data-sort-dir]').forEach(function (h) { delete h.dataset.sortDir; });
+        const next = dir !== undefined ? dir : !current ? first : current === first ? (first === 'asc' ? 'desc' : 'asc') : '';
+        table.querySelectorAll('th[data-decorated]').forEach(function (h) {
+            delete h.dataset.sortDir;
+            if (clientState.has(stateKey(h))) remember(h, { sortDir: '' });
+        });
+        remember(th, { sortDir: next });
         const body = table.tBodies[0];
         if (!body) return;
         if (!table._originalOrder) table._originalOrder = Array.from(body.rows);
@@ -143,6 +164,7 @@ window.TableColumns = (function () {
         }
         rows.forEach(function (row) { body.appendChild(row); });
         syncHeaders();
+        changed(table);
     }
 
     // Filtering
@@ -199,6 +221,7 @@ window.TableColumns = (function () {
             }
         }
         syncHeaders();
+        changed(table);
     }
 
     // DataTables tables run the same filters through their search hook
@@ -371,6 +394,7 @@ window.TableColumns = (function () {
         close();
         if (isClient(th)) {
             th._clientValues = values.map(function (v) { return Array.isArray(v) ? v : (v ? [v] : []); });
+            remember(th, { values: values });
             applyClient(th, clientFilter(th, values));
         } else {
             applyServer(th, values);
@@ -379,8 +403,23 @@ window.TableColumns = (function () {
 
     function clearAll() {
         document.querySelectorAll('table[data-columns="client"] th[data-decorated]').forEach(function (th) {
+            remember(th, { values: null });
             if (clientFilters.has(th)) { th._clientValues = []; applyClient(th, null); }
         });
+    }
+
+    // Puts back the filters and sort a swapped-in client table had before
+    function restore(th) {
+        const state = clientState.get(stateKey(th));
+        if (!state) return;
+        if (state.values) {
+            const filter = clientFilter(th, state.values);
+            if (filter) {
+                th._clientValues = state.values.map(function (v) { return Array.isArray(v) ? v : (v ? [v] : []); });
+                applyClient(th, filter);
+            }
+        }
+        if (state.sortDir) sortClient(th, state.sortDir);
     }
 
     // Events

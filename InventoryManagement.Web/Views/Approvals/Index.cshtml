@@ -36,14 +36,15 @@
         @if (Model.Requests.Any())
         {
             <div class="ip-table-wrap">
-                <table class="ip-table" id="approvalsTable">
+                @* A tab holds all its rows (the decided tabs their latest 50), so the column headers work on them in the browser *@
+                <table class="ip-table" id="approvalsTable" data-columns="client">
                     <thead>
                         <tr>
-                            <th>@L["Request"]</th>
-                            <th>@L["What changes"]</th>
-                            <th>@L["Requested By"]</th>
-                            <th>@L["Date"]</th>
-                            <th>@L["Status"]</th>
+                            <th data-sort="id" data-sort-first="desc" data-filter="text">@L["Request"]</th>
+                            <th data-sort="what" data-filter="text">@L["What changes"]</th>
+                            <th data-sort="requester" data-filter="list">@L["Requested By"]</th>
+                            <th data-sort="date" data-sort-first="desc" data-filter="date">@L["Date"]</th>
+                            <th data-sort="status" data-filter="list">@L["Status"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -52,8 +53,9 @@
                         {
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
+                            var statusLabel = L[request.Status is "Pending" or "Rejected" or "Failed" ? request.Status : "Approved"].Value;
                             <tr data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
-                                <td class="code ip-mono ip-muted">#@request.Id</td>
+                                <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
                                         <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
@@ -64,11 +66,12 @@
                                     </div>
                                 </td>
                                 <td class="meta">@request.RequestedByName</td>
-                                <td class="date ip-num text-nowrap">
+                                <td class="date ip-num text-nowrap" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">
                                     @request.CreatedAt.ToString("dd.MM.yyyy")
                                     <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
                                 </td>
-                                <td class="state">
+                                @* The decider under the badge is left out of the status filter *@
+                                <td class="state" data-filter-value="@statusLabel" data-filter-label="@statusLabel">
                                     @switch (request.Status)
                                     {
                                         case "Pending":
@@ -152,6 +155,9 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script>
         let currentRequestId = null;
         const modalEl = document.getElementById('detailsModal');

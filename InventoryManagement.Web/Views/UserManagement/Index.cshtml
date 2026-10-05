@@ -73,15 +73,16 @@
 
     <div id="usersRegion">
         <div class="ip-table-wrap">
-            <table class="ip-table" id="usersTable">
+            @* Every user is in the page, so the column headers sort and filter these rows in the browser *@
+            <table class="ip-table" id="usersTable" data-columns="client">
                 <thead>
                     <tr>
-                        <th>@L["User"]</th>
-                        <th>@L["Email"]</th>
-                        <th>@L["Roles"]</th>
-                        <th>@L["Status"]</th>
-                        <th>@L["Created"]</th>
-                        <th>@L["Last Login"]</th>
+                        <th data-sort="user" data-filter="text">@L["User"]</th>
+                        <th data-sort="email" data-filter="text">@L["Email"]</th>
+                        <th data-sort="roles" data-filter="list">@L["Roles"]</th>
+                        <th data-sort="status" data-filter="list">@L["Status"]</th>
+                        <th data-sort="created" data-sort-first="desc" data-filter="date">@L["Created"]</th>
+                        <th data-sort="lastLogin" data-sort-first="desc" data-filter="date">@L["Last Login"]</th>
                         <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                     </tr>
                 </thead>
@@ -93,7 +94,7 @@
                             data-roles="@string.Join("|", user.Roles)"
                             data-active="@user.IsActive.ToString().ToLower()"
                             data-ever-logged-in="@everLoggedIn.ToString().ToLower()">
-                            <td class="title">
+                            <td class="title" data-filter-value="@user.FullName @user.Username">
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="ip-avatar pdf-omit" aria-hidden="true">@user.Username.Substring(0, 1).ToUpper()</span>
                                     <div class="cell-text">
@@ -103,7 +104,7 @@
                                 </div>
                             </td>
                             <td class="meta">@user.Email</td>
-                            <td>
+                            <td data-filter-value="@string.Join(", ", user.Roles.Select(r => L[r].Value))">
                                 @if (user.Roles.Any())
                                 {
                                     @string.Join(", ", user.Roles.Select(r => L[r].Value))
@@ -113,7 +114,7 @@
                                     <span class="ip-faint">-</span>
                                 }
                             </td>
-                            <td class="state">
+                            <td class="state" data-filter-value="@(user.IsActive ? L["Active"] : L["Inactive"])">
                                 @if (user.IsActive)
                                 {
                                     <span class="ip-badge ip-badge-success">@L["Active"]</span>
@@ -123,8 +124,8 @@
                                     <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                 }
                             </td>
-                            <td class="hide-sm ip-num text-nowrap">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
-                            <td class="date ip-num text-nowrap">
+                            <td class="hide-sm ip-num text-nowrap" data-order="@(user.CreatedAt == default(DateTime) ? "" : user.CreatedAt.ToString("yyyy-MM-dd HH:mm"))">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
+                            <td class="date ip-num text-nowrap" data-order="@(everLoggedIn ? user.LastLoginAt.GetValueOrDefault().ToString("yyyy-MM-dd HH:mm") : "")">
                                 @if (everLoggedIn)
                                 {
                                     @(user.LastLoginAt.GetValueOrDefault().ToString("dd.MM.yyyy")) <div class="sub">@(user.LastLoginAt.GetValueOrDefault().ToString("HH:mm"))</div>
@@ -206,8 +207,15 @@
 </div>
 
 @section Scripts {
+    <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
+    <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
+    <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
     <script>
+        function userRows() {
+            return Array.from(document.querySelectorAll('#usersTable tbody tr:not(.ip-colfilter-empty)'));
+        }
+
         function applyUserFilters() {
             const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             const role = document.getElementById('roleFilter').value;
@@ -215,9 +223,7 @@
             const login = document.getElementById('loginFilter').value;
             const terms = term ? term.split(/\s+/) : [];
 
-            let shown = 0;
-            const rows = document.querySelectorAll('#usersTable tbody tr');
-            rows.forEach(row => {
+            userRows().forEach(row => {
                 const haystack = row.textContent.toLowerCase();
                 const rowRoles = (row.dataset.roles || '').split('|').filter(Boolean);
                 const isActive = row.dataset.active === 'true';
@@ -230,22 +236,34 @@
                     (!login || (login === 'signed') === hasLoggedIn);
 
                 row.style.display = matches ? '' : 'none';
-                if (matches) shown++;
             });
+            updateUserCount();
+        }
 
+        // The bar hides rows with display and the column headers with hidden, so a row shows only when both let it
+        function updateUserCount() {
+            const rows = userRows();
+            const shown = rows.filter(row => row.style.display !== 'none' && !row.hidden).length;
             const count = document.getElementById('userCount');
             if (count) {
                 const total = rows.length;
                 count.textContent = shown === total ? t('{0} users', total) : t('{0} of {1} users', shown, total);
             }
 
-            const filtered = !!(term || role || status || login);
-            document.getElementById('resetUserFiltersBtn').classList.toggle('d-none', !filtered);
+            const barFiltered = ['searchInput', 'roleFilter', 'statusFilter', 'loginFilter'].some(id => document.getElementById(id).value.trim());
+            const headerFiltered = !!document.querySelector('#usersTable .ip-th-filter.is-active');
+            document.getElementById('resetUserFiltersBtn').classList.toggle('d-none', !barFiltered && !headerFiltered);
 
-            const table = document.getElementById('usersTable');
+            // The headers stay in view, and the column filters show their own empty row when they alone match nothing
+            const headerEmpty = document.querySelector('#usersTable .ip-colfilter-empty');
             const empty = document.getElementById('noUserResults');
-            if (table) table.style.display = shown === 0 ? 'none' : '';
-            if (empty) empty.style.display = shown === 0 ? '' : 'none';
+            if (empty) empty.style.display = shown === 0 && !headerEmpty ? '' : 'none';
+        }
+
+        // Column filters and sorting change the rows without an event, so the count follows the table itself
+        function watchUserRows() {
+            const body = document.querySelector('#usersTable tbody');
+            if (body) new MutationObserver(updateUserCount).observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
         }
 
         function resetUserFilters() {
@@ -253,13 +271,17 @@
             document.getElementById('roleFilter').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('loginFilter').value = '';
+            TableColumns.clear();
             applyUserFilters();
         }
 
         function exportUsersToPDF() {
             const table = document.getElementById('usersTable');
             if (!table || typeof collectTableData !== 'function') return;
-            const data = collectTableData(table, [t('Actions')]);
+            // The export skips rows hidden by display only, so rows the column filters hide are left out of a copy
+            const copy = table.cloneNode(true);
+            copy.querySelectorAll('tbody tr[hidden], tbody tr.ip-colfilter-empty').forEach(row => row.remove());
+            const data = collectTableData(copy, [t('Actions')]);
             if (!data.rows.length) { showToast(t('Nothing to export'), 'warning'); return; }
             renderPrintDocument({ title: t('Users'), headers: data.headers, rows: data.rows });
         }
@@ -311,7 +333,11 @@
         LiveUpdates.watch({
             entities: ['user'],
             regions: ['#usersSummary', '#usersRegion'],
-            afterRefresh: applyUserFilters
+            afterRefresh() {
+                watchUserRows();
+                applyUserFilters();
+            }
         });
+        watchUserRows();
     </script>
 }

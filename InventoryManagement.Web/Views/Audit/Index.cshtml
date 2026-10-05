@@ -5,7 +5,10 @@
     var facets = ViewBag.Facets as AuditFacets ?? new AuditFacets(Array.Empty<AuditUserOption>(), Array.Empty<string>());
     var query = Context.Request.Query;
     string? Q(string key) => string.IsNullOrWhiteSpace(query[key]) ? null : query[key].ToString();
-    var hasFilters = new[] { "search", "userId", "entityType", "operation", "startDate", "entityId" }.Any(k => Q(k) != null);
+    // Any query value besides paging is a filter or sort the reset button undoes
+    var hasFilters = query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
+    // The bar shows a single choice, so several from a header leave it on All
+    string? Single(string key) => query[key].Count == 1 ? Q(key) : null;
 
     // These return English text keys that are translated through L
     string TypeLabel(string type) => type switch
@@ -61,6 +64,8 @@
         }
         return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
     }
+    var userOptions = Json.Serialize(facets.Users.Where(u => u.UserId.HasValue).Select(u => new { value = u.UserId.ToString(), label = u.UserName })).ToString();
+    var typeOptions = Json.Serialize(facets.EntityTypes.Select(t => new { value = t, label = L[TypeLabel(t)].Value })).ToString();
     var departmentNames = ViewBag.DepartmentNames as Dictionary<int, string> ?? new();
     var categoryNames = ViewBag.CategoryNames as Dictionary<int, string> ?? new();
     string? IdName(string field, string? value)
@@ -122,40 +127,40 @@
         </div>
     </div>
 
-    @* A plain GET form, so every filter reloads the page from page 1 *@
-    <form method="get" class="ip-filterbar" id="auditFilters" data-no-ajax>
+    @* The same filters as the column headers, for phones where the headers are hidden; each change keeps the others *@
+    <div class="ip-filterbar" id="auditFilters">
         <label class="ip-filter search">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="search" name="search" value="@Q("search")" autocomplete="off"
+            <input type="search" id="searchInput" value="@Q("search")" autocomplete="off"
                    placeholder="@L["Search record, user, value..."]" aria-label="@L["Search"]" />
         </label>
         <label class="ip-filter">
             <span>@L["User"]</span>
-            <select name="userId" onchange="this.form.requestSubmit()">
+            <select id="userFilter">
                 <option value="">@L["All"]</option>
                 @foreach (var user in facets.Users.Where(u => u.UserId.HasValue))
                 {
-                    <option value="@user.UserId" selected="@(Q("userId") == user.UserId.ToString())">@user.UserName</option>
+                    <option value="@user.UserId" selected="@(Single("userId") == user.UserId.ToString())">@user.UserName</option>
                 }
             </select>
         </label>
         <label class="ip-filter">
             <span>@L["Record"]</span>
-            <select name="entityType" onchange="this.form.requestSubmit()">
+            <select id="typeFilter">
                 <option value="">@L["All"]</option>
                 @foreach (var type in facets.EntityTypes)
                 {
-                    <option value="@type" selected="@(Q("entityType") == type)">@L[TypeLabel(type)]</option>
+                    <option value="@type" selected="@(Single("entityType") == type)">@L[TypeLabel(type)]</option>
                 }
             </select>
         </label>
         <label class="ip-filter">
             <span>@L["Operation"]</span>
-            <select name="operation" onchange="this.form.requestSubmit()">
+            <select id="operationFilter">
                 <option value="">@L["All"]</option>
                 @foreach (var op in new[] { "Created", "Updated", "Deleted", "SignedIn", "SignInFailed", "SignedOut" })
                 {
-                    <option value="@op" selected="@(Q("operation") == op)">@L[OperationLabel(op)]</option>
+                    <option value="@op" selected="@(Single("operation") == op)">@L[OperationLabel(op)]</option>
                 }
             </select>
         </label>
@@ -163,31 +168,22 @@
             <i class="fa-regular fa-calendar"></i>
             <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" aria-label="@L["Date"]" />
         </label>
-        <input type="hidden" name="startDate" id="startDate" value="@Q("startDate")" />
-        <input type="hidden" name="endDate" id="endDate" value="@Q("endDate")" />
-        @if (Q("entityId") != null)
-        {
-            <input type="hidden" name="entityId" value="@Q("entityId")" />
-        }
-        <input type="hidden" name="pageSize" value="@Model.PageSize" />
         @if (hasFilters)
         {
             <a href="@Url.Action("Index")" class="ip-btn ip-btn-ghost">
                 <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
             </a>
         }
-    </form>
+    </div>
 
     <div data-list-region>
         <div class="ip-table-wrap">
-            @if (Model.Items.Any())
-            {
                 <table class="ip-table ip-audit-table">
                     <thead>
                         <tr>
-                            <th class="when">@L["When"]</th>
-                            <th class="who">@L["User"]</th>
-                            <th>@L["What"]</th>
+                            <th class="when" data-sort="when" data-sort-first="desc" data-filter="date" data-param-from="startDate" data-param-to="endDate">@L["When"]</th>
+                            <th class="who" data-sort="user" data-filter="list" data-param="userId" data-options="@userOptions">@L["User"]</th>
+                            <th data-sort="action" data-filter="list" data-param="entityType" data-options="@typeOptions">@L["What"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -285,17 +281,28 @@
                                 </td>
                             </tr>
                         }
+                        @* The headers stay when nothing matches, so their filters can be changed *@
+                        @if (!Model.Items.Any())
+                        {
+                            <tr class="ip-empty-row">
+                                @* The phone layout makes this row a flex box, so the cell is told to take the full width *@
+                                <td class="empty" colspan="3" style="flex: 1 1 100%">
+                                    <div class="ip-empty">
+                                        <span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>
+                                        <div class="title">@L["Nothing found"]</div>
+                                        @if (hasFilters)
+                                        {
+                                            <div class="text">@L["No actions match these filters"]</div>
+                                            <a href="@Url.Action("Index")" class="ip-btn ip-btn-secondary">
+                                                <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <div class="ip-empty">
-                    <span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>
-                    <div class="title">@L["Nothing found"]</div>
-                    <div class="text">@L["No actions match these filters"]</div>
-                </div>
-            }
         </div>
         <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>
@@ -307,24 +314,39 @@
     <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script>
         (function () {
-            const form = document.getElementById('auditFilters');
-            const start = document.getElementById('startDate');
-            const end = document.getElementById('endDate');
+            // The selects write the same query values as the column headers and keep every other filter
+            TableColumns.bindBar({ fields: { '#userFilter': 'userId', '#typeFilter': 'entityType', '#operationFilter': 'operation' } });
+
+            function go(changes) {
+                const url = new URL(window.location.href);
+                Object.entries(changes).forEach(function ([key, value]) {
+                    if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+                });
+                url.searchParams.delete('pageNumber');
+                ListNav.go(url.pathname + url.search);
+            }
+
             DateRange.attach('#dateRange', {
                 position: 'bottom right',
-                onApply: function (from, to) {
-                    start.value = DateRange.iso(from);
-                    end.value = DateRange.iso(to);
-                    form.requestSubmit();
-                },
+                onApply: function (from, to) { go({ startDate: DateRange.iso(from), endDate: DateRange.iso(to) }); },
                 onClear: function () {
-                    if (!start.value) return;
-                    start.value = end.value = '';
-                    form.requestSubmit();
+                    if (new URLSearchParams(window.location.search).get('startDate')) go({ startDate: '', endDate: '' });
                 }
             });
-            if (start.value && end.value)
-                DateRange.set('#dateRange', DateRange.fromIso(start.value), DateRange.fromIso(end.value));
+
+            // The bar is not swapped with the list, so it follows the URL after header filters and Back
+            function sync() {
+                const p = new URLSearchParams(window.location.search);
+                const search = document.getElementById('searchInput');
+                if (document.activeElement !== search) search.value = p.get('search') || '';
+                if (p.get('startDate') && p.get('endDate'))
+                    DateRange.set('#dateRange', DateRange.fromIso(p.get('startDate')), DateRange.fromIso(p.get('endDate')));
+                else
+                    DateRange.clear('#dateRange');
+            }
+            document.addEventListener('listnav:loaded', sync);
+            window.addEventListener('popstate', sync);
+            sync();
         })();
     </script>
 }
