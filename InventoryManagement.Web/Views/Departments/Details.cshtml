@@ -87,7 +87,7 @@
         @if (products.Any())
         {
             <div class="ip-table-wrap">
-                <table class="ip-table" id="departmentProductsTable" data-columns="client">
+                <table class="ip-table" id="departmentProductsTable" data-column-filters="client">
                     <thead>
                         <tr>
                             <th data-filter="text">@L["Code"]</th>
@@ -170,10 +170,6 @@
             if (!table) return;
             // Header filter buttons go in before DataTables wraps the header content
             TableColumns.decorate();
-            // DataTables sorts on Enter anywhere in a header cell, which would swallow the filter button's own Enter
-            $(table).find('.ip-th-filter').on('keypress', e => e.stopPropagation());
-            // DataTables reads data-columns as its own columns option, so the header filter marker waits until it has started
-            delete table.dataset.columns;
             $(table).DataTable({
                 pageLength: 25,
                 order: [[2, 'asc'], [0, 'asc']], // Sort by category, then code
@@ -187,7 +183,6 @@
                     infoFiltered: t('(filtered from _MAX_ total)')
                 }
             });
-            table.dataset.columns = 'client';
         }
 
         // Other users' changes refresh the page in place, and a deletion shows a notice
