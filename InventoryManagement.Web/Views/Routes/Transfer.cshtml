@@ -125,8 +125,8 @@
                         $('#ToDepartmentId').focus();
                         return false;
                     }
-                    if (sameAsNow()) {
-                        showDepartmentError(t('The product is already in this department. To change only the worker, edit the product.'));
+                    if (isNoChange()) {
+                        showDepartmentError(t('The product is already there. Choose another department or worker.'));
                         $('#ToDepartmentId').focus();
                         return false;
                     }
@@ -172,14 +172,16 @@
             $('#searchBtn').on('click', searchProduct);
             $('#ToDepartmentId, #ToWorker').on('change input', function() {
                 hideDepartmentError();
-                if (sameAsNow()) showDepartmentError(t('The product is already in this department. To change only the worker, edit the product.'));
+                if (isNoChange()) showDepartmentError(t('The product is already there. Choose another department or worker.'));
                 updateSummary();
             });
 
-            // A transfer must change the department, since a new worker in the same one is a product edit
-            function sameAsNow() {
-                return !!currentProductData
-                    && $('#ToDepartmentId').val() === String(currentProductData.departmentId ?? '');
+            // A transfer within the same department needs a new worker, otherwise nothing would move
+            function isNoChange() {
+                if (!currentProductData
+                    || $('#ToDepartmentId').val() !== String(currentProductData.departmentId ?? '')) return false;
+                const worker = ($('#ToWorker').val() || '').trim().toLocaleLowerCase();
+                return !worker || worker === (currentProductData.worker || '').trim().toLocaleLowerCase();
             }
 
             async function searchProduct() {

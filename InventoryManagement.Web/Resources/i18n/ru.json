@@ -1177,7 +1177,6 @@
   "Request #{0}": "Запрос #{0}",
   "vs the previous 90 days": "по сравнению с предыдущими 90 днями",
   "90 days": "90 дней",
-  "The product is already in this department. To change only the worker, edit the product.": "Товар уже находится в этом отделе. Чтобы сменить только сотрудника, отредактируйте товар.",
   "No matching permissions.": "Подходящих прав не найдено.",
   "You do not have permission to access this page. If you require access, please contact your administrator.": "У вас нет прав доступа к этой странице. При необходимости обратитесь к администратору.",
   "{0} requests, {1} pending": "Запросов: {0}, ожидают: {1}",
