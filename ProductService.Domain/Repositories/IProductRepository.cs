@@ -18,6 +18,7 @@ namespace ProductService.Domain.Repositories
             int? departmentId=null,
             bool? hasImage=null,
             bool? assigned=null,
+            ProductListFilter? filter = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>Distinct department and category pairs left after the state and quick filters.</summary>
@@ -42,7 +43,9 @@ namespace ProductService.Domain.Repositories
         Task<int> CountByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
 
         // Soft-deleted products, which every other method leaves out
-        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(string? search, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(string? search, int pageNumber, int pageSize, ProductListFilter? filter = null, CancellationToken cancellationToken = default);
+        /// <summary>Names of the users who deleted products, for the deleted list's filter.</summary>
+        Task<IReadOnlyList<string>> GetDeletedByNamesAsync(CancellationToken cancellationToken = default);
         Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountDeletedByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountDeletedByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);

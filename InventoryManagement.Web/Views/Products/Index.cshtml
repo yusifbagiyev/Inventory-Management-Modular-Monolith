@@ -5,23 +5,29 @@
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
     var filterCategories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
     var filterDepartments = ViewBag.FilterDepartments as List<SelectListItem> ?? new List<SelectListItem>();
-    var curCategoryId = ViewBag.CurrentCategoryId as int?;
-    var curDepartmentId = ViewBag.CurrentDepartmentId as int?;
+    var curCategoryIds = ViewBag.CurrentCategoryIds as int[] ?? Array.Empty<int>();
+    var curDepartmentIds = ViewBag.CurrentDepartmentIds as int[] ?? Array.Empty<int>();
+    // The bar's dropdowns hold one value, and list-filters.js shows several picked in a header
+    var curCategoryId = curCategoryIds.Length == 1 ? curCategoryIds[0].ToString() : null;
+    var curDepartmentId = curDepartmentIds.Length == 1 ? curDepartmentIds[0].ToString() : null;
     var curStatus = ViewBag.CurrentStatus as bool?;
     var curAvailability = ViewBag.CurrentAvailability as bool?;
     var curHasImage = ViewBag.CurrentHasImage as bool?;
     var curAssigned = ViewBag.CurrentAssigned as bool?;
-    var curStart = ViewBag.StartDate as DateTime?;
-    var curEnd = ViewBag.EndDate as DateTime?;
 
+    // Header options, built in the attribute so Razor encodes them
+    var categoryOptions = Json.Serialize(filterCategories.Select(c => new { value = c.Value, label = c.Text })).ToString();
+    var departmentOptions = Json.Serialize(filterDepartments.Select(d => new { value = d.Value, label = d.Text })).ToString();
+    var stateOptions = Json.Serialize(new[] { new { value = "true", label = L["Working"].Value }, new { value = "false", label = L["Not working"].Value } }).ToString();
 }
 
 <div class="container-fluid px-4">
     @{
         var counts = ViewBag.Counts as ProductService.Application.Features.Products.Queries.ProductCountsDto;
-        var hasFilters = !string.IsNullOrEmpty(currentSearch) || curCategoryId.HasValue || curDepartmentId.HasValue
-            || curStatus.HasValue || curAvailability.HasValue || curStart.HasValue || curEnd.HasValue
-            || curHasImage.HasValue || curAssigned.HasValue;
+        // Any query value besides paging and sort is a filter, from the bar or a column header
+        var hasFilters = Context.Request.Query.Any(q => q.Key is not ("pageNumber" or "pageSize" or "sort" or "dir")
+            && q.Value.Any(v => !string.IsNullOrEmpty(v)));
+        var hasSort = !string.IsNullOrEmpty(Context.Request.Query["sort"]);
         var canUpdate = User.HasPermission("product.update") || User.HasPermission("product.update.direct");
         var canTransfer = User.HasPermission("route.create") || User.HasPermission("route.create.direct");
         var canChangeCode = User.HasPermission("product.code.update");
@@ -74,7 +80,7 @@
                 <option value="">@L["All"]</option>
                 @foreach (var c in filterCategories)
                 {
-                    <option value="@c.Value" selected="@(c.Value == curCategoryId?.ToString())">@c.Text</option>
+                    <option value="@c.Value" selected="@(c.Value == curCategoryId)">@c.Text</option>
                 }
             </select>
         </label>
@@ -84,7 +90,7 @@
                 <option value="">@L["All"]</option>
                 @foreach (var d in filterDepartments)
                 {
-                    <option value="@d.Value" selected="@(d.Value == curDepartmentId?.ToString())">@d.Text</option>
+                    <option value="@d.Value" selected="@(d.Value == curDepartmentId)">@d.Text</option>
                 }
             </select>
         </label>
@@ -110,7 +116,7 @@
         </label>
         <button type="button" class="ip-btn ip-btn-ghost @(curAssigned == false ? "is-on" : "")" aria-pressed="@(curAssigned == false ? "true" : "false")" data-flag="assigned" onclick="quickFilter('unassigned')">@L["Unassigned"]</button>
         <button type="button" class="ip-btn ip-btn-ghost @(curHasImage == false ? "is-on" : "")" aria-pressed="@(curHasImage == false ? "true" : "false")" data-flag="hasImage" onclick="quickFilter('noImage')">@L["No image"]</button>
-        @if (hasFilters)
+        @if (hasFilters || hasSort)
         {
             <button type="button" class="ip-btn ip-btn-ghost" onclick="resetProductFilters()">
                 <span>@L["Reset"]</span><i class="fa-solid fa-xmark"></i>
@@ -120,18 +126,18 @@
 
     <div id="productsRegion" data-list-region>
         <div class="ip-table-wrap">
-            @if (Model.Items.Any())
-            {
                 <table class="ip-table" id="productsTable">
                     <thead>
                         <tr>
                             <th class="pdf-omit" style="width: 60px"><span class="visually-hidden">@L["Image"]</span></th>
-                            <th>@L["Code"]</th>
-                            <th>@L["Product"]</th>
-                            <th>@L["Department and worker"]</th>
+                            <th data-sort="code" data-filter="text" data-param="code">@L["Code"]</th>
+                            <th data-sort="product" data-filter="text" data-param="product">@L["Product"]</th>
+                            <th class="d-none d-xl-table-cell" data-sort="category" data-filter="list" data-param="categoryId" data-options="@categoryOptions">@L["Category"]</th>
+                            <th data-sort="department" data-filter="list" data-param="departmentId" data-options="@departmentOptions">@L["Department"]</th>
+                            <th class="d-none d-xl-table-cell" data-sort="worker" data-filter="text" data-param="worker">@L["Worker"]</th>
                             <th class="d-none">@L["Description"]</th>
-                            <th>@L["Updated"]</th>
-                            <th>@L["State"]</th>
+                            <th data-sort="updated" data-sort-first="desc" data-filter="date" data-param-from="updatedFrom" data-param-to="updatedTo">@L["Updated"]</th>
+                            <th data-sort="state" data-filter="list" data-param="status" data-multi="false" data-options="@stateOptions">@L["State"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -180,21 +186,26 @@
                                             {
                                                 <span class="ip-tag-plain ms-2">@L["New"]</span>
                                             }</span>
-                                        <span class="cell-sub">@product.Vendor · @product.CategoryName</span>
+                                        @* Phones and narrow tablets hide the category and worker columns, so the cells repeat them here *@
+                                        <span class="cell-sub">@product.Vendor<span class="d-xl-none pdf-omit"> · @product.CategoryName</span></span>
                                     </div>
                                 </td>
+                                <td class="hide-sm d-none d-xl-table-cell">@product.CategoryName</td>
                                 <td class="meta">
                                     <div class="cell-text">
                                         <span class="cell-title fw-normal">@product.DepartmentName</span>
-                                        @if (!string.IsNullOrEmpty(product.Worker))
-                                        {
-                                            <span class="cell-sub">@product.Worker</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="cell-sub pdf-omit">@L["Unassigned"]</span>
-                                        }
+                                        <span class="cell-sub d-xl-none pdf-omit">@(string.IsNullOrEmpty(product.Worker) ? L["Unassigned"].Value : product.Worker)</span>
                                     </div>
+                                </td>
+                                <td class="hide-sm d-none d-xl-table-cell">
+                                    @if (!string.IsNullOrEmpty(product.Worker))
+                                    {
+                                        @product.Worker
+                                    }
+                                    else
+                                    {
+                                        <span class="ip-faint pdf-omit">@L["Unassigned"]</span>
+                                    }
                                 </td>
                                 <td class="d-none">@product.Description</td>
                                 <td class="date ip-num text-nowrap">@((product.UpdatedAt ?? product.CreatedAt)?.ToString("dd.MM.yyyy") ?? "-")</td>
@@ -239,23 +250,27 @@
                                 </td>
                             </tr>
                         }
+                        @* The headers stay when nothing matches, so their filters can be changed *@
+                        @if (!Model.Items.Any())
+                        {
+                            <tr class="ip-empty-row">
+                                <td class="empty" colspan="10">
+                                    <div class="ip-empty">
+                                        <span class="icon"><i class="fa-solid fa-box-open"></i></span>
+                                        <div class="title">@L["Nothing found"]</div>
+                                        <div class="text">@(hasFilters ? L["No products match these filters"] : L["There are no products yet."])</div>
+                                        @if (hasFilters)
+                                        {
+                                            <button type="button" class="ip-btn ip-btn-secondary" onclick="resetProductFilters()">
+                                                <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
-            }
-            else
-            {
-                <div class="ip-empty">
-                    <span class="icon"><i class="fa-solid fa-box-open"></i></span>
-                    <div class="title">@L["Nothing found"]</div>
-                    <div class="text">@(hasFilters ? L["No products match these filters"] : L["There are no products yet."])</div>
-                    @if (hasFilters)
-                    {
-                        <button type="button" class="ip-btn ip-btn-secondary" onclick="resetProductFilters()">
-                            <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
-                        </button>
-                    }
-                </div>
-            }
         </div>
         <partial name="_Pagination" model="new PaginationViewModel(Model.PageNumber, Model.PageSize, Model.TotalCount)" />
     </div>

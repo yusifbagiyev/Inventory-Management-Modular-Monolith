@@ -1,5 +1,6 @@
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Domain.Common;
 using ProductService.Domain.Repositories;
 using ProductService.Application.Mappings;
 
@@ -16,7 +17,8 @@ namespace ProductService.Application.Features.Products.Queries
         int? categoryId=null,
         int? departmentId=null,
         bool? hasImage=null,
-        bool? assigned=null) : IRequest<PagedResultDto<ProductDto>>;
+        bool? assigned=null,
+        ProductListFilter? Filter=null) : IRequest<PagedResultDto<ProductDto>>;
 
     public class GetAllProductsQueryHandler : IRequestHandler<GetAllProductsQuery, PagedResultDto<ProductDto>>
     {
@@ -42,6 +44,7 @@ namespace ProductService.Application.Features.Products.Queries
                 request.departmentId,
                 request.hasImage,
                 request.assigned,
+                request.Filter,
                 cancellationToken);
 
             return new PagedResultDto<ProductDto>

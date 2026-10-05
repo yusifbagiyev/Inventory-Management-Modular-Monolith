@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Common;
 using ProductService.Domain.Entities;
@@ -37,6 +38,7 @@ namespace ProductService.Infrastructure.Repositories
             int? departmentId = null,
             bool? hasImage = null,
             bool? assigned = null,
+            ProductListFilter? filter = null,
             CancellationToken cancellationToken = default)
         {
             // Clamp against a negative Skip but leave the size uncapped, since exports ask for more on purpose
@@ -86,17 +88,19 @@ namespace ProductService.Infrastructure.Repositories
                 query = query.Where(r => r.CreatedAt <= EndDate);
             }
 
+            query = ApplyColumnFilters(query, filter);
+
+            // Each word must match some field, since the words of a phrase often sit in different columns
+            var terms = (search ?? "")
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct()
+                .ToArray();
+
             IEnumerable<Product> items;
             int totalCount;
 
-            if (!string.IsNullOrEmpty(search))
+            if (terms.Length > 0 || filter?.HasText == true)
             {
-                // Each word must match some field, since the words of a phrase often sit in different columns
-                var terms = search
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Distinct()
-                    .ToArray();
-
                 // ILIKE doesn't fold Azerbaijani letters, so the database only narrows the rows down
                 var broadQuery = query;
                 foreach (var term in terms)
@@ -113,13 +117,10 @@ namespace ProductService.Infrastructure.Repositories
                     );
                 }
 
-                var allFilteredItems = await broadQuery
-                    .OrderByDescending(r => r.CreatedAt)
-                    .ThenByDescending(r => r.UpdatedAt)
-                    .ToListAsync(cancellationToken);
+                var allFilteredItems = await Order(broadQuery, filter, NewestFirst).ToListAsync(cancellationToken);
 
                 // Then match every word in memory with Azerbaijani folding
-                items = allFilteredItems.Where(r => terms.All(t =>
+                items = allFilteredItems.Where(r => MatchesText(r, filter) && terms.All(t =>
                     SearchHelper.ContainsAzerbaijani(r.InventoryCode.ToString(), t) ||
                     SearchHelper.ContainsAzerbaijani(r.Vendor, t) ||
                     SearchHelper.ContainsAzerbaijani(r.Model, t) ||
@@ -140,9 +141,7 @@ namespace ProductService.Infrastructure.Repositories
             {
                 totalCount = await query.CountAsync(cancellationToken);
 
-                items = await query
-                    .OrderByDescending(r => r.CreatedAt)
-                    .ThenByDescending(r => r.UpdatedAt)
+                items = await Order(query, filter, NewestFirst)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync(cancellationToken);
@@ -156,6 +155,110 @@ namespace ProductService.Infrastructure.Repositories
                 PageSize = pageSize
             };
         }
+
+        private static IOrderedQueryable<Product> NewestFirst(IQueryable<Product> query)
+            => query.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.UpdatedAt);
+
+        private static IOrderedQueryable<Product> LastDeletedFirst(IQueryable<Product> query)
+            => query.OrderByDescending(p => p.DeletedAt);
+
+        // The column header filters, where text filters only narrow the rows here and MatchesText decides
+        private static IQueryable<Product> ApplyColumnFilters(IQueryable<Product> query, ProductListFilter? filter)
+        {
+            if (filter == null)
+                return query;
+
+            if (filter.CategoryIds is { Length: > 0 } categoryIds)
+                query = query.Where(p => categoryIds.Contains(p.CategoryId));
+
+            if (filter.DepartmentIds is { Length: > 0 } departmentIds)
+                query = query.Where(p => departmentIds.Contains(p.DepartmentId));
+
+            if (filter.UpdatedFrom is { } updatedFrom)
+            {
+                var from = updatedFrom.Date;
+                query = query.Where(p => (p.UpdatedAt ?? p.CreatedAt) >= from);
+            }
+
+            if (filter.UpdatedTo is { } updatedTo)
+            {
+                var before = updatedTo.Date.AddDays(1);
+                query = query.Where(p => (p.UpdatedAt ?? p.CreatedAt) < before);
+            }
+
+            if (filter.DeletedFrom is { } deletedFrom)
+            {
+                var from = deletedFrom.Date;
+                query = query.Where(p => p.DeletedAt >= from);
+            }
+
+            if (filter.DeletedTo is { } deletedTo)
+            {
+                var before = deletedTo.Date.AddDays(1);
+                query = query.Where(p => p.DeletedAt < before);
+            }
+
+            if (filter.DeletedBy is { Length: > 0 } deletedBy)
+                query = query.Where(p => p.DeletedBy != null && deletedBy.Contains(p.DeletedBy));
+
+            if (!string.IsNullOrWhiteSpace(filter.Code))
+            {
+                var code = filter.Code.Trim();
+                query = query.Where(p => EF.Functions.ILike(p.InventoryCode.ToString(), $"%{code}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Product))
+            {
+                var product = filter.Product.Trim();
+                query = query.Where(p => EF.Functions.ILike(p.Model, $"%{product}%") || EF.Functions.ILike(p.Vendor, $"%{product}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Worker))
+            {
+                var worker = filter.Worker.Trim();
+                query = query.Where(p => EF.Functions.ILike(p.Worker ?? "", $"%{worker}%"));
+            }
+
+            return query;
+        }
+
+        // The text filters again with Azerbaijani folding, the way the search matches
+        private static bool MatchesText(Product p, ProductListFilter? filter)
+            => filter == null
+               || ((string.IsNullOrWhiteSpace(filter.Code) || SearchHelper.ContainsAzerbaijani(p.InventoryCode.ToString(), filter.Code.Trim()))
+                   && (string.IsNullOrWhiteSpace(filter.Product)
+                       || SearchHelper.ContainsAzerbaijani(p.Model, filter.Product.Trim())
+                       || SearchHelper.ContainsAzerbaijani(p.Vendor, filter.Product.Trim()))
+                   && (string.IsNullOrWhiteSpace(filter.Worker) || SearchHelper.ContainsAzerbaijani(p.Worker, filter.Worker.Trim())));
+
+        // The id breaks ties, so paging through equal values never repeats or skips a row
+        private static IOrderedQueryable<Product> Order(
+            IQueryable<Product> query, ProductListFilter? filter, Func<IQueryable<Product>, IOrderedQueryable<Product>> listOrder)
+        {
+            var desc = filter?.Descending == true;
+            var ordered = filter?.Sort switch
+            {
+                "code" => By(query, p => p.InventoryCode, desc),
+                "product" => Then(By(query, p => p.Model, desc), p => p.Vendor, desc),
+                "category" => By(query, p => p.Category!.Name, desc),
+                "department" => By(query, p => p.Department!.Name, desc),
+                "worker" => By(query, p => p.Worker ?? "", desc),
+                "updated" => By(query, p => p.UpdatedAt ?? p.CreatedAt, desc),
+                "state" => Then(By(query, p => p.IsWorking, desc), p => p.IsActive, desc),
+                "deleted" => By(query, p => p.DeletedAt, desc),
+                "deletedBy" => By(query, p => p.DeletedBy ?? "", desc),
+                _ => null
+            };
+            return ordered == null
+                ? listOrder(query).ThenByDescending(p => p.Id)
+                : Then(ordered, p => p.Id, desc);
+        }
+
+        private static IOrderedQueryable<Product> By<TKey>(IQueryable<Product> query, Expression<Func<Product, TKey>> key, bool descending)
+            => descending ? query.OrderByDescending(key) : query.OrderBy(key);
+
+        private static IOrderedQueryable<Product> Then<TKey>(IOrderedQueryable<Product> query, Expression<Func<Product, TKey>> key, bool descending)
+            => descending ? query.ThenByDescending(key) : query.ThenBy(key);
 
 
         public async Task<IReadOnlyList<(int DepartmentId, int CategoryId)>> GetDepartmentCategoryPairsAsync(
@@ -287,7 +390,7 @@ namespace ProductService.Infrastructure.Repositories
             => _context.Products.IgnoreQueryFilters().Where(p => p.IsDeleted);
 
         public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(
-            string? search, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
+            string? search, int pageNumber, int pageSize, ProductListFilter? filter = null, CancellationToken cancellationToken = default)
         {
             var query = Deleted().AsNoTracking().Include(p => p.Category).Include(p => p.Department).AsQueryable();
             if (!string.IsNullOrWhiteSpace(search))
@@ -304,14 +407,32 @@ namespace ProductService.Infrastructure.Repositories
                         (p.Department != null && EF.Functions.ILike(p.Department.Name, $"%{t}%")));
                 }
             }
+            query = ApplyColumnFilters(query, filter);
+            var skip = (Math.Max(1, pageNumber) - 1) * pageSize;
+
+            if (filter?.HasText == true)
+            {
+                var matching = (await Order(query, filter, LastDeletedFirst).ToListAsync(cancellationToken))
+                    .Where(p => MatchesText(p, filter))
+                    .ToList();
+                return (matching.Skip(skip).Take(pageSize).ToList(), matching.Count);
+            }
+
             var total = await query.CountAsync(cancellationToken);
-            var items = await query
-                .OrderByDescending(p => p.DeletedAt)
-                .Skip((Math.Max(1, pageNumber) - 1) * pageSize)
+            var items = await Order(query, filter, LastDeletedFirst)
+                .Skip(skip)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
             return (items, total);
         }
+
+        public async Task<IReadOnlyList<string>> GetDeletedByNamesAsync(CancellationToken cancellationToken = default)
+            => await Deleted()
+                .Where(p => p.DeletedBy != null && p.DeletedBy != "")
+                .Select(p => p.DeletedBy!)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToListAsync(cancellationToken);
 
         public Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default)
             => Deleted().AsNoTracking().Include(p => p.Category).Include(p => p.Department)

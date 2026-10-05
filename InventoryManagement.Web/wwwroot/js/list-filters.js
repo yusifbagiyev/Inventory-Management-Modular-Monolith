@@ -23,13 +23,20 @@ window.ListFilters = (function () {
             catToDepts.get(cat).add(dep);
         });
 
+        // Several values picked in a column header show as one option that keeps them all
+        const SEVERAL = '__several';
+
+        // Query values the bar has no control for, like column header filters and the sort, are carried over
+        const owned = new Set(['search', 'startDate', 'endDate', 'pageSize', 'pageNumber']
+            .concat(Object.keys(config.fields), config.urlFlags));
+
         function selectedDepartment() {
             const value = $('#departmentFilter').val();
-            return value ? toDepartmentKey(value) : null;
+            return value && value !== SEVERAL ? toDepartmentKey(value) : null;
         }
         function selectedCategory() {
             const value = $('#categoryFilter').val();
-            return value ? toCategoryKey(value) : null;
+            return value && value !== SEVERAL ? toCategoryKey(value) : null;
         }
 
         function navigate(params, options) {
@@ -53,15 +60,19 @@ window.ListFilters = (function () {
                 params.append('endDate', DateRange.iso(range.end));
             }
 
+            const current = currentParams();
             Object.keys(config.fields).forEach(function (param) {
                 const value = $(config.fields[param]).val();
-                if (value !== undefined && value !== null && value !== '') params.append(param, value);
+                if (value === SEVERAL) current.getAll(param).forEach(function (v) { params.append(param, v); });
+                else if (value !== undefined && value !== null && value !== '') params.append(param, value);
             });
 
             // URL-only flags have no control, so they are carried over from the current URL
-            const current = currentParams();
             config.urlFlags.forEach(function (flag) {
                 if (current.get(flag) === 'false') params.set(flag, 'false');
+            });
+            current.forEach(function (value, key) {
+                if (!owned.has(key)) params.append(key, value);
             });
 
             params.append('pageSize', $('#pageSizeFilter').val() || String(config.pageSize));
@@ -86,7 +97,15 @@ window.ListFilters = (function () {
 
             // A param missing from the URL means All, since Back can return to a state without it
             Object.keys(config.fields).forEach(function (param) {
-                $(config.fields[param]).val(params.get(param) || '');
+                const select = $(config.fields[param]);
+                const values = params.getAll(param);
+                select.find('option[value="' + SEVERAL + '"]').remove();
+                if (values.length > 1) {
+                    select.append($('<option>').val(SEVERAL).text(t('{0} selected', values.length)));
+                    select.val(SEVERAL);
+                } else {
+                    select.val(values[0] || '');
+                }
             });
         }
 
@@ -95,7 +114,7 @@ window.ListFilters = (function () {
             const dep = selectedDepartment();
             const allowed = dep === null ? null : (deptToCats.get(dep) || new Set());
             document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
-                opt.hidden = opt.value !== '' && allowed !== null && !allowed.has(toCategoryKey(opt.value));
+                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && allowed !== null && !allowed.has(toCategoryKey(opt.value));
             });
         }
 
@@ -104,7 +123,7 @@ window.ListFilters = (function () {
             const cat = selectedCategory();
             const allowed = cat === null ? null : (catToDepts.get(cat) || new Set());
             document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
-                opt.hidden = opt.value !== '' && allowed !== null && !allowed.has(toDepartmentKey(opt.value));
+                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && allowed !== null && !allowed.has(toDepartmentKey(opt.value));
             });
         }
 

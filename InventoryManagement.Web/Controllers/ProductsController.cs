@@ -10,6 +10,7 @@ using ProductService.Application.Features.Lookups;
 using ProductService.Application.Features.Products.Commands;
 using ProductService.Application.Features.Products.Queries;
 using ProductService.Application.Interfaces;
+using ProductService.Domain.Common;
 using RouteService.Application.Features.Routes.Queries;
 using SharedServices.Identity;
 using ModuleDtos = ProductService.Application.DTOs;
@@ -41,14 +42,27 @@ namespace InventoryManagement.Web.Controllers
             DateTime? endDate = null,
             bool? status = null,
             bool? availability = null,
-            int? categoryId = null,
-            int? departmentId = null,
+            int[]? categoryId = null,
+            int[]? departmentId = null,
             bool? hasImage = null,
-            bool? assigned = null)
+            bool? assigned = null,
+            string? sort = null,
+            string? dir = null,
+            string? code = null,
+            string? product = null,
+            string? worker = null,
+            DateTime? updatedFrom = null,
+            DateTime? updatedTo = null)
         {
+            // Category and department take several values from the column headers and one from the filter bar
+            var filter = new ProductListFilter
+            {
+                Sort = sort, Descending = dir == "desc", CategoryIds = categoryId, DepartmentIds = departmentId,
+                Code = code, Product = product, Worker = worker, UpdatedFrom = updatedFrom, UpdatedTo = updatedTo
+            };
             var result = await _mediator.Send(new GetAllProductsQuery(
                 pageNumber, pageSize, search, startDate, endDate,
-                status, availability, categoryId, departmentId, hasImage, assigned));
+                status, availability, null, null, hasImage, assigned, filter));
             var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result);
             var pending = await _mediator.Send(new ApprovalService.Application.Features.Queries.GetPendingProductRequests.Query());
             foreach (var p in products.Items)
@@ -60,10 +74,8 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentAvailability = availability;
-            ViewBag.StartDate = startDate;
-            ViewBag.EndDate = endDate;
-            ViewBag.CurrentCategoryId = categoryId;
-            ViewBag.CurrentDepartmentId = departmentId;
+            ViewBag.CurrentCategoryIds = categoryId ?? [];
+            ViewBag.CurrentDepartmentIds = departmentId ?? [];
             ViewBag.CurrentHasImage = hasImage;
             ViewBag.CurrentAssigned = assigned;
 
@@ -120,15 +132,26 @@ namespace InventoryManagement.Web.Controllers
 
         /// <summary>Lists soft-deleted products, or shows one when an id is given.</summary>
         [PermissionAuthorize(AllPermissions.ProductDeletedView)]
-        public async Task<IActionResult> Deleted(int? id, string? search = null, int pageNumber = 1, int pageSize = 30)
+        public async Task<IActionResult> Deleted(
+            int? id, string? search = null, int pageNumber = 1, int pageSize = 30,
+            string? sort = null, string? dir = null, string? code = null, string? product = null,
+            int[]? categoryId = null, int[]? departmentId = null, string? worker = null,
+            DateTime? deletedFrom = null, DateTime? deletedTo = null, string[]? deletedBy = null)
         {
             if (id.HasValue)
             {
-                var product = await _mediator.Send(new GetDeletedProductByIdQuery(id.Value));
-                return product == null ? RedirectToNotFound() : View("DeletedDetails", ModelMapper.Map<ProductViewModel>(product));
+                var deleted = await _mediator.Send(new GetDeletedProductByIdQuery(id.Value));
+                return deleted == null ? RedirectToNotFound() : View("DeletedDetails", ModelMapper.Map<ProductViewModel>(deleted));
             }
 
-            var page = await _mediator.Send(new GetDeletedProductsQuery(search, pageNumber, pageSize));
+            var filter = new ProductListFilter
+            {
+                Sort = sort, Descending = dir == "desc", Code = code, Product = product, CategoryIds = categoryId,
+                DepartmentIds = departmentId, Worker = worker, DeletedFrom = deletedFrom, DeletedTo = deletedTo, DeletedBy = deletedBy
+            };
+            var page = await _mediator.Send(new GetDeletedProductsQuery(search, pageNumber, pageSize, filter));
+            await LoadColumnOptions();
+            ViewBag.Deleters = await _mediator.Send(new GetProductDeletersQuery());
             ViewBag.TotalCount = page.TotalCount;
             ViewBag.PageNumber = page.PageNumber;
             ViewBag.PageSize = page.PageSize;
@@ -286,13 +309,19 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>Filter options plus the department and category pairs the filter script uses to cascade.</summary>
         private async Task LoadFilterLists(bool? status, bool? availability, bool? hasImage, bool? assigned)
         {
-            var lookups = await _mediator.Send(new GetLookupsQuery());
-            ViewBag.FilterCategories = lookups.Categories.ToSelectList();
-            ViewBag.FilterDepartments = lookups.Departments.ToSelectList();
+            await LoadColumnOptions();
 
             var facets = await _mediator.Send(new GetProductFilterFacetsQuery(status, availability, hasImage, assigned));
             ViewBag.FilterPairsJson = System.Text.Json.JsonSerializer.Serialize(
                 facets.Pairs.Select(p => new[] { p.DepartmentId, p.CategoryId }));
+        }
+
+        // Every category and department, inactive ones too, since filters still find their products
+        private async Task LoadColumnOptions()
+        {
+            var lookups = await _mediator.Send(new GetLookupsQuery());
+            ViewBag.FilterCategories = lookups.Categories.ToSelectList();
+            ViewBag.FilterDepartments = lookups.Departments.ToSelectList();
         }
 
         private static List<ModuleDtos.ProductSpecificationDto> ToSpecificationDtos(IEnumerable<ProductSpecificationViewModel>? lines)
