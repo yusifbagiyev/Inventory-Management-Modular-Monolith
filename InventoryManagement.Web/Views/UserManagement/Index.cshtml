@@ -191,29 +191,10 @@
     </div>
 </div>
 
-<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalTitle">@L["Delete User"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">@L["Are you sure you want to delete user"] <strong id="deleteUsername"></strong>?</p>
-                <p class="ip-muted mb-0">@L["This action cannot be undone."]</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form id="deleteForm" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="ip-btn ip-btn-danger">
-                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+@* Posted after the shared confirm dialog, so the result comes back as the usual redirect and notice *@
+<form id="deleteForm" method="post" hidden>
+    @Html.AntiForgeryToken()
+</form>
 
 @section Scripts {
     <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
@@ -325,11 +306,16 @@
         }
 
         function deleteUser(userId, username) {
-            document.getElementById('deleteUsername').textContent = username;
-            document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + userId;
-
-            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            modal.show();
+            confirmAction({
+                title: t('Delete User'),
+                message: t('Delete user {0}? This action cannot be undone.', username),
+                okText: t('Delete'),
+                danger: true
+            }, function () {
+                const form = document.getElementById('deleteForm');
+                form.action = '@Url.Action("Delete")/' + userId;
+                form.submit();
+            });
         }
 
         // Other users' changes refresh the count and the table in place

@@ -591,7 +591,6 @@
   "Activate user": "Активировать пользователя",
   "Active User": "Активный пользователь",
   "Are you sure you want to delete": "Вы уверены, что хотите удалить",
-  "Are you sure you want to delete user": "Вы уверены, что хотите удалить пользователя",
   "Ask your administrator to grant the access you need.": "Для получения необходимого доступа обратитесь к администратору.",
   "Assigned To": "Закреплён за",
   "Assigned workers": "Ответственные сотрудники",
@@ -654,7 +653,6 @@
   "No roles": "Нет ролей",
   "No roles assigned": "Роли не назначены",
   "No users match these filters": "Нет пользователей, соответствующих выбранным фильтрам",
-  "Deleting a user is irreversible. Please make sure before you proceed.": "Удаление пользователя необратимо. Прежде чем продолжить, убедитесь в правильности своего решения.",
   "Password Requirements": "Требования к паролю",
   "Passwords do not match!": "Пароли не совпадают!",
   "Permissions": "Права доступа",
@@ -675,7 +673,6 @@
   "Sort by Workers": "По числу сотрудников",
   "Special characters for extra security (recommended)": "Специальные символы для дополнительной защиты (рекомендуется)",
   "The user will need to use this new password to login.": "Для входа в систему пользователь должен использовать новый пароль.",
-  "This action cannot be undone.": "Это действие нельзя отменить.",
   "This department doesn't have any products assigned.": "За этим отделом не закреплено ни одного товара.",
   "This person will appear in exported documents": "Данное лицо будет указано в экспортируемых документах",
   "This will permanently delete the department and affect associated products.": "Отдел будет удалён безвозвратно, что затронет связанные с ним товары.",
@@ -1174,5 +1171,6 @@
   "WhatsApp messages are sent only for completed transfers and new products.": "Сообщения WhatsApp отправляются только для завершённых перемещений и новых товаров.",
   "Executed At": "Дата выполнения",
   "CodeChange": "Изменение номера",
-  "The product moves to the destination above and the route can no longer be changed. Complete it?": "Товар будет перемещён в указанное выше место назначения, и маршрут больше нельзя будет изменить. Завершить?"
+  "The product moves to the destination above and the route can no longer be changed. Complete it?": "Товар будет перемещён в указанное выше место назначения, и маршрут больше нельзя будет изменить. Завершить?",
+  "Delete user {0}? This action cannot be undone.": "Удалить пользователя {0}? Это действие нельзя отменить."
 }

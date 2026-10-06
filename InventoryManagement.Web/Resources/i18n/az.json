@@ -591,7 +591,6 @@
   "Activate user": "İstifadəçini aktivləşdir",
   "Active User": "Aktiv istifadəçi",
   "Are you sure you want to delete": "Silmək istədiyinizə əminsiniz:",
-  "Are you sure you want to delete user": "Bu istifadəçini silmək istədiyinizə əminsiniz:",
   "Ask your administrator to grant the access you need.": "Zəruri giriş hüququnun verilməsi üçün administratora müraciət edin.",
   "Assigned To": "Təhkim olunub",
   "Assigned workers": "Təhkim olunmuş işçilər",
@@ -654,7 +653,6 @@
   "No roles": "Rol yoxdur",
   "No roles assigned": "Heç bir rol təyin edilməyib",
   "No users match these filters": "Seçilmiş filtrlərə uyğun istifadəçi tapılmadı",
-  "Deleting a user is irreversible. Please make sure before you proceed.": "İstifadəçinin silinməsi geri qaytarıla bilməz. Davam etməzdən əvvəl qərarınızdan əmin olun.",
   "Password Requirements": "Şifrə tələbləri",
   "Passwords do not match!": "Şifrələr uyğun gəlmir!",
   "Permissions": "İcazələr",
@@ -675,7 +673,6 @@
   "Sort by Workers": "İşçi sayına görə",
   "Special characters for extra security (recommended)": "Əlavə təhlükəsizlik üçün xüsusi simvollar (tövsiyə olunur)",
   "The user will need to use this new password to login.": "İstifadəçi sistemə daxil olmaq üçün bu yeni şifrədən istifadə etməlidir.",
-  "This action cannot be undone.": "Bu əməliyyatı geri qaytarmaq mümkün deyil.",
   "This department doesn't have any products assigned.": "Bu şöbəyə heç bir məhsul təhkim olunmayıb.",
   "This person will appear in exported documents": "Bu şəxs ixrac edilən sənədlərdə göstəriləcək",
   "This will permanently delete the department and affect associated products.": "Şöbə birdəfəlik silinəcək və bu, ona aid məhsullara təsir edəcək.",
@@ -1174,5 +1171,6 @@
   "WhatsApp messages are sent only for completed transfers and new products.": "WhatsApp mesajları yalnız tamamlanmış transferlər və yeni məhsullar üçün göndərilir.",
   "Executed At": "İcra tarixi",
   "CodeChange": "Kod dəyişikliyi",
-  "The product moves to the destination above and the route can no longer be changed. Complete it?": "Məhsul yuxarıda göstərilən təyinata keçiriləcək və marşrutu artıq dəyişmək mümkün olmayacaq. Tamamlansın?"
+  "The product moves to the destination above and the route can no longer be changed. Complete it?": "Məhsul yuxarıda göstərilən təyinata keçiriləcək və marşrutu artıq dəyişmək mümkün olmayacaq. Tamamlansın?",
+  "Delete user {0}? This action cannot be undone.": "{0} istifadəçisi silinsin? Bu əməliyyatı geri qaytarmaq mümkün deyil."
 }
