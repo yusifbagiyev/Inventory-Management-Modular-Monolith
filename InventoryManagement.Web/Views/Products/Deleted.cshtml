@@ -48,15 +48,15 @@
 
     <div id="deletedRegion" data-list-region>
         <div class="ip-table-wrap">
-            <table class="ip-table">
+            <table class="ip-table" id="deletedProductsTable">
                 <thead>
                     <tr>
                         <th><span class="visually-hidden">@L["Image"]</span></th>
                         <th data-sort="code" data-filter="text" data-param="code">@L["Code"]</th>
                         <th data-sort="product" data-filter="text" data-param="product">@L["Product"]</th>
-                        <th class="d-none d-xl-table-cell" data-sort="category" data-filter="list" data-param="categoryId" data-options="@categoryOptions">@L["Category"]</th>
+                        <th class="hide-xl" data-sort="category" data-filter="list" data-param="categoryId" data-options="@categoryOptions">@L["Category"]</th>
                         <th data-sort="department" data-filter="list" data-param="departmentId" data-options="@departmentOptions">@L["Department"]</th>
-                        <th class="d-none d-xl-table-cell" data-sort="worker" data-filter="text" data-param="worker">@L["Worker"]</th>
+                        <th class="hide-xl" data-sort="worker" data-filter="text" data-param="worker">@L["Worker"]</th>
                         <th data-sort="deleted" data-sort-first="desc" data-filter="date" data-param-from="deletedFrom" data-param-to="deletedTo">@L["Deleted"]</th>
                         <th data-sort="deletedBy" data-filter="list" data-param="deletedBy" data-options="@deleterOptions">@L["Deleted by"]</th>
                     </tr>
@@ -80,19 +80,23 @@
                             </td>
                             <td class="code ip-mono">@product.InventoryCode</td>
                             <td class="title">
-                                <div class="cell-title">@product.Model</div>
-                                @* Phones and narrow tablets hide the category and worker columns, so the cells repeat them here *@
-                                <div class="cell-sub">@product.Vendor<span class="d-xl-none"> · @product.CategoryName</span></div>
+                                <div class="cell-text">
+                                    <span><a class="cell-title text-reset" href="@Url.Action("Deleted", new { id = product.Id })" title="@product.Model">@product.Model</a></span>
+                                    @* Phones and narrower screens hide the category and worker columns, so the cells repeat them here *@
+                                    <span class="cell-sub" title="@product.Vendor · @product.CategoryName">@product.Vendor<span class="show-xl"> · @product.CategoryName</span></span>
+                                </div>
                             </td>
-                            <td class="hide-sm d-none d-xl-table-cell">@product.CategoryName</td>
+                            <td class="hide-sm hide-xl" title="@product.CategoryName">@product.CategoryName</td>
                             <td class="meta">
-                                <div class="cell-title">@product.DepartmentName</div>
-                                <div class="cell-sub d-xl-none">@(string.IsNullOrWhiteSpace(product.Worker) ? L["Not Assigned"].Value : product.Worker)</div>
+                                <div class="cell-text">
+                                    <span class="cell-title fw-normal" title="@product.DepartmentName">@product.DepartmentName</span>
+                                    <span class="cell-sub show-xl" title="@product.Worker">@(string.IsNullOrWhiteSpace(product.Worker) ? L["Unassigned"].Value : product.Worker)</span>
+                                </div>
                             </td>
-                            <td class="hide-sm d-none d-xl-table-cell">
+                            <td class="hide-sm hide-xl" title="@product.Worker">
                                 @if (string.IsNullOrWhiteSpace(product.Worker))
                                 {
-                                    <span class="ip-faint">@L["Not Assigned"]</span>
+                                    <span class="ip-faint">@L["Unassigned"]</span>
                                 }
                                 else
                                 {

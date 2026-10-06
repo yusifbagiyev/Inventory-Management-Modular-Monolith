@@ -1190,3 +1190,27 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
 .ip-filter-toggle .count:empty { display: none; }
 @media (max-width: 767.98px) { .ip-filterbar .ip-filter-toggle { padding: 0 14px; border-color: transparent; background: var(--ip-sunken); color: var(--ip-text-1); font-weight: 500; } }
 .ip-brand-fill { fill: var(--ip-brand); }
+/* Products: phone cards repeat the category and worker, put department and worker on their own lines and keep the New tag beside the name */
+@media (max-width: 767.98px) {
+  :is(#productsTable, #deletedProductsTable) td.title .cell-sub .show-xl { display: inline; }
+  :is(#productsTable, #deletedProductsTable) td.meta { white-space: normal; }
+  :is(#productsTable, #deletedProductsTable) td.meta .cell-text { display: block; }
+  :is(#productsTable, #deletedProductsTable) td.meta .cell-title, :is(#productsTable, #deletedProductsTable) td.meta .cell-sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :is(#productsTable, #deletedProductsTable) td.meta .cell-sub::before { content: none; }
+  :is(#productsTable, #deletedProductsTable) td.title .cell-text > span:first-child { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  :is(#productsTable, #deletedProductsTable) td.title .cell-text > span:first-child > .cell-title { flex: 0 1 auto; min-width: 0; }
+  :is(#productsTable, #deletedProductsTable) td.title .ip-tag-plain { flex: none; margin-left: 0 !important; }
+  /* Two photos a row on every phone, where 168px tiles would leave one */
+  .ip-images { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ip-space-3); }
+  /* Dots are buttons with a finger-sized hit area around the small dot */
+  .ip-gallery-dots { gap: 0; left: calc(var(--ip-space-5) - 8px); bottom: 4px; }
+  .ip-gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .ip-gallery-dots button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ip-border-strong); }
+  .ip-gallery-dots button.active::before { background: var(--ip-text-1); }
+  .ip-gallery-dots button:focus-visible { outline-offset: -2px; border-radius: 50%; }
+}
+/* The worker under the department keeps the one-line clip that the shared show-xl display would undo */
+@container (max-width: 1271.98px) { :is(#productsTable, #deletedProductsTable) td.meta .cell-sub.show-xl { display: -webkit-box; } }
+/* The gallery photo and picker tiles clip their children, so their focus ring is drawn inside */
+[data-ig-zoom]:focus-visible, [data-im-preview]:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: -3px; }
+[data-im-preview] { cursor: zoom-in; }
