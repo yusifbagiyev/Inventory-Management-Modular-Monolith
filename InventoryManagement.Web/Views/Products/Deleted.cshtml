@@ -10,6 +10,7 @@
     var hasFilters = Context.Request.Query.Any(q => q.Key is not ("pageNumber" or "pageSize" or "sort" or "dir")
         && q.Value.Any(v => !string.IsNullOrEmpty(v)));
     var hasSort = !string.IsNullOrEmpty(Context.Request.Query["sort"]);
+    var canPurge = User.HasPermission("product.deleted.purge");
 
     // Header options, built in the attribute so Razor encodes them
     var categories = ViewBag.FilterCategories as List<SelectListItem> ?? new List<SelectListItem>();
@@ -59,6 +60,10 @@
                         <th class="hide-xl" data-sort="worker" data-filter="list" data-param="workers" data-text-param="worker" data-options-url="@Url.Action("ColumnValues", new { column = "worker", deleted = true })">@L["Worker"]</th>
                         <th data-sort="deleted" data-sort-first="desc" data-filter="date" data-param-from="deletedFrom" data-param-to="deletedTo">@L["Deleted"]</th>
                         <th data-sort="deletedBy" data-filter="list" data-param="deletedBy" data-options="@deleterOptions">@L["Deleted by"]</th>
+                        @if (canPurge)
+                        {
+                            <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -108,13 +113,24 @@
                                 <div class="sub">@product.DeletedAt?.ToString("HH:mm")</div>
                             </td>
                             <td>@(string.IsNullOrWhiteSpace(product.DeletedBy) ? "-" : product.DeletedBy)</td>
+                            @if (canPurge)
+                            {
+                                <td class="actions" data-no-row-link>
+                                    <div class="actions">
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-purge-product="@product.Id" data-summary="@product.InventoryCode · @product.Model"
+                                                title="@L["Delete permanently"]" aria-label="@L["Delete permanently {0}", product.InventoryCode]">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            }
                         </tr>
                     }
                     @* The headers stay when nothing matches, so their filters can be changed *@
                     @if (!Model.Any())
                     {
                         <tr class="ip-empty-row">
-                            <td class="empty" colspan="8">
+                            <td class="empty" colspan="@(canPurge ? 9 : 8)">
                                 <div class="ip-empty">
                                     <span class="icon"><i class="fa-solid fa-trash-can"></i></span>
                                     <div class="title">@(hasFilters ? L["Nothing found"] : L["No deleted products"])</div>

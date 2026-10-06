@@ -28,6 +28,7 @@ namespace InventoryManagement.Web.Models.ViewModels
                 new(AllPermissions.ProductCodeUpdate, "Change inventory codes"),
                 new(AllPermissions.ProductExport, "Export products to PDF"),
                 new(AllPermissions.ProductDeletedView, "View deleted products"),
+                new(AllPermissions.ProductDeletedPurge, "Permanently delete deleted products"),
             ]),
             new("routes", "Routes", "fa-route",
             [

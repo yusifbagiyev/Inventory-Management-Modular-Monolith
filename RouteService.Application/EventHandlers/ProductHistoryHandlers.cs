@@ -14,7 +14,8 @@ namespace RouteService.Application.EventHandlers
     public class ProductHistoryHandlers :
         INotificationHandler<ProductCreatedEvent>,
         INotificationHandler<ProductUpdatedEvent>,
-        INotificationHandler<ProductDeletedEvent>
+        INotificationHandler<ProductDeletedEvent>,
+        INotificationHandler<ProductPurgedEvent>
     {
         private readonly IInventoryRouteRepository _repository;
         private readonly IUnitOfWork _unitOfWork;
@@ -118,6 +119,18 @@ namespace RouteService.Application.EventHandlers
             route.Complete();
 
             await SaveAsync(route, cancellationToken);
+        }
+
+        public async Task Handle(ProductPurgedEvent notification, CancellationToken cancellationToken)
+        {
+            // A product removed for good takes its whole history along, with the history's own photo copies after the commit
+            foreach (var route in await _repository.GetByProductIdAsync(notification.ProductId, cancellationToken))
+            {
+                await _repository.DeleteAsync(route, cancellationToken);
+                foreach (var imageUrl in route.ImageUrls)
+                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(imageUrl));
+            }
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         private static ProductSnapshot Snapshot(ProductState product) => new(

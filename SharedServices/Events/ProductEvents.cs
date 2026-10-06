@@ -30,4 +30,7 @@ namespace SharedServices.Events
         string? NewImageUrl) : INotification;
 
     public record ProductDeletedEvent(ProductState Product, string RemovedBy) : INotification;
+
+    // Published inside the purging transaction, so the product's route history goes with it
+    public record ProductPurgedEvent(int ProductId, int InventoryCode) : INotification;
 }

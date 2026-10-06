@@ -366,6 +366,14 @@ namespace ProductService.Infrastructure.Repositories
         private IQueryable<Product> Deleted()
             => _context.Products.IgnoreQueryFilters().Where(p => p.IsDeleted);
 
+        public async Task<Product?> RemoveDeletedAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var product = await Deleted().FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+            if (product != null)
+                _context.Products.Remove(product);
+            return product;
+        }
+
         public async Task<(IReadOnlyList<Product> Items, int TotalCount)> GetDeletedAsync(
             string? search, int pageNumber, int pageSize, ProductListFilter? filter = null, CancellationToken cancellationToken = default)
         {

@@ -356,6 +356,18 @@ namespace InventoryManagement.Web.Controllers
             return HandleApiResponse(response, nameof(Index));
         }
 
+        /// <summary>Removes a deleted product for good, with its photos and route history.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.ProductDeletedPurge)]
+        public async Task<IActionResult> Purge(int id)
+        {
+            var response = await RunAsync(
+                () => _mediator.Send(new PurgeProduct.Command(id)),
+                "The product was deleted permanently.");
+            return HandleApiResponse(response, nameof(Deleted));
+        }
+
 
         /// <summary>Filter options plus the department and category pairs the filter script uses to cascade.</summary>
         private async Task LoadFilterLists(bool? status, bool? availability, bool? hasImage, bool? assigned)

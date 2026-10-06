@@ -1172,5 +1172,11 @@
   "New product details": "Данные нового товара",
   "There are no further details for this request.": "Дополнительных сведений по этому запросу нет.",
   "The values could not be loaded. Type to search instead.": "Не удалось загрузить значения. Введите текст для поиска.",
-  "{0} more, narrow the search": "Ещё {0}, уточните поиск"
+  "{0} more, narrow the search": "Ещё {0}, уточните поиск",
+  "Delete permanently": "Удалить навсегда",
+  "Delete permanently {0}": "Удалить {0} навсегда",
+  "Permanently delete deleted products": "Удалять удалённые товары навсегда",
+  "The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.": "Товар, его фотографии и вся история маршрутов будут удалены навсегда, а инвентарный номер можно будет использовать снова. Это действие нельзя отменить.",
+  "The product was deleted permanently.": "Товар удалён навсегда.",
+  "Deleted product with ID {0} not found": "Удалённый товар с ID {0} не найден"
 }

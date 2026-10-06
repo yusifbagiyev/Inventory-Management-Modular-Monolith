@@ -31,6 +31,12 @@
                     <i class="fa-solid fa-clipboard-list"></i><span>@L["Audit log"]</span>
                 </a>
             }
+            @if (User.HasPermission("product.deleted.purge"))
+            {
+                <button type="button" class="ip-btn ip-btn-danger" data-purge-product="@Model.Id" data-summary="@Model.InventoryCode · @Model.Model">
+                    <i class="fa-regular fa-trash-can"></i><span>@L["Delete permanently"]</span>
+                </button>
+            }
         </div>
     </div>
 

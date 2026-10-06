@@ -30,6 +30,8 @@ namespace SharedServices.Identity
         public const string ProductExport = "product.export";
         /// <summary>Opens the Deleted products page.</summary>
         public const string ProductDeletedView = "product.deleted.view";
+        /// <summary>Removes a deleted product for good, with its photos and its route history, for one created by mistake.</summary>
+        public const string ProductDeletedPurge = "product.deleted.purge";
 
         // Categories
         public const string CategoryView = "category.view";

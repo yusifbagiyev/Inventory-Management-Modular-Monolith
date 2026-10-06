@@ -1172,5 +1172,11 @@
   "New product details": "Yeni məhsulun məlumatları",
   "There are no further details for this request.": "Bu sorğu üçün əlavə məlumat yoxdur.",
   "The values could not be loaded. Type to search instead.": "Qiymətləri yükləmək mümkün olmadı. Bunun əvəzinə axtarış mətni yazın.",
-  "{0} more, narrow the search": "Daha {0} qiymət var, axtarışı dəqiqləşdirin"
+  "{0} more, narrow the search": "Daha {0} qiymət var, axtarışı dəqiqləşdirin",
+  "Delete permanently": "Birdəfəlik sil",
+  "Delete permanently {0}": "{0} birdəfəlik silinsin",
+  "Permanently delete deleted products": "Silinmiş məhsulları birdəfəlik silmək",
+  "The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.": "Məhsul, onun şəkilləri və bütün marşrut tarixçəsi birdəfəlik silinəcək, inventar kodu yenidən istifadə oluna biləcək. Bu əməliyyatı geri qaytarmaq mümkün deyil.",
+  "The product was deleted permanently.": "Məhsul birdəfəlik silindi.",
+  "Deleted product with ID {0} not found": "{0} ID-li silinmiş məhsul tapılmadı"
 }

@@ -43,6 +43,8 @@ namespace ProductService.Domain.Repositories
         /// <summary>Names of the users who deleted products, for the deleted list's filter.</summary>
         Task<IReadOnlyList<string>> GetDeletedByNamesAsync(CancellationToken cancellationToken = default);
         Task<Product?> GetDeletedByIdAsync(int id, CancellationToken cancellationToken = default);
+        /// <summary>Marks a deleted product for removal on the next save and returns it, or null when there is no such deleted product.</summary>
+        Task<Product?> RemoveDeletedAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountDeletedByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<int> CountDeletedByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
     }
