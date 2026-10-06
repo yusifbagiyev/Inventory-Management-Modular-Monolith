@@ -16,6 +16,17 @@ namespace InventoryManagement.Web.Models.ViewModels
         public JObject? ImageData { get; private init; }
         /// <summary>For deletions the dialog shows a warning instead of a diff.</summary>
         public bool IsDeletion { get; private init; }
+        /// <summary>A route update's new destination when the request stored only its id, for the dialog to name.</summary>
+        public int? UnnamedDepartmentId { get; private set; }
+
+        /// <summary>Shows the department name in place of the id in the To Department row.</summary>
+        public void NameDepartment(string name)
+        {
+            var index = Changes.FindIndex(c => c.Field == "To Department");
+            if (index >= 0 && !string.IsNullOrWhiteSpace(name))
+                Changes[index] = Changes[index] with { Proposed = name };
+            UnnamedDepartmentId = null;
+        }
 
         private static readonly Regex FieldChange = new(@"^(Vendor|Model|Category|Department|Worker|Description|Color|Destination): (.*?) (?:→|->) (.*)$", RegexOptions.Singleline);
 
@@ -143,22 +154,82 @@ namespace InventoryManagement.Web.Models.ViewModels
             };
             var from = Str(d, "fromDepartmentName");
             var to = Str(d, "toDepartmentName");
-            foreach (var line in Lines(d["changes"] ?? d["Changes"]).SelectMany(l => l.Split("; ")))
+            var lines = RouteChangeLines(Get(d, "changes")).ToList();
+
+            // The rows come from UpdateData, which is what approval applies, and the summary lines only fill in the old values
+            if (update is not null && Get(update, "toDepartmentId") is JValue departmentId)
             {
-                var m = FieldChange.Match(line.Trim());
-                if (m.Success)
-                    view.Changes.Add(new(m.Groups[1].Value == "Destination" ? "To Department" : m.Groups[1].Value,
-                        NoneToNull(m.Groups[2].Value), NoneToNull(m.Groups[3].Value)));
+                var line = lines.FirstOrDefault(l => l.StartsWith("Destination: ", StringComparison.Ordinal));
+                var proposed = line is null ? null : ProposedAfter(line, "Destination: " + to + " -> ") ?? MatchGroup(line, 3);
+                // Older requests named the new destination only by its id
+                if (proposed is null || Regex.IsMatch(proposed, @"^department #\d+$"))
+                {
+                    proposed = "#" + departmentId;
+                    if (int.TryParse(departmentId.ToString(), out var id))
+                        view.UnnamedDepartmentId = id;
+                }
+                view.Changes.Add(new("To Department", to, proposed));
             }
-            var notes = update is null ? null : Str(update, "notes");
-            if (!string.IsNullOrWhiteSpace(notes) && notes != "{}")
-                view.Changes.Add(new("Notes", null, notes));
+
+            if (update is not null && Get(update, "toWorker") is JValue { Type: not JTokenType.Null } workerToken)
+            {
+                var proposed = workerToken.ToString();
+                var line = lines.FirstOrDefault(l => l.StartsWith("Worker: ", StringComparison.Ordinal));
+                // Cut the known new value off the end, because a name may itself contain an arrow
+                var current = line is null ? null
+                    : CurrentBefore(line, "Worker: ", " -> " + (string.IsNullOrWhiteSpace(proposed) ? "None" : proposed.Trim()))
+                      ?? CurrentBefore(line, "Worker: ", " -> " + proposed)
+                      ?? MatchGroup(line, 2);
+                view.Changes.Add(new("Worker", current is null ? null : NoneToNull(current.Trim()), NoneToNull(proposed.Trim())));
+            }
+
+            // Requests stored without a change list show the notes whenever UpdateData carries them
+            var notesChanged = lines.Count == 0
+                ? update is not null && !string.IsNullOrWhiteSpace(Str(update, "notes"))
+                : lines.Any(l => l is "Notes updated" or "Notes cleared");
+            if (notesChanged)
+            {
+                var notes = update is null ? null : Str(update, "notes");
+                view.Changes.Add(new("Notes", Str(d, "currentNotes"), notes == "{}" ? null : notes));
+            }
+
+            // Lines for fields UpdateData does not carry, kept so nothing the request lists is hidden
+            foreach (var line in lines)
+            {
+                var m = FieldChange.Match(line);
+                if (!m.Success) continue;
+                var field = m.Groups[1].Value == "Destination" ? "To Department" : m.Groups[1].Value;
+                if (view.Changes.All(c => c.Field != field))
+                    view.Changes.Add(new(field, NoneToNull(m.Groups[2].Value), NoneToNull(m.Groups[3].Value)));
+            }
+
             if (HasImageChanges(update))
                 view.Changes.Add(new("Images", null, null));
             if (view.Changes.Count == 0 && from != null && to != null)
                 view.Changes.Add(new("Route", null, $"{from} → {to}"));
             return view;
         }
+
+        // Older requests joined the changes into one text with ", ", and a name may itself contain ", "
+        private static readonly Regex RouteChangeSeparator =
+            new(@"(?:, |; )(?=Notes updated|Notes cleared|Worker cleared|Worker: |Destination: |Images updated)");
+
+        private static IEnumerable<string> RouteChangeLines(JToken? token) => token switch
+        {
+            JArray array => array.Select(t => t.ToString().Trim()),
+            JValue { Type: JTokenType.String } value => RouteChangeSeparator.Split(value.ToString()).Select(l => l.Trim()),
+            _ => []
+        };
+
+        private static string? MatchGroup(string line, int group)
+            => FieldChange.Match(line) is { Success: true } m ? m.Groups[group].Value : null;
+
+        private static string? ProposedAfter(string line, string prefix)
+            => line.StartsWith(prefix, StringComparison.Ordinal) ? line[prefix.Length..] : null;
+
+        private static string? CurrentBefore(string line, string prefix, string suffix)
+            => line.Length >= prefix.Length + suffix.Length && line.StartsWith(prefix, StringComparison.Ordinal) && line.EndsWith(suffix, StringComparison.Ordinal)
+                ? line[prefix.Length..^suffix.Length] : null;
 
         private static ApprovalView RouteDelete(JObject d)
         {

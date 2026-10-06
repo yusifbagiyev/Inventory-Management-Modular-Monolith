@@ -6,10 +6,10 @@ function loadPendingApprovalsCount() {
     if (isLoadingApprovals) return;
     isLoadingApprovals = true;
     $.ajax({
-        url: AppConfig.buildApiUrl('approvalrequests?pageNumber=1&pageSize=1'),
+        url: AppConfig.buildApiUrl('approvalrequests/pending-count'),
         type: 'GET',
         timeout: 10000,
-        success: data => updatePendingApprovalsCount(data.totalCount || 0),
+        success: data => updatePendingApprovalsCount(data.count || 0),
         error: xhr => console.warn('Pending approvals count unavailable', xhr.status),
         complete: () => { isLoadingApprovals = false; }
     });

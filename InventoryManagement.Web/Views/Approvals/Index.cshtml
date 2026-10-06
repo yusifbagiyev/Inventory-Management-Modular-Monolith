@@ -130,7 +130,7 @@
             <div class="modal-footer flex-column align-items-stretch">
                 <div id="rejectBox" class="ip-field w-100 mb-2 d-none">
                     <label for="rejectionReason" class="ip-label"><span>@L["Rejection Reason"]</span> <span class="req">*</span></label>
-                    <textarea id="rejectionReason" class="ip-textarea" rows="3"
+                    <textarea id="rejectionReason" class="ip-textarea" rows="3" maxlength="500" aria-required="true"
                               placeholder="@L["The requester sees this reason on their My Requests page."]"></textarea>
                     <span class="ip-error d-none" id="rejectionError">@L["Rejection reason is required."]</span>
                 </div>
@@ -174,8 +174,8 @@
 
         function viewDetails(requestId) {
             currentRequestId = requestId;
-            $('#rejectionReason').val('').removeClass('is-invalid');
-            $('#rejectionError').addClass('d-none');
+            $('#rejectionReason').val('');
+            reasonError(false);
             setMode('view');
             loadApprovalDetails(`/Approvals/Details/${requestId}`, modalEl).then(function (head) {
                 setMode(canDecide && head && head.dataset.status === 'Pending' ? 'decide' : 'view');
@@ -188,18 +188,32 @@
 
         $('#modalRejectBtn').on('click', () => setMode('reject'));
         $('#rejectBackBtn').on('click', () => setMode('decide'));
+        // The message is tied to the field only while it shows, so a valid field is not read out as wrong
+        function reasonError(on) {
+            const $field = $('#rejectionReason').toggleClass('is-invalid', on);
+            if (on) $field.attr({ 'aria-invalid': 'true', 'aria-describedby': 'rejectionError' });
+            else $field.removeAttr('aria-invalid aria-describedby');
+            $('#rejectionError').toggleClass('d-none', !on);
+        }
+
         $('#rejectionReason').on('input', function () {
-            if (this.value.trim()) { $(this).removeClass('is-invalid'); $('#rejectionError').addClass('d-none'); }
+            if (this.value.trim()) reasonError(false);
         });
 
         function busy($button, on) {
             if (on) {
                 $button.data('html', $button.html()).prop('disabled', true)
                     .html(`<span class="spinner-border spinner-border-sm"></span><span>${escapeHtml(t('Processing...'))}</span>`);
-            } else {
-                $button.prop('disabled', false).html($button.data('html'));
+            } else if ($button.data('html') != null) {
+                $button.prop('disabled', false).html($button.data('html')).removeData('html');
             }
         }
+
+        // A decision closes the dialog with its button still busy, so the next request opens with both ready
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            busy($('#modalApproveBtn'), false);
+            busy($('#confirmRejectBtn'), false);
+        });
 
         function decided(message, type) {
             bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -224,8 +238,8 @@
         $('#confirmRejectBtn').on('click', function () {
             const reason = $('#rejectionReason').val().trim();
             if (!reason) {
-                $('#rejectionReason').addClass('is-invalid').trigger('focus');
-                $('#rejectionError').removeClass('d-none');
+                reasonError(true);
+                $('#rejectionReason').trigger('focus');
                 return;
             }
             const $button = $(this);

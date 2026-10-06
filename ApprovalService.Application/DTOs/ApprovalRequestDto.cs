@@ -6,6 +6,7 @@
         public string RequestType { get; set; } = string.Empty;
         public string EntityType {  get; set; } = string.Empty;
         public int? EntityId { get; set; }
+        /// <summary>The stored request data, which lists carry without the uploaded image bytes.</summary>
         public string ActionData {  get; set; } = string.Empty;
         public int RequestedById { get; set; }
         public string RequestedByName { get; set; } = string.Empty;

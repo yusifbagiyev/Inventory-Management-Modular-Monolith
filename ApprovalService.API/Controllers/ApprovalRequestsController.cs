@@ -28,6 +28,9 @@ namespace ApprovalService.API.Controllers
 
         private string CurrentUserName => User.Identity?.Name ?? "Unknown";
 
+        // The paged lists stay plain arrays for their callers, so the total travels in a header
+        private const string TotalCountHeader = "X-Total-Count";
+
 
         [HttpGet]
         [Permission(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
@@ -40,11 +43,23 @@ namespace ApprovalService.API.Controllers
         }
 
 
-        [HttpGet("my-requests")]
-        public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetMyRequests()
+        /// <summary>Count only, so the menu badge never reads a request.</summary>
+        [HttpGet("pending-count")]
+        [Permission(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
+        public async Task<IActionResult> GetPendingCount()
         {
-            var result = await _mediator.Send(new GetUserRequests.Query(CurrentUserId));
-            return Ok(result);
+            return Ok(new { count = await _mediator.Send(new GetPendingCount.Query()) });
+        }
+
+
+        [HttpGet("my-requests")]
+        public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetMyRequests(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = GetUserRequests.DefaultPageSize)
+        {
+            var result = await _mediator.Send(new GetUserRequests.Query(CurrentUserId, pageNumber, pageSize));
+            Response.Headers[TotalCountHeader] = result.TotalCount.ToString();
+            return Ok(result.Items);
         }
 
 
@@ -67,8 +82,18 @@ namespace ApprovalService.API.Controllers
         [Permission(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Approve(int id)
         {
-            await _mediator.Send(new ApproveRequest.Command(id, CurrentUserId, CurrentUserName, User.IsInRole(AllRoles.Admin)));
-            return NoContent();
+            var executed = await _mediator.Send(new ApproveRequest.Command(id, CurrentUserId, CurrentUserName, User.IsInRole(AllRoles.Admin)));
+            if (executed)
+                return NoContent();
+
+            // The approval is recorded, but its action was rolled back and the request is now Failed
+            var failed = await _mediator.Send(new GetRequestById.Query(id, WithImageData: false));
+            return Conflict(new
+            {
+                error = failed?.RejectionReason ?? "The request was approved but its action failed to execute.",
+                status = failed?.Status ?? "Failed",
+                approvalRequestId = id
+            });
         }
 
 
@@ -76,17 +101,20 @@ namespace ApprovalService.API.Controllers
         [Permission(AllPermissions.ApprovalDecide)]
         public async Task<IActionResult> Reject(int id, RejectRequestDto dto)
         {
-            await _mediator.Send(new RejectRequest.Command(id, CurrentUserId, CurrentUserName, dto.Reason));
+            await _mediator.Send(new RejectRequest.Command(id, CurrentUserId, CurrentUserName, dto.Reason?.Trim() ?? ""));
             return NoContent();
         }
 
 
         [HttpGet("all")]
         [Permission(AllPermissions.ApprovalView, AllPermissions.ApprovalDecide)]
-        public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetAllRequests()
+        public async Task<ActionResult<IEnumerable<ApprovalRequestDto>>> GetAllRequests(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = Application.Features.Queries.GetAllRequests.DefaultPageSize)
         {
-            var result = await _mediator.Send(new GetAllRequests.Query());
-            return Ok(result);
+            var result = await _mediator.Send(new GetAllRequests.Query(pageNumber, pageSize));
+            Response.Headers[TotalCountHeader] = result.TotalCount.ToString();
+            return Ok(result.Items);
         }
 
 

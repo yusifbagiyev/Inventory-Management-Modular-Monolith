@@ -20,11 +20,11 @@ namespace InventoryManagement.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var requests = await _approvalService.GetMyRequestsAsync();
+            var (requests, statusCounts) = await _approvalService.GetMyRequestsAsync();
             return View(new MyRequestsViewModel
             {
                 Requests = requests,
-                StatusCounts = requests.GroupBy(r => r.Status).ToDictionary(g => g.Key, g => g.Count())
+                StatusCounts = new Dictionary<string, int>(statusCounts)
             });
         }
 

@@ -5,11 +5,14 @@ using ApprovalService.Application.Mappings;
 
 namespace ApprovalService.Application.Features.Queries
 {
+    /// <summary>One page of every request, newest first, without the uploaded image bytes.</summary>
     public class GetAllRequests
     {
-        public record Query : IRequest<IEnumerable<ApprovalRequestDto>>;
+        public const int DefaultPageSize = 100;
 
-        public class Handler : IRequestHandler<Query, IEnumerable<ApprovalRequestDto>>
+        public record Query(int PageNumber = 1, int PageSize = DefaultPageSize) : IRequest<PagedResultDto<ApprovalRequestDto>>;
+
+        public class Handler : IRequestHandler<Query, PagedResultDto<ApprovalRequestDto>>
         {
             private readonly IApprovalRequestRepository _repository;
 
@@ -18,10 +21,16 @@ namespace ApprovalService.Application.Features.Queries
                 _repository = repository;
             }
 
-            public async Task<IEnumerable<ApprovalRequestDto>> Handle(Query request, CancellationToken cancellationToken)
+            public async Task<PagedResultDto<ApprovalRequestDto>> Handle(Query request, CancellationToken cancellationToken)
             {
-                var requests = await _repository.GetAllAsync(cancellationToken);
-                return requests.Select(x => x.ToDto());
+                var requests = await _repository.GetAllAsync(request.PageNumber, request.PageSize, cancellationToken);
+                return new PagedResultDto<ApprovalRequestDto>
+                {
+                    Items = requests.Select(x => x.ToDto()).ToList(),
+                    TotalCount = await _repository.CountAllAsync(cancellationToken),
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize
+                };
             }
         }
     }

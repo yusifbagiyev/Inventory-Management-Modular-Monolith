@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
 namespace SharedServices.Contracts
@@ -6,6 +7,17 @@ namespace SharedServices.Contracts
     /// <summary>Reads stored approval ActionData in any casing, nested or flat, since older rows differ.</summary>
     public static class ApprovalActionData
     {
+        /// <summary>PostgreSQL pattern for a stored base64 image, the keys GetImage reads in either casing, capturing the key.</summary>
+        public const string ImageBytesPattern = "\"([iI]mage(?:Data)?)\"\\s*:\\s*\"[^\"]+\"";
+
+        /// <summary>Leaves the key with an empty value, so the stored shape does not change.</summary>
+        public const string ImageBytesReplacement = "\"\\1\":\"\"";
+
+        private static readonly Regex ImageBytes = new(ImageBytesPattern, RegexOptions.Compiled);
+
+        /// <summary>The same removal for ActionData that is already in memory.</summary>
+        public static string WithoutImageBytes(string actionData) => ImageBytes.Replace(actionData, "\"$1\":\"\"");
+
         /// <summary>Returns the nested object with this name if present, else the element itself.</summary>
         public static JsonElement Section(this JsonElement element, string name)
         {

@@ -1,7 +1,8 @@
 @model MyRequestsViewModel
 @{
     ViewData["Title"] = "My Requests";
-    var pendingCount = Model.Requests.Count(r => r.Status == "Pending");
+    // The counts cover every request, the table only the latest ones
+    var pendingCount = Model.Count("Pending");
 }
 @Html.AntiForgeryToken()
 
@@ -9,26 +10,26 @@
     <div class="ip-page-head">
         <div>
             <h1>@L["My Approval Requests"]</h1>
-            <div class="ip-sub ip-num" id="myRequestsSummary">@L["{0} requests, {1} pending", Model.Requests.Count, pendingCount]</div>
+            <div class="ip-sub ip-num" id="myRequestsSummary">@L["{0} requests, {1} pending", Model.TotalCount, pendingCount]</div>
         </div>
     </div>
 
     @* These tabs filter rows in the browser through .filter-btn and data-filter *@
     <nav class="ip-tabs strong" aria-label="@L["Status"]" id="myRequestsTabs">
         <button type="button" class="ip-tab filter-btn active" data-filter="all">
-            @L["All"] <span class="count">@Model.Requests.Count</span>
+            @L["All"] <span class="count">@Model.TotalCount</span>
         </button>
         <button type="button" class="ip-tab filter-btn" data-filter="pending">
             @L["Pending"] <span class="count warning">@pendingCount</span>
         </button>
         <button type="button" class="ip-tab filter-btn" data-filter="approved">
-            @L["Approved"] <span class="count">@Model.Requests.Count(r => r.Status == "Approved" || r.Status == "Executed")</span>
+            @L["Approved"] <span class="count">@Model.Count("Approved", "Executed")</span>
         </button>
         <button type="button" class="ip-tab filter-btn" data-filter="rejected">
-            @L["Rejected"] <span class="count">@Model.Requests.Count(r => r.Status == "Rejected")</span>
+            @L["Rejected"] <span class="count">@Model.Count("Rejected")</span>
         </button>
         <button type="button" class="ip-tab filter-btn" data-filter="failed">
-            @L["Failed"] <span class="count">@Model.Requests.Count(r => r.Status == "Failed")</span>
+            @L["Failed"] <span class="count">@Model.Count("Failed")</span>
         </button>
     </nav>
 
@@ -83,14 +84,14 @@
                                             <span class="ip-badge ip-badge-danger">@L["Rejected"]</span>
                                             @if (!string.IsNullOrEmpty(request.RejectionReason))
                                             {
-                                                <div class="sub">@request.RejectionReason</div>
+                                                <div class="sub text-break">@request.RejectionReason</div>
                                             }
                                             break;
                                         case "Failed":
                                             <span class="ip-badge ip-badge-danger">@L["Failed"]</span>
                                             @if (!string.IsNullOrEmpty(request.RejectionReason))
                                             {
-                                                <div class="sub">@L["Reason"]: @JsonStringLocalizer.TranslateMessage(request.RejectionReason)</div>
+                                                <div class="sub text-break">@L["Reason"]: @JsonStringLocalizer.TranslateMessage(request.RejectionReason)</div>
                                             }
                                             break;
                                         default:
@@ -132,6 +133,10 @@
                 <span class="icon"><i class="fa-solid fa-filter"></i></span>
                 <div class="title">@L["No requests with this status"]</div>
             </div>
+            @if (Model.Requests.Count < Model.TotalCount)
+            {
+                <p class="ip-faint mt-3">@L["The latest {0} are shown.", Model.Requests.Count]</p>
+            }
         }
         else
         {

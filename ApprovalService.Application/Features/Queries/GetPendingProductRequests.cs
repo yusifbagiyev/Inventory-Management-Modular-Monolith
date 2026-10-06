@@ -14,6 +14,9 @@ namespace ApprovalService.Application.Features.Queries
         // Pending requests are few, so they are read once and matched in memory
         private const int MaxPending = 500;
 
+        private static readonly string[] ProductRequestTypes =
+            [RequestType.UpdateProduct, RequestType.DeleteProduct, RequestType.TransferProduct];
+
         public class Handler : IRequestHandler<Query, IReadOnlyDictionary<int, int>>
         {
             private readonly IApprovalRequestRepository _repository;
@@ -27,14 +30,12 @@ namespace ApprovalService.Application.Features.Queries
             {
                 var result = new Dictionary<int, int>();
                 // Newest first, so a product with several pending requests points at the latest
-                foreach (var pending in await _repository.GetPendingAsync(1, MaxPending, cancellationToken))
+                foreach (var pending in await _repository.GetPendingAsync(ProductRequestTypes, MaxPending, cancellationToken))
                 {
-                    var productId = pending.RequestType switch
-                    {
-                        RequestType.UpdateProduct or RequestType.DeleteProduct => pending.EntityId ?? ProductIdIn(pending.ActionData),
-                        RequestType.TransferProduct => ProductIdIn(pending.ActionData),
-                        _ => 0
-                    };
+                    // A transfer's EntityId is empty because its route does not exist yet
+                    var productId = pending.RequestType == RequestType.TransferProduct
+                        ? ProductIdIn(pending.ActionData)
+                        : pending.EntityId ?? ProductIdIn(pending.ActionData);
                     if (productId > 0)
                         result.TryAdd(productId, pending.Id);
                 }

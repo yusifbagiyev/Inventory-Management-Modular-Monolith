@@ -13,9 +13,17 @@ namespace ApprovalService.Infrastructure.Data
 
         public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
 
+        /// <summary>PostgreSQL's regexp_replace with its flags, as the translated Regex.Replace changes only the first match.</summary>
+        public static string RegexpReplace(string input, string pattern, string replacement, string flags)
+            => throw new NotSupportedException("Only translated inside a query");
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDefaultSchema(Schema);
+
+            modelBuilder.HasDbFunction(() => RegexpReplace(default!, default!, default!, default!))
+                .HasName("regexp_replace")
+                .IsBuiltIn();
 
             modelBuilder.Entity<ApprovalRequest>(entity =>
             {

@@ -13,6 +13,7 @@ namespace InventoryManagement.Web.Services
     public class ApprovalService : IApprovalService
     {
         private const int PendingPageSize = 100;
+        private const int MyRequestsPageSize = 200;
 
         private readonly IMediator _mediator;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -38,7 +39,8 @@ namespace InventoryManagement.Web.Services
         /// <summary>Null when the request is missing or belongs to someone else and the user cannot see all requests.</summary>
         public async Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id)
         {
-            var request = await _mediator.Send(new GetRequestById.Query(id));
+            // The pages show the uploads' names only, so the image bytes stay in the database
+            var request = await _mediator.Send(new GetRequestById.Query(id, WithImageData: false));
             var canSeeAll = User.HasPermission(AllPermissions.ApprovalView) || User.HasPermission(AllPermissions.ApprovalDecide);
             if (request == null || (!canSeeAll && request.RequestedById != UserId))
                 return null;
@@ -49,7 +51,7 @@ namespace InventoryManagement.Web.Services
             => _mediator.Send(new ApproveRequest.Command(id, UserId, UserName, User.IsInRole(AllRoles.Admin)));
 
         public Task RejectRequestAsync(int id, string reason)
-            => _mediator.Send(new RejectRequest.Command(id, UserId, UserName, reason));
+            => _mediator.Send(new RejectRequest.Command(id, UserId, UserName, reason.Trim()));
 
         public async Task<ApprovalStatisticsDto> GetStatisticsAsync()
         {
@@ -68,8 +70,11 @@ namespace InventoryManagement.Web.Services
             return (ModelMapper.MapList<ApprovalRequestDto>(result.Items), result.ApprovedCount, result.RejectedCount);
         }
 
-        public async Task<List<ApprovalRequestDto>> GetMyRequestsAsync()
-            => ModelMapper.MapList<ApprovalRequestDto>(await _mediator.Send(new GetUserRequests.Query(UserId)));
+        public async Task<(List<ApprovalRequestDto> Items, IReadOnlyDictionary<string, int> StatusCounts)> GetMyRequestsAsync()
+        {
+            var result = await _mediator.Send(new GetUserRequests.Query(UserId, 1, MyRequestsPageSize));
+            return (ModelMapper.MapList<ApprovalRequestDto>(result.Items), result.StatusCounts);
+        }
 
         public Task CancelRequestAsync(int id)
             => _mediator.Send(new CancelRequest.Command(id, UserId));

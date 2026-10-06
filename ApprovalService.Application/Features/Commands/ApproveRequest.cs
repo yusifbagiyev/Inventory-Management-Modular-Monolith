@@ -1,12 +1,14 @@
 using ApprovalService.Application.Interfaces;
 using ApprovalService.Domain.Enums;
 using ApprovalService.Domain.Repositories;
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using SharedServices.Contracts;
 using SharedServices.Events;
 using SharedServices.Exceptions;
 using SharedServices.Persistence;
+using SharedServices.Web;
 
 namespace ApprovalService.Application.Features.Commands
 {
@@ -78,12 +80,14 @@ namespace ApprovalService.Application.Features.Commands
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     await _session.RollbackToSavepointAsync(ExecutionSavepoint, cancellationToken);
-                    approvalRequest.MarkAsFailed(Truncate($"Execution error: {ex.Message}", 500));
+                    approvalRequest.MarkAsFailed(Truncate($"Execution error: {FailureMessage(ex)}", 500));
                     _logger.LogWarning(ex, "Request {RequestId} failed to execute for admin {AdminName}",
                         request.RequestId, request.UserName);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                // The uploads are stored with the record now, or the request has ended without them
+                await _repository.DropImageDataAsync(approvalRequest.Id, cancellationToken);
 
                 var executed = approvalRequest.Status == ApprovalStatus.Executed;
                 await _publisher.Publish(new ApprovalRequestProcessedEvent(
@@ -97,6 +101,11 @@ namespace ApprovalService.Application.Features.Commands
 
                 return executed;
             }
+
+            // The reason reaches the requester, so framework and file-system messages stay in the log
+            private static string FailureMessage(Exception ex) => ex is ValidationException { Errors: var errors } && errors.Any()
+                ? string.Join("; ", errors.Select(e => e.ErrorMessage).Distinct())
+                : UserFacingErrors.MessageOf(ex);
 
             private static string Truncate(string value, int maxLength)
                 => value.Length <= maxLength ? value : value[..maxLength];

@@ -83,6 +83,13 @@ namespace InventoryManagement.Web.Controllers
                     new Dictionary<string, string> { ["reason"] = "Please provide a reason for rejection" });
             }
 
+            reason = reason.Trim();
+            if (reason.Length > ApprovalService.Application.Features.Commands.RejectRequest.Validator.MaxReasonLength)
+            {
+                return HandleError("Rejection reason cannot exceed 500 characters", null,
+                    new Dictionary<string, string> { ["reason"] = "Rejection reason cannot exceed 500 characters" });
+            }
+
             var response = await RunAsync(() => _approvalService.RejectRequestAsync(id, reason));
             return response.IsSuccess
                 ? Json(new { success = true, message = Tr("Request rejected successfully") })

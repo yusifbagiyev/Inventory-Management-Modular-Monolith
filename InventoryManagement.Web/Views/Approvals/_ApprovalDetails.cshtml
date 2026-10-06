@@ -1,8 +1,14 @@
 @model ApprovalRequestDto
 @inject MediatR.IMediator Mediator
+@inject SharedServices.Contracts.IProductCatalog Catalog
 @* Dialog content for Approvals and My Requests, loadApprovalDetails() moves [data-approval-head] into the header *@
 @{
     var view = ApprovalView.From(Model.RequestType, Model.ActionData);
+    if (view.UnnamedDepartmentId is int newDepartmentId
+        && await Catalog.GetDepartmentAsync(newDepartmentId) is { } newDepartment)
+    {
+        view.NameDepartment(newDepartment.Name);
+    }
     var images = view.ImageData;
     var (addedImages, removedImages) = view.ImageCounts();
 
@@ -70,14 +76,14 @@
 {
     <div class="ip-banner ip-banner-danger mb-3">
         <i class="fa-solid fa-circle-xmark"></i>
-        <span><b>@L["Rejection Reason"]:</b> @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
+        <span class="text-break"><b>@L["Rejection Reason"]:</b> @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
     </div>
 }
 else if (Model.Status == "Failed")
 {
     <div class="ip-banner ip-banner-danger mb-3">
         <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>@L["Approved, but the change could not be carried out."] @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
+        <span class="text-break">@L["Approved, but the change could not be carried out."] @JsonStringLocalizer.TranslateMessage(Model.RejectionReason)</span>
     </div>
 }
 @if (Model.Status != "Pending" && !string.IsNullOrEmpty(Model.ApprovedByName))
