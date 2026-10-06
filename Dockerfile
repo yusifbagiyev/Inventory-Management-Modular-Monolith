@@ -1,6 +1,7 @@
 # One image for the whole app, built from the repository root
+# The .NET versions are pinned so a deploy ships the runtime and SDK of its commit, and Dependabot proposes each bump
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.12 AS base
 # Npgsql wants libgssapi, the healthcheck wants curl and the non-root user writes keys and images
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgssapi-krb5-2 curl \
@@ -11,7 +12,7 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 

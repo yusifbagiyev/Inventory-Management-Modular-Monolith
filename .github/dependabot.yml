@@ -1,0 +1,12 @@
+version: 2
+
+# The Dockerfile pins the .NET runtime and SDK, so their monthly servicing releases arrive here as pull requests
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # A new major .NET version is a planned upgrade, not a servicing bump
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

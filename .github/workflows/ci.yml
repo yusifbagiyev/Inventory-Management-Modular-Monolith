@@ -27,5 +27,14 @@ jobs:
           dotnet list InventoryManagement.sln package --vulnerable --include-transitive | tee vulnerable.txt
           ! grep -q '>' vulnerable.txt
 
+      - name: nginx configuration
+        run: |
+          # nginx -t reads the certificate and looks up the app, so both get a stand-in here
+          mkdir -p ssl
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=ci \
+            -keyout ssl/inventory166.key -out ssl/inventory166.crt 2> /dev/null
+          docker compose --env-file .env.example run --rm --no-deps -T nginx \
+            sh -c 'echo "127.0.0.1 app" >> /etc/hosts && nginx -t'
+
       - name: Docker image
         run: docker build -t inventory-app:ci .

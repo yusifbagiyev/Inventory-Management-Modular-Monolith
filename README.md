@@ -137,7 +137,9 @@ request id, without permission `403`, and `409` if someone changed the record in
 
 ## Deployment
 
-`ci.yml` builds the solution, checks the NuGet packages for known vulnerabilities and builds the
-Docker image. `cd.yml` pushes the image to GHCR and a runner on the server deploys it with
-`deploy/deploy.sh`: it backs up the database, recreates the app container, waits for the health check
-and rolls back if it fails.
+`ci.yml` builds the solution, checks the NuGet packages for known vulnerabilities, tests the nginx
+configuration and builds the Docker image. `cd.yml` pushes the image of the newest master commit to
+GHCR and a runner on the server deploys it with `deploy/deploy.sh`: it tests the nginx configuration,
+backs up the database, recreates the app container, waits for the health check, brings the other
+services up to date and checks the site through nginx. If any step fails, it puts back the previous
+image together with the `docker-compose.yml` and nginx configuration it ran with.

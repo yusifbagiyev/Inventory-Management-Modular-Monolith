@@ -1,5 +1,12 @@
 # The app behind nginx, PostgreSQL with a schema per module and Seq for logs, with secrets from .env
 
+# Docker keeps a container's log in one file that only grows unless it is told to rotate it
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -16,6 +23,7 @@ services:
     networks:
       - backend
     restart: always
+    logging: *logging
     healthcheck:
       # Without -d it connects to a database named after the user, which logs an error every check
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d postgres"]
@@ -70,6 +78,7 @@ services:
       - backend
       - frontend
     restart: always
+    logging: *logging
 
   seq:
     # Pinned because Seq keeps state in seq_data, so it is only upgraded on purpose
@@ -88,9 +97,11 @@ services:
     networks:
       - backend
     restart: always
+    logging: *logging
 
   nginx:
-    image: nginx:1.29-alpine
+    # Pinned to a stable release and bumped by commit, since deploys pull only a tag that is new
+    image: nginx:1.30.5-alpine
     container_name: inventory_nginx
     ports:
       - "80:80"
@@ -109,6 +120,7 @@ services:
     networks:
       - frontend
     restart: always
+    logging: *logging
 
   # Outbound Cloudflare Tunnel for public access, run only with COMPOSE_PROFILES=tunnel and its token
   cloudflared:
@@ -123,6 +135,7 @@ services:
     networks:
       - frontend
     restart: always
+    logging: *logging
 
 networks:
   frontend:

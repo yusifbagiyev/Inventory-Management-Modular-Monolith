@@ -14,10 +14,12 @@ on:
         required: false
         default: ''
 
-# One deployment at a time and in order, never cancelled half-way
+# One deployment at a time and in the order the runs arrive, never cancelled half-way
+# Every run waits its turn, so one with nothing to deploy cannot take the place of a waiting deployment
 concurrency:
   group: production
   cancel-in-progress: false
+  queue: max
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/inventory-app
@@ -42,18 +44,33 @@ jobs:
           # The commit CI tested, not whatever master points at by now
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # CI runs finish in any order and can be run again, and an older commit must not replace a newer one
+      - id: tip
+        if: github.event_name == 'workflow_run'
+        run: |
+          tip=$(git ls-remote origin refs/heads/master | cut -f1)
+          [ -n "$tip" ] || { echo "Could not read the tip of master"; exit 1; }
+          if [ "$tip" != "$(git rev-parse HEAD)" ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::master is at $tip by now, so this commit is neither built nor deployed"
+          fi
+
       - id: tag
+        if: steps.tip.outputs.stale != 'true'
         run: echo "tag=sha-$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v4
+        if: steps.tip.outputs.stale != 'true'
 
       - uses: docker/login-action@v4
+        if: steps.tip.outputs.stale != 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: docker/build-push-action@v7
+        if: steps.tip.outputs.stale != 'true'
         with:
           context: .
           push: true
@@ -65,11 +82,12 @@ jobs:
 
   deploy:
     needs: image
-    # Runs after a successful build or alone for a rollback, and only while CD_ENABLED is true
+    # Runs after a build that produced an image or alone for a rollback, and only while CD_ENABLED is true
     if: >-
       always() && vars.CD_ENABLED == 'true' &&
       (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/master') &&
-      (needs.image.result == 'success' || (needs.image.result == 'skipped' && inputs.image_tag))
+      ((needs.image.result == 'success' && needs.image.outputs.tag) ||
+       (needs.image.result == 'skipped' && inputs.image_tag))
     runs-on: [self-hosted, inventory-prod]
     permissions:
       contents: read
@@ -91,6 +109,14 @@ jobs:
       # Server-specific values belong in .env and docker-compose.override.yml, which are never overwritten
       - name: Sync deployment files
         run: |
+          # deploy.sh puts the files of the last successful deploy back when one fails and keeps that copy itself afterwards
+          if [ ! -d "$DEPLOY_DIR/.previous" ] && [ -f "$DEPLOY_DIR/docker-compose.yml" ] && [ -d "$DEPLOY_DIR/deploy/nginx" ]; then
+            rm -rf "$DEPLOY_DIR/.previous.tmp"
+            mkdir -p "$DEPLOY_DIR/.previous.tmp/deploy"
+            cp "$DEPLOY_DIR/docker-compose.yml" "$DEPLOY_DIR/.previous.tmp/"
+            cp -R "$DEPLOY_DIR/deploy/nginx" "$DEPLOY_DIR/.previous.tmp/deploy/"
+            mv "$DEPLOY_DIR/.previous.tmp" "$DEPLOY_DIR/.previous"
+          fi
           cp docker-compose.yml "$DEPLOY_DIR/docker-compose.yml"
           mkdir -p "$DEPLOY_DIR/deploy"
           cp -R deploy/. "$DEPLOY_DIR/deploy/"

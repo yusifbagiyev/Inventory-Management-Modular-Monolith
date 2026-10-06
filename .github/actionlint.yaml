@@ -2,3 +2,9 @@
 self-hosted-runner:
   labels:
     - inventory-prod
+
+# GitHub's queue setting for concurrency groups is newer than actionlint's list of keys
+paths:
+  .github/workflows/cd.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'
