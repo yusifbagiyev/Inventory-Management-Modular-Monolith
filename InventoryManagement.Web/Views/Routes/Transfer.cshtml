@@ -258,7 +258,7 @@
                 const thumb = document.getElementById('productThumb');
                 thumb.innerHTML = product.imageUrl
                     ? `<img src="${escapeHtml(thumbUrl(product.imageUrl, 480))}" alt="" />`
-                    : '<i class="fa-solid fa-box"></i>';
+                    : `<i class="fa-solid ${categoryIcon(product.categoryName)}" aria-hidden="true"></i>`;
                 $('#ProductId').val(product.id);
                 $('#productInfoContainer').show();
                 updateSummary();

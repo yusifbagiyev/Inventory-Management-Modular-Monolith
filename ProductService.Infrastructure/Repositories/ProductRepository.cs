@@ -202,6 +202,15 @@ namespace ProductService.Infrastructure.Repositories
             if (filter.DeletedBy is { Length: > 0 } deletedBy)
                 query = query.Where(p => p.DeletedBy != null && deletedBy.Contains(p.DeletedBy));
 
+            if (filter.Codes is { Length: > 0 } codes)
+                query = query.Where(p => codes.Contains(p.InventoryCode));
+
+            if (filter.Models is { Length: > 0 } models)
+                query = query.Where(p => models.Contains(p.Model));
+
+            if (filter.Workers is { Length: > 0 } workers)
+                query = query.Where(p => p.Worker != null && workers.Contains(p.Worker));
+
             if (!string.IsNullOrWhiteSpace(filter.Code))
             {
                 var code = filter.Code.Trim();

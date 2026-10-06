@@ -2,6 +2,8 @@
 //
 // A header opts in with data-sort="key" and/or data-filter="text|list|date|range" (+ data-param, data-options,
 // data-param-from/to, data-param-min/max). Tables marked data-column-filters="client" sort and filter their own rows.
+// A list with data-options-url asks the server for the values in use under the other filters; its data-text-param
+// takes the typed text when nothing is ticked, so a search the list cannot show in full still filters.
 window.TableColumns = (function () {
     'use strict';
 
@@ -144,9 +146,14 @@ window.TableColumns = (function () {
         }
     }
 
+    // A value list's typed-text twin counts as the same filter
+    function queryNames(th) {
+        return paramNames(th).concat(th.dataset.textParam || []).filter(Boolean);
+    }
+
     function isFiltered(th, params) {
         if (isClient(th)) return clientFilters.has(th);
-        return paramNames(th).some(function (name) { return name && params.getAll(name).some(Boolean); });
+        return queryNames(th).some(function (name) { return params.getAll(name).some(Boolean); });
     }
 
     // Sorting
@@ -209,9 +216,13 @@ window.TableColumns = (function () {
         else window.location.href = url.href;
     }
 
-    function applyServer(th, values) {
+    function applyServer(th, values, text) {
         const url = new URL(window.location.href);
         const p = url.searchParams;
+        if (th.dataset.textParam) {
+            p.delete(th.dataset.textParam);
+            if (text) p.set(th.dataset.textParam, text);
+        }
         paramNames(th).forEach(function (name, i) {
             if (!name) return;
             p.delete(name);
@@ -292,6 +303,7 @@ window.TableColumns = (function () {
     }
 
     function optionsOf(th) {
+        if (th.dataset.optionsUrl) return th._remoteOptions || [];
         if (th.dataset.options) {
             try { return JSON.parse(th.dataset.options); } catch (e) { return []; }
         }
@@ -301,7 +313,9 @@ window.TableColumns = (function () {
     function currentValues(th) {
         if (isClient(th)) return th._clientValues || [];
         const p = new URLSearchParams(window.location.search);
-        return paramNames(th).map(function (name) { return name ? p.getAll(name) : []; });
+        const values = paramNames(th).map(function (name) { return name ? p.getAll(name) : []; });
+        if (th.dataset.textParam) values.push(p.getAll(th.dataset.textParam));
+        return values;
     }
 
     /** The filter a header holds in words, such as the names picked from a list or the two ends of a range. */
@@ -310,7 +324,8 @@ window.TableColumns = (function () {
         switch (th.dataset.filter) {
             case 'list': {
                 const names = new Map(optionsOf(th).map(function (o) { return [String(o.value), o.label]; }));
-                return (values[0] || []).filter(Boolean).map(function (v) { return names.get(String(v)) || v; }).join(', ');
+                const picked = (values[0] || []).filter(Boolean).map(function (v) { return names.get(String(v)) || v; }).join(', ');
+                return picked || (values[1] || []).filter(Boolean).map(function (v) { return '“' + v + '”'; }).join(', ');
             }
             case 'date': {
                 const days = [first(0), first(1)].filter(Boolean).map(function (iso) {
@@ -334,7 +349,7 @@ window.TableColumns = (function () {
         (root || document).querySelectorAll('th[data-filter]').forEach(function (th) {
             const values = currentValues(th);
             if (!values.some(function (v) { return (v || []).some(Boolean); })) return;
-            found.push({ label: label(th), text: describe(th, values), params: paramNames(th).filter(Boolean) });
+            found.push({ label: label(th), text: describe(th, values), params: queryNames(th) });
         });
         return found;
     }
@@ -342,6 +357,11 @@ window.TableColumns = (function () {
     function body(th) {
         const type = th.dataset.filter;
         const values = currentValues(th);
+        if (type === 'list' && th.dataset.optionsUrl) {
+            const typed = (values[1] || [])[0] || '';
+            return `<input type="search" class="ip-input" data-colfilter-find placeholder="${escapeHtml(t('Search...'))}" aria-label="${escapeHtml(t('Search'))}" value="${escapeHtml(typed)}" />
+                <div class="ip-colfilter-list" data-colfilter-remote role="group" aria-label="${escapeHtml(label(th))}" aria-busy="true"><div class="ip-faint small">${escapeHtml(t('Loading...'))}</div></div>`;
+        }
         if (type === 'list') {
             const selected = new Set((values[0] || []).map(String));
             const options = optionsOf(th);
@@ -422,6 +442,57 @@ window.TableColumns = (function () {
         else if (dateFields().every(function (field) { return !field.value.trim(); })) DateRange.clear(holder);
     }
 
+    // Values in use come from the server for the list as the other filters leave it, the column's own filter aside
+    const remoteLimit = 200;
+
+    function remoteUrl(th) {
+        const url = new URL(th.dataset.optionsUrl, window.location.origin);
+        const own = [th.dataset.param, th.dataset.textParam, 'pageNumber', 'pageSize', 'sort', 'dir'];
+        new URLSearchParams(window.location.search).forEach(function (value, key) {
+            if (!own.includes(key)) url.searchParams.append(key, value);
+        });
+        return url;
+    }
+
+    function loadRemote(th) {
+        const owner = panel;
+        owner._picked = new Set((currentValues(th)[0] || []).filter(Boolean).map(String));
+        fetch(remoteUrl(th), { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (response) { if (!response.ok) throw new Error(response.status); return response.json(); })
+            .then(function (options) {
+                th._remoteOptions = options;
+                if (panel === owner) renderRemote(th);
+            })
+            .catch(function () {
+                const list = panel === owner && panel.querySelector('[data-colfilter-remote]');
+                if (!list) return;
+                list.removeAttribute('aria-busy');
+                list.innerHTML = `<div class="ip-faint small">${escapeHtml(t('The values could not be loaded. Type to search instead.'))}</div>`;
+            });
+    }
+
+    // Ticked values stay ticked while the search narrows the list, and only the first matches are drawn so long lists stay quick
+    function renderRemote(th) {
+        const list = panel.querySelector('[data-colfilter-remote]');
+        const options = th._remoteOptions;
+        if (!list || !options) return;
+        const needle = fold(panel.querySelector('[data-colfilter-find]').value);
+        const picked = panel._picked;
+        const multi = th.dataset.multi !== 'false';
+        const known = new Set(options.map(function (o) { return String(o.value); }));
+        const all = Array.from(picked).filter(function (v) { return !known.has(v); })
+            .map(function (v) { return { value: v, label: v }; }).concat(options);
+        const matches = all.filter(function (o) { return !needle || fold(o.label).includes(needle) || picked.has(String(o.value)); });
+        const shown = matches.slice(0, remoteLimit);
+        list.removeAttribute('aria-busy');
+        list.innerHTML = shown.length
+            ? shown.map(function (o) {
+                return `<label class="ip-colfilter-opt"><input type="${multi ? 'checkbox' : 'radio'}" name="colfilter" value="${escapeHtml(o.value)}" ${picked.has(String(o.value)) ? 'checked' : ''} /><span>${escapeHtml(o.label)}</span></label>`;
+            }).join('') + (matches.length > shown.length
+                ? `<div class="ip-faint small">${escapeHtml(t('{0} more, narrow the search').replace('{0}', matches.length - shown.length))}</div>` : '')
+            : `<div class="ip-faint small">${escapeHtml(t('No values'))}</div>`;
+    }
+
     function open(th, button) {
         close();
         panelHeader = th;
@@ -440,6 +511,7 @@ window.TableColumns = (function () {
         document.body.appendChild(panel);
 
         if (th.dataset.filter === 'date') attachCalendar(th);
+        if (th.dataset.filter === 'list' && th.dataset.optionsUrl) loadRemote(th);
 
         place(button);
         button.setAttribute('aria-expanded', 'true');
@@ -501,6 +573,7 @@ window.TableColumns = (function () {
     /** The values the panel holds, or null while a typed date cannot be read. */
     function readPanel(th) {
         const type = th.dataset.filter;
+        if (type === 'list' && panel._picked) return [Array.from(panel._picked)];
         if (type === 'list') {
             return [Array.from(panel.querySelectorAll('.ip-colfilter-list input:checked')).map(function (i) { return i.value; })];
         }
@@ -550,13 +623,16 @@ window.TableColumns = (function () {
 
     function apply(th, values) {
         if (!values) return;
+        // Text typed into a value list's search with nothing ticked filters as a search of that column
+        const find = th.dataset.textParam && !(values[0] || []).length && panel && panel.querySelector('[data-colfilter-find]');
+        const text = find ? find.value.trim() : '';
         close();
         if (isClient(th)) {
             th._clientValues = values.map(function (v) { return Array.isArray(v) ? v : (v ? [v] : []); });
             remember(th, { values: values });
             applyClient(th, clientFilter(th, values));
         } else {
-            applyServer(th, values);
+            applyServer(th, values, text);
         }
     }
 
@@ -592,7 +668,13 @@ window.TableColumns = (function () {
         }
         if (!panel) return;
         if (e.target.closest('[data-colfilter-apply]')) { apply(panelHeader, readPanel(panelHeader)); return; }
-        if (e.target.closest('[data-colfilter-clear]')) { apply(panelHeader, emptyValues(panelHeader)); return; }
+        if (e.target.closest('[data-colfilter-clear]')) {
+            // Reset clears a value list's typed text too, which Apply would otherwise use as a search
+            const find = panel.querySelector('[data-colfilter-find]');
+            if (find) find.value = '';
+            apply(panelHeader, emptyValues(panelHeader));
+            return;
+        }
         // The calendar redraws its cells on a click, so the target may have left the page by now and the path is asked instead
         if (!e.composedPath().includes(panel)) close();
     });
@@ -611,6 +693,7 @@ window.TableColumns = (function () {
         if (!panel) return;
         if (e.target.matches('[data-colfilter-from], [data-colfilter-to]')) { syncCalendar(); return; }
         if (!e.target.matches('[data-colfilter-find]')) return;
+        if (panel._picked) { renderRemote(panelHeader); return; }
         const needle = fold(e.target.value);
         panel.querySelectorAll('.ip-colfilter-opt').forEach(function (opt) {
             opt.hidden = !!needle && !fold(opt.textContent).includes(needle);
@@ -619,6 +702,11 @@ window.TableColumns = (function () {
 
     // A day typed loosely, like 5.1.2026, is rewritten the way the lists show dates once the field is left
     document.addEventListener('change', function (e) {
+        if (panel && panel._picked && e.target.matches('.ip-colfilter-list input')) {
+            if (e.target.type === 'radio') panel._picked.clear();
+            if (e.target.checked) panel._picked.add(e.target.value); else panel._picked.delete(e.target.value);
+            return;
+        }
         if (!panel || !e.target.matches('[data-colfilter-from], [data-colfilter-to]')) return;
         const day = DateRange.day(e.target.value);
         if (day) e.target.value = DateRange.text(day);

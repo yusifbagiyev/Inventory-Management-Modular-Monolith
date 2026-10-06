@@ -1343,3 +1343,23 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 @media (max-width: 767.98px) { .ip-table.ip-audit-table td.ip-audit-session { margin-top: var(--ip-space-1); padding-top: 0 !important; border-top: 0 !important; } }
 /* Shared: lets a flex child shrink below its content, so long text inside it can truncate or wrap */
 .ip-min0 { min-width: 0; }
+
+/* Route types: an icon and a tint per kind from the chart palette, so the status colours stay for the status */
+.ip-type {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 3px 9px 3px 8px; border-radius: var(--ip-radius-pill);
+  font-size: var(--ip-fs-xs); line-height: var(--ip-lh-xs); font-weight: var(--ip-fw-medium);
+  color: var(--ip-text-1); background: color-mix(in srgb, var(--ip-type) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ip-type) 28%, transparent);
+  white-space: nowrap;
+}
+.ip-type > i { color: var(--ip-type); font-size: 11px; }
+.ip-type > span { overflow: hidden; text-overflow: ellipsis; }
+.ip-type-transfer { --ip-type: var(--ip-chart-1); }
+.ip-type-new { --ip-type: var(--ip-chart-pending); }
+.ip-type-existing { --ip-type: var(--ip-chart-2); }
+.ip-type-update { --ip-type: var(--ip-chart-5); }
+.ip-type-codechange { --ip-type: var(--ip-info-text); }
+.ip-type-removal { --ip-type: var(--ip-chart-3); }
+.ip-type-removal > span { color: var(--ip-text-2); }
+@media print { .ip-type { background: none; box-shadow: none; padding: 0; } }

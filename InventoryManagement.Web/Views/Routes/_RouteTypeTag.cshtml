@@ -1,0 +1,15 @@
+@model RouteViewModel
+@* The route type as a small tag whose icon and tint tell the kinds apart at a glance; the text stays for screen readers and the PDF export *@
+@{
+    var icon = Model.RouteTypeName switch
+    {
+        "New" => "fa-circle-plus",
+        "Existing" => "fa-box-archive",
+        "Update" => "fa-pen",
+        "CodeChange" => "fa-hashtag",
+        "Transfer" => "fa-arrow-right-arrow-left",
+        "Removal" => "fa-trash-can",
+        _ => "fa-circle"
+    };
+}
+<span class="ip-type ip-type-@Model.RouteTypeName.ToLowerInvariant()"><i class="fa-solid @icon" aria-hidden="true"></i><span>@L[Model.RouteTypeLabel]</span></span>

@@ -28,7 +28,7 @@
                 {
                     <span class="ip-badge ip-badge-warning">@L["Pending"]</span>
                 }
-                <span class="ip-tag-plain">@L[Model.RouteTypeLabel]</span>
+                <partial name="_RouteTypeTag" model="Model" />
             </div>
         </div>
     </div>
@@ -67,7 +67,7 @@
                         }
                     </dd>
                 </div>
-                <div><dt>@L["Type"]</dt><dd>@L[Model.RouteTypeLabel]</dd></div>
+                <div><dt>@L["Type"]</dt><dd><partial name="_RouteTypeTag" model="Model" /></dd></div>
                 <div><dt>@L["Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</dd></div>
             </dl>
         </section>

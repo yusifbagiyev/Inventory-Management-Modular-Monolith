@@ -235,6 +235,9 @@ namespace RouteService.Infrastructure.Repositories
         /// <summary>The list's column filters, matched against the names stored on the route like the other filters.</summary>
         private static IQueryable<InventoryRoute> ApplyColumnFilters(IQueryable<InventoryRoute> query, RouteListFilter filter)
         {
+            if (filter.Codes is { Length: > 0 } codes)
+                query = query.Where(r => codes.Contains(r.ProductSnapshot.InventoryCode));
+
             if (filter.FromDepartments is { Length: > 0 } fromNames)
                 query = query.Where(r => r.FromDepartmentName != null && fromNames.Contains(r.FromDepartmentName));
 

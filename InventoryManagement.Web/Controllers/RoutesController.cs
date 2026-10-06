@@ -51,6 +51,7 @@ namespace InventoryManagement.Web.Controllers
             string[]? fromDepartment = null,
             string[]? toDepartment = null,
             string[]? whatsApp = null,
+            int[]? codes = null,
             CancellationToken cancellationToken = default)
         {
             // The filter bar sends one value and the column headers several, so both arrive as lists
@@ -60,6 +61,7 @@ namespace InventoryManagement.Web.Controllers
                 Sort = sort,
                 Descending = dir == "desc",
                 Product = product,
+                Codes = codes,
                 FromDepartments = NonEmpty(fromDepartment),
                 ToDepartments = NonEmpty(toDepartment),
                 Categories = NonEmpty(categoryName),
@@ -104,6 +106,40 @@ namespace InventoryManagement.Web.Controllers
                 // A newer search replaced this one in the browser, so nobody reads the answer
                 return new EmptyResult();
             }
+        }
+
+        /// <summary>The products in use among the routes the list's other filters leave, offered by the product column's filter.</summary>
+        [PermissionAuthorize(AllPermissions.RouteView)]
+        public async Task<IActionResult> ColumnValues(
+            string column, string? search = null, bool? isCompleted = null, DateTime? startDate = null, DateTime? endDate = null,
+            int? departmentId = null, string[]? categoryName = null, string[]? routeType = null, string? departmentName = null,
+            string[]? fromDepartment = null, string[]? toDepartment = null, string[]? whatsApp = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (column != "product")
+                return Json(Array.Empty<object>());
+
+            // The product column's own filters are left out, so its list still offers the products around the ones picked
+            var filter = new RouteListFilter
+            {
+                FromDepartments = NonEmpty(fromDepartment),
+                ToDepartments = NonEmpty(toDepartment),
+                Categories = NonEmpty(categoryName),
+                RouteTypes = (routeType ?? []).Select(ParseRouteType).OfType<RouteType>().Distinct().ToArray(),
+                WhatsApp = NonEmpty(whatsApp)
+            };
+            var routes = await _mediator.Send(new GetAllRoutesQuery(
+                1, int.MaxValue, search, isCompleted, startDate, endDate,
+                departmentId, null, null, departmentName, filter), cancellationToken);
+
+            // A code is labelled with the model of its newest route, since the model can change over its history
+            var values = routes.Items
+                .GroupBy(r => r.InventoryCode)
+                .OrderBy(g => g.Key)
+                .Select(g => g.OrderByDescending(r => r.CreatedAt).First())
+                .Select(r => new { value = r.InventoryCode.ToString(), label = $"{r.InventoryCode} · {r.Model}" })
+                .ToList();
+            return Json(values);
         }
 
         private static string[]? NonEmpty(string[]? values)

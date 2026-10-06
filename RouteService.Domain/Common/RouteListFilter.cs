@@ -8,6 +8,8 @@ namespace RouteService.Domain.Common
         /// <summary>date, product, from, to, category, type, status or whatsapp; null keeps the pending-first order.</summary>
         public string? Sort { get; init; }
         public bool Descending { get; init; }
+        /// <summary>Inventory codes picked from the product column's list.</summary>
+        public int[]? Codes { get; init; }
         /// <summary>Text matched against the product's inventory code and model.</summary>
         public string? Product { get; init; }
         /// <summary>Department names stored on the route's sending end.</summary>

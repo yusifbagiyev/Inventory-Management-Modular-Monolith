@@ -13,6 +13,10 @@ namespace ProductService.Domain.Common
         /// <summary>Part of the model or the vendor.</summary>
         public string? Product { get; init; }
         public string? Worker { get; init; }
+        /// <summary>Exact values picked from a column's list of the values in use.</summary>
+        public int[]? Codes { get; init; }
+        public string[]? Models { get; init; }
+        public string[]? Workers { get; init; }
         /// <summary>Last change, or creation for a product never changed, both days inclusive.</summary>
         public DateTime? UpdatedFrom { get; init; }
         public DateTime? UpdatedTo { get; init; }

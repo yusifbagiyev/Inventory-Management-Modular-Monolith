@@ -1170,5 +1170,7 @@
   "Transfer activity, categories and departments appear here once transfers are made in the period.": "Когда за этот период будут перемещения, здесь появятся активность перемещений, категории и отделы.",
   "View all time": "Показать за всё время",
   "New product details": "Данные нового товара",
-  "There are no further details for this request.": "Дополнительных сведений по этому запросу нет."
+  "There are no further details for this request.": "Дополнительных сведений по этому запросу нет.",
+  "The values could not be loaded. Type to search instead.": "Не удалось загрузить значения. Введите текст для поиска.",
+  "{0} more, narrow the search": "Ещё {0}, уточните поиск"
 }

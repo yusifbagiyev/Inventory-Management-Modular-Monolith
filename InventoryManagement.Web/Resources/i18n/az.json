@@ -1170,5 +1170,7 @@
   "Transfer activity, categories and departments appear here once transfers are made in the period.": "Bu dövrdə transferlər olduqda transfer fəaliyyəti, kateqoriyalar və şöbələr burada göstəriləcək.",
   "View all time": "Bütün dövrə bax",
   "New product details": "Yeni məhsulun məlumatları",
-  "There are no further details for this request.": "Bu sorğu üçün əlavə məlumat yoxdur."
+  "There are no further details for this request.": "Bu sorğu üçün əlavə məlumat yoxdur.",
+  "The values could not be loaded. Type to search instead.": "Qiymətləri yükləmək mümkün olmadı. Bunun əvəzinə axtarış mətni yazın.",
+  "{0} more, narrow the search": "Daha {0} qiymət var, axtarışı dəqiqləşdirin"
 }

@@ -52,13 +52,17 @@ namespace InventoryManagement.Web.Controllers
             string? product = null,
             string? worker = null,
             DateTime? updatedFrom = null,
-            DateTime? updatedTo = null)
+            DateTime? updatedTo = null,
+            int[]? codes = null,
+            string[]? models = null,
+            string[]? workers = null)
         {
             // Category and department take several values from the column headers and one from the filter bar
             var filter = new ProductListFilter
             {
                 Sort = sort, Descending = dir == "desc", CategoryIds = categoryId, DepartmentIds = departmentId,
-                Code = code, Product = product, Worker = worker, UpdatedFrom = updatedFrom, UpdatedTo = updatedTo
+                Code = code, Product = product, Worker = worker, UpdatedFrom = updatedFrom, UpdatedTo = updatedTo,
+                Codes = codes, Models = models, Workers = workers
             };
             var result = await _mediator.Send(new GetAllProductsQuery(
                 pageNumber, pageSize, search, startDate, endDate,
@@ -124,6 +128,7 @@ namespace InventoryManagement.Web.Controllers
                     model = p.Model,
                     vendor = p.Vendor,
                     department = p.DepartmentName,
+                    category = p.CategoryName,
                     imageUrl = p.ImageUrl
                 }));
         }
@@ -134,7 +139,8 @@ namespace InventoryManagement.Web.Controllers
             int? id, string? search = null, int pageNumber = 1, int pageSize = 30,
             string? sort = null, string? dir = null, string? code = null, string? product = null,
             int[]? categoryId = null, int[]? departmentId = null, string? worker = null,
-            DateTime? deletedFrom = null, DateTime? deletedTo = null, string[]? deletedBy = null)
+            DateTime? deletedFrom = null, DateTime? deletedTo = null, string[]? deletedBy = null,
+            int[]? codes = null, string[]? models = null, string[]? workers = null)
         {
             if (id.HasValue)
             {
@@ -145,7 +151,8 @@ namespace InventoryManagement.Web.Controllers
             var filter = new ProductListFilter
             {
                 Sort = sort, Descending = dir == "desc", Code = code, Product = product, CategoryIds = categoryId,
-                DepartmentIds = departmentId, Worker = worker, DeletedFrom = deletedFrom, DeletedTo = deletedTo, DeletedBy = deletedBy
+                DepartmentIds = departmentId, Worker = worker, DeletedFrom = deletedFrom, DeletedTo = deletedTo, DeletedBy = deletedBy,
+                Codes = codes, Models = models, Workers = workers
             };
             var page = await _mediator.Send(new GetDeletedProductsQuery(search, pageNumber, pageSize, filter));
             await LoadColumnOptions();
@@ -154,6 +161,52 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.PageNumber = page.PageNumber;
             ViewBag.PageSize = page.PageSize;
             return View(ModelMapper.MapList<ProductViewModel>(page.Items));
+        }
+
+        /// <summary>The codes, models or workers in use among the products the list's other filters leave, offered by that column's filter.</summary>
+        [PermissionAuthorize(AllPermissions.ProductView)]
+        public async Task<IActionResult> ColumnValues(
+            string column, bool deleted = false, string? search = null, DateTime? startDate = null, DateTime? endDate = null,
+            bool? status = null, bool? availability = null, int[]? categoryId = null, int[]? departmentId = null,
+            bool? hasImage = null, bool? assigned = null, string? code = null, string? product = null, string? worker = null,
+            DateTime? updatedFrom = null, DateTime? updatedTo = null, DateTime? deletedFrom = null, DateTime? deletedTo = null,
+            string[]? deletedBy = null, int[]? codes = null, string[]? models = null, string[]? workers = null)
+        {
+            if (deleted && !User.HasPermission(AllPermissions.ProductDeletedView))
+                return Forbid();
+
+            // The column's own filter is left out, so its list still offers the values around the ones picked
+            var filter = new ProductListFilter
+            {
+                CategoryIds = categoryId, DepartmentIds = departmentId, UpdatedFrom = updatedFrom, UpdatedTo = updatedTo,
+                DeletedFrom = deletedFrom, DeletedTo = deletedTo, DeletedBy = deletedBy,
+                Code = column == "code" ? null : code, Codes = column == "code" ? null : codes,
+                Product = column == "product" ? null : product, Models = column == "product" ? null : models,
+                Worker = column == "worker" ? null : worker, Workers = column == "worker" ? null : workers
+            };
+            var items = deleted
+                ? (await _mediator.Send(new GetDeletedProductsQuery(search, 1, int.MaxValue, filter))).Items
+                : (await _mediator.Send(new GetAllProductsQuery(1, int.MaxValue, search, startDate, endDate,
+                    status, availability, null, null, hasImage, assigned, filter))).Items;
+
+            var byText = StringComparer.CurrentCultureIgnoreCase;
+            var values = column switch
+            {
+                "code" => items.Select(p => p.InventoryCode).Distinct().Order()
+                    .Select(c => new { value = c.ToString(), label = c.ToString() }).ToList(),
+                // The vendor rides along in the label, so typing a vendor finds its models
+                "product" => items.Where(p => !string.IsNullOrWhiteSpace(p.Model))
+                    .GroupBy(p => p.Model!).OrderBy(g => g.Key, byText)
+                    .Select(g => new
+                    {
+                        value = g.Key,
+                        label = string.Join(" · ", new[] { g.Key, string.Join(", ", g.Select(p => p.Vendor).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
+                    }).ToList(),
+                "worker" => items.Where(p => !string.IsNullOrWhiteSpace(p.Worker)).Select(p => p.Worker!).Distinct().Order(byText)
+                    .Select(w => new { value = w, label = w }).ToList(),
+                _ => []
+            };
+            return Json(values);
         }
 
         [PermissionAuthorize(AllPermissions.ProductView)]

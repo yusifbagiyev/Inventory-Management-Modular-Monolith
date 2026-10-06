@@ -17,5 +17,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public IReadOnlyList<string> Images { get; init; } = [];
         public string Title { get; init; } = string.Empty;
         public string EmptyText { get; init; } = "No images";
+        /// <summary>Shown when there are no images, such as the product's category icon.</summary>
+        public string EmptyIcon { get; init; } = "fa-regular fa-image";
     }
 }

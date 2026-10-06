@@ -271,6 +271,27 @@ window.FieldErrors = (function () {
     return { show: show, clear: clear, markRequired: markRequired };
 })();
 
+/** The icon shown for a product without a photo, picked from its category name by the rules CategoryIcons gives the page. */
+function categoryIcon(categoryName) {
+    let rules = categoryIcon.rules;
+    if (!rules) {
+        try { rules = JSON.parse(document.body.dataset.categoryIcons || '[]'); } catch (e) { rules = []; }
+        categoryIcon.rules = rules;
+    }
+    const name = String(categoryName || '').toLowerCase();
+    // Short words such as "pc" or "tv" count only as whole words, as on the server
+    const isLetter = function (c) { return !!c && /\p{L}/u.test(c); };
+    const matches = function (word) {
+        if (word.length > 3) return name.includes(word);
+        for (let at = name.indexOf(word); at >= 0; at = name.indexOf(word, at + 1)) {
+            if (!isLetter(name[at - 1]) && !isLetter(name[at + word.length])) return true;
+        }
+        return false;
+    };
+    const rule = name && rules.find(function (r) { return r[0].some(matches); });
+    return rule ? rule[1] : 'fa-box';
+}
+
 /** Server-made thumbnail URL for an uploaded photo, leaving other URLs unchanged. */
 function thumbUrl(url, width) {
     return typeof url === 'string' && url.startsWith('/images/') ? '/thumbs/' + (width || 160) + url : url;
@@ -754,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function render(list, term) {
         let html = list.map((p, i) => `
             <a class="ip-finder-item" role="option" id="codeFinder-${i}" href="/Products/Details/${encodeURIComponent(p.id)}">
-                <span class="ip-thumb">${p.imageUrl ? `<img src="${escapeHtml(thumbUrl(p.imageUrl))}" alt="" />` : '<i class="fa-solid fa-box"></i>'}</span>
+                <span class="ip-thumb">${p.imageUrl ? `<img src="${escapeHtml(thumbUrl(p.imageUrl))}" alt="" />` : `<i class="fa-solid ${categoryIcon(p.category)}" aria-hidden="true"></i>`}</span>
                 <span class="meta">
                     <span><b class="ip-mono">${escapeHtml(String(p.code))}</b> · ${escapeHtml(p.model || '')}</span>
                     <span>${escapeHtml([p.vendor, p.department].filter(Boolean).join(' · '))}</span>

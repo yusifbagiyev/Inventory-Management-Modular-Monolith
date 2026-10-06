@@ -93,7 +93,7 @@
                             <a asp-action="Details" asp-route-id="@route.Id" class="ip-num fw-semibold text-body">
                                 @route.CreatedAt.ToString("dd.MM.yyyy") <span class="ip-muted fw-normal">@route.CreatedAt.ToString("HH:mm")</span>
                             </a>
-                            <span class="ip-tag-plain">@L[route.RouteTypeLabel]</span>
+                            <partial name="_RouteTypeTag" model="route" />
                             @if (route.IsCompleted)
                             {
                                 <span class="ip-badge ip-badge-success">@L["Completed"]</span>

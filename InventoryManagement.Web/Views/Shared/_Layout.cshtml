@@ -63,7 +63,7 @@
     @await RenderSectionAsync("Styles", required: false)
 
 </head>
-<body>
+<body data-category-icons="@Json.Serialize(InventoryManagement.Web.Services.CategoryIcons.Rules.Select(r => new object[] { r.Words, r.Icon })).ToString()">
     @{ var signedIn = User.Identity?.IsAuthenticated ?? false; }
     <a class="ip-skip" href="#page-body">@L["Skip to content"]</a>
     <div class="ip-app">
