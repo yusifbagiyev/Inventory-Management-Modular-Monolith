@@ -59,13 +59,13 @@
                         <select asp-for="ToDepartmentId" asp-items="Model.Departments" class="ip-select">
                             <option value="">@L["-- Select Department --"]</option>
                         </select>
-                        <span class="ip-error d-none" id="departmentError"></span>
-                        <span asp-validation-for="ToDepartmentId" class="ip-error"></span>
+                        <span asp-validation-for="ToDepartmentId" class="ip-error" id="departmentError" role="alert"></span>
                     </div>
                     <div class="ip-field">
                         <label asp-for="ToWorker" class="ip-label">@L["New worker"]</label>
                         <input asp-for="ToWorker" class="ip-input" placeholder="@L["Enter worker name (optional)"]" />
-                        <span asp-validation-for="ToWorker" class="ip-error"></span>
+                        <span class="ip-hint d-none" id="sameDepartmentHint">@L["Enter the new worker to transfer within the same department."]</span>
+                        <span asp-validation-for="ToWorker" class="ip-error" id="workerError" role="alert"></span>
                     </div>
                 </div>
 
@@ -115,23 +115,25 @@
                 onBeforeSubmit: function() {
                     if (isSubmitting) return false;
 
-                    if (!currentProductData || !$('#ProductId').val()) {
+                    // The product on screen must be the one whose code is in the field
+                    if (!currentProductData || !$('#ProductId').val()
+                        || $('#inventoryCodeInput').val().trim() !== String(currentProductData.inventoryCode)) {
                         showError(t('Please search for and select a valid product first'));
                         $('#inventoryCodeInput').focus();
                         return false;
                     }
                     if (!$('#ToDepartmentId').val()) {
-                        showDepartmentError(t('Please select a destination department'));
+                        showFieldError('#ToDepartmentId', '#departmentError', t('Please select a destination department'));
                         $('#ToDepartmentId').focus();
                         return false;
                     }
                     if (sameDepartment() && !newWorker()) {
-                        showDepartmentError(t('Enter the new worker to transfer within the same department.'));
+                        showFieldError('#ToWorker', '#workerError', t('Enter the new worker to transfer within the same department.'));
                         $('#ToWorker').focus();
                         return false;
                     }
                     if (isNoChange()) {
-                        showDepartmentError(t('The product is already with this worker. Enter another worker or choose another department.'));
+                        showFieldError('#ToWorker', '#workerError', t('The product is already with this worker. Enter another worker or choose another department.'));
                         $('#ToWorker').focus();
                         return false;
                     }
@@ -165,6 +167,13 @@
                 const inventoryCode = $(this).val().trim();
                 clearTimeout(searchTimeout);
                 if (!inventoryCode) { resetForm(); return; }
+                // The product found for the previous code is withdrawn at once, so it cannot be transferred by mistake
+                if (currentProductData && inventoryCode !== String(currentProductData.inventoryCode)) {
+                    hideProductInfo();
+                    hideTransferFields();
+                    hideWarning();
+                    updateSummary();
+                }
 
                 const codeNum = parseInt(inventoryCode);
                 if (isNaN(codeNum) || codeNum < 1 || codeNum > 9999) {
@@ -175,9 +184,12 @@
             });
 
             $('#searchBtn').on('click', searchProduct);
-            $('#ToDepartmentId, #ToWorker').on('change input', function() {
-                hideDepartmentError();
-                if (isNoChange()) showDepartmentError(t('The product is already with this worker. Enter another worker or choose another department.'));
+            // Bound on the document so it runs after the shared handler that clears a field's error as it is edited
+            $(document).on('change input', '#ToDepartmentId, #ToWorker', function() {
+                hideFieldError('#ToDepartmentId', '#departmentError');
+                hideFieldError('#ToWorker', '#workerError');
+                if (isNoChange()) showFieldError('#ToWorker', '#workerError', t('The product is already with this worker. Enter another worker or choose another department.'));
+                updateSameDepartmentHint();
                 updateSummary();
             });
 
@@ -261,7 +273,7 @@
                     const pending = (routes || []).filter(r => !r.isCompleted);
                     if (pending.length > 0) {
                         showWarning(t('This product has a pending transfer to {0} created on {1}. The pending transfer must be completed first.',
-                            pending[0].toDepartmentName || '', formatDate(pending[0].createdAt)));
+                            pending[0].toDepartmentName || '', formatDate(pending[0].createdAt)), pending[0].id);
                         hideTransferFields();
                     } else {
                         showTransferFields();
@@ -312,18 +324,38 @@
                 $('#inventoryCodeInput').removeClass('is-invalid');
             }
 
-            function showDepartmentError(message) {
-                $('#departmentError').text(message).removeClass('d-none');
-                $('#ToDepartmentId').addClass('is-invalid');
+            function describedBy(field, id, on) {
+                const ids = (field.attr('aria-describedby') || '').split(/\s+/).filter(x => x && x !== id);
+                if (on) ids.push(id);
+                if (ids.length) field.attr('aria-describedby', ids.join(' ')); else field.removeAttr('aria-describedby');
             }
-            function hideDepartmentError() {
-                $('#departmentError').text('').addClass('d-none');
-                $('#ToDepartmentId').removeClass('is-invalid');
+            function showFieldError(fieldSelector, messageSelector, message) {
+                const field = $(fieldSelector), box = $(messageSelector);
+                box.text(message).removeClass('field-validation-valid').addClass('field-validation-error');
+                field.addClass('is-invalid').attr('aria-invalid', 'true');
+                describedBy(field, box.attr('id'), true);
+            }
+            function hideFieldError(fieldSelector, messageSelector) {
+                const field = $(fieldSelector), box = $(messageSelector);
+                box.text('');
+                field.removeClass('is-invalid').removeAttr('aria-invalid');
+                describedBy(field, box.attr('id'), false);
             }
 
-            function showWarning(message) {
+            // Within the same department the worker becomes required, so say so as soon as it is chosen
+            function updateSameDepartmentHint() {
+                const on = sameDepartment() && !isNoChange();
+                $('#sameDepartmentHint').toggleClass('d-none', !on);
+                describedBy($('#ToWorker'), 'sameDepartmentHint', on);
+            }
+
+            // A pending transfer is a wait, not a failure, so the banner leads to that transfer
+            function showWarning(message, pendingRouteId) {
+                const link = pendingRouteId
+                    ? `<a href="/Routes/Details/${encodeURIComponent(pendingRouteId)}">${escapeHtml(t('Open the pending transfer'))}</a>`
+                    : '';
                 $('#warningContainer').html(
-                    `<div class="ip-banner ip-banner-danger mt-3"><i class="fa-solid fa-ban"></i><span>${escapeHtml(message)}</span></div>`);
+                    `<div class="ip-banner ip-banner-warning mt-3" role="status"><i class="fa-regular fa-clock" aria-hidden="true"></i><div>${escapeHtml(message)}</div>${link}</div>`);
             }
             function hideWarning() { $('#warningContainer').empty(); }
 
@@ -332,13 +364,15 @@
                 hideTransferFields();
                 hideError();
                 hideWarning();
-                hideDepartmentError();
+                hideFieldError('#ToDepartmentId', '#departmentError');
+                hideFieldError('#ToWorker', '#workerError');
                 lastSearchedCode = '';
                 isSubmitting = false;
                 $('#ToDepartmentId').val('');
                 $('#ToWorker').val('');
                 $('#Notes').val('');
                 ImageManager.reset(document);
+                updateSameDepartmentHint();
                 updateSummary();
             }
 
