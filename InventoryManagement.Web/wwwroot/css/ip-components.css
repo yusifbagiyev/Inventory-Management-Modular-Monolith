@@ -591,7 +591,6 @@ tr.ip-clickable { cursor: pointer; }
 .ip-notif-day .ip-notif-item { border-radius: 0; }
 .ip-notif-day .ip-notif-item:focus-visible { outline-offset: -2px; }
 .ip-notif-link { display: inline-block; margin-top: 4px; font-size: var(--ip-fs-sm); font-weight: 600; color: var(--ip-accent-text); }
-.ip-tabs > .ip-filter { margin-bottom: 4px; }
 
 /* Dashboard */
 .ip-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
@@ -645,11 +644,6 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 /* Absolute children of a table need a positioned ancestor or they widen the page on phones */
 .ip-table-wrap { position: relative; }
 .ip-table td { position: relative; }
-/* On phones a filter in the tabs row moves to its own line */
-@media (max-width: 575.98px) {
-  .ip-tabs { flex-wrap: wrap; }
-  .ip-tabs > .ip-filter { margin-left: 0 !important; flex: 1 1 100%; order: 10; }
-}
 
 /* Product specification rows */
 .ip-spec-list { display: flex; flex-direction: column; gap: var(--ip-space-2); max-width: 760px; }
@@ -1316,3 +1310,26 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 }
 /* Audit: on tablets the user column narrows and each changed field puts its value under its name, so values keep the full width */
 @media (min-width: 768px) and (max-width: 1024px) { .ip-audit-table th.who { width: 10rem; } .ip-audit-changes dl > div + div { margin-top: 4px; } }
+/* Notifications: the type filter beside the tabs (below their rule on phones, with Mark all as read as an icon), the unread dot as a button, finger-sized links */
+.ip-notif-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ip-space-3) var(--ip-space-4); }
+.ip-notif-bar > .ip-tabs { flex: 1 1 auto; }
+.ip-notif-markall { display: none; }
+@media (min-width: 576px) {
+  .ip-notif-bar { border-bottom: var(--ip-rule-width) solid var(--ip-rule); }
+  .ip-notif-bar > .ip-tabs { border-bottom: 0; }
+  .ip-notif-bar > .ip-filter { margin-bottom: 4px; }
+}
+@media (max-width: 575.98px) {
+  .ip-notif-bar { align-items: center; }
+  .ip-notif-bar > .ip-tabs { flex-basis: 100%; }
+  .ip-notif-bar > .ip-filter { flex: 1 1 0; min-width: 0; }
+  .ip-notif-bar > .ip-filter select { flex: 1; min-width: 0; max-width: none; }
+  .ip-page-head .ip-notif-head-actions { display: none; }
+  .ip-notif-markall { display: inline-flex; align-items: center; width: 44px; height: 44px; margin-left: auto; }
+}
+.ip-notif-item button.unread-dot { display: grid; place-items: center; width: 32px; height: 32px; margin: 0 -12px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.ip-notif-item button.unread-dot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ip-accent); }
+.ip-notif-item.unread button.unread-dot { background: transparent; }
+.ip-notif-item:not(.unread) button.unread-dot { visibility: hidden; }
+.ip-notif-item:not(.unread) .ip-notif-unread { display: none; }
+@media (pointer: coarse), (max-width: 767.98px) { .ip-notif-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0; } }

@@ -18,8 +18,11 @@ namespace NotificationService.Application.DTOs
         public List<NotificationDto> Items { get; init; } = [];
         /// <summary>How many match the current tab and type, used for paging.</summary>
         public int TotalCount { get; init; }
+        /// <summary>The tab counts, for the current type.</summary>
         public int AllCount { get; init; }
         public int UnreadCount { get; init; }
+        /// <summary>Unread notifications of every type.</summary>
+        public int TotalUnreadCount { get; init; }
         public List<string> Types { get; init; } = [];
     }
 

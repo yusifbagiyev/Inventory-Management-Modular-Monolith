@@ -34,6 +34,7 @@ namespace InventoryManagement.Web.Services
                 TotalCount = page.TotalCount,
                 AllCount = page.AllCount,
                 UnreadCount = page.UnreadCount,
+                TotalUnreadCount = page.TotalUnreadCount,
                 Types = page.Types,
                 PageNumber = pageNumber,
                 PageSize = pageSize

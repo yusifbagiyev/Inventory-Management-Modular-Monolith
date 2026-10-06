@@ -52,8 +52,15 @@ namespace NotificationService.Infrastructure.Repositories
             return (items, total);
         }
 
-        public Task<int> CountAsync(int userId, CancellationToken cancellationToken = default)
-            => _context.Notifications.CountAsync(n => n.UserId == userId, cancellationToken);
+        public Task<int> CountAsync(int userId, bool unreadOnly, string? type, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Notifications.Where(n => n.UserId == userId);
+            if (unreadOnly)
+                query = query.Where(n => !n.IsRead);
+            if (!string.IsNullOrEmpty(type))
+                query = query.Where(n => n.Type == type);
+            return query.CountAsync(cancellationToken);
+        }
 
         public Task<List<string>> GetTypesAsync(int userId, CancellationToken cancellationToken = default)
             => _context.Notifications.AsNoTracking()

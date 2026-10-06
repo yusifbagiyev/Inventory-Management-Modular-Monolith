@@ -28,8 +28,9 @@ namespace NotificationService.Infrastructure.Services
             {
                 Items = items.Select(ToDto).ToList(),
                 TotalCount = total,
-                AllCount = await _repository.CountAsync(userId, cancellationToken),
-                UnreadCount = await _repository.GetUnreadCountAsync(userId, cancellationToken),
+                AllCount = await _repository.CountAsync(userId, false, type, cancellationToken),
+                UnreadCount = await _repository.CountAsync(userId, true, type, cancellationToken),
+                TotalUnreadCount = await _repository.GetUnreadCountAsync(userId, cancellationToken),
                 Types = await _repository.GetTypesAsync(userId, cancellationToken)
             };
         }

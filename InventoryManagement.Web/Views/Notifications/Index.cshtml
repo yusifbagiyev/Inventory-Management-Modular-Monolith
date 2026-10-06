@@ -14,21 +14,24 @@
     <div class="ip-page-head">
         <div>
             <h1>@L["Notifications"]</h1>
-            <div class="ip-sub ip-num" id="unreadSummary" data-unread="@Model.UnreadCount">@L["{0} unread", Model.UnreadCount]</div>
+            <div class="ip-sub ip-num" id="unreadSummary" data-unread="@Model.TotalUnreadCount">@L["{0} unread", Model.TotalUnreadCount]</div>
         </div>
-        <div class="ip-page-actions">
+        <div class="ip-page-actions ip-notif-head-actions">
             <button type="button" class="ip-btn ip-btn-secondary" onclick="markAllAsRead()">
                 <i class="fa-solid fa-check-double"></i><span>@L["Mark all as read"]</span>
             </button>
         </div>
     </div>
 
-    <nav class="ip-tabs strong align-items-center" aria-label="@L["Notifications"]" data-list-tabs>
-        <a class="ip-tab @(unreadTab ? "" : "active")" href="@TabUrl(null)">@L["All"] <span class="count">@Model.AllCount</span></a>
-        <a class="ip-tab @(unreadTab ? "active" : "")" href="@TabUrl("unread")">@L["Unread"] <span class="count" id="unreadCount">@Model.UnreadCount</span></a>
+    @* The type filter sits beside the tabs, not in them, so on phones it drops below their rule *@
+    <div class="ip-notif-bar">
+        <nav class="ip-tabs strong" aria-label="@L["Notifications"]" data-list-tabs>
+            <a class="ip-tab @(unreadTab ? "" : "active")" href="@TabUrl(null)">@L["All"] <span class="count">@Model.AllCount</span></a>
+            <a class="ip-tab @(unreadTab ? "active" : "")" href="@TabUrl("unread")">@L["Unread"] <span class="count" id="unreadCount">@Model.UnreadCount</span></a>
+        </nav>
         @if (Model.Types.Count > 1)
         {
-            <label class="ip-filter ms-auto">
+            <label class="ip-filter">
                 <span>@L["Type"]</span>
                 <select id="typeFilter">
                     <option value="">@L["All"]</option>
@@ -39,7 +42,10 @@
                 </select>
             </label>
         }
-    </nav>
+        <button type="button" class="ip-btn-icon lg ip-notif-markall" onclick="markAllAsRead()" aria-label="@L["Mark all as read"]" title="@L["Mark all as read"]">
+            <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+        </button>
+    </div>
 
     <div id="notificationsList" data-list-region>
         @if (items.Count == 0)
@@ -57,6 +63,7 @@
                     <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
                     <div class="title">@L["Nothing found"]</div>
                     <div class="text">@L["No notifications match this filter."]</div>
+                    <a class="ip-btn ip-btn-secondary" href="@Url.Action("Index")"><span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i></a>
                 }
                 else
                 {
@@ -75,14 +82,22 @@
                     @foreach (var notification in day)
                     {
                         var link = Link(notification);
-                        <div class="ip-notif-item @(notification.IsRead ? "" : "unread")" role="button" tabindex="0"
+                        @* A click anywhere marks the row as read; the dot is the keyboard's way to do it and goes once it is read *@
+                        <div class="ip-notif-item @(notification.IsRead ? "" : "unread")"
                              data-id="@notification.Id" data-type="@notification.Type" data-read="@(notification.IsRead ? "read" : "unread")">
-                            <span class="unread-dot" aria-hidden="true"></span>
+                            @if (notification.IsRead)
+                            {
+                                <span class="unread-dot" aria-hidden="true"></span>
+                            }
+                            else
+                            {
+                                <button type="button" class="unread-dot" aria-label="@L["Mark Read"]" title="@L["Mark Read"]"></button>
+                            }
                             @{ var (icon, tone) = Icon(notification); }
                             <span class="ip-notif-icon @tone" aria-hidden="true"><i class="fa-solid @icon"></i></span>
                             <div class="flex-grow-1" style="min-width: 0">
                                 <div class="d-flex justify-content-between align-items-baseline gap-3">
-                                    <span class="title">@notification.Title</span>
+                                    <span class="title">@if (!notification.IsRead) {<span class="visually-hidden ip-notif-unread">@L["Unread notification"]: </span>}@notification.Title</span>
                                     <span class="time ip-num" title="@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")">@notification.CreatedAt.ToString("HH:mm")</span>
                                 </div>
                                 <div class="text">@notification.Message</div>
@@ -110,22 +125,28 @@
             ListNav.go(window.location.pathname + '?' + params.toString());
         });
 
-        // _Layout removes .unread when a notification is clicked, so count the unread number down here
-        function unreadNow() { return parseInt($('#unreadSummary').attr('data-unread'), 10) || 0; }
-        function setUnread(n) {
-            $('#unreadSummary').attr('data-unread', n).text(t('{0} unread', n));
-            $('#unreadCount').text(n);
+        // _Layout removes .unread when a notification is clicked, so count the unread numbers down here (the tab counts only the chosen type)
+        function countDown(read) {
+            const total = Math.max(0, (parseInt($('#unreadSummary').attr('data-unread'), 10) || 0) - read);
+            $('#unreadSummary').attr('data-unread', total).text(t('{0} unread', total));
+            $('#unreadCount').text(Math.max(0, (parseInt($('#unreadCount').text(), 10) || 0) - read));
         }
         new MutationObserver(function (mutations) {
             const read = mutations.filter(m => m.target.classList && m.target.classList.contains('ip-notif-item')
                 && (m.oldValue || '').split(' ').includes('unread') && !m.target.classList.contains('unread')).length;
-            if (read) setUnread(Math.max(0, unreadNow() - read));
+            if (read) countDown(read);
         }).observe(document.getElementById('notificationsList'),
             { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
 
-        // Enter on a focused notification works like a click
-        $(document).on('keydown', '#notificationsList .ip-notif-item', function (e) {
-            if (e.key === 'Enter' && e.target === this) this.click();
+        // The dot hides once the row is read, so keyboard focus moves on to the row's link
+        $(document).on('click', '#notificationsList button.unread-dot', function () {
+            $(this).closest('.ip-notif-item').find('.ip-notif-link').trigger('focus');
+        });
+
+        // The filter is not swapped with the list, so it follows the URL after Clear filters and Back
+        document.addEventListener('listnav:loaded', function () {
+            const select = document.getElementById('typeFilter');
+            if (select) select.value = new URLSearchParams(window.location.search).get('type') || '';
         });
 
         function markAllAsRead() {
