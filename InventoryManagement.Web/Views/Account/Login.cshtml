@@ -56,16 +56,6 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--ip-bg); }
         [data-bs-theme="dark"] { color-scheme: dark; }
-        .ip-login-head form { margin: 0; }
-        .ip-account-wrap { position: relative; }
-        .ip-account-wrap .ip-account { width: 100%; padding-right: 48px; }
-        /* The remove button shows on hover or focus, and always on touch screens */
-        .ip-account-forget { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); margin: 0; }
-        .ip-account-forget button { width: 32px; height: 32px; border: 0; border-radius: var(--ip-radius-md); background: transparent; color: var(--ip-text-3); cursor: pointer; opacity: 0; }
-        .ip-account-wrap:hover .ip-account-forget button, .ip-account-forget button:focus-visible { opacity: 1; }
-        .ip-account-forget button:hover { background: var(--ip-surface-active); color: var(--ip-text-1); }
-        @@media (hover: none) { .ip-account-forget button { opacity: 1; } }
-        .ip-account-wrap:hover .ip-account > i { visibility: hidden; }
     </style>
 </head>
 <body>
@@ -97,10 +87,10 @@
                             <div class="ip-account-wrap">
                                 <a class="ip-account" href="@Url.Action("Login", new { user = a.Login, returnUrl })">
                                     <span class="ip-avatar" aria-hidden="true">@a.Initials</span>
-                                    <span class="who"><b>@a.Name</b><small>@a.RoleLabel · @a.LastAtText</small></span>
+                                    <span class="who"><b>@a.Name</b><small>@a.RoleLabel</small><small>@a.LastAtText</small></span>
                                     <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                                 </a>
-                                <form class="ip-account-forget" method="post" asp-action="ForgetAccount">
+                                <form class="ip-account-forget" method="post" asp-action="ForgetAccount" data-confirm="@L["Remove {0} from this list?", a.Name]">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="login" value="@a.Login" />
                                     <input type="hidden" name="returnUrl" value="@returnUrl" />
@@ -205,6 +195,13 @@
                 toggle.setAttribute('aria-label', label);
                 toggle.title = label;
                 toggle.querySelector('i').className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+            });
+
+            // Removing an account from the list means typing its username again, so a stray tap asks first
+            document.querySelectorAll('.ip-account-forget').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    if (!window.confirm(form.dataset.confirm)) e.preventDefault();
+                });
             });
 
             // The theme toggle uses the same storage key as site.js

@@ -1252,3 +1252,24 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
 .request-photo { position: relative; width: 64px; height: 64px; }
 .request-photo .cover { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--ip-surface); font-size: 11px; color: var(--ip-brand); }
 a.request-photo:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
+/* Users and sign-in: account picker cards of equal height with role and last sign-in on their own lines, the remove button in the chevron's place, finger-sized targets on touch screens */
+.ip-login-head form { margin: 0; }
+.ip-account-wrap { position: relative; }
+.ip-account-wrap .ip-account { width: 100%; height: 100%; }
+.ip-account .who b, .ip-account .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ip-account-forget { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); margin: 0; }
+.ip-account-forget button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: var(--ip-radius-md); background: transparent; color: var(--ip-text-3); cursor: pointer; opacity: 0; }
+.ip-account-wrap:hover .ip-account-forget button, .ip-account-forget button:focus-visible { opacity: 1; }
+.ip-account-forget button:hover { background: var(--ip-surface-active); color: var(--ip-text-1); }
+.ip-account-wrap:is(:hover, :has(.ip-account-forget button:focus-visible)) .ip-account > i { visibility: hidden; }
+@media (hover: none) {
+  .ip-account-wrap .ip-account { padding-right: 56px; }
+  .ip-account-wrap .ip-account > i { display: none; }
+  .ip-account-forget { right: 4px; }
+  .ip-account-forget button { width: 44px; height: 44px; opacity: 1; }
+}
+@media (max-width: 767.98px) {
+  .ip-account-other, .ip-login-form .back { height: 44px; }
+  .ip-login-head .ip-seg > * { height: 44px; min-width: 44px; justify-content: center; }
+  .ip-login-head .ip-btn-icon.lg { width: 44px; height: 44px; }
+}
