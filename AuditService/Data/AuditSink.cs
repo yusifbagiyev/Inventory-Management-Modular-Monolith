@@ -1,6 +1,5 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Unicode;
 using Microsoft.Extensions.DependencyInjection;
 using SharedServices.Auditing;
 
@@ -9,10 +8,10 @@ namespace AuditService.Data
     /// <summary>Saves audit records on the request's connection, inside its transaction.</summary>
     public sealed class AuditSink : IAuditSink
     {
-        // Letters are stored as they are rather than escaped, so the log can be searched for them
+        // Letters and signs like & are stored as they are rather than escaped, so the log can be searched for them
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
         {
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         private readonly IServiceProvider _services;
 

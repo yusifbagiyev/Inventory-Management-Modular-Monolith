@@ -16,6 +16,8 @@ namespace AuditService
             // Not audited itself, otherwise every audit row would get audit rows of its own
             services.AddModuleDbContext<AuditDbContext>(AuditDbContext.Schema, audited: false);
             services.AddScoped<IAuditSink, AuditSink>();
+            // The audit page keeps its filter lists here
+            services.AddMemoryCache();
             return services;
         }
     }

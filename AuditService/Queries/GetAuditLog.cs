@@ -3,6 +3,7 @@ using System.Text.Json;
 using AuditService.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SharedServices.Auditing;
 
 namespace AuditService.Queries
@@ -53,9 +54,16 @@ namespace AuditService.Queries
         IRequestHandler<GetAuditFacetsQuery, AuditFacets>
     {
         private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+        private const string FacetsKey = "audit:facets";
+        private static readonly TimeSpan FacetsLifetime = TimeSpan.FromMinutes(5);
         private readonly AuditDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public GetAuditLogHandler(AuditDbContext context) => _context = context;
+        public GetAuditLogHandler(AuditDbContext context, IMemoryCache cache)
+        {
+            _context = context;
+            _cache = cache;
+        }
 
         public async Task<AuditLogPage> Handle(GetAuditLogQuery request, CancellationToken cancellationToken)
         {
@@ -89,33 +97,32 @@ namespace AuditService.Queries
                     EF.Functions.ILike(SearchSql.Fold(e.Changes), pattern));
             }
 
-            var total = await rows.Select(e => e.CorrelationId).Distinct().CountAsync(cancellationToken);
-            var groups = rows
-                .GroupBy(e => e.CorrelationId)
-                .Select(g => new
-                {
-                    CorrelationId = g.Key,
-                    At = g.Max(e => e.At),
-                    LastId = g.Max(e => e.Id),
-                    UserName = g.Max(e => e.UserName),
-                    Action = g.Max(e => e.Action)
-                });
+            // The newest matching row stands for its action, so the newest page is read from the date index instead of grouping the whole log
+            var actions = rows.Where(e => !rows.Any(o => o.CorrelationId == e.CorrelationId && o.Id > e.Id));
             var desc = request.Descending;
-            // The last row id breaks ties, so paging never repeats or skips an action
+            // The row id breaks ties, so paging never repeats or skips an action
             var ordered = request.Sort switch
             {
-                "user" => (desc ? groups.OrderByDescending(g => g.UserName) : groups.OrderBy(g => g.UserName))
-                    .ThenByDescending(g => g.At).ThenByDescending(g => g.LastId),
-                "action" => (desc ? groups.OrderByDescending(g => g.Action) : groups.OrderBy(g => g.Action))
-                    .ThenByDescending(g => g.At).ThenByDescending(g => g.LastId),
+                "user" => (desc ? actions.OrderByDescending(e => e.UserName) : actions.OrderBy(e => e.UserName))
+                    .ThenByDescending(e => e.At).ThenByDescending(e => e.Id),
+                "action" => (desc ? actions.OrderByDescending(e => e.Action) : actions.OrderBy(e => e.Action))
+                    .ThenByDescending(e => e.At).ThenByDescending(e => e.Id),
                 _ => desc
-                    ? groups.OrderByDescending(g => g.At).ThenByDescending(g => g.LastId)
-                    : groups.OrderBy(g => g.At).ThenBy(g => g.LastId)
+                    ? actions.OrderByDescending(e => e.At).ThenByDescending(e => e.Id)
+                    : actions.OrderBy(e => e.At).ThenBy(e => e.Id)
             };
+            var skipped = (pageNumber - 1) * pageSize;
             var page = await ordered
-                .Skip((pageNumber - 1) * pageSize)
+                .Skip(skipped)
                 .Take(pageSize)
+                .Select(e => new { e.CorrelationId, e.At })
                 .ToListAsync(cancellationToken);
+
+            // A page that is not full is the last one, so the total is known without another pass over the log
+            var isLastPage = page.Count < pageSize && (page.Count > 0 || pageNumber == 1);
+            var total = isLastPage
+                ? skipped + page.Count
+                : await rows.Select(e => e.CorrelationId).Distinct().CountAsync(cancellationToken);
 
             var ids = page.Select(p => p.CorrelationId).ToList();
             var entries = await rows
@@ -141,19 +148,22 @@ namespace AuditService.Queries
         static List<string> Values(IReadOnlyList<string>? values)
             => values?.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().ToList() ?? [];
 
+        // Cached because both lists read the whole log on every view, yet change only when a new user or kind of record first appears
         public async Task<AuditFacets> Handle(GetAuditFacetsQuery request, CancellationToken cancellationToken)
-        {
-            var users = await _context.Entries.AsNoTracking()
-                .Where(e => e.UserName != null)
-                .GroupBy(e => e.UserId)
-                .Select(g => new { UserId = g.Key, UserName = g.Max(e => e.UserName)! })
-                .ToListAsync(cancellationToken);
-            var types = await _context.Entries.AsNoTracking()
-                .Select(e => e.EntityType).Distinct().OrderBy(t => t)
-                .ToListAsync(cancellationToken);
-            return new AuditFacets(
-                users.Select(u => new AuditUserOption(u.UserId, u.UserName)).OrderBy(u => u.UserName).ToList(),
-                types);
-        }
+            => (await _cache.GetOrCreateAsync(FacetsKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = FacetsLifetime;
+                var users = await _context.Entries.AsNoTracking()
+                    .Where(e => e.UserName != null)
+                    .GroupBy(e => e.UserId)
+                    .Select(g => new { UserId = g.Key, UserName = g.Max(e => e.UserName)! })
+                    .ToListAsync(cancellationToken);
+                var types = await _context.Entries.AsNoTracking()
+                    .Select(e => e.EntityType).Distinct().OrderBy(t => t)
+                    .ToListAsync(cancellationToken);
+                return new AuditFacets(
+                    users.Select(u => new AuditUserOption(u.UserId, u.UserName)).OrderBy(u => u.UserName).ToList(),
+                    types);
+            }))!;
     }
 }

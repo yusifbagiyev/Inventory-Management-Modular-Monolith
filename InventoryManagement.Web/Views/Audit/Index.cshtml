@@ -27,16 +27,25 @@
         "SignedOut" => "Signed out",
         _ => op
     };
-    // Links to the record's page unless the record was deleted
-    string? RecordUrl(AuditEntryDto e) => e.Operation == "Deleted" || !int.TryParse(e.EntityId, out var id) ? null : e.EntityType switch
+    // Links to the record's page, and for a deletion only to a product's kept page since other records are gone
+    string? RecordUrl(AuditEntryDto e)
     {
-        "Product" when User.HasPermission("product.view") => $"/Products/Details/{id}",
-        "InventoryRoute" when User.HasPermission("route.view") => $"/Routes/Details/{id}",
-        "Category" when User.HasPermission("category.view") => $"/Categories/Details/{id}",
-        "Department" when User.HasPermission("department.view") => $"/Departments/Details/{id}",
-        "User" when User.HasPermission("user.view") => $"/UserManagement/Details/{id}",
-        _ => null
-    };
+        if (!int.TryParse(e.EntityId, out var id)) return null;
+        if (e.Operation == "Deleted")
+        {
+            var kept = e.EntityType == "Product" && e.Changes.Any(c => c.Field == "IsDeleted" && c.New == "true");
+            return kept && User.HasPermission("product.deleted.view") ? $"/Products/Deleted?id={id}" : null;
+        }
+        return e.EntityType switch
+        {
+            "Product" when User.HasPermission("product.view") => $"/Products/Details/{id}",
+            "InventoryRoute" when User.HasPermission("route.view") => $"/Routes/Details/{id}",
+            "Category" when User.HasPermission("category.view") => $"/Categories/Details/{id}",
+            "Department" when User.HasPermission("department.view") => $"/Departments/Details/{id}",
+            "User" when User.HasPermission("user.view") => $"/UserManagement/Details/{id}",
+            _ => null
+        };
+    }
     string OperationBadge(string op) => op switch
     {
         "Created" or "SignedIn" => "ip-badge-success",
@@ -51,18 +60,39 @@
         if (AuditLabels.IsRequestType(value)) return L[AuditLabels.RequestType(value)].Value;
         if (value is "true" or "false") return L[value == "true" ? "Yes" : "No"].Value;
         // Lists are stored as JSON, specifications are joined with semicolons and other lists with commas
-        if (value.StartsWith('[') && value.EndsWith(']'))
+        if (ListItems(value, out var cut) is { } items)
+        {
+            if (items.Count == 0) return "—";
+            var text = string.Join(items.All(i => i is Newtonsoft.Json.Linq.JObject) ? "; " : ", ", items.Select(i => i is Newtonsoft.Json.Linq.JObject o
+                ? $"{o.GetValue("Name", StringComparison.OrdinalIgnoreCase)}: {o.GetValue("Value", StringComparison.OrdinalIgnoreCase)}".TrimEnd(' ', ':')
+                : i.ToString()));
+            return cut ? text + " …" : text;
+        }
+        return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
+    }
+    // Older rows hold long lists cut off mid-item with an ellipsis, so only their complete items are read
+    static Newtonsoft.Json.Linq.JArray? ListItems(string value, out bool cut)
+    {
+        cut = false;
+        if (!value.StartsWith('[')) return null;
+        if (value.EndsWith(']'))
+        {
+            try { return Newtonsoft.Json.Linq.JArray.Parse(value); }
+            catch (Newtonsoft.Json.JsonException) { return null; }
+        }
+        if (!value.EndsWith('…') || !(value.StartsWith("[\"") || value.StartsWith("[{"))) return null;
+        // The list is closed after each comma from the end until what is left is whole
+        for (var end = value.LastIndexOf(','); end > 0; end = value.LastIndexOf(',', end - 1))
         {
             try
             {
-                var items = Newtonsoft.Json.Linq.JArray.Parse(value);
-                return items.Count == 0 ? "—" : string.Join(items.All(i => i is Newtonsoft.Json.Linq.JObject) ? "; " : ", ", items.Select(i => i is Newtonsoft.Json.Linq.JObject o
-                    ? $"{o.GetValue("Name", StringComparison.OrdinalIgnoreCase)}: {o.GetValue("Value", StringComparison.OrdinalIgnoreCase)}".TrimEnd(' ', ':')
-                    : i.ToString()));
+                var items = Newtonsoft.Json.Linq.JArray.Parse(value[..end] + "]");
+                cut = true;
+                return items;
             }
             catch (Newtonsoft.Json.JsonException) { }
         }
-        return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
+        return null;
     }
     var userOptions = Json.Serialize(facets.Users.Where(u => u.UserId.HasValue).Select(u => new { value = u.UserId.ToString(), label = u.UserName })).ToString();
     var typeOptions = Json.Serialize(facets.EntityTypes.Select(t => new { value = t, label = L[TypeLabel(t)].Value })).ToString();
@@ -77,12 +107,13 @@
     }
     static bool IsEmpty(string? value) => string.IsNullOrWhiteSpace(value) || value == "[]" || value.StartsWith("01.01.0001");
     static bool IsImageField(string field) => field.EndsWith("ImageUrl") || field.EndsWith("ImageUrls");
-    static IEnumerable<string> ImageUrls(string? value)
+    // Null when the value is neither one address nor a readable list, so it is shown as text
+    static List<string>? ImageUrls(string? value, out bool cut)
     {
-        if (string.IsNullOrWhiteSpace(value)) return Enumerable.Empty<string>();
-        if (!value.StartsWith('[')) return new[] { value };
-        try { return Newtonsoft.Json.Linq.JArray.Parse(value).Select(v => v.ToString()).Where(v => v.Length > 0); }
-        catch (Newtonsoft.Json.JsonException) { return new[] { value }; }
+        cut = false;
+        if (string.IsNullOrWhiteSpace(value)) return new List<string>();
+        if (!value.StartsWith('[')) return new List<string> { value };
+        return ListItems(value, out cut)?.Select(v => v.ToString()).Where(v => v.Length > 0).ToList();
     }
 
     string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
@@ -101,14 +132,17 @@
     // Images render as thumbnails and department or category ids as names
     void RenderValue(string field, string? value)
     {
-        if (IsImageField(field) && value != null && !value.StartsWith("01.01.0001"))
+        if (IsImageField(field) && value != null && !value.StartsWith("01.01.0001") && ImageUrls(value, out var cut) is { } urls)
         {
-            var urls = ImageUrls(value).ToList();
             if (urls.Count == 0) { <text>—</text> return; }
             <span class="ip-audit-thumbs">
                 @foreach (var url in urls)
                 {
                     <a href="@url" target="_blank" rel="noopener" title="@url"><img src="@InventoryManagement.Web.Services.ImageThumbnails.Url(url)" alt="" loading="lazy" data-fallback /></a>
+                }
+                @if (cut)
+                {
+                    <span class="ip-faint align-self-center">…</span>
                 }
             </span>
             return;
@@ -207,11 +241,7 @@
                                     {
                                         <div class="ip-audit-entry">
                                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                                @{
-                                                    // Products are soft-deleted, so an update that sets IsDeleted is shown as a deletion
-                                                    var shownOperation = entry.Changes.Any(c => c.Field == "IsDeleted" && c.New == "true") ? "Deleted" : entry.Operation;
-                                                }
-                                                <span class="ip-badge @OperationBadge(shownOperation)">@L[OperationLabel(shownOperation)]</span>
+                                                <span class="ip-badge @OperationBadge(entry.Operation)">@L[OperationLabel(entry.Operation)]</span>
                                                 <span class="fw-medium">@L[TypeLabel(entry.EntityType)]</span>
                                                 @if (!string.IsNullOrEmpty(entry.Label))
                                                 {

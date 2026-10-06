@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using SharedServices.Auditing;
 using SharedServices.Persistence;
 
 namespace SharedServices.LiveUpdates
@@ -78,6 +79,8 @@ namespace SharedServices.LiveUpdates
                 var action = entry.State switch
                 {
                     EntityState.Added => "created",
+                    // A kept record marked as deleted is gone for every page that shows it
+                    EntityState.Modified when SoftDelete.IsBeingDeleted(entry) => "deleted",
                     EntityState.Modified => "updated",
                     EntityState.Deleted => "deleted",
                     _ => null
