@@ -1236,3 +1236,11 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
   :is(#approvalsTable, #myRequestsTable) td.actions .ip-btn-sm { padding-left: 8px; padding-right: 8px; }
 }
 @container (max-width: 743.98px) { #approvalsTable td.title .show-md { display: block; } }
+/* Approvals: the change table keeps its columns and wraps long values, and the request dialog uses the tablet width */
+.ip-diff { table-layout: fixed; width: 100%; }
+.ip-diff th, .ip-diff td, .ip-diff .new { overflow-wrap: anywhere; }
+.ip-diff th { white-space: normal; }
+/* The highlight of a proposed value reaches 6px past its text, which must stay inside the table */
+.ip-diff td:last-child { padding-right: 8px; }
+@media (max-width: 767.98px) { .ip-diff tr { padding-right: 6px; } }
+@media (min-width: 768px) and (max-width: 991.98px) { #detailsModal .modal-dialog { max-width: min(720px, calc(100vw - 48px)); } }

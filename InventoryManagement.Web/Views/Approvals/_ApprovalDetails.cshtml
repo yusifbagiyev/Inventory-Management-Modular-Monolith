@@ -109,11 +109,18 @@ else if (view.Changes.Count > 0)
     <div class="ip-faint mb-1">@L["Changed fields"] · @view.Changes.Count</div>
     <div class="ip-table-wrap">
         <table class="ip-table ip-diff">
+            @* Fixed widths, so a long value wraps inside its column instead of widening the dialog *@
+            <colgroup>
+                <col style="width: 24%" />
+                <col style="width: 34%" />
+                <col style="width: 36px" />
+                <col />
+            </colgroup>
             <thead>
                 <tr>
                     <th>@L["Field"]</th>
                     <th>@L["Current value"]</th>
-                    <th style="width: 24px"></th>
+                    <th></th>
                     <th>@L["Proposed"]</th>
                 </tr>
             </thead>
@@ -121,7 +128,7 @@ else if (view.Changes.Count > 0)
                 @foreach (var change in view.Changes)
                 {
                     <tr>
-                        <td class="field text-nowrap">@L[change.Field]</td>
+                        <td class="field">@L[change.Field]</td>
                         @if (change.Field == "Images")
                         {
                             <td class="old">@(view.Kind == "Product update" ? L["Current images"].Value : "—")</td>
