@@ -36,6 +36,10 @@ namespace NotificationService.Infrastructure.Services
     {
         private const int MaxAttempts = 5;
         private const int MaxOtherErrors = 3;
+        private const int RecordAttempts = 3;
+
+        /// <summary>Stored on a route whose message was queued or being sent when the app stopped.</summary>
+        public const string InterruptedError = "Sending was interrupted by a restart. Check the group before sending again.";
 
         private readonly WhatsAppOutbox _outbox;
         private readonly IServiceScopeFactory _scopes;
@@ -54,24 +58,54 @@ namespace NotificationService.Infrastructure.Services
             _minInterval = TimeSpan.FromSeconds(configuration.GetValue("WhatsApp:MinIntervalSeconds", 5.5));
         }
 
+        public override async Task StartAsync(CancellationToken cancellationToken)
+        {
+            // The outbox starts empty, so a message still marked queued was lost with the previous process
+            try
+            {
+                await using var scope = _scopes.CreateAsyncScope();
+                var interrupted = await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>()
+                    .FailQueuedAsync(InterruptedError, cancellationToken);
+                if (interrupted > 0)
+                    _logger.LogWarning("{Count} WhatsApp message(s) were still queued when the app last stopped and are marked failed", interrupted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not mark the WhatsApp messages interrupted by the last stop as failed");
+            }
+
+            await base.StartAsync(cancellationToken);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await foreach (var job in _outbox.Reader.ReadAllAsync(stoppingToken))
+            try
             {
-                try
+                await foreach (var job in _outbox.Reader.ReadAllAsync(stoppingToken))
                 {
-                    await SendAsync(job, stoppingToken);
-                }
-                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-                {
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "WhatsApp outbox failed for inventory code {Code}", job.InventoryCode);
-                    await RecordAsync(job, WhatsAppStatus.Failed, ex.Message, stoppingToken);
+                    try
+                    {
+                        await SendAsync(job, stoppingToken);
+                    }
+                    catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                    {
+                        await RecordAsync(job, WhatsAppStatus.Failed, InterruptedError);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "WhatsApp outbox failed for inventory code {Code}", job.InventoryCode);
+                        await RecordAsync(job, WhatsAppStatus.Failed, ex.Message);
+                    }
                 }
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+            }
+
+            // Messages still waiting are lost with the process, so their routes say so and offer Send again
+            while (_outbox.Reader.TryRead(out var waiting))
+                await RecordAsync(waiting, WhatsAppStatus.Failed, InterruptedError);
         }
 
         private async Task SendAsync(WhatsAppJob job, CancellationToken cancellationToken)
@@ -100,11 +134,13 @@ namespace NotificationService.Infrastructure.Services
 
                 if (result.Success)
                 {
-                    await RecordAsync(job, WhatsAppStatus.Sent, null, cancellationToken);
+                    await RecordAsync(job, WhatsAppStatus.Sent, null);
                     return;
                 }
 
                 lastError = result.Error;
+                // Sending again could post the message twice, which also risks the account
+                if (result.OutcomeUnknown) break;
                 // A rate limit waits as asked and does not use up one of the MaxOtherErrors tries
                 if (result.RateLimited)
                 {
@@ -116,21 +152,28 @@ namespace NotificationService.Infrastructure.Services
             }
 
             _logger.LogWarning("WhatsApp message for inventory code {Code} was not delivered: {Error}", job.InventoryCode, lastError);
-            await RecordAsync(job, WhatsAppStatus.Failed, lastError, cancellationToken);
+            await RecordAsync(job, WhatsAppStatus.Failed, lastError);
         }
 
         /// <summary>Stores a completed transfer's outcome on its route, while product messages are not recorded anywhere.</summary>
-        private async Task RecordAsync(WhatsAppJob job, string status, string? error, CancellationToken cancellationToken)
+        private async Task RecordAsync(WhatsAppJob job, string status, string? error)
         {
             if (job.RouteId is not int routeId) return;
-            try
+            // Not cancelled by a stop and tried again after a failure, or the route would stay queued with nothing left to send
+            for (var attempt = 1; attempt <= RecordAttempts; attempt++)
             {
-                await using var scope = _scopes.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>().SetAsync(routeId, status, error, cancellationToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "Could not record WhatsApp status {Status} for route {RouteId}", status, routeId);
+                try
+                {
+                    await using var scope = _scopes.CreateAsyncScope();
+                    await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>().SetAsync(routeId, status, error);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Could not record WhatsApp status {Status} for route {RouteId} (attempt {Attempt})", status, routeId, attempt);
+                    if (attempt < RecordAttempts)
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+                }
             }
         }
     }

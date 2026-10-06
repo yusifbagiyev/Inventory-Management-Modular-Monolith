@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using NotificationService.Application.Interfaces;
 using NotificationService.Domain.Repositories;
@@ -27,13 +28,42 @@ namespace NotificationService.Infrastructure
             services.AddScoped<WhatsAppRouteNotifier>();
             services.AddScoped<SharedServices.Contracts.IWhatsAppRouteNotifier>(sp => sp.GetRequiredService<WhatsAppRouteNotifier>());
 
+            // A send that times out is not retried, since it may have been delivered, so the answer gets a long wait
             services.AddHttpClient<IWhatsAppService, WhatsAppService>(client =>
             {
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(60);
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
-            });
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { ConnectCallback = ConnectWithTimeoutAsync });
 
             return services;
+        }
+
+        private static readonly TimeSpan WhatsAppConnectTimeout = TimeSpan.FromSeconds(10);
+
+        /// <summary>Opens the connection with its own time limit, so a server that cannot be reached fails as a connection error that is safe to retry.</summary>
+        private static async ValueTask<Stream> ConnectWithTimeoutAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken)
+        {
+            var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+            try
+            {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(WhatsAppConnectTimeout);
+                try
+                {
+                    await socket.ConnectAsync(context.DnsEndPoint, timeout.Token);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    throw new SocketException((int)SocketError.TimedOut);
+                }
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
         }
     }
 }

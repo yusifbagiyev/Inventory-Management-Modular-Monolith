@@ -12,6 +12,9 @@ namespace NotificationService.Infrastructure.Services
     /// <summary>WaSender client that posts group messages, uploading an image first to get a temporary URL for it.</summary>
     public class WhatsAppService : IWhatsAppService
     {
+        /// <summary>Stored on a route whose message got no answer, since it may still have reached the group.</summary>
+        public const string NoAnswerError = "WhatsApp did not answer in time, so the message may have been delivered. Check the group before sending again.";
+
         private readonly HttpClient _httpClient;
         private readonly ILogger<WhatsAppService> _logger;
         private readonly WhatsAppSettings _settings;
@@ -214,12 +217,24 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogError("WhatsApp message failed: {Error}", error);
                 return new WhatsAppSendResult(false, false, null, error, imageUrl);
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            // Connecting failed, so nothing reached WaSender and the message can be tried again
+            catch (HttpRequestException ex) when (NotSent(ex) || cancellationToken.IsCancellationRequested)
             {
                 _logger.LogError(ex, "WhatsApp message to group {Group} failed", groupId);
                 return new WhatsAppSendResult(false, false, null, ex.Message, imageUrl);
             }
+            // The request may have been written before the answer failed, so WaSender may have posted it and a retry could post it twice
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is (TaskCanceledException or HttpRequestException))
+            {
+                _logger.LogError(ex, "WhatsApp message to group {Group} got no answer and may have been delivered", groupId);
+                return new WhatsAppSendResult(false, false, null, NoAnswerError, imageUrl, OutcomeUnknown: true);
+            }
         }
+
+        /// <summary>Whether the request failed before any of it reached WaSender, so sending it again cannot post it twice.</summary>
+        private static bool NotSent(HttpRequestException ex)
+            => ex.HttpRequestError is HttpRequestError.NameResolutionError or HttpRequestError.ConnectionError
+                or HttpRequestError.SecureConnectionError or HttpRequestError.ProxyTunnelError;
 
         private async Task<string?> UploadImageToWaSender(byte[] imageData, string fileName)
         {

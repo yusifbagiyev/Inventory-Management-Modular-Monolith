@@ -14,6 +14,10 @@ namespace SharedServices.Contracts
     public interface IRouteWhatsAppStatus
     {
         Task SetAsync(int routeId, string status, string? error, CancellationToken cancellationToken = default);
+
+        /// <summary>Marks every message still queued as failed with the given error and returns how many there were.</summary>
+        // A store that cannot list its queued messages leaves them as they are
+        Task<int> FailQueuedAsync(string error, CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 
     /// <summary>Puts a completed transfer's WhatsApp message in the outbox again.</summary>

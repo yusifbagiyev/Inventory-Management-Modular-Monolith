@@ -13,6 +13,9 @@ window.NotificationManager = (function () {
     const OUTAGE_NOTICE_DELAY_MS = 10000;
     let outageNoticeTimer = null;
     let outageNoticeShown = false;
+    let unreachableNoticeShown = false;
+    // After the quick retries a long outage is tried once a minute, so the tab recovers once the server is back
+    const SLOW_RETRY_MS = 60000;
     let hasConnectedBefore = false; // A later start() is a reconnect, so pages may have missed changes
     let suspended = false;
 
@@ -73,6 +76,7 @@ window.NotificationManager = (function () {
     function noteRecovered() {
         clearTimeout(outageNoticeTimer);
         outageNoticeTimer = null;
+        unreachableNoticeShown = false;
         if (outageNoticeShown) {
             outageNoticeShown = false;
             showToast(t('Connection restored'), 'success');
@@ -174,14 +178,7 @@ window.NotificationManager = (function () {
                 connectionRetryCount++;
                 scheduleReconnect(5000);
             } else {
-                console.error('Maximum reconnection attempts exceeded');
-                clearTimeout(outageNoticeTimer);
-                outageNoticeTimer = null;
-                showToast(t('Unable to connect to notification service'), 'error');
-                // Allow another round of retries after a minute
-                setTimeout(() => {
-                    connectionRetryCount = 0;
-                }, 60000);
+                retrySlowly();
             }
         });
     }
@@ -330,11 +327,28 @@ window.NotificationManager = (function () {
                     console.error('Authentication error, user may need to login');
                     showToast(t('Authentication expired. Please refresh the page.'), 'warning');
                 } else {
-                    console.error('Failed to establish SignalR connection after maximum retries');
-                    showToast(t('Unable to connect to notification service'), 'error');
+                    retrySlowly();
                 }
             });
     }
+
+    // The counter stays at its limit, so every later failure comes back here for one quiet attempt a minute
+    function retrySlowly() {
+        if (!unreachableNoticeShown) {
+            unreachableNoticeShown = true;
+            console.error('Failed to establish SignalR connection after maximum retries');
+            showToast(t('Unable to connect to notification service'), 'error');
+        }
+        scheduleReconnect(SLOW_RETRY_MS);
+    }
+
+    // The network coming back is the moment to try, instead of waiting for the next slow retry
+    window.addEventListener('online', () => {
+        if (!connection || suspended || document.hidden
+            || connection.state !== signalR.HubConnectionState.Disconnected) return;
+        connectionRetryCount = 0;
+        startConnection();
+    });
 
 
 
@@ -354,7 +368,7 @@ window.NotificationManager = (function () {
         }
 
         const toastType = window.getNotificationType(notification.type);
-        showToast(`${t(notification.title || '')}: ${t(notification.message || '')}`, toastType);
+        showToast(`${translateMessage(notification.title)}: ${translateMessage(notification.message)}`, toastType);
 
         window.incrementNotificationCount();
 
@@ -369,6 +383,44 @@ window.NotificationManager = (function () {
     }
 
 
+
+    // A pushed notification is stored English text with values in it, so it is matched against the {n} keys
+    // the same way the server translates the bell list (JsonStringLocalizer.TranslateMessage)
+    let messagePatterns = null;
+    const placeholder = /\{(\d+)\}/g;
+    const has = (table, key) => Object.prototype.hasOwnProperty.call(table, key);
+
+    function translateMessage(text) {
+        const table = window.I18n;
+        if (!text || !table) return text || '';
+        if (has(table, text)) return table[text];
+        messagePatterns = messagePatterns || buildMessagePatterns(table);
+        for (const pattern of messagePatterns) {
+            const match = pattern.regex.exec(text);
+            if (!match) continue;
+            // A value can itself be a known text, such as the error of a failed request
+            const values = match.slice(1).map(v => has(table, v) ? table[v] : v);
+            return pattern.template.replace(placeholder, (m, i) => values[i] ?? m);
+        }
+        return text;
+    }
+
+    function buildMessagePatterns(table) {
+        const list = [];
+        for (const [key, value] of Object.entries(table)) {
+            if (!/\{\d+\}/.test(key)) continue;
+            // Without 8 letters of real text or an arrow a pattern would match unrelated messages
+            const literal = key.replace(placeholder, '');
+            if ((literal.match(/\p{L}/gu) || []).length < 8 && !literal.includes('→')) continue;
+            const order = Array.from(key.matchAll(placeholder), m => m[1]);
+            const source = '^' + key.split(/\{\d+\}/).map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.*?)') + '$';
+            // Translations may put the placeholders in another order, so they are renumbered by capture position
+            const template = String(value).replace(placeholder, (m, n) => '{' + order.indexOf(n) + '}');
+            list.push({ regex: new RegExp(source), template, length: source.length });
+        }
+        // Longest pattern first so the most specific one wins
+        return list.sort((a, b) => b.length - a.length);
+    }
 
     // Only the approvals badge is updated here since the lists refresh through live-updates.js
     function handleSpecialNotifications(notification) {

@@ -136,6 +136,10 @@ namespace NotificationService.Infrastructure.Services
 
         public async Task RouteCompletedAsync(RouteCompletedEvent e, int? actorId, CancellationToken cancellationToken)
         {
+            // Queued first so a failing in-app notification cannot leave the route waiting for a message nobody sends
+            // The outbox paces and retries it, and stores the outcome on the route
+            await _whatsApp.QueueRouteCompletedAsync(e, cancellationToken);
+
             var users = await OtherActiveUsersAsync(actorId, AllPermissions.RouteView, cancellationToken);
             var data = Json(new { routeId = e.RouteId, productId = e.ProductId });
 
@@ -145,9 +149,6 @@ namespace NotificationService.Infrastructure.Services
                 "Transfer Completed",
                 $"Product {e.Model} (Code: {e.InventoryCode}) transfer to {e.ToDepartmentName} has been completed",
                 data)), cancellationToken);
-
-            // The outbox paces and retries it, and stores the outcome on the route
-            await _whatsApp.QueueRouteCompletedAsync(e, cancellationToken);
         }
 
         /// <summary>Active users with the given permission, except the actor.</summary>
