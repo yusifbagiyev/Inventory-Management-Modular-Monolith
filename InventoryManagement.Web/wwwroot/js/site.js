@@ -493,7 +493,7 @@ window.ListNav = (function () {
         });
         syncFilterButtons(doc);
         document.title = doc.title;
-        if (window.LiveUpdates) LiveUpdates.afterSwap();
+        if (window.LiveUpdates) LiveUpdates.afterSwap(doc);
         document.dispatchEvent(new CustomEvent('listnav:loaded'));
 
         // New results start at the top of the list, not where the old ones were scrolled to

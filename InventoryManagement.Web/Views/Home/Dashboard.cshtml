@@ -239,10 +239,13 @@
         // Colours are read from the tokens so the charts follow the theme
         const v = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-        function initializeCharts() {
+        const chartAnimation = Chart.defaults.animation;
+
+        function initializeCharts(quiet) {
             Chart.defaults.font.family = v('--ip-font-sans');
             Chart.defaults.color = v('--ip-text-3');
-            if (matchMedia('(prefers-reduced-motion: reduce)').matches) Chart.defaults.animation = false;
+            // A live refresh redraws the charts in place instead of growing them again from zero
+            Chart.defaults.animation = quiet === true || matchMedia('(prefers-reduced-motion: reduce)').matches ? false : chartAnimation;
             initializeTransferChart();
             initializeCategoryChart();
         }
@@ -260,7 +263,7 @@
             entities: ['product', 'route', 'category', 'department', 'approval'],
             regions: ['#dashboardStats', '#dashboardCharts'],
             beforeRefresh: destroyCharts,
-            afterRefresh: initializeCharts
+            afterRefresh: () => initializeCharts(true)
         });
 
         // Charts only have data-link when the user may open the routes list

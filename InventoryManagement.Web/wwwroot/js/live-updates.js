@@ -9,16 +9,41 @@ window.LiveUpdates = (function () {
     const OWN_SAVE_WINDOW_MS = 10000;
     const watchers = [];
 
+    // The markup the server last sent for each region, so a change that leaves a region as it was does not redraw it
+    const served = new Map();
+
+    // The page as it arrived, taken before other scripts decorate it, since the regions are compared with server markup
+    const arrived = document.body ? document.body.cloneNode(true) : null;
+
+    // Antiforgery tokens differ on every response without the page changing
+    function markup(node) {
+        const copy = node.cloneNode(true);
+        copy.querySelectorAll('input[name="__RequestVerificationToken"]').forEach(input => input.removeAttribute('value'));
+        return copy.outerHTML;
+    }
+
+    function remember(doc) {
+        regions().forEach(selector => {
+            const node = doc.querySelector(selector);
+            if (node) served.set(selector, markup(node));
+        });
+    }
+
     // This tab's own submit comes back as a change too, while saves from another tab still warn
     let ownSaveUntil = 0;
     document.addEventListener('submit', () => { ownSaveUntil = Date.now() + OWN_SAVE_WINDOW_MS; }, true);
 
     // Warn mode is for edit forms and only shows a notice, never touching what was typed
     function watch(options) {
-        watchers.push(Object.assign({ mode: 'refresh', ids: {}, regions: [], entities: [] }, options, {
+        const w = Object.assign({ mode: 'refresh', ids: {}, regions: [], entities: [] }, options, {
             pending: null,
             timer: null
-        }));
+        });
+        watchers.push(w);
+        if (w.mode !== 'warn' && arrived) w.regions.forEach(selector => {
+            const node = arrived.querySelector(selector);
+            if (node && !served.has(selector)) served.set(selector, markup(node));
+        });
     }
 
     // Prefers this record's deletion, then its change, then any match, and a null id means many records
@@ -125,9 +150,18 @@ window.LiveUpdates = (function () {
             return;
         }
 
+        // Only regions whose markup changed are redrawn, and a change that touches none of them redraws nothing
+        const changed = pairs.filter(([current, fresh], i) => {
+            if (!current || !fresh) return false;
+            const html = markup(fresh);
+            if (served.get(w.regions[i]) === html) return false;
+            served.set(w.regions[i], html);
+            return true;
+        });
+        if (!changed.length) return;
+
         if (typeof w.beforeRefresh === 'function') w.beforeRefresh();
-        pairs.forEach(([current, fresh]) => {
-            if (!current || !fresh) return;
+        changed.forEach(([current, fresh]) => {
             const node = document.importNode(fresh, true);
             node.setAttribute('data-quiet', '');   // Rows skip their entrance animation on a live refresh
             replaceKeepingFocus(current, node);
@@ -218,7 +252,10 @@ window.LiveUpdates = (function () {
     function refreshing() { return watchers.filter(w => w.mode !== 'warn'); }
     function regions() { return refreshing().flatMap(w => w.regions); }
     function beforeSwap() { refreshing().forEach(w => { if (typeof w.beforeRefresh === 'function') w.beforeRefresh(); }); }
-    function afterSwap() { refreshing().forEach(w => { if (typeof w.afterRefresh === 'function') w.afterRefresh(); }); }
+    function afterSwap(doc) {
+        if (doc) remember(doc);
+        refreshing().forEach(w => { if (typeof w.afterRefresh === 'function') w.afterRefresh(); });
+    }
 
     return { watch, regions, beforeSwap, afterSwap };
 })();
