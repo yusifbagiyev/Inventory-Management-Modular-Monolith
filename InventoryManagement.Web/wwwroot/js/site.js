@@ -111,8 +111,27 @@ document.addEventListener('hidden.bs.modal', function (e) {
     if (opener && opener.isConnected && !document.querySelector('.modal.show')) opener.focus();
 });
 
+/** Moves the photos already loaded in a region into its fresh copy, so a list swapped by a live update or a filter does not blink while the same thumbnails load again. */
+function keepLoadedImages(current, fresh) {
+    const loaded = new Map();
+    current.querySelectorAll('img[src]').forEach(function (img) {
+        if (!img.complete || !img.naturalWidth) return;
+        const src = img.getAttribute('src');
+        if (!loaded.has(src)) loaded.set(src, []);
+        loaded.get(src).push(img);
+    });
+    if (!loaded.size) return;
+    fresh.querySelectorAll('img[src]').forEach(function (img) {
+        const old = (loaded.get(img.getAttribute('src')) || []).shift();
+        if (!old) return;
+        Array.from(img.attributes).forEach(function (a) { old.setAttribute(a.name, a.value); });
+        img.replaceWith(old);
+    });
+}
+
 /** Replaces a region with fresh markup and keeps keyboard focus on the same control, or the same kind of control in the row that took its place. */
 function replaceKeepingFocus(current, fresh) {
+    keepLoadedImages(current, fresh);
     const active = document.activeElement;
     if (!active || active === document.body || !current.contains(active)) {
         current.replaceWith(fresh);
