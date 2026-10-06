@@ -1180,5 +1180,7 @@
   "The message will be deleted from the WhatsApp group for everyone. This cannot be undone.": "Сообщение будет удалено из группы WhatsApp для всех участников. Это действие нельзя отменить.",
   "This message is too old to be deleted for everyone in the group.": "Это сообщение слишком старое, чтобы удалить его для всех участников группы.",
   "WhatsApp did not delete the message. Try again later or delete it in the group.": "WhatsApp не удалил сообщение. Повторите попытку позже или удалите его в группе.",
-  "WhatsApp messages are sent only for completed transfers and new products.": "Сообщения WhatsApp отправляются только для завершённых перемещений и новых товаров."
+  "WhatsApp messages are sent only for completed transfers and new products.": "Сообщения WhatsApp отправляются только для завершённых перемещений и новых товаров.",
+  "Executed At": "Дата выполнения",
+  "CodeChange": "Изменение номера"
 }
