@@ -61,13 +61,15 @@ namespace SharedServices.Web
             NotFoundException => (StatusCodes.Status404NotFound, new { error = exception.Message }),
             ConflictException or DuplicateEntityException => (StatusCodes.Status409Conflict, new { error = exception.Message }),
             InsufficientPermissionsException => (StatusCodes.Status403Forbidden, new { error = exception.Message }),
-            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, new { error = exception.Message }),
+            // The file system throws this type too, for a folder it cannot write, and that is not a sign-in problem
+            UnauthorizedAccessException when UserFacingErrors.IsUserFacing(exception)
+                => (StatusCodes.Status401Unauthorized, new { error = exception.Message }),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict,
                 new { error = "The record has been changed by another user. Please reload the page and try again." }),
-            // Domain rule violations, while the same types from the framework or driver keep their text in the log
-            ArgumentException or InvalidOperationException
-                => (StatusCodes.Status400BadRequest, new { error = UserFacingErrors.MessageOf(exception) }),
-            _ => (StatusCodes.Status500InternalServerError, new { error = "An error occurred while processing your request" })
+            // Domain rule violations, while the same types from the framework or driver are faults and fall through
+            ArgumentException or InvalidOperationException when UserFacingErrors.IsUserFacing(exception)
+                => (StatusCodes.Status400BadRequest, new { error = exception.Message }),
+            _ => (StatusCodes.Status500InternalServerError, new { error = UserFacingErrors.Generic })
         };
     }
 }

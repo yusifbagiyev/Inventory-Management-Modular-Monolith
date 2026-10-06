@@ -41,14 +41,11 @@ namespace SharedServices.Storage
             }
             var clean = ImageSanitizer.Clean(buffer.ToArray());
 
-            var folder = Path.Combine(_root, category, inventoryCode.ToString());
-            Directory.CreateDirectory(folder);
+            // The extension follows the content
+            var (path, url) = NewFile(category, inventoryCode, clean.Extension);
+            await File.WriteAllBytesAsync(path, clean.Data, cancellationToken);
 
-            // The Guid keeps two uploads in the same second apart, and the extension follows the content
-            var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{clean.Extension}";
-            await File.WriteAllBytesAsync(Path.Combine(folder, storedName), clean.Data, cancellationToken);
-
-            return $"/images/{category}/{inventoryCode}/{storedName}";
+            return url;
         }
 
         /// <summary>Copies an existing image into another category, or returns null when the source is missing.</summary>
@@ -58,8 +55,23 @@ namespace SharedServices.Storage
             if (sourcePath == null || !File.Exists(sourcePath))
                 return null;
 
+            // A stored image was checked and cleaned when it came in, so the upload rules are not applied to it again
+            var (path, url) = NewFile(targetCategory, inventoryCode, Path.GetExtension(sourcePath));
             await using var source = File.OpenRead(sourcePath);
-            return await SaveAsync(targetCategory, inventoryCode, source, Path.GetFileName(sourcePath), cancellationToken);
+            await using var target = File.Create(path);
+            await source.CopyToAsync(target, cancellationToken);
+            return url;
+        }
+
+        /// <summary>Makes the item's folder and returns a new file's path and URL in it.</summary>
+        private (string FilePath, string Url) NewFile(string category, int inventoryCode, string extension)
+        {
+            var folder = Path.Combine(_root, category, inventoryCode.ToString());
+            Directory.CreateDirectory(folder);
+
+            // The Guid keeps two uploads in the same second apart
+            var storedName = $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
+            return (Path.Combine(folder, storedName), $"/images/{category}/{inventoryCode}/{storedName}");
         }
 
         public Task DeleteAsync(string? url)

@@ -10,6 +10,12 @@ namespace SharedServices.Storage
 
         public const string InvalidMessage = "Invalid image. Allowed: JPG, JPEG, PNG photos up to 50 megapixels.";
 
+        // Tried in turn until the upright copy of a sideways photo fits the upload limit
+        private static readonly int[] UprightQualities = [92, 85, 75, 65];
+        private const int ShrunkQuality = 80;
+
+        private static ReadOnlySpan<byte> EndOfImage => [0xFF, 0xD9];
+
         public sealed record Result(byte[] Data, string Extension);
 
         /// <summary>Returns the cleaned image and throws <see cref="ArgumentException"/> when it is not an acceptable photo.</summary>
@@ -35,7 +41,7 @@ namespace SharedServices.Storage
             }
         }
 
-        /// <summary>True when the data carries metadata that Clean would remove.</summary>
+        /// <summary>True when the data carries metadata or appended data that Clean would remove.</summary>
         public static bool HasMetadata(byte[] data)
         {
             var cleaned = data.Length > 1 && data[0] == 0xFF && data[1] == 0xD8 ? StripJpeg(data)
@@ -44,14 +50,35 @@ namespace SharedServices.Storage
             return cleaned != null && cleaned.Length != data.Length;
         }
 
-        /// <summary>Re-encodes the photo with its EXIF orientation applied.</summary>
+        /// <summary>Re-encodes the photo with its EXIF orientation applied, never larger than an upload may be.</summary>
         private static byte[] Upright(SKCodec codec)
         {
             using var decoded = SKBitmap.Decode(codec) ?? throw new ArgumentException(InvalidMessage);
             using var upright = Orient(decoded, codec.EncodedOrigin);
             using var image = SKImage.FromBitmap(upright);
-            using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 92) ?? throw new ArgumentException(InvalidMessage);
-            return encoded.ToArray();
+
+            // Cameras often save at a lower quality than ours, so the same pixels can come out larger than the upload
+            foreach (var quality in UprightQualities)
+            {
+                using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, quality) ?? throw new ArgumentException(InvalidMessage);
+                if (encoded.Size <= ImageStorage.MaxBytes) return encoded.ToArray();
+            }
+            return Shrink(upright);
+        }
+
+        /// <summary>Scales the photo down until it fits, for the rare one that no quality step makes small enough.</summary>
+        private static byte[] Shrink(SKBitmap bitmap)
+        {
+            // A single pixel always fits, so the loop ends
+            for (var scale = 0.8f; ; scale *= 0.8f)
+            {
+                var info = bitmap.Info.WithSize(Math.Max(1, (int)(bitmap.Width * scale)), Math.Max(1, (int)(bitmap.Height * scale)));
+                using var smaller = bitmap.Resize(info, new SKSamplingOptions(SKCubicResampler.Mitchell))
+                    ?? throw new ArgumentException(InvalidMessage);
+                using var image = SKImage.FromBitmap(smaller);
+                using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, ShrunkQuality) ?? throw new ArgumentException(InvalidMessage);
+                if (encoded.Size <= ImageStorage.MaxBytes) return encoded.ToArray();
+            }
         }
 
         /// <summary>Applies an EXIF orientation, returning the same bitmap for TopLeft.</summary>
@@ -87,34 +114,70 @@ namespace SharedServices.Storage
             return result;
         }
 
-        /// <summary>Drops the EXIF, XMP, IPTC and comment segments of a JPEG, or returns null when malformed.</summary>
+        /// <summary>Drops a JPEG's EXIF, XMP, IPTC and comment segments and whatever follows the picture, or returns null when malformed.</summary>
         private static byte[]? StripJpeg(byte[] data)
         {
             if (data.Length < 4 || data[0] != 0xFF || data[1] != 0xD8) return null;
             using var output = new MemoryStream(data.Length);
             output.Write(data, 0, 2);
             var pos = 2;
+            var hasScan = false;
             while (pos + 4 <= data.Length)
             {
-                if (data[pos] != 0xFF) return null;
+                // A photo cut short still shows its upper part, so one with image data ends at the damage instead of being refused
+                if (data[pos] != 0xFF)
+                {
+                    if (hasScan) break;
+                    return null;
+                }
                 var marker = data[pos + 1];
                 // Skip a fill byte
                 if (marker == 0xFF) { pos++; continue; }
-                // Start of scan, after which everything is image data
-                if (marker == 0xDA)
-                {
-                    output.Write(data, pos, data.Length - pos);
-                    return output.ToArray();
-                }
+                // End of image, after which phones append video clips and further pictures
+                if (marker == 0xD9) break;
                 var length = (data[pos + 2] << 8) | data[pos + 3];
-                if (length < 2 || pos + 2 + length > data.Length) return null;
+                if (length < 2 || pos + 2 + length > data.Length)
+                {
+                    if (hasScan) break;
+                    return null;
+                }
                 // APP1 holds EXIF and XMP, APP13 IPTC and FE a comment, while the colour profile stays
-                var drop = marker is 0xE1 or 0xED or 0xFE;
+                var drop = marker is 0xE1 or 0xED or 0xFE || IsPictureIndex(data, pos, length);
                 if (!drop) output.Write(data, pos, 2 + length);
                 pos += 2 + length;
+                // Start of scan, whose compressed data runs up to the next marker
+                if (marker == 0xDA)
+                {
+                    var end = ScanEnd(data, pos);
+                    output.Write(data, pos, end - pos);
+                    pos = end;
+                    hasScan = true;
+                }
             }
-            return null;
+            if (!hasScan) return null;
+            output.Write(EndOfImage);
+            return output.ToArray();
         }
+
+        /// <summary>The position of the first marker after a scan's compressed data, or the end of the data.</summary>
+        private static int ScanEnd(byte[] data, int pos)
+        {
+            while (true)
+            {
+                var next = Array.IndexOf(data, (byte)0xFF, pos);
+                if (next < 0 || next + 1 >= data.Length) return data.Length;
+                var code = data[next + 1];
+                // A stuffed zero and the restart markers belong to the compressed data
+                if (code == 0x00 || code is >= 0xD0 and <= 0xD7) pos = next + 2;
+                // A fill byte, so the next one decides
+                else if (code == 0xFF) pos = next + 1;
+                else return next;
+            }
+        }
+
+        /// <summary>True for the APP2 multi-picture index, which only points at the pictures cut off after the first.</summary>
+        private static bool IsPictureIndex(byte[] data, int pos, int length)
+            => data[pos + 1] == 0xE2 && length >= 6 && data.AsSpan(pos + 4, 4).SequenceEqual("MPF\0"u8);
 
         /// <summary>Drops the text, EXIF and timestamp chunks of a PNG, or returns null when malformed.</summary>
         private static byte[]? StripPng(byte[] data)
