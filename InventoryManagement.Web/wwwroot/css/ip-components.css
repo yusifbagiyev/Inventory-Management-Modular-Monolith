@@ -1330,3 +1330,5 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
   .ip-list-head .ip-page-actions > .ip-btn-secondary { flex: none; width: 44px; padding: 0; justify-content: center; }
   .ip-list-head .ip-page-actions > .ip-btn-secondary > span, .ip-list-head .ip-page-actions > .ip-btn-ghost { display: none; }
 }
+/* Transfer: the found product's text keeps its place beside the thumbnail however long the name is, and the current place moves under it when the row is full */
+.ip-found-text { flex: 1 1 0; min-width: min(240px, calc(100% - 60px)); }
