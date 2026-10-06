@@ -59,8 +59,7 @@ namespace ProductService.Application.Features.Products.Commands
                     before,
                     product.ToState(),
                     $"Inventory code changed from {before.InventoryCode} to {request.InventoryCode}",
-                    NewImageUrl: null,
-                    DateTime.Now), cancellationToken);
+                    NewImageUrl: null), cancellationToken);
             }
         }
     }

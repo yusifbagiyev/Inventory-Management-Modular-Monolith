@@ -39,7 +39,7 @@ namespace ProductService.Application.Features.Products.Commands
                 await _productRepository.UpdateAsync(product, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await _publisher.Publish(new ProductDeletedEvent(state, request.UserName ?? "Unknown", DateTime.Now), cancellationToken);
+                await _publisher.Publish(new ProductDeletedEvent(state, request.UserName ?? "Unknown"), cancellationToken);
             }
         }
     }

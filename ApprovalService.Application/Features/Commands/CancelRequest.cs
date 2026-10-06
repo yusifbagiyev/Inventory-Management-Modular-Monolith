@@ -40,11 +40,7 @@ namespace ApprovalService.Application.Features.Commands
                 await _repository.DeleteAsync(approvalRequest, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                await _publisher.Publish(new ApprovalRequestCancelledEvent(
-                    approvalRequest.Id,
-                    approvalRequest.RequestType,
-                    approvalRequest.RequestedById,
-                    DateTime.Now), cancellationToken);
+                await _publisher.Publish(new ApprovalRequestCancelledEvent(approvalRequest.Id), cancellationToken);
             }
         }
     }

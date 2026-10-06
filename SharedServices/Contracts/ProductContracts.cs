@@ -5,13 +5,11 @@ namespace SharedServices.Contracts
         int InventoryCode,
         string Model,
         string Vendor,
-        int CategoryId,
         string CategoryName,
         int DepartmentId,
         string DepartmentName,
         bool IsWorking,
-        string? Worker,
-        string? ImageUrl);
+        string? Worker);
 
     public record DepartmentSummary(int Id, string Name, bool IsActive = true);
 

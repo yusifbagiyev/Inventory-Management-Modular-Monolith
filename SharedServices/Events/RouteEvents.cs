@@ -12,7 +12,6 @@ namespace SharedServices.Events
         public string CategoryName { get; init; } = string.Empty;
         public string FromDepartmentName { get; init; } = string.Empty;
         public string? FromWorker { get; init; }
-        public int ToDepartmentId { get; init; }
         public string ToDepartmentName { get; init; } = string.Empty;
         public string? ToWorker { get; init; }
         public string? Notes { get; init; }

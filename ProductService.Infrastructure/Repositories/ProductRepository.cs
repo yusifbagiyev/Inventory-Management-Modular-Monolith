@@ -302,26 +302,6 @@ namespace ProductService.Infrastructure.Repositories
         }
 
 
-        public async Task<IEnumerable<Product>> GetByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.Department)
-                .Where(p => p.CategoryId == categoryId)
-                .ToListAsync(cancellationToken);
-        }
-
-
-        public async Task<IEnumerable<Product>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.Department)
-                .Where(p => p.DepartmentId == departmentId)
-                .ToListAsync(cancellationToken);
-        }
-
-
         public async Task<Product?> GetByInventoryCodeAsync(int inventoryCode, CancellationToken cancellationToken = default)
         {
             return await _context.Products
@@ -342,19 +322,6 @@ namespace ProductService.Infrastructure.Repositories
         {
             _context.Entry(product).State = EntityState.Modified;
             return Task.CompletedTask;
-        }
-
-
-        public Task DeleteAsync(Product product, CancellationToken cancellationToken = default)
-        {
-            _context.Products.Remove(product);
-            return Task.CompletedTask;
-        }
-
-
-        public async Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default)
-        {
-            return await _context.Products.AnyAsync(p => p.Id == id, cancellationToken);
         }
 
 

@@ -29,13 +29,11 @@ namespace ProductService.Infrastructure.Services
                     p.InventoryCode,
                     p.Model,
                     p.Vendor,
-                    p.CategoryId,
                     p.Category!.Name,
                     p.DepartmentId,
                     p.Department!.Name,
                     p.IsWorking,
-                    p.Worker,
-                    p.ImageUrl))
+                    p.Worker))
                 .FirstOrDefaultAsync(cancellationToken);
 
         public Task<DepartmentSummary?> GetDepartmentAsync(int departmentId, CancellationToken cancellationToken = default) =>

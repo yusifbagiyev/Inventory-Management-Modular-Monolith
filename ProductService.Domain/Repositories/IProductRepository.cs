@@ -29,13 +29,9 @@ namespace ProductService.Domain.Repositories
             bool? assigned = null,
             CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<Product>> GetByCategoryIdAsync(int categoryId, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Product>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
         Task<Product?> GetByInventoryCodeAsync(int inventoryCode, CancellationToken cancellationToken = default);
         Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default);
         Task UpdateAsync(Product product, CancellationToken cancellationToken = default);
-        Task DeleteAsync(Product product, CancellationToken cancellationToken = default);
-        Task<bool> ExistsByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<int> CountAsync(CancellationToken cancellationToken = default);
         /// <summary>Product counts, optionally only for products created in the given range.</summary>
         Task<(int Total, int Active, int NotWorking)> CountCreatedAsync(DateTime? createdFrom, DateTime? createdTo, CancellationToken cancellationToken = default);

@@ -16,10 +16,5 @@ namespace ProductService.Application.Services
             => _storage.SaveAsync(ImageStorage.Products, inventoryCode, imageStream, fileName);
 
         public Task DeleteImageAsync(string imageUrl) => _storage.DeleteAsync(imageUrl);
-
-        public Task DeleteInventoryFolderAsync(int inventoryCode)
-            => _storage.DeleteFolderAsync(ImageStorage.Products, inventoryCode);
-
-        public bool IsValidImage(string fileName) => ImageStorage.IsAllowedFileName(fileName);
     }
 }

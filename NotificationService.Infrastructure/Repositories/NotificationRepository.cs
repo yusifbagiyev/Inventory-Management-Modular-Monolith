@@ -68,18 +68,6 @@ namespace NotificationService.Infrastructure.Repositories
                 .Select(n => n.Type).Distinct().OrderBy(t => t)
                 .ToListAsync(cancellationToken);
 
-        public async Task<Notification> AddAsync(Notification notification, CancellationToken cancellationToken = default)
-        {
-            await _context.Notifications.AddAsync(notification, cancellationToken);
-            return notification;
-        }
-
-        public Task UpdateAsync(Notification notification, CancellationToken cancellationToken = default)
-        {
-            _context.Entry(notification).State = EntityState.Modified;
-            return Task.CompletedTask;
-        }
-
         public async Task<int> GetUnreadCountAsync(int userId, CancellationToken cancellationToken = default)
         {
             return await _context.Notifications

@@ -76,18 +76,7 @@ namespace RouteService.Application.EventHandlers
             var imageUrl = await CopyImageAsync(notification.NewImageUrl, after.InventoryCode, cancellationToken);
 
             var route = InventoryRoute.CreateUpdate(
-                new ExistingProduct(
-                    before.ProductId,
-                    before.InventoryCode,
-                    before.CategoryId,
-                    before.CategoryName,
-                    before.DepartmentId,
-                    before.DepartmentName,
-                    before.Worker,
-                    before.Description,
-                    before.IsActive,
-                    before.IsNewItem,
-                    before.IsWorking),
+                new ExistingProduct(before.DepartmentId, before.DepartmentName, before.Worker),
                 Snapshot(after),
                 after.DepartmentId,
                 after.DepartmentName,

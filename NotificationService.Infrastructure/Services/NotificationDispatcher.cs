@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.DTOs;
 using NotificationService.Application.Interfaces;
@@ -10,7 +9,6 @@ using NotificationService.Domain.Repositories;
 using SharedServices.Contracts;
 using SharedServices.Events;
 using SharedServices.Identity;
-using SharedServices.Storage;
 
 namespace NotificationService.Infrastructure.Services
 {
@@ -53,7 +51,7 @@ namespace NotificationService.Infrastructure.Services
                 data)), cancellationToken);
 
             await _hub.Clients.Groups(admins.Select(id => $"user-{id}").ToList())
-                .SendAsync("RefreshApprovals", new { requestId = e.RequestId, requestType = e.RequestType }, cancellationToken);
+                .SendAsync("RefreshApprovals", cancellationToken);
         }
 
         public Task ApprovalRequestProcessedAsync(ApprovalRequestProcessedEvent e, CancellationToken cancellationToken)
@@ -104,7 +102,6 @@ namespace NotificationService.Infrastructure.Services
 
             await SendWhatsAppAsync(new WhatsAppProductNotification
             {
-                ProductId = product.ProductId,
                 InventoryCode = product.InventoryCode,
                 Model = product.Model,
                 Vendor = product.Vendor,
@@ -117,7 +114,7 @@ namespace NotificationService.Infrastructure.Services
                 Notes = product.Description,
                 NotificationType = "created",
                 ImageUrl = product.ImageUrl
-            }, $"product_{product.InventoryCode}.jpg", cancellationToken);
+            }, cancellationToken);
         }
 
         public async Task ProductDeletedAsync(ProductDeletedEvent e, int? actorId, CancellationToken cancellationToken)
@@ -180,9 +177,9 @@ namespace NotificationService.Infrastructure.Services
         }
 
         /// <summary>Queues a WhatsApp group message for the outbox.</summary>
-        private Task SendWhatsAppAsync(WhatsAppProductNotification notification, string fallbackFileName, CancellationToken cancellationToken)
+        private Task SendWhatsAppAsync(WhatsAppProductNotification notification, CancellationToken cancellationToken)
         {
-            _whatsApp.Queue(notification, fallbackFileName, routeId: null);
+            _whatsApp.Queue(notification, routeId: null);
             return Task.CompletedTask;
         }
 

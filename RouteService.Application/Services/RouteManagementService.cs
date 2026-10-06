@@ -325,7 +325,7 @@ namespace RouteService.Application.Services
         public int GetUserId(ClaimsPrincipal User)
         {
             // API-key clients carry a service id rather than a user id, so they get 0 and the permission check decides
-            var raw = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var raw = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(raw, out var id) ? id : 0;
         }
 

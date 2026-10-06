@@ -2,7 +2,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Application;
 using ProductService.Infrastructure;
-using ProductService.Infrastructure.Data;
 
 namespace ProductService.API
 {
@@ -15,8 +14,6 @@ namespace ProductService.API
             typeof(ProductModule).Assembly,
             typeof(Application.DependencyInjection).Assembly
         ];
-
-        public static Type DbContextType => typeof(ProductDbContext);
 
         public static IServiceCollection AddProductModule(this IServiceCollection services)
         {

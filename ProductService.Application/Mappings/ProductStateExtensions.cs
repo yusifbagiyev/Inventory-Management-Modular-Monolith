@@ -12,13 +12,11 @@ namespace ProductService.Application.Mappings
             InventoryCode = product.InventoryCode,
             Model = product.Model,
             Vendor = product.Vendor,
-            CategoryId = product.CategoryId,
             CategoryName = product.Category?.Name ?? string.Empty,
             DepartmentId = product.DepartmentId,
             DepartmentName = product.Department?.Name ?? string.Empty,
             Worker = product.Worker,
             Description = product.Description,
-            IsActive = product.IsActive,
             IsWorking = product.IsWorking,
             IsNewItem = product.IsNewItem,
             ImageUrl = product.ImageUrl

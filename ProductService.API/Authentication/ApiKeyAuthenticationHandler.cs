@@ -40,7 +40,6 @@ namespace ProductService.API.Authentication
             {
                 new(ClaimTypes.Name, client.ServiceName),
                 new(ClaimTypes.NameIdentifier, client.ServiceId),
-                new("ServiceType", "Internal"),
             };
             claims.AddRange(client.Permissions.Select(p => new Claim("permission", p)));
 

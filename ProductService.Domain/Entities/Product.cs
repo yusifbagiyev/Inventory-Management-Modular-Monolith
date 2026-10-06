@@ -117,21 +117,5 @@ namespace ProductService.Domain.Entities
             InventoryCode = inventoryCode;
             UpdatedAt = DateTime.Now;
         }
-
-        public void SetActiveStatus(bool isActive)
-        {
-            IsActive = isActive;
-            UpdatedAt = DateTime.Now;
-        }
-        public void SetWorkingStatus()
-        {
-            IsWorking = true;
-            UpdatedAt = DateTime.Now;
-        }
-        public void SetNotWorkingStatus()
-        {
-            IsWorking = false;
-            UpdatedAt = DateTime.Now;
-        }
     }
 }

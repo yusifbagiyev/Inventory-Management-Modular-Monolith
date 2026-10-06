@@ -64,19 +64,6 @@ namespace IdentityService.Application.DTOs
         public string NewPassword { get; init; } = string.Empty;
     }
 
-    public record UserStatusDto
-    {
-        public int Id { get; init; }
-        public string Username { get; init; } = string.Empty;
-        public string Email { get; init; } = string.Empty;
-        public string FirstName { get; init; } = string.Empty;
-        public string LastName { get; init; } = string.Empty;
-        public bool IsActive { get; init; }
-        public DateTime CreatedAt { get; init; }
-        public DateTime? LastLoginAt { get; init; }
-        public List<string> Roles { get; init; } = new();
-    }
-
     public record PermissionDto
     {
         public int Id { get; init; }
@@ -85,12 +72,6 @@ namespace IdentityService.Application.DTOs
         public string Category { get; init; } = string.Empty;
     }
 
-    public record RoleDto
-    {
-        public string Name { get; init; } = string.Empty;
-        public string Description { get; init; } = string.Empty;
-        public List<string> Permissions { get; init; } = new();
-    }
     public record GrantPermissionDto
     {
         [Required]

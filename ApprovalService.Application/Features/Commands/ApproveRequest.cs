@@ -70,7 +70,7 @@ namespace ApprovalService.Application.Features.Commands
                     await _actionExecutor.ExecuteAsync(
                         approvalRequest.RequestType,
                         approvalRequest.ActionData,
-                        new ApprovalActor(request.UserId, request.UserName),
+                        new ApprovalActor(request.UserName),
                         cancellationToken);
 
                     approvalRequest.MarkAsExecuted();
@@ -94,7 +94,6 @@ namespace ApprovalService.Application.Features.Commands
                     approvalRequest.Id,
                     approvalRequest.RequestType,
                     executed ? "Approved" : "Failed",
-                    request.UserId,
                     request.UserName,
                     approvalRequest.RequestedById,
                     executed ? null : approvalRequest.RejectionReason), cancellationToken);

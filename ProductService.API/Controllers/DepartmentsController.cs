@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.DTOs;
-using ProductService.Application.Features.Categories.Queries;
 using ProductService.Application.Features.Departments.Commands;
 using ProductService.Application.Features.Departments.Queries;
 using ProductService.Domain.Common;

@@ -52,7 +52,6 @@ namespace ApprovalService.Application.Features.Commands
                     approvalRequest.Id,
                     approvalRequest.RequestType,
                     "Rejected",
-                    request.UserId,
                     request.UserName,
                     approvalRequest.RequestedById,
                     request.Reason), cancellationToken);

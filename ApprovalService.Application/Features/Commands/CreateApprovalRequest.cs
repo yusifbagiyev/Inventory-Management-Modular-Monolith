@@ -47,9 +47,7 @@ namespace ApprovalService.Application.Features.Commands
                 await _publisher.Publish(new ApprovalRequestCreatedEvent(
                     approvalRequest.Id,
                     approvalRequest.RequestType,
-                    approvalRequest.RequestedById,
-                    approvalRequest.RequestedByName,
-                    approvalRequest.CreatedAt), cancellationToken);
+                    approvalRequest.RequestedByName), cancellationToken);
 
                 return approvalRequest.ToDto();
             }

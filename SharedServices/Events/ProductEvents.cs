@@ -9,13 +9,11 @@ namespace SharedServices.Events
         public int InventoryCode { get; init; }
         public string Model { get; init; } = string.Empty;
         public string Vendor { get; init; } = string.Empty;
-        public int CategoryId { get; init; }
         public string CategoryName { get; init; } = string.Empty;
         public int DepartmentId { get; init; }
         public string DepartmentName { get; init; } = string.Empty;
         public string? Worker { get; init; }
         public string? Description { get; init; }
-        public bool IsActive { get; init; }
         public bool IsWorking { get; init; }
         public bool IsNewItem { get; init; }
         public string? ImageUrl { get; init; }
@@ -29,8 +27,7 @@ namespace SharedServices.Events
         ProductState Before,
         ProductState After,
         string Changes,
-        string? NewImageUrl,
-        DateTime UpdatedAt) : INotification;
+        string? NewImageUrl) : INotification;
 
-    public record ProductDeletedEvent(ProductState Product, string RemovedBy, DateTime DeletedAt) : INotification;
+    public record ProductDeletedEvent(ProductState Product, string RemovedBy) : INotification;
 }

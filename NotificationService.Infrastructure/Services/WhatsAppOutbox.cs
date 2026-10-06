@@ -12,7 +12,7 @@ using SharedServices.Storage;
 namespace NotificationService.Infrastructure.Services
 {
     /// <summary>One WhatsApp group message waiting to go out, with RouteId set for a completed transfer.</summary>
-    public sealed record WhatsAppJob(string Message, string? ImageUrl, string FallbackFileName, int InventoryCode, int? RouteId);
+    public sealed record WhatsAppJob(string Message, string? ImageUrl, int InventoryCode, int? RouteId);
 
     /// <summary>In-memory queue that lets WhatsApp messages out one at a time, since WaSender allows one every 5 seconds.</summary>
     public sealed class WhatsAppOutbox
@@ -114,7 +114,7 @@ namespace NotificationService.Infrastructure.Services
             if (string.IsNullOrEmpty(groupId)) return;   // Switched off meanwhile
 
             var image = await _images.ReadAsync(job.ImageUrl, cancellationToken);
-            var fileName = Path.GetFileName(job.ImageUrl) ?? job.FallbackFileName;
+            var fileName = Path.GetFileName(job.ImageUrl) ?? "";
             string? uploaded = null, lastError = null;
             var otherErrors = 0;
 
@@ -196,7 +196,6 @@ namespace NotificationService.Infrastructure.Services
         {
             Queue(new WhatsAppProductNotification
             {
-                ProductId = e.ProductId,
                 InventoryCode = e.InventoryCode,
                 Model = e.Model,
                 Vendor = e.Vendor,
@@ -209,15 +208,15 @@ namespace NotificationService.Infrastructure.Services
                 Notes = e.Notes,
                 NotificationType = "transferred",
                 ImageUrl = e.ImageUrl
-            }, $"route_{e.InventoryCode}.jpg", e.RouteId);
+            }, e.RouteId);
             return Task.CompletedTask;
         }
 
-        public void Queue(WhatsAppProductNotification notification, string fallbackFileName, int? routeId)
+        public void Queue(WhatsAppProductNotification notification, int? routeId)
         {
             if (!_outbox.Enabled) return;
             _outbox.Enqueue(new WhatsAppJob(_whatsApp.FormatNotification(notification), notification.ImageUrl,
-                fallbackFileName, notification.InventoryCode, routeId));
+                notification.InventoryCode, routeId));
         }
     }
 }

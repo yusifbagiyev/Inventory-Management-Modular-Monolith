@@ -16,7 +16,5 @@ namespace RouteService.Application.Services
             => _storage.SaveAsync(ImageStorage.Routes, inventoryCode, imageStream, fileName);
 
         public Task DeleteImageAsync(string imageUrl) => _storage.DeleteAsync(imageUrl);
-
-        public bool IsValidImage(string fileName) => ImageStorage.IsAllowedFileName(fileName);
     }
 }

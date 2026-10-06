@@ -133,8 +133,7 @@ namespace ProductService.Application.Features.Products.Commands
                     after,
                     ProductDetails.ChangeSummary(request.Changes),
                     // The history row keeps a copy of the cover when it changed
-                    product.ImageUrl != oldCover && !string.IsNullOrEmpty(product.ImageUrl) ? product.ImageUrl : null,
-                    DateTime.Now), cancellationToken);
+                    product.ImageUrl != oldCover && !string.IsNullOrEmpty(product.ImageUrl) ? product.ImageUrl : null), cancellationToken);
 
                 // Removed images are only deleted once the update is committed
                 foreach (var url in removed)

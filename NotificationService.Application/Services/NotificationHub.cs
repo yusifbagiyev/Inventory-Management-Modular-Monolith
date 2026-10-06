@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace NotificationService.Application.Services
 {
-    /// <summary>Pushes notifications to the browser, with each connection in a user group and a role group.</summary>
+    /// <summary>Pushes notifications to the browser, with each connection in its user's group.</summary>
     [Authorize]
     public class NotificationHub : Hub
     {
@@ -21,24 +21,8 @@ namespace NotificationService.Application.Services
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(userId))
             {
-                var userGroup = $"user-{userId}";
-                await Groups.AddToGroupAsync(Context.ConnectionId, userGroup);
-
-                var roleGroups = (Context.User?.FindAll(ClaimTypes.Role) ?? [])
-                    .Select(c => $"role-{c.Value}")
-                    .ToList();
-                foreach (var roleGroup in roleGroups)
-                    await Groups.AddToGroupAsync(Context.ConnectionId, roleGroup);
-
-                await Clients.Caller.SendAsync("ConnectionEstablished", new
-                {
-                    connectionId = Context.ConnectionId,
-                    userId,
-                    userGroup,
-                    roleGroups,
-                    timestamp = DateTime.Now,
-                    message = "Connected successfully"
-                });
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+                await Clients.Caller.SendAsync("ConnectionEstablished");
 
                 _logger.LogDebug("User {UserId} connected to the notification hub ({ConnectionId})", userId, Context.ConnectionId);
             }

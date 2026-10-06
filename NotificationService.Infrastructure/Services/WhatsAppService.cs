@@ -30,21 +30,6 @@ namespace NotificationService.Infrastructure.Services
             [JsonPropertyName("message")]
             public string? Message { get; set; }
 
-            [JsonPropertyName("fileId")]
-            public string? FileId { get; set; }
-
-            [JsonPropertyName("expiresAt")]
-            public DateTime? ExpiresAt { get; set; }
-        }
-
-        private class UploadData
-        {
-            [JsonPropertyName("url")]
-            public string? Url { get; set; }
-
-            [JsonPropertyName("fileId")]
-            public string? FileId { get; set; }
-
             [JsonPropertyName("expiresAt")]
             public DateTime? ExpiresAt { get; set; }
         }
@@ -66,112 +51,6 @@ namespace NotificationService.Infrastructure.Services
                 new AuthenticationHeaderValue("Bearer", _settings.ApiToken);
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
-        }
-
-        /// <summary>Sends a text-only message to a WhatsApp group.</summary>
-        public async Task<bool> SendGroupMessageAsync(string groupId, string message)
-        {
-            try
-            {
-                // Group ids need the @g.us suffix
-                if (!groupId.EndsWith("@g.us"))
-                    groupId = $"{groupId}@g.us";
-
-                var requestPayload = new
-                {
-                    to = groupId,
-                    text = message
-                };
-
-                var jsonContent = JsonSerializer.Serialize(requestPayload);
-                var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-                _logger.LogDebug($"Sending text message to WhatsApp group: {groupId}");
-
-                var response = await _httpClient.PostAsync("send-message", httpContent);
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    _logger.LogInformation($"WhatsApp message sent successfully to group {groupId}");
-                    return true;
-                }
-
-                _logger.LogError($"Failed to send WhatsApp message. Status: {response.StatusCode}, Response: {responseContent}");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Exception while sending WhatsApp message to group {groupId}");
-                return false;
-            }
-        }
-
-        public async Task<bool> SendGroupMessageWithImageDataAsync(string groupId, string message, byte[] imageData, string fileName)
-        {
-            try
-            {
-                if (!groupId.EndsWith("@g.us"))
-                    groupId = $"{groupId}@g.us";
-
-                if (message.Length > 2048)
-                {
-                    _logger.LogWarning("Caption exceeds 2048 characters. Truncating to fit limit.");
-                    message = message.Substring(0, 2045) + "...";
-                }
-
-                // Images over 5 MB go as text only
-                var imageSizeInMB = imageData.Length / (1024.0 * 1024.0);
-                _logger.LogInformation($"Processing image: {fileName} ({imageSizeInMB:F2} MB)");
-
-                if (imageSizeInMB > 5)
-                {
-                    _logger.LogWarning($"Image size {imageSizeInMB:F2}MB is over the 5 MB limit. Sending text only.");
-                    return await SendGroupMessageAsync(groupId, message);
-                }
-
-                // The message needs a URL, so upload the image first to get a temporary one
-                var imageUrl = await UploadImageToWaSender(imageData, fileName);
-
-                if (string.IsNullOrEmpty(imageUrl))
-                {
-                    _logger.LogWarning("Failed to get image URL from upload. Falling back to text-only message.");
-                    return await SendGroupMessageAsync(groupId, message);
-                }
-
-                _logger.LogInformation($"Successfully uploaded image. Now sending WhatsApp message with image URL: {imageUrl}");
-
-                var requestPayload = new
-                {
-                    to = groupId,
-                    text = message,  // Shown as the image caption
-                    imageUrl = imageUrl
-                };
-
-                var jsonContent = JsonSerializer.Serialize(requestPayload);
-                var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-                _logger.LogDebug($"Sending image message to WhatsApp group: {groupId}");
-
-                var response = await _httpClient.PostAsync("send-message", httpContent);
-                var responseContent = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    _logger.LogInformation($"WhatsApp image message sent successfully to group {groupId}");
-                    return true;
-                }
-
-                _logger.LogError($"Failed to send WhatsApp image message. Status: {response.StatusCode}, Response: {responseContent}");
-
-                _logger.LogInformation("Attempting fallback to text-only message");
-                return await SendGroupMessageAsync(groupId, message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Exception while sending image message to group {groupId}");
-                return await SendGroupMessageAsync(groupId, message);
-            }
         }
 
         /// <summary>One attempt to post a group message, reusing uploadedImageUrl on retries and reporting the wait a 429 asks for.</summary>
@@ -327,7 +206,6 @@ namespace NotificationService.Infrastructure.Services
             {
                 "created" => "✅",
                 "transferred" => "🔄",
-                "deleted" => "❌",
                 _ => "📌"
             };
 

@@ -89,7 +89,6 @@ namespace RouteService.Application.Features.Routes.Commands
                     CategoryName = route.ProductSnapshot.CategoryName,
                     FromDepartmentName = route.FromDepartmentName ?? string.Empty,
                     FromWorker = route.FromWorker,
-                    ToDepartmentId = route.ToDepartmentId,
                     ToDepartmentName = route.ToDepartmentName,
                     ToWorker = route.ToWorker,
                     Notes = route.Notes,

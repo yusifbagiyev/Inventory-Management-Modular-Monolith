@@ -13,7 +13,7 @@ namespace SharedServices.Contracts
             CancellationToken cancellationToken = default);
     }
 
-    public record ApprovalActor(int UserId, string UserName);
+    public record ApprovalActor(string UserName);
 
     /// <summary>Runs an approved request for the owning module and throws on failure, so the message is recorded.</summary>
     public interface IApprovalActionHandler

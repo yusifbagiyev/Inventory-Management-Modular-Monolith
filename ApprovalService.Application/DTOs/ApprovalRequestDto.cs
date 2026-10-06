@@ -18,10 +18,6 @@
         public DateTime? ProcessedAt { get; set; }
         public DateTime? ExecutedAt { get; set; }
     }
-    public record ApproveRequestDto
-    {
-        public int RequestId { get; set; }
-    }
     public record RejectRequestDto
     {
         public int RequestId { get; set; }

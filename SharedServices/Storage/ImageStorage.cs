@@ -82,14 +82,6 @@ namespace SharedServices.Storage
             return Task.CompletedTask;
         }
 
-        public Task DeleteFolderAsync(string category, int inventoryCode)
-        {
-            var folder = Path.Combine(_root, category, inventoryCode.ToString());
-            if (Directory.Exists(folder))
-                Directory.Delete(folder, recursive: true);
-            return Task.CompletedTask;
-        }
-
         public async Task<byte[]?> ReadAsync(string? url, CancellationToken cancellationToken = default)
         {
             var path = GetPhysicalPath(url);

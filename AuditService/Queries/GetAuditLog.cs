@@ -10,17 +10,13 @@ namespace AuditService.Queries
 {
     /// <summary>One action, meaning the rows one request wrote.</summary>
     public sealed record AuditActionDto(
-        string CorrelationId,
         DateTime At,
-        int? UserId,
         string? UserName,
         string? IpAddress,
         string Action,
         IReadOnlyList<AuditEntryDto> Entries);
 
     public sealed record AuditEntryDto(
-        long Id,
-        DateTime At,
         string EntityType,
         string? EntityId,
         string? Label,
@@ -136,9 +132,9 @@ namespace AuditService.Queries
                 var group = byAction[p.CorrelationId].ToList();
                 var first = group[0];
                 return new AuditActionDto(
-                    p.CorrelationId, p.At, first.UserId, first.UserName, first.IpAddress, first.Action,
+                    p.At, first.UserName, first.IpAddress, first.Action,
                     group.Select(e => new AuditEntryDto(
-                        e.Id, e.At, e.EntityType, e.EntityId, e.Label, e.Operation,
+                        e.EntityType, e.EntityId, e.Label, e.Operation,
                         JsonSerializer.Deserialize<List<AuditFieldChange>>(e.Changes, Json) ?? [])).ToList());
             }).ToList();
 
