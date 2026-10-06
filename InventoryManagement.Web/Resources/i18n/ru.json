@@ -183,13 +183,11 @@
   "{0} active": "Активных: {0}",
   "{0} pending": "Ожидает: {0}",
   "Transfer Activity": "Активность перемещений",
-  "No transfer activity for this period": "За этот период перемещений не было",
   "Categories in Transfers": "Категории в перемещениях",
   "No transfers for this period": "За этот период перемещений нет",
   "Top Departments by Transfer Activity": "Самые активные отделы по перемещениям",
   "Unique Products": "Уникальные товары",
   "Active Workers": "Активные сотрудники",
-  "No department activity for this period": "За этот период активности отделов не было",
   "Error": "Ошибка",
   "An error has occurred.": "Произошла ошибка.",
   "An error occurred while processing your request.": "При обработке запроса произошла ошибка.",
@@ -824,7 +822,6 @@
   "Click a bar to open those transfers.": "Щёлкните по столбцу, чтобы открыть соответствующие перемещения.",
   "Needs attention": "Требует внимания",
   "Requests awaiting approval": "Запросы, ожидающие согласования",
-  "Unfinished transfers": "Незавершённые перемещения",
   "Broken devices": "Неисправные устройства",
   "7 days": "7 дней",
   "30 days": "30 дней",
@@ -1047,7 +1044,6 @@
   "Remove from this list": "Убрать из списка",
   "Remove {0} from this list": "Убрать {0} из списка",
   "{0} active · {1} inactive": "Активных: {0} · неактивных: {1}",
-  "Faulty": "Неисправен",
   "in the last {0} days": "за последние {0} дн.",
   "over all time": "за всё время",
   "None waiting": "Ожидающих нет",
@@ -1172,5 +1168,7 @@
   "CodeChange": "Изменение номера",
   "The product moves to the destination above and the route can no longer be changed. Complete it?": "Товар будет перемещён в указанное выше место назначения, и маршрут больше нельзя будет изменить. Завершить?",
   "Delete user {0}? This action cannot be undone.": "Удалить пользователя {0}? Это действие нельзя отменить.",
-  "Choose a password you do not use for other services.": "Выберите пароль, который вы не используете в других сервисах."
+  "Choose a password you do not use for other services.": "Выберите пароль, который вы не используете в других сервисах.",
+  "Transfer activity, categories and departments appear here once transfers are made in the period.": "Когда за этот период будут перемещения, здесь появятся активность перемещений, категории и отделы.",
+  "View all time": "Показать за всё время"
 }

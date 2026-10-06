@@ -6,6 +6,9 @@
     var notWorking = (int)(ViewBag.NotWorking ?? 0);
     var openTransfers = (int)(ViewBag.OpenTransfers ?? 0);
     var pendingApprovals = ViewBag.PendingApprovals as int?;
+    // Without the approvals row the block would only repeat two figures from the tiles above
+    var showAttention = pendingApprovals is not null;
+    var hasTransfers = Model.TransferActivityData.Labels.Any();
 
     // Period caption under the completed-transfers figure
     var periodText = currentPeriod switch
@@ -57,7 +60,7 @@
             <span class="trend">@L["{0} active · {1} inactive", Model.ActiveProducts.ToString("N0"), Model.InactiveProducts.ToString("N0")]</span>
         </a>
         <a class="ip-kpi" href="@ProductLink("/Products?status=false")">
-            <span class="label">@L["Faulty"]</span>
+            <span class="label">@L["Broken devices"]</span>
             <span class="value">@Model.NotWorking.ToString("N0")</span>
             @if (Model.NotWorkingNames.Count > 0)
             {
@@ -93,17 +96,18 @@
     </div>
 
     <div class="row g-5 mt-0" id="dashboardCharts">
-        <div class="col-lg-8">
-            <section class="ip-section">
-                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
-                    <h2>@L["Transfer Activity"]</h2>
-                    <div class="ip-legend" aria-hidden="true">
-                        <span><i style="background: var(--ip-chart-1)"></i>@L["Completed"]</span>
-                        <span><i style="background: var(--ip-chart-pending)"></i>@L["Pending"]</span>
+        @* The chart, categories and departments all count the period's transfers, so an empty period shows one empty state for them *@
+        <div class="@(showAttention ? "col-lg-8" : "col-12")">
+            @if (hasTransfers)
+            {
+                <section class="ip-section">
+                    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+                        <h2>@L["Transfer Activity"]</h2>
+                        <div class="ip-legend" aria-hidden="true">
+                            <span><i style="background: var(--ip-chart-1)"></i>@L["Completed"]</span>
+                            <span><i style="background: var(--ip-chart-pending)"></i>@L["Pending"]</span>
+                        </div>
                     </div>
-                </div>
-                @if (Model.TransferActivityData.Labels.Any())
-                {
                     <div class="ip-chart">
                         <canvas id="transferChart" role="img" aria-label="@L["Transfer Activity"]"
                                 data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="@RouteLink("/Routes?routeType=Transfer")"></canvas>
@@ -122,89 +126,109 @@
                             </li>
                         }
                     </ul>
-                }
-                else
-                {
-                    <p class="ip-muted py-4 mb-0">@L["No transfer activity for this period"]</p>
-                }
-            </section>
-        </div>
-
-        @* In one column CSS order moves this block above the chart *@
-        <div class="col-lg-4 ip-dash-attention">
-            <section class="ip-section">
-                <h2 class="mb-3">@L["Needs attention"]</h2>
-                @if (pendingApprovals is int approvals)
-                {
-                    <a class="ip-list-link" href="/Approvals">
-                        <span>@L["Requests awaiting approval"]</span>
-                        <b class="ip-num @(approvals > 0 ? "ip-status-text warning fs-6" : "")">@approvals</b>
-                    </a>
-                }
-                <a class="ip-list-link" href="@RouteLink("/Routes?isCompleted=false")">
-                    <span>@L["Unfinished transfers"]</span>
-                    <b class="ip-num @(openTransfers > 0 ? "ip-status-text warning fs-6" : "")">@openTransfers</b>
-                </a>
-                <a class="ip-list-link" href="@ProductLink("/Products?status=false")">
-                    <span>@L["Broken devices"]</span>
-                    <b class="ip-num @(notWorking > 0 ? "text-danger" : "")">@notWorking</b>
-                </a>
-            </section>
-        </div>
-
-        <div class="col-lg-6">
-            <section class="ip-section">
-                <h2 class="mb-3">@L["Categories in Transfers"]</h2>
-                @if (Model.CategoryDistributions.Any())
-                {
-                    <div class="d-flex gap-4 align-items-center flex-wrap">
-                        <div class="ip-dash-doughnut">
-                            <canvas id="categoryChart" role="img" aria-label="@L["Categories in Transfers"]"
-                                    data-chart="@Json.Serialize(categoryChart).ToString()" data-link="@RouteLink(transfersUrl)"></canvas>
-                        </div>
-                        <div class="flex-grow-1" style="min-width: 200px">
-                            @for (var i = 0; i < Model.CategoryDistributions.Count; i++)
-                            {
-                                var category = Model.CategoryDistributions[i];
-                                var label = CategoryLabel(category);
-                                <a class="ip-list-link" href="@RouteLink(category.IsOther ? transfersUrl : transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
-                                    <span class="d-flex align-items-center gap-2" style="min-width: 0">
-                                        <i class="ip-swatch" style="background: var(--ip-cat-@(category.IsOther ? 8 : i % 8 + 1))"></i>
-                                        <span class="text-truncate" title="@label">@label</span>
-                                    </span>
-                                    <span class="ip-num ip-muted text-nowrap">@L.Plural(category.Count, "{0} transfer", "{0} transfers") · @Percent(category.Count)%</span>
-                                </a>
-                            }
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <p class="ip-muted py-4 mb-0">@L["No transfers for this period"]</p>
-                }
-            </section>
-        </div>
-
-        <div class="col-lg-6" id="dashboardRecent">
-            <section class="ip-section">
-                <h2 class="mb-3">@L["Transfers by department"]</h2>
-                @if (Model.DepartmentStats.Any())
-                {
-                    @foreach (var dept in Model.DepartmentStats)
+                </section>
+            }
+            else
+            {
+                <div class="ip-empty">
+                    <span class="icon"><i class="fa-solid fa-right-left"></i></span>
+                    <div class="title">@L["No transfers for this period"]</div>
+                    <div class="text">@L["Transfer activity, categories and departments appear here once transfers are made in the period."]</div>
+                    @if (!allTime)
                     {
-                        <a class="ip-list-link" href="@RouteLink(transfersUrl + "&departmentName=" + Uri.EscapeDataString(dept.DepartmentName))">
-                            <span class="text-truncate" title="@dept.DepartmentName">@dept.DepartmentName</span>
-                            <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
-                            <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">@dept.PeriodTransfers.ToString("N0")</span>
+                        <a href="/Home/Dashboard?period=all" class="ip-btn ip-btn-secondary">
+                            <span>@L["View all time"]</span><i class="fa-solid fa-arrow-right"></i>
                         </a>
                     }
-                }
-                else
-                {
-                    <p class="ip-muted py-4 mb-0">@L["No department activity for this period"]</p>
-                }
-            </section>
+                </div>
+            }
         </div>
+
+        @if (showAttention)
+        {
+            @* In one column CSS order moves this block above the chart *@
+            <div class="col-lg-4 ip-dash-attention">
+                <section class="ip-section">
+                    <h2 class="mb-3">@L["Needs attention"]</h2>
+                    <a class="ip-list-link" href="/Approvals">
+                        <span>@L["Requests awaiting approval"]</span>
+                        <span class="ip-dash-count">
+                            <b class="ip-num fs-6 @(pendingApprovals > 0 ? "ip-status-text warning" : "")">@pendingApprovals</b>
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </span>
+                    </a>
+                    <a class="ip-list-link" href="@RouteLink("/Routes?isCompleted=false")">
+                        <span>@L["Pending transfers"]</span>
+                        <span class="ip-dash-count">
+                            <b class="ip-num fs-6 @(openTransfers > 0 ? "ip-status-text warning" : "")">@openTransfers</b>
+                            @if (canRoutes)
+                            {
+                                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                            }
+                        </span>
+                    </a>
+                    <a class="ip-list-link" href="@ProductLink("/Products?status=false")">
+                        <span>@L["Broken devices"]</span>
+                        <span class="ip-dash-count">
+                            <b class="ip-num fs-6 @(notWorking > 0 ? "ip-status-text danger" : "")">@notWorking</b>
+                            @if (canProducts)
+                            {
+                                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                            }
+                        </span>
+                    </a>
+                </section>
+            </div>
+        }
+
+        @if (hasTransfers)
+        {
+            <div class="col-lg-6">
+                <section class="ip-section">
+                    <h2 class="mb-3">@L["Categories in Transfers"]</h2>
+                    @if (Model.CategoryDistributions.Any())
+                    {
+                        <div class="d-flex gap-4 align-items-center flex-wrap">
+                            <div class="ip-dash-doughnut">
+                                <canvas id="categoryChart" role="img" aria-label="@L["Categories in Transfers"]"
+                                        data-chart="@Json.Serialize(categoryChart).ToString()" data-link="@RouteLink(transfersUrl)"></canvas>
+                            </div>
+                            <div class="flex-grow-1" style="min-width: 200px">
+                                @for (var i = 0; i < Model.CategoryDistributions.Count; i++)
+                                {
+                                    var category = Model.CategoryDistributions[i];
+                                    var label = CategoryLabel(category);
+                                    <a class="ip-list-link" href="@RouteLink(category.IsOther ? transfersUrl : transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
+                                        <span class="d-flex align-items-center gap-2" style="min-width: 0">
+                                            <i class="ip-swatch" style="background: var(--ip-cat-@(category.IsOther ? 8 : i % 8 + 1))"></i>
+                                            <span class="text-truncate" title="@label">@label</span>
+                                        </span>
+                                        <span class="ip-num ip-muted text-nowrap">@L.Plural(category.Count, "{0} transfer", "{0} transfers") · @Percent(category.Count)%</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </section>
+            </div>
+
+            <div class="col-lg-6" id="dashboardRecent">
+                <section class="ip-section">
+                    <h2 class="mb-3">@L["Transfers by department"]</h2>
+                    @if (Model.DepartmentStats.Any())
+                    {
+                        @foreach (var dept in Model.DepartmentStats)
+                        {
+                            <a class="ip-list-link" href="@RouteLink(transfersUrl + "&departmentName=" + Uri.EscapeDataString(dept.DepartmentName))">
+                                <span class="text-truncate" title="@dept.DepartmentName">@dept.DepartmentName</span>
+                                <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
+                                <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">@dept.PeriodTransfers.ToString("N0")</span>
+                            </a>
+                        }
+                    }
+                </section>
+            </div>
+        }
     </div>
 </div>
 

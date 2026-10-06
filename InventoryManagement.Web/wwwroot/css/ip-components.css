@@ -1335,3 +1335,7 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 /* Banners: a message in a span shrinks beside its icon like a div, and the link at the end keeps to one line */
 .ip-banner > span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
 .ip-banner > a { flex: none; }
+/* Dashboard: the attention figures share one size, faulty devices in the danger colour, and each row ends in a chevron */
+.ip-status-text.danger { color: var(--ip-danger-text); }
+.ip-dash-count { display: inline-flex; align-items: center; gap: var(--ip-space-2); flex: none; }
+.ip-dash-count > i { font-size: 12px; color: var(--ip-text-3); }

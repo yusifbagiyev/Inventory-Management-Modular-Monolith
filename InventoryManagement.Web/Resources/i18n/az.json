@@ -183,13 +183,11 @@
   "{0} active": "{0} aktiv",
   "{0} pending": "{0} gözləmədə",
   "Transfer Activity": "Transfer fəaliyyəti",
-  "No transfer activity for this period": "Bu dövrdə transfer fəaliyyəti yoxdur",
   "Categories in Transfers": "Transferlərdə kateqoriyalar",
   "No transfers for this period": "Bu dövrdə transfer yoxdur",
   "Top Departments by Transfer Activity": "Transfer fəaliyyətinə görə ən aktiv şöbələr",
   "Unique Products": "Unikal məhsullar",
   "Active Workers": "Aktiv işçilər",
-  "No department activity for this period": "Bu dövrdə şöbə fəaliyyəti yoxdur",
   "Error": "Xəta",
   "An error has occurred.": "Xəta baş verdi.",
   "An error occurred while processing your request.": "Sorğunuz emal edilərkən xəta baş verdi.",
@@ -824,7 +822,6 @@
   "Click a bar to open those transfers.": "Müvafiq transferləri açmaq üçün sütunun üzərinə klikləyin.",
   "Needs attention": "Diqqət tələb edir",
   "Requests awaiting approval": "Təsdiq gözləyən sorğular",
-  "Unfinished transfers": "Tamamlanmamış transferlər",
   "Broken devices": "Nasaz cihazlar",
   "7 days": "7 gün",
   "30 days": "30 gün",
@@ -1047,7 +1044,6 @@
   "Remove from this list": "Siyahıdan sil",
   "Remove {0} from this list": "{0} hesabını siyahıdan sil",
   "{0} active · {1} inactive": "{0} aktiv · {1} deaktiv",
-  "Faulty": "Nasaz",
   "in the last {0} days": "son {0} gündə",
   "over all time": "bütün dövrdə",
   "None waiting": "Gözləyən yoxdur",
@@ -1172,5 +1168,7 @@
   "CodeChange": "Kod dəyişikliyi",
   "The product moves to the destination above and the route can no longer be changed. Complete it?": "Məhsul yuxarıda göstərilən təyinata keçiriləcək və marşrutu artıq dəyişmək mümkün olmayacaq. Tamamlansın?",
   "Delete user {0}? This action cannot be undone.": "{0} istifadəçisi silinsin? Bu əməliyyatı geri qaytarmaq mümkün deyil.",
-  "Choose a password you do not use for other services.": "Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin."
+  "Choose a password you do not use for other services.": "Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin.",
+  "Transfer activity, categories and departments appear here once transfers are made in the period.": "Bu dövrdə transferlər olduqda transfer fəaliyyəti, kateqoriyalar və şöbələr burada göstəriləcək.",
+  "View all time": "Bütün dövrə bax"
 }
