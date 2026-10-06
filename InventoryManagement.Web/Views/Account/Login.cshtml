@@ -134,7 +134,7 @@
                     {
                         <div class="ip-field">
                             <label asp-for="Username" class="ip-label">@L["Username"]</label>
-                            <input asp-for="Username" class="ip-input" autocomplete="username" autofocus>
+                            <input asp-for="Username" class="ip-input" autocomplete="username" autofocus="@string.IsNullOrEmpty(Model.Username)">
                         </div>
                     }
                     else
@@ -144,7 +144,7 @@
                     <div class="ip-field">
                         <label asp-for="Password" class="ip-label">@L["Password"]</label>
                         <div class="ip-pw-wrap">
-                            <input asp-for="Password" class="ip-input" type="password" autocomplete="current-password" autofocus="@(!Model.AskUsername)">
+                            <input asp-for="Password" class="ip-input" type="password" autocomplete="current-password" autofocus="@(!Model.AskUsername || !string.IsNullOrEmpty(Model.Username))">
                             <button type="button" class="ip-btn-icon" id="togglePassword" aria-pressed="false"
                                     aria-label="@L["Show password"]" title="@L["Show password"]"
                                     data-label-show="@L["Show password"]" data-label-hide="@L["Hide password"]">
