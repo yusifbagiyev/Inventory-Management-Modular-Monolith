@@ -27,9 +27,9 @@
     </div>
 
     <nav class="ip-tabs strong" aria-label="@L["Status"]" id="approvalsTabs">
-        <a asp-action="Index" class="ip-tab @(pendingTab ? "active" : "")">@L["Pending"] <span class="count warning">@Model.TotalPending</span></a>
-        <a asp-action="Index" asp-route-status="approved" class="ip-tab @(Model.Tab == "approved" ? "active" : "")">@L["Approved"] <span class="count">@Model.ApprovedCount</span></a>
-        <a asp-action="Index" asp-route-status="rejected" class="ip-tab @(Model.Tab == "rejected" ? "active" : "")">@L["Rejected"] <span class="count">@Model.RejectedCount</span></a>
+        <a asp-action="Index" class="ip-tab @(pendingTab ? "active" : "")" aria-current="@(pendingTab ? "page" : null)">@L["Pending"] <span class="count warning">@Model.TotalPending</span></a>
+        <a asp-action="Index" asp-route-status="approved" class="ip-tab @(Model.Tab == "approved" ? "active" : "")" aria-current="@(Model.Tab == "approved" ? "page" : null)">@L["Approved"] <span class="count">@Model.ApprovedCount</span></a>
+        <a asp-action="Index" asp-route-status="rejected" class="ip-tab @(Model.Tab == "rejected" ? "active" : "")" aria-current="@(Model.Tab == "rejected" ? "page" : null)">@L["Rejected"] <span class="count">@Model.RejectedCount</span></a>
     </nav>
 
     <div id="approvalsRegion">
@@ -62,7 +62,9 @@
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
-                                        <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
+                                        @* The title is the row's control for the keyboard and on phones, where the actions cell is hidden *@
+                                        <a class="fw-semibold request-link" href="@Url.Action("Index", new { status = pendingTab ? null : Model.Tab, open = request.Id })" aria-haspopup="dialog"
+                                           onclick="event.preventDefault(); event.stopPropagation(); viewDetails(@request.Id)">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
                                         @if (fields.Count > 0)
                                         {
                                             <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
@@ -142,7 +144,7 @@
                     <label for="rejectionReason" class="ip-label"><span>@L["Rejection Reason"]</span> <span class="req">*</span></label>
                     <textarea id="rejectionReason" class="ip-textarea" rows="3" maxlength="500" aria-required="true"
                               placeholder="@L["The requester sees this reason on their My Requests page."]"></textarea>
-                    <span class="ip-error d-none" id="rejectionError">@L["Rejection reason is required."]</span>
+                    <span class="ip-error d-none" id="rejectionError" role="alert">@L["Rejection reason is required."]</span>
                 </div>
                 <div class="d-flex justify-content-end gap-2 flex-wrap d-none" id="decisionButtons">
                     <span class="ip-faint me-auto align-self-center d-none" id="ownRequestNote">@L["This is your own request; it must be approved by another approver."]</span>

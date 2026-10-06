@@ -16,19 +16,19 @@
 
     @* These tabs filter rows in the browser through .filter-btn and data-filter *@
     <nav class="ip-tabs strong" aria-label="@L["Status"]" id="myRequestsTabs">
-        <button type="button" class="ip-tab filter-btn active" data-filter="all">
+        <button type="button" class="ip-tab filter-btn active" data-filter="all" aria-pressed="true">
             @L["All"] <span class="count">@Model.TotalCount</span>
         </button>
-        <button type="button" class="ip-tab filter-btn" data-filter="pending">
+        <button type="button" class="ip-tab filter-btn" data-filter="pending" aria-pressed="false">
             @L["Pending"] <span class="count warning">@pendingCount</span>
         </button>
-        <button type="button" class="ip-tab filter-btn" data-filter="approved">
+        <button type="button" class="ip-tab filter-btn" data-filter="approved" aria-pressed="false">
             @L["Approved"] <span class="count">@Model.Count("Approved", "Executed")</span>
         </button>
-        <button type="button" class="ip-tab filter-btn" data-filter="rejected">
+        <button type="button" class="ip-tab filter-btn" data-filter="rejected" aria-pressed="false">
             @L["Rejected"] <span class="count">@Model.Count("Rejected")</span>
         </button>
-        <button type="button" class="ip-tab filter-btn" data-filter="failed">
+        <button type="button" class="ip-tab filter-btn" data-filter="failed" aria-pressed="false">
             @L["Failed"] <span class="count">@Model.Count("Failed")</span>
         </button>
     </nav>
@@ -58,7 +58,9 @@
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
-                                        <span class="fw-semibold">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</span>
+                                        @* The title is the row's control for the keyboard and on phones, where the actions cell is hidden *@
+                                        <a class="fw-semibold request-link" href="?open=@request.Id" aria-haspopup="dialog"
+                                           onclick="event.preventDefault(); event.stopPropagation(); viewDetails(@request.Id)">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
                                         @if (fields.Count > 0)
                                         {
                                             <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
@@ -177,8 +179,8 @@
     <script>
         // Delegated because live updates replace the tabs
         $(document).on('click', '.filter-btn', function () {
-            $('.filter-btn').removeClass('active');
-            $(this).addClass('active');
+            $('.filter-btn').removeClass('active').attr('aria-pressed', 'false');
+            $(this).addClass('active').attr('aria-pressed', 'true');
             applyStatusFilter();
         });
 
@@ -211,7 +213,8 @@
                 activeFilter = $('.filter-btn.active').data('filter') || 'all';
             },
             afterRefresh() {
-                $('.filter-btn').removeClass('active').filter(`[data-filter="${activeFilter}"]`).addClass('active');
+                $('.filter-btn').removeClass('active').attr('aria-pressed', 'false')
+                    .filter(`[data-filter="${activeFilter}"]`).addClass('active').attr('aria-pressed', 'true');
                 applyStatusFilter();
             }
         });

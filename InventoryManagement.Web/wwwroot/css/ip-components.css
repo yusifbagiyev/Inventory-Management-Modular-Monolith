@@ -1244,3 +1244,7 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
 .ip-diff td:last-child { padding-right: 8px; }
 @media (max-width: 767.98px) { .ip-diff tr { padding-right: 6px; } }
 @media (min-width: 768px) and (max-width: 991.98px) { #detailsModal .modal-dialog { max-width: min(720px, calc(100vw - 48px)); } }
+/* Approvals: the request title is a link that reads as the row's title */
+:is(#approvalsTable, #myRequestsTable) .request-link { color: inherit; text-decoration: none; }
+:is(#approvalsTable, #myRequestsTable) .request-link:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; border-radius: var(--ip-radius-sm); }
+@media (max-width: 767.98px) { :is(#approvalsTable, #myRequestsTable) .request-link { display: block; padding-block: 7px; margin-block: -7px; } }
