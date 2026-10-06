@@ -19,7 +19,7 @@
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Category name cannot be empty", nameof(name));
 
-            Name = name;
+            Name = name.Trim();
             Description = description ?? string.Empty ;
             IsActive = isActive;
             CreatedAt = DateTime.Now;
@@ -30,10 +30,8 @@
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Category name cannot be empty", nameof(name));
 
-            // A blank description keeps the current one
-            if (!string.IsNullOrWhiteSpace(description))
-                Description = description;
-            Name = name;
+            Name = name.Trim();
+            Description = string.IsNullOrWhiteSpace(description) ? string.Empty : description;
             IsActive= isActive;
             UpdatedAt = DateTime.Now;
         }

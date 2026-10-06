@@ -30,6 +30,9 @@ namespace ProductService.Infrastructure.Repositories
             return (active, inactive);
         }
 
+        public Task<int> CountWithProductsAsync(CancellationToken cancellationToken = default)
+            => _context.Products.Select(p => p.DepartmentId).Distinct().CountAsync(cancellationToken);
+
         public async Task<IReadOnlyList<LookupItem>> GetLookupAsync(CancellationToken cancellationToken = default)
             => await _context.Departments
                 .AsNoTracking()

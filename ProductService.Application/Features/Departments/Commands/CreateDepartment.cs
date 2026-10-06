@@ -1,5 +1,6 @@
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Application.Features.Lookups;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
 using ProductService.Application.Mappings;
@@ -31,6 +32,7 @@ namespace ProductService.Application.Features.Departments.Commands
                     request.DepartmentDto.DepartmentHead,
                     request.DepartmentDto.IsActive);
 
+                await _departmentRepository.EnsureNameIsFreeAsync(department.Name, null, cancellationToken);
                 await _departmentRepository.AddAsync(department, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

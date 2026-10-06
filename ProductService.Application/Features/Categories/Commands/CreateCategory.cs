@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Application.Features.Lookups;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Repositories;
 using ProductService.Application.Mappings;
@@ -39,6 +40,7 @@ namespace ProductService.Application.Features.Categories.Commands
             {
                 var category = new Category(request.CategoryDto.Name, request.CategoryDto.Description,request.CategoryDto.IsActive);
 
+                await _categoryRepository.EnsureNameIsFreeAsync(category.Name, null, cancellationToken);
                 await _categoryRepository.AddAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 

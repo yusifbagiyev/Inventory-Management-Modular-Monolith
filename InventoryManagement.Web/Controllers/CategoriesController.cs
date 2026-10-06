@@ -44,7 +44,7 @@ namespace InventoryManagement.Web.Controllers
 
             ViewBag.ActiveCategories = stats.Active;
             ViewBag.InActiveCategories = stats.Inactive;
-            ViewBag.CategoriesInWithProducts = stats.Products;
+            ViewBag.CategoriesInWithProducts = stats.WithProducts;
             ViewBag.CurrentSearch = search;
             ViewBag.PageNumber = pageNumber;
             ViewBag.PageSize = pageSize;
@@ -116,7 +116,8 @@ namespace InventoryManagement.Web.Controllers
                 Description = model.Description,
                 IsActive = model.IsActive
             };
-            var response = await RunAsync(() => _mediator.Send(new UpdateCategory.Command(id, dto)), "Category updated successfully");
+            // The form posts every field, so an emptied one is meant to be cleared
+            var response = await RunAsync(() => _mediator.Send(new UpdateCategory.Command(id, dto, ClearBlankFields: true)), "Category updated successfully");
             return HandleApiResponse(response, nameof(Index));
         }
 

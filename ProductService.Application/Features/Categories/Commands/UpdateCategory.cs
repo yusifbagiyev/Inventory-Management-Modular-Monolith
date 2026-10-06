@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using MediatR;
 using ProductService.Application.DTOs;
+using ProductService.Application.Features.Lookups;
 using ProductService.Domain.Repositories;
 using SharedServices.Exceptions;
 
@@ -8,7 +9,8 @@ namespace ProductService.Application.Features.Categories.Commands
 {
     public class UpdateCategory
     {
-        public record Command(int Id, UpdateCategoryDto CategoryDto) : IRequest;
+        /// <summary>With <paramref name="ClearBlankFields"/> a blank description clears the stored one instead of keeping it.</summary>
+        public record Command(int Id, UpdateCategoryDto CategoryDto, bool ClearBlankFields = false) : IRequest;
 
         public class Validator : AbstractValidator<Command>
         {
@@ -40,7 +42,17 @@ namespace ProductService.Application.Features.Categories.Commands
             {
                 var category = await _categoryRepository.GetByIdAsync(request.Id, cancellationToken) ??
                     throw new NotFoundException($"Category with ID {request.Id} not found");
-                category.Update(request.CategoryDto.Name, request.CategoryDto.Description,request.CategoryDto.IsActive);
+                var dto = request.CategoryDto;
+                // A category that already shares its name can still be edited, so only a new name is checked
+                if (CatalogNames.IsRenamed(dto.Name, category.Name))
+                    await _categoryRepository.EnsureNameIsFreeAsync(dto.Name, category.Id, cancellationToken);
+
+                // A client that leaves the description out keeps it, so only a caller that sends every field can clear it
+                var keepBlank = !request.ClearBlankFields;
+                category.Update(
+                    dto.Name,
+                    keepBlank && string.IsNullOrWhiteSpace(dto.Description) ? category.Description : dto.Description,
+                    dto.IsActive);
 
                 await _categoryRepository.UpdateAsync(category, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);

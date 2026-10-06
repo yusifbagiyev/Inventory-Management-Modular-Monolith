@@ -17,7 +17,7 @@ namespace ProductService.Domain.Entities
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
-            Name = name;
+            Name = name.Trim();
             Description = description??string.Empty;
             DepartmentHead = departmentHead ?? string.Empty;
             IsActive = isActive;
@@ -28,16 +28,14 @@ namespace ProductService.Domain.Entities
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Department name cannot be empty", nameof(name));
 
-            // A blank description or head keeps the current value
-            if(!string.IsNullOrWhiteSpace(description))
-                Description=description;
-
-            if (!string.IsNullOrWhiteSpace(departmentHead))
-                DepartmentHead = departmentHead;
-
-            Name = name;
+            Name = name.Trim();
+            Description = string.IsNullOrWhiteSpace(description) ? Cleared(Description) : description;
+            DepartmentHead = string.IsNullOrWhiteSpace(departmentHead) ? Cleared(DepartmentHead) : departmentHead;
             IsActive = isActive;
             UpdatedAt = DateTime.Now;
         }
+
+        // An older row may hold null for no value, and clearing it again should not count as a change
+        private static string? Cleared(string? current) => string.IsNullOrEmpty(current) ? current : string.Empty;
     }
 }

@@ -454,9 +454,32 @@ namespace InventoryManagement.Web.Services
             runProp.Append(new FontSize { Val = fontSize.ToString() });
 
             run.Append(runProp);
-            run.Append(new Text(text) { Space = SpaceProcessingModeValues.Preserve });
+            run.Append(new Text(XmlSafe(text)) { Space = SpaceProcessingModeValues.Preserve });
 
             return run;
+        }
+
+
+
+        /// <summary>The text without the characters XML cannot carry, which would make saving the document fail.</summary>
+        private static string XmlSafe(string? text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            var clean = new System.Text.StringBuilder(text.Length);
+            for (var i = 0; i < text.Length; i++)
+            {
+                var ch = text[i];
+                if (System.Xml.XmlConvert.IsXmlChar(ch))
+                    clean.Append(ch);
+                else if (i + 1 < text.Length && System.Xml.XmlConvert.IsXmlSurrogatePair(text[i + 1], ch))
+                    clean.Append(ch).Append(text[++i]);
+                // A vertical tab or form feed is a line or page break pasted from Word, so the words stay apart
+                else if (ch is '\v' or '\f')
+                    clean.Append(' ');
+            }
+            return clean.ToString();
         }
 
 
@@ -481,7 +504,7 @@ namespace InventoryManagement.Web.Services
             runProp.Append(new FontSize { Val = fontSize.ToString() });
 
             run.Append(runProp);
-            run.Append(new Text(text));
+            run.Append(new Text(XmlSafe(text)));
 
             return run;
         }

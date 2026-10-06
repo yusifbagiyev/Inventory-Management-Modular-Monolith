@@ -52,7 +52,7 @@ namespace InventoryManagement.Web.Controllers
 
             ViewBag.ActiveDepartments = stats.Active;
             ViewBag.InActiveDepartments = stats.Inactive;
-            ViewBag.DepartmentsInWithProducts = stats.Products;
+            ViewBag.DepartmentsInWithProducts = stats.WithProducts;
             ViewBag.CurrentSearch = search;
             ViewBag.PageNumber = pageNumber;
             ViewBag.PageSize = pageSize;
@@ -68,17 +68,10 @@ namespace InventoryManagement.Web.Controllers
             if (department == null)
                 return RedirectToNotFound();
 
-            var products = await GetDepartmentProducts(id);
-            var model = ModelMapper.Map<DepartmentViewModel>(department);
-            model.ProductCount = products.Count;
-            model.WorkerCount = products
-                .Where(p => !string.IsNullOrEmpty(p.Worker))
-                .Select(p => p.Worker)
-                .Distinct()
-                .Count();
-            ViewBag.Products = products;
+            // The product and worker counts come with the department, counted the same way as on the list
+            ViewBag.Products = await GetDepartmentProducts(id);
 
-            return View(model);
+            return View(ModelMapper.Map<DepartmentViewModel>(department));
         }
 
 
@@ -131,7 +124,8 @@ namespace InventoryManagement.Web.Controllers
                 Description = model.Description,
                 IsActive = model.IsActive
             };
-            var response = await RunAsync(() => _mediator.Send(new UpdateDepartment.Command(id, dto)), "Department updated successfully");
+            // The form posts every field, so an emptied one is meant to be cleared
+            var response = await RunAsync(() => _mediator.Send(new UpdateDepartment.Command(id, dto, ClearBlankFields: true)), "Department updated successfully");
             return HandleApiResponse(response, nameof(Index));
         }
 

@@ -10,6 +10,8 @@ namespace ProductService.Domain.Repositories
         /// <summary>Id and name only, ordered by name.</summary>
         Task<IReadOnlyList<LookupItem>> GetLookupAsync(CancellationToken cancellationToken = default);
         Task<(int Active, int Inactive)> CountByActivityAsync(CancellationToken cancellationToken = default);
+        /// <summary>How many departments have at least one product.</summary>
+        Task<int> CountWithProductsAsync(CancellationToken cancellationToken = default);
         Task<PagedResult<Department>> GetPagedAsync(int pageNumber, int pageSize, string? search, CancellationToken cancellationToken = default);
         Task<Department> AddAsync(Department category, CancellationToken cancellationToken = default);
         Task UpdateAsync(Department category, CancellationToken cancellationToken = default);
