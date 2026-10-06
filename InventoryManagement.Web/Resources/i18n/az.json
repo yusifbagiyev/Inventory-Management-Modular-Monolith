@@ -99,7 +99,6 @@
   "Failed to reset password": "Şifrəni sıfırlamaq mümkün olmadı",
   "Permission change failed": "İcazəni dəyişmək mümkün olmadı",
   "User not found": "İstifadəçi tapılmadı",
-  "My Approval Requests": "Təsdiq sorğularım",
   "Approved today": "Bu gün təsdiqlənib",
   "Rejected today": "Bu gün rədd edilib",
   "Date": "Tarix",
@@ -128,7 +127,6 @@
   "Failed to cancel request": "Sorğunu ləğv etmək mümkün olmadı",
   "Failed to load details. Please try again.": "Məlumatları yükləmək mümkün olmadı. Yenidən cəhd edin.",
   "Unknown error": "Naməlum xəta",
-  "View details for more information": "Ətraflı məlumat üçün təfərrüatlara baxın",
   "Create Product": "Məhsul yarat",
   "Product": "Məhsul",
   "Route": "Marşrut",
@@ -786,7 +784,7 @@
   "Approving this deletes the record below.": "Təsdiqlənərsə, aşağıdakı qeyd silinəcək.",
   "Back": "Geri",
   "Changed fields": "Dəyişdirilmiş sahələr",
-  "Confirm rejection": "İmtinanı təsdiqlə",
+  "Confirm rejection": "Rədd etməni təsdiqlə",
   "Current images": "Hazırkı şəkillər",
   "Decided by {0}": "Qərarı verən: {0}",
   "Decided requests are listed here, newest first.": "Baxılmış sorğular burada göstərilir; ən yeniləri yuxarıdadır.",
@@ -1170,5 +1168,7 @@
   "Delete user {0}? This action cannot be undone.": "{0} istifadəçisi silinsin? Bu əməliyyatı geri qaytarmaq mümkün deyil.",
   "Choose a password you do not use for other services.": "Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin.",
   "Transfer activity, categories and departments appear here once transfers are made in the period.": "Bu dövrdə transferlər olduqda transfer fəaliyyəti, kateqoriyalar və şöbələr burada göstəriləcək.",
-  "View all time": "Bütün dövrə bax"
+  "View all time": "Bütün dövrə bax",
+  "New product details": "Yeni məhsulun məlumatları",
+  "There are no further details for this request.": "Bu sorğu üçün əlavə məlumat yoxdur."
 }

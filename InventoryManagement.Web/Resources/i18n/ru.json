@@ -99,7 +99,6 @@
   "Failed to reset password": "Не удалось сбросить пароль",
   "Permission change failed": "Не удалось изменить права доступа",
   "User not found": "Пользователь не найден",
-  "My Approval Requests": "Мои запросы на согласование",
   "Approved today": "Одобрено сегодня",
   "Rejected today": "Отклонено сегодня",
   "Date": "Дата",
@@ -128,7 +127,6 @@
   "Failed to cancel request": "Не удалось отменить запрос",
   "Failed to load details. Please try again.": "Не удалось загрузить сведения. Повторите попытку.",
   "Unknown error": "Неизвестная ошибка",
-  "View details for more information": "Подробная информация приведена в сведениях",
   "Create Product": "Создать товар",
   "Product": "Товар",
   "Route": "Маршрут",
@@ -1170,5 +1168,7 @@
   "Delete user {0}? This action cannot be undone.": "Удалить пользователя {0}? Это действие нельзя отменить.",
   "Choose a password you do not use for other services.": "Выберите пароль, который вы не используете в других сервисах.",
   "Transfer activity, categories and departments appear here once transfers are made in the period.": "Когда за этот период будут перемещения, здесь появятся активность перемещений, категории и отделы.",
-  "View all time": "Показать за всё время"
+  "View all time": "Показать за всё время",
+  "New product details": "Данные нового товара",
+  "There are no further details for this request.": "Дополнительных сведений по этому запросу нет."
 }

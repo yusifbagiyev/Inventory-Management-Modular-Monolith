@@ -16,6 +16,10 @@ namespace InventoryManagement.Web.Models.ViewModels
         public JObject? ImageData { get; private init; }
         /// <summary>For deletions the dialog shows a warning instead of a diff.</summary>
         public bool IsDeletion { get; private init; }
+        /// <summary>A new record has no current values, so the dialog lists its fields instead of a diff.</summary>
+        public bool IsCreation { get; private init; }
+        /// <summary>A transfer's note, shown under the changes since it is not a field of the product.</summary>
+        public string? Note { get; private init; }
         /// <summary>A route update's new destination when the request stored only its id, for the dialog to name.</summary>
         public int? UnnamedDepartmentId { get; private set; }
 
@@ -67,7 +71,8 @@ namespace InventoryManagement.Web.Models.ViewModels
             {
                 Kind = "New product",
                 Subject = SubjectOf(Str(d, "model"), Str(d, "inventoryCode")),
-                ImageData = d
+                ImageData = d,
+                IsCreation = true
             };
             Add(view, "Inventory Code", null, Str(d, "inventoryCode"));
             Add(view, "Model", null, Str(d, "model"));
@@ -127,17 +132,16 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         private static ApprovalView Transfer(JObject d)
         {
+            var notes = Str(d, "notes");
             var view = new ApprovalView
             {
                 Kind = "Transfer",
                 Subject = SubjectOf(Str(d, "productModel"), Str(d, "inventoryCode")),
-                ImageData = d
+                ImageData = d,
+                Note = string.IsNullOrWhiteSpace(notes) || notes == "{}" ? null : notes
             };
             view.Changes.Add(new("Department", Str(d, "fromDepartmentName"), Str(d, "toDepartmentName")));
             view.Changes.Add(new("Worker", Str(d, "fromWorker"), Str(d, "toWorker")));
-            var notes = Str(d, "notes");
-            if (!string.IsNullOrWhiteSpace(notes) && notes != "{}")
-                view.Changes.Add(new("Notes", null, notes));
             if (HasImageChanges(d))
                 view.Changes.Add(new("Images", null, null));
             return view;
