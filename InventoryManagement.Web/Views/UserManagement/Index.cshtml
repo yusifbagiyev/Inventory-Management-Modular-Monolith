@@ -79,11 +79,11 @@
                 <thead>
                     <tr>
                         <th data-sort="user" data-filter="text">@L["User"]</th>
-                        <th data-sort="email" data-filter="text">@L["Email"]</th>
+                        <th class="hide-md" data-sort="email" data-filter="text">@L["Email"]</th>
                         <th data-sort="roles" data-filter="list">@L["Roles"]</th>
                         <th data-sort="status" data-filter="list">@L["Status"]</th>
-                        <th data-sort="created" data-sort-first="desc" data-filter="date">@L["Created"]</th>
-                        <th data-sort="lastLogin" data-sort-first="desc" data-filter="date">@L["Last Login"]</th>
+                        <th class="hide-lg" data-sort="created" data-sort-first="desc" data-filter="date">@L["Created"]</th>
+                        <th class="hide-md" data-sort="lastLogin" data-sort-first="desc" data-filter="date">@L["Last Login"]</th>
                         <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                     </tr>
                 </thead>
@@ -99,12 +99,12 @@
                                 <div class="d-flex align-items-center gap-3">
                                     <span class="ip-avatar pdf-omit" aria-hidden="true">@user.Username.Substring(0, 1).ToUpper()</span>
                                     <div class="cell-text">
-                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = user.Id })">@user.FullName</a>
-                                        <span class="cell-sub">@user.Username</span>
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = user.Id })" title="@user.FullName">@user.FullName</a>
+                                        <span class="cell-sub" title="@user.Username">@user.Username</span>
                                     </div>
                                 </div>
                             </td>
-                            <td class="meta">@user.Email</td>
+                            <td class="meta hide-md"><span class="ip-clip" title="@user.Email">@user.Email</span></td>
                             <td data-filter-value="@string.Join(", ", user.Roles.Select(r => L[r].Value))">
                                 @if (user.Roles.Any())
                                 {
@@ -125,8 +125,8 @@
                                     <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                 }
                             </td>
-                            <td class="hide-sm ip-num text-nowrap" data-order="@(user.CreatedAt == default(DateTime) ? "" : user.CreatedAt.ToString("yyyy-MM-dd HH:mm"))">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
-                            <td class="date ip-num text-nowrap" data-order="@(everLoggedIn ? user.LastLoginAt.GetValueOrDefault().ToString("yyyy-MM-dd HH:mm") : "")">
+                            <td class="hide-sm hide-lg ip-num text-nowrap" data-order="@(user.CreatedAt == default(DateTime) ? "" : user.CreatedAt.ToString("yyyy-MM-dd HH:mm"))">@(user.CreatedAt == default(DateTime) ? L["Unknown"].Value : user.CreatedAt.ToString("dd.MM.yyyy"))</td>
+                            <td class="date hide-md ip-num text-nowrap" data-order="@(everLoggedIn ? user.LastLoginAt.GetValueOrDefault().ToString("yyyy-MM-dd HH:mm") : "")">
                                 @if (everLoggedIn)
                                 {
                                     @(user.LastLoginAt.GetValueOrDefault().ToString("dd.MM.yyyy")) <div class="sub">@(user.LastLoginAt.GetValueOrDefault().ToString("HH:mm"))</div>
