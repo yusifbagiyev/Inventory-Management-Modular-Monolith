@@ -143,6 +143,10 @@
                         <span>@L["Approve"]</span><i class="fa-solid fa-check"></i>
                     </button>
                 </div>
+                @* Decided requests, view-only approvers and a failed load still get a way out *@
+                <div class="d-flex justify-content-end gap-2" id="viewButtons">
+                    <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Close"]</button>
+                </div>
                 <div class="d-flex justify-content-end gap-2 flex-wrap d-none" id="rejectButtons">
                     <button type="button" class="ip-btn ip-btn-secondary" id="rejectBackBtn">@L["Back"]</button>
                     <button type="button" class="ip-btn ip-btn-danger" id="confirmRejectBtn">
@@ -164,6 +168,7 @@
 
         function setMode(mode) {   // Mode is view, decide or reject
             // d-none rather than [hidden], which display:flex on these containers overrides
+            $('#viewButtons').toggleClass('d-none', mode !== 'view');
             $('#decisionButtons').toggleClass('d-none', mode !== 'decide');
             $('#rejectButtons').toggleClass('d-none', mode !== 'reject');
             $('#rejectBox').toggleClass('d-none', mode !== 'reject');

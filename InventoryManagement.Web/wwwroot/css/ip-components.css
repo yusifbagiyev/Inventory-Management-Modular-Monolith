@@ -1222,3 +1222,11 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
   .catalog-details .ip-page-head .breadcrumb { display: none; }
 }
 @media (max-width: 767.98px) { body:has(.catalog-details) .ip-appbar .title small { font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+/* Approvals: the confirming button of the reject step takes the room its label needs, and decided phone cards give the request date a line of its own */
+@media (max-width: 767.98px) {
+  #rejectButtons { flex-wrap: nowrap; }
+  #rejectButtons .ip-btn-secondary { flex: 0 1 auto; }
+  #rejectButtons .ip-btn-danger { flex: 1 1 auto; }
+  #myRequestsTable td.state > .sub { flex: 0 0 100%; }
+  #myRequestsTable td.state:has(> .sub) { padding-bottom: 22px; }
+}

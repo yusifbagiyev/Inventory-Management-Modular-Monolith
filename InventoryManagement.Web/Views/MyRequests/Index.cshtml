@@ -159,6 +159,10 @@
             </div>
             <div class="modal-body" data-dialog-body></div>
             <div class="modal-footer">
+                @* Phone cards have no row actions, so a pending request is cancelled from here *@
+                <button type="button" class="ip-btn ip-btn-danger-ghost d-none" id="modalCancelBtn">
+                    <i class="fa-solid fa-xmark"></i><span>@L["Cancel request"]</span>
+                </button>
                 <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Close"]</button>
             </div>
         </div>
@@ -211,9 +215,23 @@
             }
         });
 
+        const detailsModal = document.getElementById('detailsModal');
+
         function viewDetails(requestId) {
-            loadApprovalDetails(`/MyRequests/Details/${requestId}`, document.getElementById('detailsModal'));
+            $('#modalCancelBtn').addClass('d-none');
+            loadApprovalDetails(`/MyRequests/Details/${requestId}`, detailsModal).then(function (head) {
+                $('#modalCancelBtn').toggleClass('d-none', !(head && head.dataset.status === 'Pending'))
+                    .data('request-id', head ? head.dataset.requestId : null);
+            });
         }
+
+        $('#modalCancelBtn').on('click', function () {
+            const requestId = $(this).data('request-id');
+            if (!requestId) return;
+            // The confirmation opens once this dialog has gone, as two Bootstrap dialogs cannot overlap
+            detailsModal.addEventListener('hidden.bs.modal', () => cancelRequest(requestId), { once: true });
+            bootstrap.Modal.getOrCreateInstance(detailsModal).hide();
+        });
 
         // Products and notifications link here with ?open=id to open that request straight away
         $(function () {
