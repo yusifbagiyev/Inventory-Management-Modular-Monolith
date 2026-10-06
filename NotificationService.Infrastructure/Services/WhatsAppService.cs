@@ -144,7 +144,8 @@ namespace NotificationService.Infrastructure.Services
                 _logger.LogWarning("WhatsApp message {MessageId} was not deleted: {Error}", messageId, error);
                 return new WhatsAppDeleteResult(false, (int)response.StatusCode == 429, error);
             }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is (TaskCanceledException or HttpRequestException))
+            // Nothing to undo when a delete fails, so every error (no answer, no API address configured) is reported the same way
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 _logger.LogError(ex, "Deleting WhatsApp message {MessageId} failed", messageId);
                 return new WhatsAppDeleteResult(false, false, ex.Message);
