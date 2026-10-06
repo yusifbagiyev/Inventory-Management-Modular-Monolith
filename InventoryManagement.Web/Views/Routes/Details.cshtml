@@ -5,6 +5,7 @@
     var canComplete = User.HasPermission("route.complete");
     var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
     var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
+    var hasFootActions = !Model.IsCompleted && (canDelete || canUpdate || canComplete);
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
@@ -31,7 +32,8 @@
         </div>
     </div>
 
-    <div class="ip-page-actions mb-4">
+    @* Phones get the record actions in the fixed bar at the end of the page, and history and print under the details *@
+    <div class="ip-page-actions mb-4 d-none d-md-flex">
         @if (canDelete && !Model.IsCompleted)
         {
             <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)">
@@ -136,6 +138,14 @@
                     </div>
                 }
             </dl>
+            <div class="ip-page-actions mt-4 d-md-none">
+                <a asp-action="Timeline" asp-route-productId="@Model.ProductId" class="ip-btn ip-btn-secondary">
+                    <i class="fa-solid fa-clock-rotate-left"></i><span>@L["Full history"]</span>
+                </a>
+                <button type="button" class="ip-btn ip-btn-secondary" onclick="printRoute()">
+                    <i class="fa-solid fa-print"></i><span>@L["Print Details"]</span>
+                </button>
+            </div>
         </div>
         @if (Model.ImageUrls.Count > 0)
         {
@@ -144,6 +154,28 @@
             </div>
         }
     </div>
+
+    @if (hasFootActions)
+    {
+        <div class="ip-form-foot d-md-none">
+            @if (canDelete)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)" title="@L["Delete"]" aria-label="@L["Delete"]">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            }
+            @if (canUpdate)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary flex-fill"><i class="fa-solid fa-pen"></i><span>@L["Edit"]</span></a>
+            }
+            @if (canComplete)
+            {
+                <button type="button" class="ip-btn ip-btn-primary flex-fill" onclick="completeRoute(@Model.Id)">
+                    <span>@L["Complete"]</span><i class="fa-solid fa-check"></i>
+                </button>
+            }
+        </div>
+    }
 </div>
 
 @section Scripts {
@@ -195,6 +227,20 @@
         function printRoute() {
             window.print();
         }
+
+        // The sheet is printed with the light colours, also when the browser's own print command is used
+        window.addEventListener('beforeprint', function () {
+            const root = document.documentElement;
+            root.dataset.themeBeforePrint = root.getAttribute('data-bs-theme') || '';
+            root.setAttribute('data-bs-theme', 'light');
+        });
+        window.addEventListener('afterprint', function () {
+            const root = document.documentElement;
+            if (!('themeBeforePrint' in root.dataset)) return;
+            if (root.dataset.themeBeforePrint) root.setAttribute('data-bs-theme', root.dataset.themeBeforePrint);
+            else root.removeAttribute('data-bs-theme');
+            delete root.dataset.themeBeforePrint;
+        });
 
 
         // Other users' changes refresh the page in place, and a deletion shows a notice

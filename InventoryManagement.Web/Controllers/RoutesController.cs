@@ -161,6 +161,13 @@ namespace InventoryManagement.Web.Controllers
             if (route == null)
                 return RedirectToNotFound();
 
+            // A completed route cannot change, so its page is the details page
+            if (route.IsCompleted)
+            {
+                TempData["Error"] = "Completed routes cannot be edited";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
             ViewBag.Departments = await GetDepartmentOptions(route.ToDepartmentId);
             // The notes go into an input here, so only the placeholder words are translated
             return View(ModelMapper.Map<RouteViewModel>(route).LocalizePlaceholders());
