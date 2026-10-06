@@ -82,7 +82,14 @@
         </div>
 
         <div class="col-lg-7">
-            <h2 class="mb-3">@L["My Permissions"] <span class="ip-faint ip-num fw-normal ms-1">@Model.Permissions.Count</span></h2>
+            @* An Admin holds every permission, so a count of the rows held through the role would mislead *@
+            <h2 class="mb-3">
+                @L["My Permissions"]
+                @if (!User.IsInRole("Admin"))
+                {
+                    <span class="ip-faint ip-num fw-normal ms-1">@Model.Permissions.Count</span>
+                }
+            </h2>
 
             @if (User.IsInRole("Admin"))
             {
