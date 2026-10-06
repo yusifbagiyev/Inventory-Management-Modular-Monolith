@@ -2,10 +2,8 @@
 
 /* Declared on every [data-bs-theme] element because inherited values would keep the sidebar light */
 :root, [data-bs-theme] {
-    --ground: var(--ip-surface);
     --surface: var(--ip-surface);
     --surface-2: var(--ip-sunken);
-    --surface-3: var(--ip-surface-2);
     --ink: var(--ip-text-1);
     --ink-2: var(--ip-text-2);
     --ink-3: var(--ip-text-3);
@@ -13,90 +11,27 @@
     --line-2: var(--ip-border-strong);
     --accent: var(--ip-accent);
     --accent-2: var(--ip-accent-text);
-    --accent-ink: var(--ip-on-accent);
     --accent-weak: var(--ip-accent-soft);
-    --ok: var(--ip-success-text);
-    --ok-weak: var(--ip-success-soft);
-    --warn: var(--ip-warning-text);
-    --warn-weak: var(--ip-warning-soft);
-    --crit: var(--ip-danger-text);
-    --crit-weak: var(--ip-danger-soft);
-    /* The New tag is not a status, so it stays neutral */
-    --violet: var(--ip-neutral-text);
-    --violet-weak: var(--ip-neutral-soft);
-    --shadow: var(--ip-shadow-sm);
-    --r: var(--ip-radius-md);
     --font-mono: var(--ip-font-mono);
 }
 
-body {
-    font-family: var(--ip-font-sans);
-    background-color: var(--ground);
-    color: var(--ink);
-    font-size: var(--ip-fs-base);
-    line-height: var(--ip-lh-base);
-    -webkit-font-smoothing: antialiased;
-}
-
 /* Typography and page header */
-.ip-main > .container-fluid, .ip-main > .container { padding-left: 0 !important; padding-right: 0 !important; max-width: none; }
-h1, .h1 { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
-h2, .h2 { font-size: var(--ip-fs-md); line-height: var(--ip-lh-md); font-weight: 600; }
-h3, .h3 { font-size: 15px; font-weight: 600; }
-h4 { font-size: 15px; font-weight: 600; }
-h5, .h5 { font-size: 14px; font-weight: 600; }
-.ip-page-head h1 { margin: 0; }
+.ip-main > .container-fluid { padding-left: 0 !important; padding-right: 0 !important; max-width: none; }
+h1 { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
 .ip-page-head .ip-sub { font-size: var(--ip-fs-base); }
 .ip-page-actions { display: flex; gap: var(--ip-space-2); flex-wrap: wrap; align-items: center; }
 
 .breadcrumb { --bs-breadcrumb-divider: "›"; font-size: var(--ip-fs-sm); margin-bottom: var(--ip-space-2); }
-.breadcrumb a { color: var(--ip-accent-text); text-decoration: none; }
-.breadcrumb a:hover { color: var(--ip-accent-active); text-decoration: underline; }
 .breadcrumb-item.active { color: var(--ink-3); }
 .breadcrumb-item + .breadcrumb-item::before { color: var(--ink-3); }
 
 /* Bootstrap form labels and validation messages */
-.form-label, label.form-label { font-size: var(--ip-fs-base); font-weight: 500; color: var(--ink); margin-bottom: 6px; }
-.form-label .text-danger { color: var(--ip-danger-text) !important; }
-.field-validation-error, .text-danger.small, span.text-danger {
+.form-label { font-size: var(--ip-fs-base); font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+.field-validation-error, span.text-danger {
     font-size: var(--ip-fs-sm); color: var(--ip-danger-text) !important;
 }
 
 .field-validation-error::before { content: "\f06a"; font-family: "Font Awesome 7 Free", "Font Awesome 6 Free"; font-weight: 900; margin-right: 6px; }
-
-/* Tables, styled like .ip-table */
-.table {
-    --bs-table-bg: transparent;
-    --bs-table-hover-bg: var(--ip-surface-hover);
-    --bs-table-striped-bg: transparent;
-    font-size: var(--ip-fs-base);
-    color: var(--ink);
-    margin-bottom: 0;
-}
-.table > thead > tr > th {
-    font-size: var(--ip-fs-xs);
-    line-height: var(--ip-lh-xs);
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--ink-3);
-    font-weight: 500;
-    background: transparent;
-    border: 0;
-    padding: 12px 16px;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-.table > tbody > tr > td {
-    padding: 12px 16px;
-    border: 0;
-    border-top: 1px solid var(--line);
-    vertical-align: middle;
-    background: transparent;
-}
-.table > :not(caption) > * > * { box-shadow: none; }
-.table > thead > tr > th:first-child, .table > tbody > tr > td:first-child { padding-left: 0; }
-.table > thead > tr > th:last-child, .table > tbody > tr > td:last-child { padding-right: 0; }
-.table > tbody > tr:hover > td { background: var(--ip-surface-hover); }
 
 /* DataTables sortable headers */
 table.dataTable > thead > tr > th { color: var(--ink-3); }
@@ -114,7 +49,7 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 
 .text-danger { color: var(--ip-danger-text) !important; }
 
-.border, .border-top, .border-bottom { border-color: var(--line) !important; }
+.border-bottom { border-color: var(--line) !important; }
 
 /* Pagination, styled like .ip-pagination */
 .pagination { gap: 4px; margin: 0; }
@@ -128,21 +63,10 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 .page-item.active .page-link { background: var(--ink); color: var(--surface); font-weight: 600; }
 .page-item.disabled .page-link { background: transparent; opacity: .45; }
 
-/* Dropdowns, styled like .ip-dropdown */
-.dropdown-menu {
-    background: var(--surface); color: var(--ink); border: 1px solid var(--line);
-    border-radius: var(--ip-radius-lg); box-shadow: var(--ip-shadow-lg); padding: 4px 0;
-}
-.dropdown-item { color: var(--ink); padding: 8px 16px; }
-.dropdown-item:hover, .dropdown-item:focus { background: var(--ip-surface-hover); color: var(--ink); }
-.dropdown-item.active, .dropdown-item:active { background: var(--ip-surface-active); color: var(--ink); }
-
 /* Every Bootstrap modal gets the .ip-modal look */
-.modal-backdrop.show { background: var(--ip-backdrop); opacity: 1; }
 .modal-content { background: var(--surface); color: var(--ink); border: 0; border-radius: var(--ip-radius-xl); box-shadow: var(--ip-shadow-lg); }
 .modal-header { padding: 20px 24px 16px; border-bottom: var(--ip-rule-width) solid var(--ip-rule); background: transparent; align-items: flex-start; }
 .modal-title { font-size: 20px; line-height: 28px; font-weight: 600; }
-.modal-title i { color: var(--ink-3); }
 .modal-body { padding: 16px 24px; }
 .modal-footer { padding: 12px 24px 20px; border: 0; background: transparent; gap: 8px; }
 .modal-footer > * { margin: 0; }
@@ -169,20 +93,14 @@ hr { border-color: var(--line); opacity: 1; }
 .spinner-border { color: var(--ink-3); }
 
 /* The inline code editor floats above the narrow Code column instead of wrapping */
-.table td { position: relative; }
 .inventory-code-edit {
     position: absolute; top: 50%; left: 0; transform: translateY(-50%); z-index: 6;
     background: var(--surface); border: 1px solid var(--line); border-radius: var(--ip-radius-lg);
     padding: 4px; box-shadow: var(--ip-shadow-md);
 }
 
-/* Responsive */
-@media (max-width: 1400px) {
-    .table > thead > tr > th, .table > tbody > tr > td { padding-left: 12px; padding-right: 12px; }
-}
-
 @media (max-width: 640px) {
-    h1, .h1 { font-size: 24px; line-height: 30px; }
+    h1 { font-size: 24px; line-height: 30px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

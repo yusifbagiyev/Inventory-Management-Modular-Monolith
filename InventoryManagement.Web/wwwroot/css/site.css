@@ -5,26 +5,6 @@ body {
     text-rendering: optimizeLegibility;
 }
 
-/* Tables */
-.table {
-    margin-bottom: 0;
-}
-
-    .table thead th {
-        border-bottom: 2px solid var(--line-2);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.3px;
-    }
-
-/* Form Controls */
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--ip-focus-ring);
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
@@ -48,19 +28,6 @@ canvas {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
-
-#routesTable {
-    font-weight: normal;
-}
-
-    #routesTable tbody tr {
-        font-weight: normal;
-    }
-
-    #routesTable tbody td {
-        vertical-align: middle;
-        font-weight: 400;
-    }
 
 /* Short highlight on a region that live-updates.js just refreshed */
 @keyframes live-refreshed {
