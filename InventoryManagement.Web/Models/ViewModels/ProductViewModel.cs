@@ -23,20 +23,31 @@ namespace InventoryManagement.Web.Models.ViewModels
 
 
         [Display(Name = "Model")]
+        [StringLength(50)]
         public string? Model { get; set; }
 
 
         [Display(Name = "Vendor")]
+        [StringLength(30)]
         public string? Vendor { get; set; }
 
 
         [Display(Name = "Worker")]
+        [StringLength(100)]
         public string? Worker { get; set; }
 
 
 
+        private string? _description;
+
+        /// <summary>Holds a line break as one character, the way the browser counts it against the limit.</summary>
         [Display(Name = "Description")]
-        public string? Description { get; set; }
+        [StringLength(500)]
+        public string? Description
+        {
+            get => _description;
+            set => _description = value?.Replace("\r\n", "\n");
+        }
 
 
 

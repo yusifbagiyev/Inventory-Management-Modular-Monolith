@@ -30,6 +30,18 @@ namespace ProductService.Application.Features.Products.Commands
                 RuleFor(x => x.ProductDto.DepartmentId)
                     .GreaterThan(0).WithMessage("Valid department is required");
 
+                RuleFor(x => x.ProductDto.Model)
+                    .MaximumLength(ProductDetails.MaxModelLength).WithMessage($"Model cannot exceed {ProductDetails.MaxModelLength} characters");
+
+                RuleFor(x => x.ProductDto.Vendor)
+                    .MaximumLength(ProductDetails.MaxVendorLength).WithMessage($"Vendor cannot exceed {ProductDetails.MaxVendorLength} characters");
+
+                RuleFor(x => x.ProductDto.Worker)
+                    .MaximumLength(ProductDetails.MaxWorkerLength).WithMessage($"Worker cannot exceed {ProductDetails.MaxWorkerLength} characters");
+
+                RuleFor(x => x.ProductDto.Description)
+                    .MaximumLength(ProductDetails.MaxDescriptionLength).WithMessage($"Description cannot exceed {ProductDetails.MaxDescriptionLength} characters");
+
                 RuleFor(x => x.ProductDto.Color)
                     .MaximumLength(30).WithMessage("Color cannot exceed 30 characters");
 

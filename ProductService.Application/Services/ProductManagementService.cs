@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using ProductService.Application.DTOs;
@@ -24,6 +25,8 @@ namespace ProductService.Application.Services
         private readonly IApprovalRequests _approvalRequests;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IDepartmentRepository _departmentRepository;
+        private readonly IValidator<CreateProduct.Command> _createValidator;
+        private readonly IValidator<UpdateProduct.Command> _updateValidator;
         private readonly ILogger<ProductManagementService> _logger;
 
         public ProductManagementService(
@@ -31,12 +34,16 @@ namespace ProductService.Application.Services
             IApprovalRequests approvalRequests,
             ICategoryRepository categoryRepository,
             IDepartmentRepository departmentRepository,
+            IValidator<CreateProduct.Command> createValidator,
+            IValidator<UpdateProduct.Command> updateValidator,
             ILogger<ProductManagementService> logger)
         {
             _mediator = mediator;
             _approvalRequests = approvalRequests;
             _categoryRepository = categoryRepository;
             _departmentRepository = departmentRepository;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
             _logger = logger;
         }
 
@@ -58,6 +65,9 @@ namespace ProductService.Application.Services
             {
                 throw new InsufficientPermissionsException("You don't have permission to create products");
             }
+
+            // A request is checked like the command it will run, so a wrong value is refused now and not at approval
+            await _createValidator.ValidateAndThrowAsync(new CreateProduct.Command(dto));
 
             var actionData = await BuildCreateProductActionData(dto);
             var approvalRequest = new CreateApprovalRequestDto
@@ -108,6 +118,8 @@ namespace ProductService.Application.Services
             {
                 throw new InsufficientPermissionsException("You don't have permission to update products");
             }
+
+            await _updateValidator.ValidateAndThrowAsync(new UpdateProduct.Command(id, dto, changeComparison));
 
             var updateData = await BuildUpdateProductActionData(dto, existingProduct);
             var approvalRequest = new CreateApprovalRequestDto
@@ -322,7 +334,7 @@ namespace ProductService.Application.Services
             if (TextDiffers(existingProduct.Worker, updatedProduct.Worker))
                 changes.Add($"Worker: {existingProduct.Worker ?? "None"} → {updatedProduct.Worker ?? "None"}");
             if (TextDiffers(existingProduct.Description, updatedProduct.Description))
-                changes.Add($"Description: {existingProduct.Description} → {updatedProduct.Description}");
+                changes.Add($"{ProductDetails.DescriptionChange}{existingProduct.Description} → {updatedProduct.Description}");
             if (existingProduct.IsNewItem != updatedProduct.IsNewItem)
                 changes.Add(updatedProduct.IsNewItem == true ? "Product is new now" : "Product's status changed to old");
             if (existingProduct.IsActive != updatedProduct.IsActive)
@@ -349,7 +361,10 @@ namespace ProductService.Application.Services
 
         /// <summary>Treats null and empty as equal, since form posts send an empty string for a null value.</summary>
         private static bool TextDiffers(string? current, string? updated)
-            => !string.Equals((current ?? "").Trim(), (updated ?? "").Trim(), StringComparison.Ordinal);
+            => !string.Equals(Comparable(current), Comparable(updated), StringComparison.Ordinal);
+
+        // The web form keeps a line break as one character, while text saved before that holds two
+        private static string Comparable(string? text) => (text ?? "").Trim().Replace("\r\n", "\n");
 
         public async Task<string?> GetCategoryNameAsync(int categoryId)
         {

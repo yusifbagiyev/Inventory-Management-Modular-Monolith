@@ -70,19 +70,32 @@ window.ImageManager = (function () {
 
     function addFiles(state, picked) {
         const errors = [];
+        let overLimit = 0;
         picked.forEach(function (file) {
             if (!ALLOWED.test(file.name)) {
                 errors.push(t('{0}: only JPG and PNG images are allowed', file.name));
             } else if (file.size > MAX_BYTES) {
                 errors.push(t('{0}: larger than 5 MB', file.name));
             } else if (total(state) >= state.max) {
-                errors.push(t('At most {0} images', state.max));
+                overLimit++;
             } else {
                 state.files.push({ file: file, url: URL.createObjectURL(file) });
             }
         });
-        state.error.textContent = Array.from(new Set(errors)).join(' ');
+        if (overLimit > 0) {
+            errors.push(t('An item can have at most {0} images. Files not added: {1}', state.max, overLimit));
+        }
+        showErrors(state, errors);
         render(state);
+    }
+
+    // One line per refused file, written as text because file names come from the user
+    function showErrors(state, messages) {
+        state.error.replaceChildren(...Array.from(new Set(messages)).map(function (message) {
+            const line = document.createElement('div');
+            line.textContent = message;
+            return line;
+        }));
     }
 
     function removeTile(state, tile) {

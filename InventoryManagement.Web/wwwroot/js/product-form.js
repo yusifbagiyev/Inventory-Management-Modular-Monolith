@@ -9,7 +9,11 @@ window.ProductForm = (function () {
         document.querySelectorAll('[data-char-count-for]').forEach(function (counter) {
             const field = document.getElementById(counter.dataset.charCountFor);
             if (!field) return;
-            const update = () => { counter.textContent = t('{0} characters', field.value.length); };
+            // A field with a limit shows how much of it is used, since typing simply stops there
+            const max = field.maxLength > 0 ? field.maxLength : 0;
+            const update = () => {
+                counter.textContent = max ? `${field.value.length} / ${max}` : t('{0} characters', field.value.length);
+            };
             field.addEventListener('input', update);
             update();
         });
