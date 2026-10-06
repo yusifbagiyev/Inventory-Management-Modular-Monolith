@@ -840,11 +840,33 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // The bar's filters that hold a value (not its sort), plus the column header filters the bar has no control for
     function activeFilters(bar) {
         let n = 0;
-        bar.querySelectorAll('.ip-filter:not(.search) select').forEach(function (s) { if (s.value) n++; });
-        bar.querySelectorAll('.ip-filter:not(.search) input:not([type=hidden])').forEach(function (i) { if (i.value) n++; });
-        return n + bar.querySelectorAll('.ip-btn.is-on').length;
+        const params = new Set();
+        bar.querySelectorAll('.ip-filter:not(.search):not([data-sort-control])').forEach(function (filter) {
+            const control = filter.querySelector('select, input:not([type=hidden])');
+            if (!control || !control.value) return;
+            n++;
+            if (control.dataset.param) params.add(control.dataset.param);
+        });
+        n += bar.querySelectorAll('.ip-btn.is-on').length;
+        if (window.TableColumns) {
+            n += TableColumns.filters(document.querySelector('[data-list-region]') || document)
+                .filter(function (f) { return !f.params.some(function (p) { return params.has(p); }); }).length;
+        }
+        return n;
+    }
+
+    function updateFilterCount(bar) {
+        const count = bar.querySelector(':scope > .ip-filter-toggle .count');
+        if (!count) return;
+        const n = activeFilters(bar);
+        count.textContent = n ? String(n) : '';
+    }
+
+    function updateFilterCounts() {
+        document.querySelectorAll('.ip-filterbar.has-toggle').forEach(updateFilterCount);
     }
 
     function addFilterToggle(bar) {
@@ -854,9 +876,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'ip-btn ip-btn-secondary ip-filter-toggle';
-        const n = activeFilters(bar);
-        button.innerHTML = '<i class="fa-solid fa-sliders"></i><span>' + escapeHtml(t('Filters')) + '</span>'
-            + (n ? '<span class="count">' + n + '</span>' : '');
+        button.innerHTML = '<i class="fa-solid fa-sliders"></i><span>' + escapeHtml(t('Filter')) + '</span><span class="count"></span>';
         button.setAttribute('aria-expanded', 'false');
         button.addEventListener('click', function () {
             const open = bar.classList.toggle('open');
@@ -865,6 +885,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const search = bar.querySelector(':scope > .search');
         if (search) search.after(button); else bar.prepend(button);
         bar.classList.add('has-toggle');
+        updateFilterCount(bar);
+        bar.addEventListener('change', function () { updateFilterCount(bar); });
     }
 
     function apply(root) {
@@ -881,6 +903,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function touchesLists(node) {
         return node.nodeType === 1 && (node.matches('table, tbody, tr, .ip-filterbar') || !!node.querySelector('table, .ip-filterbar'));
     }
+
+    // Lists that reload in place and column header filters change what is filtered without touching the bar
+    document.addEventListener('listnav:loaded', updateFilterCounts);
+    document.addEventListener('tablecolumns:change', updateFilterCounts);
 
     document.addEventListener('DOMContentLoaded', function () {
         apply(document);

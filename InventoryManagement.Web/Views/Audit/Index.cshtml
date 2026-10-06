@@ -194,7 +194,7 @@
         </label>
         <label class="ip-filter">
             <span>@L["User"]</span>
-            <select id="userFilter">
+            <select id="userFilter" data-param="userId">
                 <option value="">@L["All"]</option>
                 @foreach (var user in facets.Users.Where(u => u.UserId.HasValue))
                 {
@@ -204,7 +204,7 @@
         </label>
         <label class="ip-filter">
             <span>@L["Record"]</span>
-            <select id="typeFilter">
+            <select id="typeFilter" data-param="entityType">
                 <option value="">@L["All"]</option>
                 @foreach (var type in facets.EntityTypes)
                 {
@@ -214,7 +214,7 @@
         </label>
         <label class="ip-filter">
             <span>@L["Operation"]</span>
-            <select id="operationFilter">
+            <select id="operationFilter" data-param="operation">
                 <option value="">@L["All"]</option>
                 @foreach (var op in new[] { "Created", "Updated", "Deleted", "SignedIn", "SignInFailed", "SignedOut" })
                 {
@@ -224,7 +224,7 @@
         </label>
         <label class="ip-filter">
             <i class="fa-regular fa-calendar"></i>
-            <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" aria-label="@L["Date"]" />
+            <input type="text" id="dateRange" class="date-range-input" data-param="startDate" placeholder="@L["Any date"]" size="12" aria-label="@L["Date"]" />
         </label>
         @if (hasFilters)
         {
