@@ -293,6 +293,21 @@ namespace InventoryManagement.Web.Models.ViewModels
                                  || Get(d, "imageData") is JValue);
 
         /// <summary>Counts of added and removed images for the Images row.</summary>
+        /// <summary>The photos uploaded with the request in stored order, which the dialog's thumbnails address by index.</summary>
+        public List<JObject> NewImages()
+        {
+            var list = new List<JObject>();
+            if (ImageData is null) return list;
+            foreach (var key in new[] { "images", "replaceImages" })
+            {
+                if (Get(ImageData, key) is JArray array)
+                    list.AddRange(array.OfType<JObject>());
+            }
+            // Older requests stored a single image on the data itself
+            if (Get(ImageData, "imageData") is JValue) list.Add(ImageData);
+            return list;
+        }
+
         public (int Added, int Removed) ImageCounts()
         {
             if (ImageData is null) return (0, 0);

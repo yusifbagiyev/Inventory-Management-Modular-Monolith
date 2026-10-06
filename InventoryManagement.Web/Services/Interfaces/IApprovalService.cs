@@ -6,6 +6,8 @@ namespace InventoryManagement.Web.Services.Interfaces
     {
         Task<List<ApprovalRequestDto>> GetPendingRequestsAsync();
         Task<ApprovalRequestDto?> GetRequestDetailsAsync(int id);
+        /// <summary>A photo uploaded with a request the user may see, null when missing or no longer stored.</summary>
+        Task<(byte[] Data, string ContentType)?> GetRequestImageAsync(int id, int index);
         /// <returns>True when the approved action executed.</returns>
         Task<bool> ApproveRequestAsync(int id);
         Task RejectRequestAsync(int id, string reason);

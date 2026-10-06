@@ -26,21 +26,13 @@
             : null;
     }
 
-    var newImageNames = new List<string>();
-    if (images != null)
-    {
-        foreach (var key in new[] { "images", "replaceImages" })
-        {
-            if (images.GetValue(key, StringComparison.OrdinalIgnoreCase) is Newtonsoft.Json.Linq.JArray list)
-                newImageNames.AddRange(list.Select(i => i.Value<string>("imageFileName") ?? L["Image"].Value));
-        }
-    }
+    var newImageNames = view.NewImages().Select(i => i.Value<string>("imageFileName") ?? L["Image"].Value).ToList();
     var removedUrls = (images?.GetValue("removeImageUrls", StringComparison.OrdinalIgnoreCase) as Newtonsoft.Json.Linq.JArray)?
         .Select(u => u.ToString()).Where(u => u.StartsWith("/images/")).ToList() ?? new List<string>();
     var cover = images?.GetValue("coverImageUrl", StringComparison.OrdinalIgnoreCase)?.ToString();
     // A cover of new:N points at the Nth uploaded image instead of a stored URL
-    string? newCoverName = cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < newImageNames.Count
-        ? newImageNames[coverIndex] : null;
+    int? newCoverIndex = cover != null && cover.StartsWith("new:") && int.TryParse(cover[4..], out var coverIndex) && coverIndex < newImageNames.Count
+        ? coverIndex : null;
 }
 
 @{
@@ -181,11 +173,35 @@ else
     <div class="ip-section mt-3">
         @if (newImageNames.Count > 0)
         {
-            <div class="mb-2"><span class="ip-faint">@L["New images"]:</span> @string.Join(", ", newImageNames)</div>
-        }
-        @if (newCoverName != null)
-        {
-            <div class="mb-2"><i class="fa-solid fa-star" style="color: var(--ip-brand)"></i> <span class="ip-faint">@L["New cover image"]:</span> @newCoverName</div>
+            @* A decided request no longer holds the uploads, so only a pending one shows the pictures *@
+            <div class="ip-faint mb-1">@L["New images"]:</div>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+                @for (var i = 0; i < newImageNames.Count; i++)
+                {
+                    var name = newImageNames[i];
+                    var label = i == newCoverIndex ? $"{name} ({L["New cover image"].Value})" : name;
+                    if (pending)
+                    {
+                        <a class="ip-thumb request-photo" href="@Url.Action("RequestImage", "Approvals", new { id = Model.Id, index = i })" target="_blank" rel="noopener" title="@label" data-no-prefetch>
+                            <img src="@Url.Action("RequestImage", "Approvals", new { id = Model.Id, index = i })" alt="@label" loading="lazy" />
+                            @if (i == newCoverIndex)
+                            {
+                                <i class="fa-solid fa-star cover" aria-hidden="true"></i>
+                            }
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="ip-thumb request-photo" title="@label" role="img" aria-label="@label">
+                            <i class="fa-regular fa-image" aria-hidden="true"></i>
+                            @if (i == newCoverIndex)
+                            {
+                                <i class="fa-solid fa-star cover" aria-hidden="true"></i>
+                            }
+                        </span>
+                    }
+                }
+            </div>
         }
         @if (cover != null && cover.StartsWith("/images/"))
         {

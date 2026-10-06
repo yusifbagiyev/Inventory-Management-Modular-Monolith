@@ -1248,3 +1248,7 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
 :is(#approvalsTable, #myRequestsTable) .request-link { color: inherit; text-decoration: none; }
 :is(#approvalsTable, #myRequestsTable) .request-link:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; border-radius: var(--ip-radius-sm); }
 @media (max-width: 767.98px) { :is(#approvalsTable, #myRequestsTable) .request-link { display: block; padding-block: 7px; margin-block: -7px; } }
+/* Approvals: photos uploaded with a request, the new cover marked with the star */
+.request-photo { position: relative; width: 64px; height: 64px; }
+.request-photo .cover { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--ip-surface); font-size: 11px; color: var(--ip-brand); }
+a.request-photo:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: 2px; }

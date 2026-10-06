@@ -47,6 +47,15 @@ namespace InventoryManagement.Web.Controllers
             return request == null ? RedirectToNotFound() : PartialView("_ApprovalDetails", request);
         }
 
+        /// <summary>A photo uploaded with a pending request, shown as a thumbnail in the request dialog.</summary>
+        // Requesters see their own requests' photos too, so the service applies the same rule as Details instead of a permission
+        [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Client)]
+        public async Task<IActionResult> RequestImage(int id, int index)
+        {
+            var image = await _approvalService.GetRequestImageAsync(id, index);
+            return image is { } found ? File(found.Data, found.ContentType) : NotFound();
+        }
+
         /// <summary>Approves and executes the request, reporting a failed execution rather than throwing.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
