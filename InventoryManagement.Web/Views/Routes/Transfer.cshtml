@@ -80,17 +80,25 @@
                 </div>
             </section>
 
+            @* Phones hide the footer note, so the approval notice is repeated above the fixed bar *@
+            @if (!direct)
+            {
+                <p class="ip-hint d-md-none mt-3 mb-0"><i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]</p>
+            }
+
             <div class="ip-form-foot">
-                <span class="note ip-transfer-summary" id="transferSummary"></span>
+                <span class="note">
+                    <span class="ip-transfer-summary d-block" id="transferSummary"></span>
+                    @if (!direct)
+                    {
+                        <span class="d-block mt-1"><i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]</span>
+                    }
+                </span>
                 <a asp-action="Index" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
                 <button type="submit" class="ip-btn ip-btn-primary" id="submitBtn">
                     <span>@L["Start transfer"]</span>
                 </button>
             </div>
-            @if (!direct)
-            {
-                <p class="ip-hint mt-2"><i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]</p>
-            }
         </div>
     </form>
 </div>

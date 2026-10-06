@@ -38,21 +38,27 @@ if (window.DataTable && window.DataTable.defaults) {
     });
 }
 
-/** In-page confirm dialog that falls back to window.confirm on pages without the shared modal. */
+/** In-page confirm dialog that falls back to window.confirm on pages without the shared modal; `detail` names the record above the message. */
 function confirmAction(options, onConfirm) {
     const opts = typeof options === 'string' ? { message: options } : (options || {});
     const modalEl = document.getElementById('globalConfirmModal');
 
     if (!modalEl || typeof bootstrap === 'undefined') {
-        if (window.confirm(opts.message || t('Are you sure?'))) onConfirm?.();
+        const text = opts.message || t('Are you sure?');
+        if (window.confirm(opts.detail ? opts.detail + '\n\n' + text : text)) onConfirm?.();
         return;
     }
 
     const titleEl = document.getElementById('globalConfirmTitle');
+    const detailEl = document.getElementById('globalConfirmDetail');
     const msgEl = document.getElementById('globalConfirmMessage');
     const okBtn = document.getElementById('globalConfirmOk');
 
     titleEl.textContent = opts.title || t('Please confirm');
+    if (detailEl) {
+        detailEl.textContent = opts.detail || '';
+        detailEl.hidden = !opts.detail;
+    }
     msgEl.textContent = opts.message || t('Are you sure?');
     okBtn.textContent = opts.okText || t('Confirm');
     okBtn.className = 'ip-btn ' + (opts.danger ? 'ip-btn-danger' : 'ip-btn-primary');

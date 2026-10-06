@@ -35,6 +35,12 @@ namespace InventoryManagement.Web.Models.ViewModels
         public DateTime? WhatsAppAt { get; set; }
         public long? WhatsAppMessageId { get; set; }
 
+        /// <summary>Names the route in confirm dialogs: product, code, departments and the new worker.</summary>
+        public string Summary =>
+            (string.IsNullOrWhiteSpace(Model) ? InventoryCode.ToString() : $"{Model} ({InventoryCode})") + ": "
+            + (string.IsNullOrWhiteSpace(FromDepartmentName) ? "" : FromDepartmentName + " ") + "→ " + ToDepartmentName
+            + (string.IsNullOrWhiteSpace(ToWorker) ? "" : " · " + ToWorker);
+
         /// <summary>A sent message whose id is known and that is still young enough to be deleted for everyone in the group.</summary>
         public bool CanDeleteWhatsApp(TimeSpan window)
             => WhatsAppStatus == "Sent" && WhatsAppMessageId != null && WhatsAppAt is DateTime sentAt && DateTime.Now - sentAt < window;
@@ -71,7 +77,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         [Display(Name = "To Department")]
         public int ToDepartmentId { get; set; }
 
-        [Display(Name = "To Worker")]
+        [Display(Name = "New worker")]
         [MaxLength(100)]
         public string? ToWorker { get; set; }
 

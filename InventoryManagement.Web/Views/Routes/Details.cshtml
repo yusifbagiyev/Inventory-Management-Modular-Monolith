@@ -10,7 +10,7 @@
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
-<div class="container-fluid px-4" id="detailsRegion">
+<div class="container-fluid px-4" id="detailsRegion" data-summary="@Model.Summary">
     <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
@@ -191,10 +191,14 @@
 
 @section Scripts {
     <script>
+        // Read when asked, because live updates replace the region
+        const routeSummary = () => document.getElementById('detailsRegion').dataset.summary;
+
         function completeRoute(id) {
             confirmAction({
                 title: t('Complete route'),
-                message: t('Mark this route as completed?'),
+                detail: routeSummary(),
+                message: t('The product moves to the destination above and the route can no longer be changed. Complete it?'),
                 okText: t('Complete')
             }, function () {
                 const form = document.createElement('form');
@@ -216,6 +220,7 @@
         function deleteRoute(id) {
             confirmAction({
                 title: t('Delete route'),
+                detail: routeSummary(),
                 message: t('Delete this route? This cannot be undone.'),
                 okText: t('Delete'),
                 danger: true

@@ -1316,3 +1316,7 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 .ip-notif-item:not(.unread) button.unread-dot { visibility: hidden; }
 .ip-notif-item:not(.unread) .ip-notif-unread { display: none; }
 @media (pointer: coarse), (max-width: 767.98px) { .ip-notif-link { display: inline-flex; align-items: center; min-height: 44px; margin-top: 0; } }
+/* Confirm dialog: the record it acts on above the question, and the OK button as compact as Cancel whether primary or danger */
+.ip-confirm-detail { margin: 0 0 var(--ip-space-2); font-weight: 600; color: var(--ip-text-1); overflow-wrap: anywhere; }
+#globalConfirmModal .modal-footer .ip-btn { min-width: 0; justify-content: center; }
+@media (max-width: 767.98px) { #globalConfirmModal .modal-footer .ip-btn { flex: 1 1 0; } }

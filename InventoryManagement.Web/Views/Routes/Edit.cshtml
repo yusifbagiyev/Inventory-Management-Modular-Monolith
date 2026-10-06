@@ -72,8 +72,9 @@
             </dl>
         </section>
 
+        @* Same fields, names and order as the transfer form that created the route *@
         <section class="ip-form-section">
-            <h2>@L["Destination"]</h2>
+            <h2>@L["Where to"]</h2>
             <div class="ip-form-grid">
                 <div class="ip-field">
                     <label class="ip-label" for="ToDepartmentId"><span>@L["To Department"]</span> <span class="req">*</span></label>
@@ -99,23 +100,28 @@
                     }
                 </div>
                 <div class="ip-field">
-                    <label class="ip-label" for="ToWorker">@L["To Worker"]</label>
+                    <label class="ip-label" for="ToWorker">@L["New worker"]</label>
                     <input type="text" name="ToWorker" id="ToWorker" class="ip-input" value="@Model.ToWorker"
-                           maxlength="100" placeholder="@L["Not assigned"]" />
+                           maxlength="100" placeholder="@L["Enter worker name (optional)"]" />
                 </div>
+            </div>
+
+            <div class="ip-field mt-4">
+                <label class="ip-label" for="Notes">@L["Notes"]</label>
+                <textarea name="Notes" id="Notes" class="ip-textarea" rows="3" maxlength="500"
+                          placeholder="@L["Reason for the transfer, condition of the device"]">@Model.Notes</textarea>
+            </div>
+
+            <div class="mt-4">
+                <partial name="_ImageManager" model='new ImageManagerModel { Existing = Model.ImageUrls, Label = "Handover photos (optional)", Hint = "When the transfer is completed they become the product images; the starred one becomes the cover." }' />
             </div>
         </section>
 
-        <section class="ip-form-section">
-            <h2 class="mb-2">@L["Images"]</h2>
-            <partial name="_ImageManager" model='new ImageManagerModel { Existing = Model.ImageUrls, Hint = "When the transfer is completed these become the product images, and the cover (★) becomes its main image." }' />
-        </section>
-
-        <section class="ip-form-section">
-            <h2>@L["Notes"]</h2>
-            <textarea name="Notes" id="Notes" class="ip-textarea" rows="3" maxlength="500" aria-label="@L["Notes"]"
-                      placeholder="@L["Add any notes..."]">@Model.Notes</textarea>
-        </section>
+        @* Phones hide the footer note, so the approval notice is repeated above the fixed bar *@
+        @if (!direct)
+        {
+            <p class="ip-hint d-md-none mt-3 mb-0"><i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]</p>
+        }
 
         <div class="ip-form-foot">
             <span class="note">
@@ -126,7 +132,7 @@
             </span>
             @if (canDelete && !Model.IsCompleted)
             {
-                <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="confirmDelete(@Model.Id)">
+                <button type="button" class="ip-btn ip-btn-danger-ghost" data-summary="@Model.Summary" onclick="confirmDelete(this.dataset.summary)">
                     <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
                 </button>
             }
@@ -138,27 +144,6 @@
     </form>
 </div>
 
-<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalTitle">@L["Delete route"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-2">@L["Are you sure you want to delete this route?"]</p>
-                <p class="ip-muted mb-0">@L["The product will be reverted to its previous location and worker assignment."]</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <button type="button" class="ip-btn ip-btn-danger" onclick="deleteRoute()">
-                    <span>@L["Delete Route"]</span><i class="fa-solid fa-trash-can"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @section Scripts {
     <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
@@ -167,7 +152,7 @@
 
             // Shared by save and delete so only one request runs at a time
             let isSubmitting = false;
-            let routeId = @Model.Id;
+            const routeId = @Model.Id;
 
             $(document).ready(function() {
                 initializeEditForm();
@@ -225,33 +210,36 @@
             }
 
             function initializeDeleteHandlers() {
-                window.confirmDelete = function(id) {
-                    window.currentDeleteRouteId = id;
-                    $('#deleteModal').modal('show');
+                // The same question as on the route's page and in the list
+                window.confirmDelete = function(routeSummary) {
+                    confirmAction({
+                        title: t('Delete route'),
+                        detail: routeSummary,
+                        message: t('Delete this route? This cannot be undone.'),
+                        okText: t('Delete'),
+                        danger: true
+                    }, deleteRoute);
                 };
 
-                window.deleteRoute = function() {
+                function deleteRoute() {
                     if (isSubmitting) {
                         return;
                     }
 
                     isSubmitting = true;
-                    $('#deleteModal').modal('hide');
-
-                    const deleteRouteId = window.currentDeleteRouteId || routeId;
 
                     $.ajax({
                         url: '/Routes/Delete',
                         type: 'POST',
                         data: {
-                            id: deleteRouteId,
+                            id: routeId,
                             __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                         },
                         success: function(response) {
                             // Without route.delete.direct the deletion waits for approval
                             showToast(response && response.isApprovalRequest
                                 ? (response.message || t('Delete request submitted for approval'))
-                                : t('Route deleted successfully. Product has been reverted to previous state.'),
+                                : (response && response.message) || t('Route deleted successfully'),
                                 response && response.isApprovalRequest ? 'info' : 'success');
                             setTimeout(() => {
                                 window.location.href = '/Routes';
@@ -275,11 +263,7 @@
                             showToast(errorMsg, 'error');
                         }
                     });
-                };
-
-                $('#deleteModal').on('hidden.bs.modal', function() {
-                    window.currentDeleteRouteId = null;
-                });
+                }
             }
         })();
 

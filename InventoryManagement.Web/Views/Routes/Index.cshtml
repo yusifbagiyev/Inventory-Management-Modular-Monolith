@@ -280,17 +280,19 @@
                                 <div class="actions align-items-center">
                                     @if (canComplete && !route.IsCompleted)
                                     {
-                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" onclick="completeRoute(@route.Id)">@L["Complete"]</button>
+                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" data-summary="@route.Summary" onclick="completeRoute(@route.Id, this.dataset.summary)"
+                                                aria-label="@L["Complete"] @route.InventoryCode">@L["Complete"]</button>
                                     }
                                     @if (canUpdate && !route.IsCompleted)
                                     {
-                                        <a asp-action="Edit" asp-route-id="@route.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
+                                        <a asp-action="Edit" asp-route-id="@route.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"] @route.InventoryCode">
                                             <i class="fa-solid fa-pen"></i>
                                         </a>
                                     }
                                     @if (canDelete && !route.IsCompleted)
                                     {
-                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" onclick="deleteRoute(@route.Id)" title="@L["Delete"]" aria-label="@L["Delete"]">
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-summary="@route.Summary" onclick="deleteRoute(@route.Id, this.dataset.summary)"
+                                                title="@L["Delete"]" aria-label="@L["Delete"] @route.InventoryCode">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     }
@@ -378,10 +380,12 @@
         function onCategoryChange() { routeFilters.onCategoryChange(); }
         function resetFilters() { routeFilters.reset(); }
 
-        function completeRoute(id) {
+        // The dialog covers the rows, so it names the route it acts on
+        function completeRoute(id, summary) {
             confirmAction({
                 title: t('Complete route'),
-                message: t('Mark this route as completed?'),
+                detail: summary,
+                message: t('The product moves to the destination above and the route can no longer be changed. Complete it?'),
                 okText: t('Complete')
             }, function () {
                 $.ajax({
@@ -401,9 +405,10 @@
                 });
             });
         }
-        function deleteRoute(id) {
+        function deleteRoute(id, summary) {
             confirmAction({
                 title: t('Delete route'),
+                detail: summary,
                 message: t('Delete this route? This cannot be undone.'),
                 okText: t('Delete'),
                 danger: true
