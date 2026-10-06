@@ -2,10 +2,14 @@
 @{
     var canProducts = User.HasPermission("product.view");
     ViewData["Title"] = "Department Details";
+    ViewData["Subtitle"] = Model.Name;   // Shown under the title in the phone app bar
+    var canUpdate = User.HasPermission("department.update");
+    var canDelete = User.HasPermission("department.delete");
+    var canExport = User.HasPermission("department.export");
     var products = ViewBag.Products as List<ProductViewModel> ?? new List<ProductViewModel>();
 }
 
-<div class="container-fluid px-4" id="detailsRegion">
+<div class="container-fluid px-4 catalog-details" id="detailsRegion">
     <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
@@ -27,28 +31,40 @@
         </div>
     </div>
 
-    <div class="ip-page-actions mb-4">
-        @if (User.HasPermission("department.export"))
-        {
-            <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
-                <i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span>
-            </a>
-        }
-        @if (User.HasPermission("department.update"))
-        {
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary">
-                <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
-            </a>
-        }
-    </div>
+    @* Phones get these actions in the fixed bar at the end of the page *@
+    @if (canDelete || canExport || canUpdate)
+    {
+        <div class="ip-page-actions mb-4 d-none d-md-flex">
+            @if (canDelete)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" data-catalog-delete="department" data-name="@Model.Name" data-products="@Model.ProductCount"
+                        data-url="@Url.Action("Delete", new { id = Model.Id })" data-edit-url="@(canUpdate ? Url.Action("Edit", new { id = Model.Id }) : null)">
+                    <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
+                </button>
+            }
+            @if (canExport)
+            {
+                <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
+                    <i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span>
+                </a>
+            }
+            @if (canUpdate)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary">
+                    <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
+                </a>
+            }
+        </div>
+    }
 
     <hr class="ip-rule" />
 
-    <div class="row pt-2 mb-5">
-        <div class="col-lg-8 col-xl-7">
+    @* The counts and the status are in the head, so the facts list only what it lacks *@
+    <div class="row pt-2 mb-4">
+        <div class="col-md-6">
             <dl class="ip-dl">
                 <div>
-                    <dt>@L["Department head"]</dt>
+                    <dt>@L["Department Head"]</dt>
                     @if (!string.IsNullOrEmpty(Model.DepartmentHead))
                     {
                         <dd>@Model.DepartmentHead</dd>
@@ -58,9 +74,15 @@
                         <dd class="ip-muted">@L["Not assigned"]</dd>
                     }
                 </div>
-                <div><dt>@L["Products"]</dt><dd class="ip-num">@Model.ProductCount</dd></div>
-                <div><dt>@L["Workers"]</dt><dd class="ip-num">@Model.WorkerCount</dd></div>
                 <div><dt>@L["Created"]</dt><dd class="ip-num">@Model.CreatedAt.ToString("dd.MM.yyyy")</dd></div>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <div><dt>@L["Updated"]</dt><dd class="ip-num">@Model.UpdatedAt.Value.ToString("dd.MM.yyyy")</dd></div>
+                }
+            </dl>
+        </div>
+        <div class="col-md-6">
+            <dl class="ip-dl">
                 <div>
                     <dt>@L["Description"]</dt>
                     @if (!string.IsNullOrEmpty(Model.Description))
@@ -77,24 +99,18 @@
     </div>
 
     <section class="ip-section">
-        <div class="d-flex align-items-baseline gap-3 flex-wrap mb-2">
-            <h2>@L["Department Inventory"]</h2>
-            @if (products.Any())
-            {
-                <span class="ip-faint ip-num">@L["{0} Total Items", products.Count]</span>
-            }
-        </div>
+        <h2 class="mb-2">@L["Department Inventory"]</h2>
         @if (products.Any())
         {
             <div class="ip-table-wrap">
                 <table class="ip-table" id="departmentProductsTable" data-column-filters="client">
                     <thead>
                         <tr>
-                            <th data-filter="text">@L["Code"]</th>
-                            <th data-filter="text">@L["Product"]</th>
-                            <th data-filter="list">@L["Category"]</th>
-                            <th data-filter="list">@L["Assigned To"]</th>
-                            <th data-filter="list">@L["State"]</th>
+                            <th data-sort="code" data-filter="text">@L["Code"]</th>
+                            <th data-sort="product" data-filter="text">@L["Product"]</th>
+                            <th data-sort="category" data-filter="list">@L["Category"]</th>
+                            <th data-sort="worker" data-filter="list">@L["Assigned To"]</th>
+                            <th data-sort="state" data-filter="list">@L["State"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -155,61 +171,41 @@
             </div>
         }
     </section>
+    @if (canDelete || canExport || canUpdate)
+    {
+        <div class="ip-form-foot d-md-none">
+            @if (canDelete)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" title="@L["Delete"]" aria-label="@L["Delete"]" data-catalog-delete="department" data-name="@Model.Name" data-products="@Model.ProductCount"
+                        data-url="@Url.Action("Delete", new { id = Model.Id })" data-edit-url="@(canUpdate ? Url.Action("Edit", new { id = Model.Id }) : null)">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            }
+            @if (canExport)
+            {
+                <a asp-action="ExportToWord" asp-route-id="@Model.Id" class="ip-btn ip-btn-ghost" title="@L["Export to Word"]" aria-label="@L["Export to Word"]"><i class="fa-regular fa-file-word"></i><span>@L["Export to Word"]</span></a>
+            }
+            @if (canUpdate)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-primary"><span>@L["Edit"]</span><i class="fa-solid fa-pen"></i></a>
+            }
+        </div>
+    }
 </div>
 
+<form id="catalogDeleteForm" method="post" class="d-none">@Html.AntiForgeryToken()</form>
+
 @section Scripts {
+    <script src="~/js/catalog-delete.js" asp-append-version="true"></script>
     <script>
-        const productsTable = '#departmentProductsTable';
-        let keptTable = null;
-
-        $(document).ready(initProductsTable);
-
-        // Runs on load and when a live refresh brings the first products
-        function initProductsTable() {
-            const table = document.querySelector(productsTable);
-            if (!table) return;
-            // Header filter buttons go in before DataTables wraps the header content
-            TableColumns.decorate();
-            $(table).DataTable({
-                pageLength: 25,
-                order: [[2, 'asc'], [0, 'asc']], // Sort by category, then code
-                columnDefs: [{ targets: -1, orderable: false, searchable: false }],
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: t('Search products...'),
-                    lengthMenu: t('Show _MENU_ items'),
-                    info: t('Showing _START_ to _END_ of _TOTAL_ products'),
-                    infoEmpty: t('No products to show'),
-                    infoFiltered: t('(filtered from _MAX_ total)')
-                }
-            });
-        }
-
-        // Other users' changes refresh the page in place, and a deletion shows a notice
+        // Other users' changes refresh the page in place, and a deletion shows a notice; the table keeps its header sort and filters
         LiveUpdates.watch({
             entities: ['department', 'product'],
             ids: { department: @Model.Id },
             regions: ['#detailsRegion'],
             label: 'department',
             // An open header filter belongs to the table it was opened on
-            isEditing: () => !!document.querySelector('.ip-colfilter'),
-            beforeRefresh() {
-                keptTable = $.fn.DataTable.isDataTable(productsTable) ? $(productsTable).DataTable() : null;
-            },
-            afterRefresh() {
-                const kept = keptTable;
-                keptTable = null;
-                const fresh = document.querySelector(productsTable);
-                if (kept && fresh) {
-                    // The current table takes the fresh rows, so its header filters, sorting, search and page stay
-                    const rows = Array.from(fresh.tBodies[0].rows);
-                    fresh.replaceWith(kept.table().container());
-                    kept.clear().rows.add(rows).draw(false);
-                    return;
-                }
-                if (kept) kept.destroy();
-                if (fresh) initProductsTable();
-            }
+            isEditing: () => !!document.querySelector('.ip-colfilter')
         });
     </script>
 }
