@@ -1069,7 +1069,6 @@
   "At least {0} characters": "Ən azı {0} simvol",
   "Uppercase and lowercase letters": "Böyük və kiçik hərflər",
   "At least one digit": "Ən azı bir rəqəm",
-  "At least {0} characters, with an uppercase letter, a lowercase letter and a digit. Choose a password you do not use for other services.": "Ən azı {0} simvol; tərkibində böyük hərf, kiçik hərf və rəqəm olmalıdır. Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin.",
   "All notifications have been read": "Bütün bildirişlər oxunub",
   "There are no unread notifications.": "Oxunmamış bildiriş yoxdur.",
   "{0} found": "{0} nəticə tapıldı",
@@ -1172,5 +1171,6 @@
   "Executed At": "İcra tarixi",
   "CodeChange": "Kod dəyişikliyi",
   "The product moves to the destination above and the route can no longer be changed. Complete it?": "Məhsul yuxarıda göstərilən təyinata keçiriləcək və marşrutu artıq dəyişmək mümkün olmayacaq. Tamamlansın?",
-  "Delete user {0}? This action cannot be undone.": "{0} istifadəçisi silinsin? Bu əməliyyatı geri qaytarmaq mümkün deyil."
+  "Delete user {0}? This action cannot be undone.": "{0} istifadəçisi silinsin? Bu əməliyyatı geri qaytarmaq mümkün deyil.",
+  "Choose a password you do not use for other services.": "Digər xidmətlərdə istifadə etmədiyiniz şifrə seçin."
 }
