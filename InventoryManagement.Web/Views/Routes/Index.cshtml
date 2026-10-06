@@ -22,13 +22,9 @@
     var categoryOptions = NameOptions(filterCategories.Select(c => c.Value), curCategories);
     var typeOptions = Json.Serialize(routeTypes.Select(t => new { value = t.Item1, label = L[t.Item2].Value })).ToString();
     var statusOptions = Json.Serialize(new[] { new { value = "false", label = L["Pending"].Value }, new { value = "true", label = L["Completed"].Value } }).ToString();
-    var whatsAppOptions = Json.Serialize(new[]
-    {
-        new { value = "Sent", label = L["Sent"].Value },
-        new { value = "Queued", label = L["Queued"].Value },
-        new { value = "Failed", label = L["Failed"].Value },
-        new { value = "None", label = L["None"].Value }
-    }).ToString();
+    var curWhatsApp = QueryValues("whatsApp");
+    var whatsAppStatuses = new[] { ("Sent", "Sent"), ("Queued", "Queued"), ("Failed", "Failed"), ("None", "None") };
+    var whatsAppOptions = Json.Serialize(whatsAppStatuses.Select(s => new { value = s.Item1, label = L[s.Item2].Value })).ToString();
 }
 <div class="container-fluid px-4">
     @{
@@ -137,6 +133,17 @@
                 }
             </select>
         </label>
+        @* The WhatsApp column only fits wide lists, so its filter also lives here *@
+        <label class="ip-filter">
+            <span>@L["WhatsApp"]</span>
+            <select id="whatsAppFilter" onchange="applyRouteFilters()">
+                <option value="">@L["All"]</option>
+                @foreach (var (status, label) in whatsAppStatuses)
+                {
+                    <option value="@status" selected="@(curWhatsApp.Length == 1 && status == curWhatsApp[0])">@L[label]</option>
+                }
+            </select>
+        </label>
         <label class="ip-filter">
             <i class="fa-regular fa-calendar"></i>
             <input type="text" id="dateRange" class="date-range-input" placeholder="@L["Any date"]" size="12" aria-label="@L["Created between"]" />
@@ -188,27 +195,27 @@
                                         }
                                     </span>
                                     <div class="cell-text">
-                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = route.Id })">@route.Model</a>
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = route.Id })" title="@route.Model">@route.Model</a>
                                         <span class="cell-sub ip-mono">@route.InventoryCode</span>
                                     </div>
                                 </div>
                             </td>
-                            <td class="meta route-from">
+                            <td class="meta route-from @(string.IsNullOrEmpty(route.FromDepartmentName) ? "is-empty" : "")">
                                 <div class="cell-text">
-                                    <span class="cell-title fw-normal">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
+                                    <span class="cell-title fw-normal" title="@route.FromDepartmentName">@(string.IsNullOrEmpty(route.FromDepartmentName) ? "—" : route.FromDepartmentName)</span>
                                     @if (!string.IsNullOrEmpty(route.FromWorker))
                                     {
-                                        <span class="cell-sub">@route.FromWorker</span>
+                                        <span class="cell-sub" title="@route.FromWorker">@route.FromWorker</span>
                                     }
                                 </div>
                             </td>
                             <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                             <td class="meta route-to">
                                 <div class="cell-text">
-                                    <span class="cell-title">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
+                                    <span class="cell-title" title="@route.ToDepartmentName">@(string.IsNullOrEmpty(route.ToDepartmentName) ? "—" : route.ToDepartmentName)</span>
                                     @if (!string.IsNullOrEmpty(route.ToWorker))
                                     {
-                                        <span class="cell-sub">@route.ToWorker</span>
+                                        <span class="cell-sub" title="@route.ToWorker">@route.ToWorker</span>
                                     }
                                 </div>
                             </td>
@@ -315,6 +322,15 @@
         @@container routes (max-width: 1279.98px) { #routesTable .route-category { display: none; } }
         @@container routes (max-width: 1139.98px) { #routesTable .route-whatsapp { display: none; } }
         @@container routes (min-width: 1140px) { #routesTable .route-wa-inline { display: none; } }
+        @@media (max-width: 767.98px) {
+            /* On cards the date sits beside the title, so the WhatsApp line and its Send again button get the whole width */
+            #routesTable td.date { top: var(--ip-space-3); bottom: auto; }
+            #routesTable td.title { padding-right: 104px; }
+            #routesTable .route-wa-inline { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ip-space-2); margin-top: 0 !important; }
+            /* A route with no source shows only its destination, with the arrow in front */
+            #routesTable td.route-from.is-empty { display: none; }
+            #routesTable tr:has(> td.route-from.is-empty) > td.route-to::before { content: "\2192\00a0"; }
+        }
     </style>
 }
 
@@ -337,7 +353,8 @@
                 isCompleted: '#statusFilter',
                 departmentName: '#departmentFilter',
                 categoryName: '#categoryFilter',
-                routeType: '#typeFilter'
+                routeType: '#typeFilter',
+                whatsApp: '#whatsAppFilter'
             },
             sheet: true
         });
