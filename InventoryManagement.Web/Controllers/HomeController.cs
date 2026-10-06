@@ -7,6 +7,7 @@ using InventoryManagement.Web.Models;
 using InventoryManagement.Web.Models.ViewModels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using ProductService.Application.Features.Lookups;
 using ProductService.Application.Features.Products.Queries;
@@ -105,38 +106,53 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>Busiest departments in the period, grouped by the name stored on each transfer.</summary>
         private static List<DepartmentStats> BuildDepartmentStats(IReadOnlyList<TransferActivity> transfers, int count)
         {
-            var byDepartment = new Dictionary<string, (string Name, List<TransferActivity> Transfers, HashSet<string> Workers)>(StringComparer.Ordinal);
+            var byDepartment = new Dictionary<string, DepartmentTally>(StringComparer.Ordinal);
 
-            void Add(int id, string? name, TransferActivity transfer, string? worker)
+            static string Key(int id, string? name) => string.IsNullOrWhiteSpace(name) ? $"#{id}" : name;
+
+            void Add(string key, int productId, string? worker, bool countTransfer)
             {
-                var key = string.IsNullOrWhiteSpace(name) ? $"#{id}" : name;
-                if (!byDepartment.TryGetValue(key, out var entry))
-                    byDepartment[key] = entry = (key, new List<TransferActivity>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-                if (!entry.Transfers.Contains(transfer))
-                    entry.Transfers.Add(transfer);
+                if (!byDepartment.TryGetValue(key, out var tally))
+                    byDepartment[key] = tally = new DepartmentTally();
+                if (countTransfer)
+                    tally.Transfers++;
+                tally.Products.Add(productId);
                 if (!string.IsNullOrWhiteSpace(worker))
-                    entry.Workers.Add(worker.Trim());
+                    tally.Workers.Add(worker.Trim());
             }
 
             foreach (var t in transfers)
             {
-                Add(t.ToDepartmentId, t.ToDepartmentName, t, t.ToWorker);
-                if (t.FromDepartmentId.HasValue)
-                    Add(t.FromDepartmentId.Value, t.FromDepartmentName, t, t.FromWorker);
+                var to = Key(t.ToDepartmentId, t.ToDepartmentName);
+                Add(to, t.ProductId, t.ToWorker, countTransfer: true);
+                if (t.FromDepartmentId is { } fromId)
+                {
+                    var from = Key(fromId, t.FromDepartmentName);
+                    // A transfer that stays inside one department is one transfer for it, not two
+                    Add(from, t.ProductId, t.FromWorker, countTransfer: from != to);
+                }
             }
 
-            return byDepartment.Values
+            return byDepartment
                 .Select(d => new DepartmentStats
                 {
-                    DepartmentName = d.Name,
-                    ProductCount = d.Transfers.Select(t => t.ProductId).Distinct().Count(),
-                    ActiveWorkers = d.Workers.Count,
-                    PeriodTransfers = d.Transfers.Count
+                    DepartmentName = d.Key,
+                    ProductCount = d.Value.Products.Count,
+                    ActiveWorkers = d.Value.Workers.Count,
+                    PeriodTransfers = d.Value.Transfers
                 })
                 .OrderByDescending(d => d.PeriodTransfers)
                 .ThenByDescending(d => d.ProductCount)
                 .Take(count)
                 .ToList();
+        }
+
+        /// <summary>Running figures of one department, so no list of its transfers has to be kept or searched.</summary>
+        private sealed class DepartmentTally
+        {
+            public int Transfers { get; set; }
+            public HashSet<int> Products { get; } = [];
+            public HashSet<string> Workers { get; } = new(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>Uses the category a product had when it was transferred.</summary>
@@ -254,16 +270,37 @@ namespace InventoryManagement.Web.Controllers
             return View(errorViewModel);
         }
 
+        /// <summary>Explains any error status that came without content, keeping the status that really happened.</summary>
         [AllowAnonymous]
         [Route("NotFound")]
-        public IActionResult NotFound(int? statusCode = null)
+        [ActionName("NotFound")]
+        public IActionResult StatusPage()
         {
-            Response.StatusCode = 404;
-            return View(new ErrorViewModel
+            // Only a re-executed request carries a real status, so this address typed with any code is just not found
+            var statusCode = HttpContext.Features.Get<IStatusCodeReExecuteFeature>()?.OriginalStatusCode
+                             ?? StatusCodes.Status404NotFound;
+
+            // A failed image or script request needs the status alone, which also spares the layout's queries
+            if (!Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase))
+                return StatusCode(statusCode);
+
+            Response.StatusCode = statusCode;
+            return View("Status", new StatusPageViewModel
             {
-                StatusCode = statusCode ?? 404,
-                Message = "The page you're looking for could not be found."
+                StatusCode = statusCode,
+                // Only a stale form token gives a page request a 400, and opening the form's page again issues a new one
+                ReloadUrl = statusCode == StatusCodes.Status400BadRequest ? LocalReferer() : null
             });
+        }
+
+        /// <summary>The page of this site the request was sent from, as a local address.</summary>
+        private string? LocalReferer()
+        {
+            if (!Uri.TryCreate(Request.Headers.Referer.ToString(), UriKind.Absolute, out var referer)
+                || !string.Equals(referer.Authority, Request.Host.Value, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return Url.IsLocalUrl(referer.PathAndQuery) ? referer.PathAndQuery : null;
         }
     }
 }

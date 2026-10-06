@@ -1,0 +1,62 @@
+@model StatusPageViewModel
+@{
+    // Each expected status says what happened and what to do next, anything else gets the general text and its code
+    var (icon, title, text) = Model.StatusCode switch
+    {
+        400 => ("fa-rotate-right", "The page has expired", "The page was open for too long or the session has changed. Reload the page and try again."),
+        404 => ("fa-magnifying-glass", "Page Not Found", "The page you're looking for doesn't exist or may have been removed."),
+        405 => ("fa-link-slash", "This address cannot be opened directly", "This address works only through a button or a form in the system."),
+        429 => ("fa-hourglass-half", "Too many attempts", "Please wait a minute and try again."),
+        _ => ("fa-triangle-exclamation", "An error occurred", "The request could not be completed. Please try again later.")
+    };
+    ViewData["Title"] = title;
+    var expected = Model.StatusCode is 400 or 404 or 405 or 429;
+    var signedIn = User.Identity?.IsAuthenticated ?? false;
+    var canReload = Model.ReloadUrl is not null;
+}
+
+<div class="container-fluid px-4">
+    <div class="ip-empty">
+        <span class="icon"><i class="fa-solid @icon" aria-hidden="true"></i></span>
+        <h1 class="title">@L[title]</h1>
+        <p class="text mb-0">@L[text]</p>
+        @if (!expected)
+        {
+            <p class="ip-faint mb-0">@L["Error code"]: <span class="ip-num">@Model.StatusCode</span></p>
+        }
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            @if (!canReload)
+            {
+                @* Going back would show the same stale form, so Back is left out when Reload is offered *@
+                <button type="button" class="ip-btn ip-btn-ghost" data-status-back hidden>
+                    <span>@L["Back"]</span>
+                </button>
+            }
+            @* A signed-out visitor's reload ends on the sign-in page anyway, so a second link there would only repeat it *@
+            @if (signedIn || !canReload)
+            {
+                <a href="@(signedIn ? "/" : "/Account/Login")" class="ip-btn @(canReload ? "ip-btn-ghost" : "ip-btn-secondary")">
+                    <span>@L[signedIn ? "Go to Dashboard" : "Sign in"]</span>
+                </a>
+            }
+            @if (canReload)
+            {
+                <a href="@Model.ReloadUrl" class="ip-btn ip-btn-secondary" data-no-prefetch>
+                    <span>@L["Reload"]</span>
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Back is offered only when this tab has an earlier page to return to
+        (function () {
+            const back = document.querySelector('[data-status-back]');
+            if (!back || history.length < 2) return;
+            back.hidden = false;
+            back.addEventListener('click', function () { history.back(); });
+        })();
+    </script>
+}
