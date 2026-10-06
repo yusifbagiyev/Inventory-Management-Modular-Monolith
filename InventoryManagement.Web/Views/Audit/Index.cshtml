@@ -259,82 +259,102 @@
                                         <div class="cell-sub ip-mono">@action.IpAddress</div>
                                     }
                                 </td>
-                                <td>
-                                    <div class="fw-semibold mb-1" title="@action.Action">@L[AuditLabels.Action(action.Action)]</div>
-                                    @foreach (var entry in action.Entries)
-                                    {
-                                        <div class="ip-audit-entry">
-                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                @* Sign-ins and sign-outs only repeat the user column, so their badge is the whole entry and a failure gives its reason beside it *@
+                                @if (action.Entries.Count > 0 && action.Entries.All(e => e.EntityType == "Session"))
+                                {
+                                    <td class="ip-audit-session">
+                                        @foreach (var entry in action.Entries)
+                                        {
+                                            var reason = entry.Changes.FirstOrDefault(c => c.Field == "Reason")?.New;
+                                            <div class="ip-audit-entry d-flex flex-wrap align-items-center gap-2">
                                                 <span class="ip-badge @OperationBadge(entry.Operation)">@L[OperationLabel(entry.Operation)]</span>
-                                                <span class="fw-medium">@L[TypeLabel(entry.EntityType)]</span>
-                                                @if (!string.IsNullOrEmpty(entry.Label))
+                                                @if (!string.IsNullOrWhiteSpace(reason))
                                                 {
-                                                    var url = RecordUrl(entry);
-                                                    if (url != null)
-                                                    {
-                                                        <a href="@url">@LabelText(entry)</a>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span>@LabelText(entry)</span>
-                                                    }
-                                                }
-                                                @if (!string.IsNullOrEmpty(entry.EntityId) && entry.EntityType != "Session")
-                                                {
-                                                    <span class="ip-faint ip-mono">#@entry.EntityId</span>
+                                                    <span class="ip-muted">@Shown("Reason", reason)</span>
                                                 }
                                             </div>
-                                            @{
-                                                // Hide fields that repeat another one, like ImageUrl next to ImageUrls or an id next to its name
-                                                var shownChanges = entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))
-                                                    && !((c.Field.EndsWith("ById") || c.Field.EndsWith("DepartmentId") || c.Field.EndsWith("CategoryId")) && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))
-                                                    // A request's stored data is opened on the Approvals page instead
-                                                    && !(c.Field.EndsWith("ActionData") && (!CanViewRequests || !int.TryParse(entry.EntityId, out _)))).ToList();
-                                            }
-                                            @if (shownChanges.Count > 0)
-                                            {
-                                                <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && shownChanges.Count <= 6)">
-                                                    <summary class="ip-faint">@L["{0} fields", shownChanges.Count]</summary>
-                                                    <dl>
-                                                        @foreach (var change in shownChanges)
+                                        }
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td>
+                                        <div class="fw-semibold mb-1" title="@action.Action">@L[AuditLabels.Action(action.Action)]</div>
+                                        @foreach (var entry in action.Entries)
+                                        {
+                                            <div class="ip-audit-entry">
+                                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                                    <span class="ip-badge @OperationBadge(entry.Operation)">@L[OperationLabel(entry.Operation)]</span>
+                                                    <span class="fw-medium">@L[TypeLabel(entry.EntityType)]</span>
+                                                    @if (!string.IsNullOrEmpty(entry.Label))
+                                                    {
+                                                        var url = RecordUrl(entry);
+                                                        if (url != null)
                                                         {
-                                                            <div>
-                                                                <dt title="@change.Field">@L[FieldLabel(change.Field)]</dt>
-                                                                <dd>
-                                                                    @if (entry.Operation == "Updated")
-                                                                    {
-                                                                        @* Empty values are spelled out instead of shown as a dash *@
-                                                                        if (IsEmpty(change.Old))
-                                                                        {
-                                                                            <span class="ip-empty-value">@L["Not set"]</span>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            <span class="old">@{ RenderValue(change.Field, change.Old, entry.EntityId); }</span>
-                                                                        }
-                                                                        <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
-                                                                        if (IsEmpty(change.New))
-                                                                        {
-                                                                            <span class="ip-removed-value">@L["Removed"]</span>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            <span class="new">@{ RenderValue(change.Field, change.New, entry.EntityId); }</span>
-                                                                        }
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <span>@{ RenderValue(change.Field, change.New ?? change.Old, entry.EntityId); }</span>
-                                                                    }
-                                                                </dd>
-                                                            </div>
+                                                            <a href="@url">@LabelText(entry)</a>
                                                         }
-                                                    </dl>
-                                                </details>
-                                            }
-                                        </div>
-                                    }
-                                </td>
+                                                        else
+                                                        {
+                                                            <span>@LabelText(entry)</span>
+                                                        }
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(entry.EntityId) && entry.EntityType != "Session")
+                                                    {
+                                                        <span class="ip-faint ip-mono">#@entry.EntityId</span>
+                                                    }
+                                                </div>
+                                                @{
+                                                    // Hide fields that repeat another one, like ImageUrl next to ImageUrls or an id next to its name
+                                                    var shownChanges = entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))
+                                                        && !((c.Field.EndsWith("ById") || c.Field.EndsWith("DepartmentId") || c.Field.EndsWith("CategoryId")) && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))
+                                                        // A request's stored data is opened on the Approvals page instead
+                                                        && !(c.Field.EndsWith("ActionData") && (!CanViewRequests || !int.TryParse(entry.EntityId, out _)))).ToList();
+                                                }
+                                                @if (shownChanges.Count > 0)
+                                                {
+                                                    <details class="ip-audit-changes" open="@(entry.Operation is "Updated" or "SignInFailed" && shownChanges.Count <= 6)">
+                                                        <summary class="ip-faint">@L["{0} fields", shownChanges.Count]</summary>
+                                                        <dl>
+                                                            @foreach (var change in shownChanges)
+                                                            {
+                                                                <div>
+                                                                    <dt title="@change.Field">@L[FieldLabel(change.Field)]</dt>
+                                                                    <dd>
+                                                                        @if (entry.Operation == "Updated")
+                                                                        {
+                                                                            @* Empty values are spelled out instead of shown as a dash *@
+                                                                            if (IsEmpty(change.Old))
+                                                                            {
+                                                                                <span class="ip-empty-value">@L["Not set"]</span>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <span class="old">@{ RenderValue(change.Field, change.Old, entry.EntityId); }</span>
+                                                                            }
+                                                                            <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
+                                                                            if (IsEmpty(change.New))
+                                                                            {
+                                                                                <span class="ip-removed-value">@L["Removed"]</span>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <span class="new">@{ RenderValue(change.Field, change.New, entry.EntityId); }</span>
+                                                                            }
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span>@{ RenderValue(change.Field, change.New ?? change.Old, entry.EntityId); }</span>
+                                                                        }
+                                                                    </dd>
+                                                                </div>
+                                                            }
+                                                        </dl>
+                                                    </details>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                         @* The headers stay when nothing matches, so their filters can be changed *@

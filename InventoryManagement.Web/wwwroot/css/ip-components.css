@@ -1339,3 +1339,5 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 .ip-status-text.danger { color: var(--ip-danger-text); }
 .ip-dash-count { display: inline-flex; align-items: center; gap: var(--ip-space-2); flex: none; }
 .ip-dash-count > i { font-size: 12px; color: var(--ip-text-3); }
+/* Audit: a sign-in or sign-out is one badge line, and on phones it sits under the user without a rule, so the card has two lines */
+@media (max-width: 767.98px) { .ip-table.ip-audit-table td.ip-audit-session { margin-top: var(--ip-space-1); padding-top: 0 !important; border-top: 0 !important; } }
