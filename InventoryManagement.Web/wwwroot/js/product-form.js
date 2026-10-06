@@ -99,10 +99,64 @@ window.ProductForm = (function () {
         renumber();
     }
 
+    // Required fields and the code range are checked when a field is left and before the form is sent, in the page language
+    function initValidation() {
+        const form = document.getElementById('productForm');
+        if (!form) return;
+        form.noValidate = true;
+        const fields = () => Array.from(form.querySelectorAll('[required], [data-code-check]'));
+
+        function labelOf(field) {
+            const label = form.querySelector(`label[for="${CSS.escape(field.id)}"]`);
+            const text = label && (label.querySelector('span:not(.req)') || label);
+            return text ? text.textContent.replace('*', '').trim() : field.name;
+        }
+
+        // The data-val texts are the model's own messages, already in the page language
+        function problem(field) {
+            if (field.validity.valueMissing) return field.dataset.valRequired || t('The {0} field is required.', labelOf(field));
+            if (field.validity.badInput || field.validity.rangeUnderflow || field.validity.rangeOverflow || field.validity.stepMismatch) {
+                return field.dataset.valRange || t('Inventory code must be between 1 and 9999');
+            }
+            return '';
+        }
+
+        // Writes into the field's validation span the way FieldErrors does, so its clearing on edit applies too
+        function check(field) {
+            const text = problem(field);
+            const message = form.querySelector(`[data-valmsg-for="${CSS.escape(field.name)}"]`);
+            if (!text || !message) return !text;
+            if (!message.id) message.id = field.id + '-error';
+            message.setAttribute('aria-live', 'polite');
+            message.textContent = text;
+            message.classList.remove('field-validation-valid');
+            message.classList.add('field-validation-error');
+            field.classList.add('is-invalid');
+            field.setAttribute('aria-invalid', 'true');
+            const ids = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== message.id);
+            field.setAttribute('aria-describedby', ids.concat(message.id).join(' '));
+            return false;
+        }
+
+        // Listening on document runs after the shared handlers that clear a field once it is edited
+        document.addEventListener('focusout', function (e) { if (fields().includes(e.target)) check(e.target); });
+        document.addEventListener('change', function (e) { if (e.target.tagName === 'SELECT' && fields().includes(e.target)) check(e.target); });
+        // Capturing on document runs before the form's own submit handler
+        document.addEventListener('submit', function (e) {
+            if (e.target !== form) return;
+            const invalid = fields().filter(field => !check(field));
+            if (!invalid.length) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            invalid[0].focus();
+        }, true);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initCounters();
         initCodeCheck();
         initSpecifications();
+        initValidation();
     });
 
     return { codeTaken: () => taken };

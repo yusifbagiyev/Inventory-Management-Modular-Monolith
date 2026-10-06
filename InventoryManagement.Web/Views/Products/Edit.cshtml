@@ -26,6 +26,12 @@
 
         <partial name="_ProductFormFields" model="Model" view-data='new ViewDataDictionary(ViewData) { ["IsEdit"] = true }' />
 
+        @* Phones hide the footer note, so the approval notice is repeated above the fixed bar *@
+        @if (!direct)
+        {
+            <p class="ip-hint d-md-none mt-3 mb-0"><i class="fa-solid fa-circle-info me-1"></i>@L["Your changes are applied after they are approved."]</p>
+        }
+
         <div class="ip-form-foot">
             <span class="note">
                 @if (!direct)
