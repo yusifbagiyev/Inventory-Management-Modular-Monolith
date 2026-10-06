@@ -99,7 +99,37 @@ window.ListFilters = (function () {
             return params;
         }
 
-        function apply() { navigate(collect()); }
+        // Arrow keys and typed letters change a closed select at every step, so a choice made from the keyboard
+        // is applied after a pause, on Enter or when the field is left, not on every step
+        let keyedSelect = null;
+        let pending = null;
+        function runPending() {
+            if (!pending) return;
+            const run = pending;
+            pending = null;
+            clearTimeout(run.timer);
+            run();
+        }
+        function apply() {
+            const run = function () { navigate(collect()); };
+            if (keyedSelect && document.activeElement === keyedSelect) {
+                if (pending) clearTimeout(pending.timer);
+                pending = run;
+                run.timer = setTimeout(runPending, 900);
+                return;
+            }
+            run();
+        }
+        Object.keys(config.fields).forEach(function (param) {
+            const select = document.querySelector(config.fields[param]);
+            if (!select || select.tagName !== 'SELECT') return;
+            select.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { keyedSelect = null; runPending(); return; }
+                if (e.key !== 'Tab' && e.key !== 'Escape') keyedSelect = select;
+            });
+            select.addEventListener('pointerdown', function () { keyedSelect = null; });
+            select.addEventListener('blur', function () { keyedSelect = null; runPending(); });
+        });
 
         /** The name a column header gives a value, for options the bar's own list lacks. */
         function optionLabel(param, value) {
@@ -210,10 +240,6 @@ window.ListFilters = (function () {
                 onClear: function () {
                     if (currentParams().has('startDate')) remove('dates');
                 }
-            });
-
-            $('#searchInput').on('keypress', function (e) {
-                if (e.which === 13) apply();
             });
 
             restore();
