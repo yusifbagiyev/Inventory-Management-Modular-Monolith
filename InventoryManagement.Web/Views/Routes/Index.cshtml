@@ -74,7 +74,7 @@
             @if (User.HasPermission("route.export"))
             {
                 <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()" title="@L["Export PDF"]" aria-label="@L["Export PDF"]">
-                    <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
+                    <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
                 </button>
             }
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
@@ -312,7 +312,7 @@
                                     @if (hasFilters || curCompleted.HasValue)
                                     {
                                         <button type="button" class="ip-btn ip-btn-secondary" onclick="resetFilters()">
-                                            <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                            <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
                                         </button>
                                     }
                                 </div>

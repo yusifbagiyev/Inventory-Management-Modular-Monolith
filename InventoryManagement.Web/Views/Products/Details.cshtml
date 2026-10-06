@@ -57,7 +57,7 @@
         @if (canTransfer && Model.IsActive)
         {
             <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary">
-                <span>@L["Transfer"]</span>
+                <span>@L["Transfer"]</span><i class="fa-solid fa-arrow-right-arrow-left"></i>
             </a>
         }
     </div>
@@ -197,7 +197,7 @@
             }
             @if (canTransfer && Model.IsActive)
             {
-                <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary"><span>@L["Transfer"]</span></a>
+                <a href="@Url.Action("Transfer", "Routes", new { code = Model.InventoryCode })" class="ip-btn ip-btn-primary"><span>@L["Transfer"]</span><i class="fa-solid fa-arrow-right-arrow-left"></i></a>
             }
         </div>
     }

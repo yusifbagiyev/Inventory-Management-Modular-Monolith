@@ -56,7 +56,7 @@
             @if (User.HasPermission("product.export"))
             {
                 <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()" title="@L["Export PDF"]" aria-label="@L["Export PDF"]">
-                    <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
+                    <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
                 </button>
             }
             @if (User.HasPermission("product.create") || User.HasPermission("product.create.direct"))
@@ -262,7 +262,7 @@
                                         @if (hasFilters)
                                         {
                                             <button type="button" class="ip-btn ip-btn-secondary" onclick="resetProductFilters()">
-                                                <span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i>
+                                                <span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i>
                                             </button>
                                         }
                                     </div>

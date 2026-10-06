@@ -63,7 +63,7 @@
                     <span class="icon"><i class="fa-regular fa-bell-slash"></i></span>
                     <div class="title">@L["Nothing found"]</div>
                     <div class="text">@L["No notifications match this filter."]</div>
-                    <a class="ip-btn ip-btn-secondary" href="@Url.Action("Index")"><span>@L["Clear filters"]</span><i class="fa-solid fa-xmark"></i></a>
+                    <a class="ip-btn ip-btn-secondary" href="@Url.Action("Index")"><span>@L["Reset filters"]</span><i class="fa-solid fa-xmark"></i></a>
                 }
                 else
                 {
@@ -143,7 +143,7 @@
             $(this).closest('.ip-notif-item').find('.ip-notif-link').trigger('focus');
         });
 
-        // The filter is not swapped with the list, so it follows the URL after Clear filters and Back
+        // The filter is not swapped with the list, so it follows the URL after Reset filters and Back
         document.addEventListener('listnav:loaded', function () {
             const select = document.getElementById('typeFilter');
             if (select) select.value = new URLSearchParams(window.location.search).get('type') || '';

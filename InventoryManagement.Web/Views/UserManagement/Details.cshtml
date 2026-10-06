@@ -40,7 +40,7 @@
         @if (!isOwnAccount)
         {
         <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
-            <i class="fa-solid fa-trash-can"></i><span>@L["Delete User"]</span>
+            <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
         </button>
         <button type="button" class="ip-btn ip-btn-secondary" onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
             @if (Model.IsActive)
@@ -57,7 +57,7 @@
             <i class="fa-solid fa-key"></i><span>@L["Reset Password"]</span>
         </a>
         <a href="@Url.Action("Edit", new { id = Model.Id })" class="ip-btn ip-btn-primary">
-            <span>@L["Edit User"]</span><i class="fa-solid fa-pen"></i>
+            <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
         </a>
     </div>
     }
