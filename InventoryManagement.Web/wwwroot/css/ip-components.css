@@ -670,7 +670,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .ip-audit-changes dt { color: var(--ip-text-2); font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ip-audit-changes dd { margin: 0; overflow-wrap: anywhere; }
 .ip-audit-changes .old { color: var(--ip-text-2); text-decoration: line-through; text-decoration-color: var(--ip-border-strong, currentColor); }
-@media (max-width: 575.98px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 1024px) { .ip-audit-changes dl > div { grid-template-columns: 1fr; gap: 0; } }
 
 /* Centers the icon in links too, with :where() keeping specificity low so [hidden] and d-none still win */
 :where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
@@ -1314,3 +1314,5 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
   #dashboardRecent .ip-list-link > .ip-bar { grid-column: 1 / -1; grid-row: 2; }
   .ip-page-head .ip-tab { min-width: 44px; justify-content: center; }
 }
+/* Audit: on tablets the user column narrows and each changed field puts its value under its name, so values keep the full width */
+@media (min-width: 768px) and (max-width: 1024px) { .ip-audit-table th.who { width: 10rem; } .ip-audit-changes dl > div + div { margin-top: 4px; } }
