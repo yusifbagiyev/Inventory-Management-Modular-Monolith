@@ -15,6 +15,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int? OldestPendingDays { get; set; }
         public List<DepartmentStats> DepartmentStats { get; set; }=[];
         public List<CategoryDistribution> CategoryDistributions { get; set; } = [];
+        /// <summary>Transfers created in the period, the whole that category shares are taken of.</summary>
+        public int TotalTransfers { get; set; }
         public TransferActivityData TransferActivityData { get; set; } = new();
 
         /// <summary>Period bounds for links to the filtered lists, null for all time.</summary>
@@ -41,6 +43,10 @@ namespace InventoryManagement.Web.Models.ViewModels
     public class CategoryDistribution
     {
         public string CategoryName { get; set; } = string.Empty;
+        /// <summary>Transfers of products in this category.</summary>
         public int Count { get; set; }
+        /// <summary>True for the row that joins the categories beyond the listed ones.</summary>
+        public bool IsOther { get; set; }
+        public int OtherCategories { get; set; }
     }
 }

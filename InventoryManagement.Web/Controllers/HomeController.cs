@@ -85,6 +85,7 @@ namespace InventoryManagement.Web.Controllers
                 PendingTransfers = pending.TotalCount,
                 OldestPendingDays = oldestPending is { } oldest ? (int)(now.Date - oldest.Date).TotalDays : null,
                 CategoryDistributions = categories,
+                TotalTransfers = transfers.Count,
                 // Same row count as categories so the two lists side by side end level
                 DepartmentStats = BuildDepartmentStats(transfers, categories.Count),
                 TransferActivityData = BuildTransferActivity(transfers, startDate, endDate, period),
@@ -155,15 +156,22 @@ namespace InventoryManagement.Web.Controllers
             public HashSet<string> Workers { get; } = new(StringComparer.OrdinalIgnoreCase);
         }
 
-        /// <summary>Uses the category a product had when it was transferred.</summary>
+        /// <summary>Transfers per category the product had when it was transferred, the smallest beyond eight joined as one row.</summary>
         private static List<CategoryDistribution> BuildCategoryDistribution(IReadOnlyList<TransferActivity> transfers)
-            => transfers
+        {
+            const int rows = 8;
+            var all = transfers
                 .GroupBy(t => t.CategoryName)
-                .Select(g => (Name: g.Key, Count: g.Select(t => t.ProductId).Distinct().Count()))
+                .Select(g => new CategoryDistribution { CategoryName = g.Key, Count = g.Count() })
                 .OrderByDescending(c => c.Count)
-                .Take(8)
-                .Select(c => new CategoryDistribution { CategoryName = c.Name, Count = c.Count })
+                .ThenBy(c => c.CategoryName, StringComparer.Ordinal)
                 .ToList();
+            if (all.Count <= rows)
+                return all;
+
+            var rest = all.Skip(rows - 1).ToList();
+            return [.. all.Take(rows - 1), new CategoryDistribution { IsOther = true, OtherCategories = rest.Count, Count = rest.Sum(c => c.Count) }];
+        }
 
         /// <summary>Bucket size grows with the period, from days up to quarters.</summary>
         private static TransferActivityData BuildTransferActivity(
@@ -186,15 +194,13 @@ namespace InventoryManagement.Web.Controllers
             switch (period)
             {
                 case "last30days":
-                    var week = 1;
-                    for (var from = startDate; from <= endDate && week <= 10; from = from.AddDays(7), week++)
-                        AddBucket(Tr("Week {0}").Replace("{0}", week.ToString()), from.Date, from.AddDays(7).Date);
-                    break;
-
                 case "last90days":
-                    // Weekly buckets labelled by their first day
-                    for (var from = startDate; from <= endDate; from = from.AddDays(7))
-                        AddBucket(from.ToString("dd.MM"), from.Date, from.AddDays(7).Date);
+                    // Weekly buckets labelled by their first and last day, the last one cut at today
+                    for (var from = startDate.Date; from <= endDate; from = from.AddDays(7))
+                    {
+                        var toExclusive = from.AddDays(7) > endDate ? endDate.Date.AddDays(1) : from.AddDays(7);
+                        AddBucket(RangeName(from, toExclusive.AddDays(-1)), from, toExclusive);
+                    }
                     break;
 
                 case "last6months":
@@ -238,7 +244,10 @@ namespace InventoryManagement.Web.Controllers
         private static string DayName(DateTime date)
             => JsonStringLocalizer.IsAzerbaijani ? $"{AzDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
              : JsonStringLocalizer.IsRussian ? $"{RuDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"
-             : date.ToString("ddd, MMM dd");
+             : $"{date:ddd} {date:dd}.{date:MM}";
+
+        private static string RangeName(DateTime first, DateTime last)
+            => first.Month == last.Month ? $"{first:dd}–{last:dd}.{last:MM}" : $"{first:dd}.{first:MM}–{last:dd}.{last:MM}";
 
         private static string QuarterName(DateTime quarterStart)
         {
