@@ -1,6 +1,7 @@
 @model CreateUserViewModel
 @{
     ViewData["Title"] = "Create User";
+    var chosenRole = Model.SelectedRole == "Admin" ? "Admin" : "User";
 }
 
 <div class="container-fluid px-4">
@@ -23,7 +24,7 @@
 
         <section class="ip-form-section">
             <h2>@L["Account"]</h2>
-            <div class="ip-form-grid">
+            <div class="ip-form-grid cols-2">
                 <div class="ip-field">
                     <label asp-for="FirstName" class="ip-label"><span>@L["First Name"]</span> <span class="req">*</span></label>
                     <input asp-for="FirstName" class="ip-input" placeholder="@L["Enter first name"]" />
@@ -49,27 +50,23 @@
 
         <section class="ip-form-section">
             <h2>@L["Password"]</h2>
-            <div class="ip-form-grid">
+            <div class="ip-form-grid cols-2">
                 <div class="ip-field">
                     <label asp-for="Password" class="ip-label"><span>@L["Password"]</span> <span class="req">*</span></label>
-                    <div class="position-relative">
-                        <input asp-for="Password" class="ip-input pe-5" type="password" placeholder="@L["Enter password"]" autocomplete="new-password" />
-                        <button type="button" class="ip-btn-icon position-absolute top-50 end-0 translate-middle-y me-1"
-                                onclick="togglePassword('Password')" title="@L["Show password"]" aria-label="@L["Show password"]">
-                            <i class="fa-regular fa-eye" id="Password-icon"></i>
-                        </button>
+                    <div class="ip-pw-wrap">
+                        <input asp-for="Password" class="ip-input" type="password" placeholder="@L["Enter password"]" autocomplete="new-password" aria-describedby="Password-hint" />
+                        <button type="button" class="ip-btn-icon" data-password-toggle="Password" aria-pressed="false"
+                                title="@L["Show password"]" aria-label="@L["Show password"]"><i class="fa-regular fa-eye"></i></button>
                     </div>
-                    <span class="ip-hint">@L[SharedServices.Identity.PasswordRules.LengthMessage]</span>
+                    <span class="ip-hint" id="Password-hint">@L[SharedServices.Identity.PasswordRules.LengthMessage]</span>
                     <span asp-validation-for="Password" class="ip-error"></span>
                 </div>
                 <div class="ip-field">
                     <label asp-for="ConfirmPassword" class="ip-label"><span>@L["Confirm Password"]</span> <span class="req">*</span></label>
-                    <div class="position-relative">
-                        <input asp-for="ConfirmPassword" class="ip-input pe-5" type="password" placeholder="@L["Confirm password"]" autocomplete="new-password" />
-                        <button type="button" class="ip-btn-icon position-absolute top-50 end-0 translate-middle-y me-1"
-                                onclick="togglePassword('ConfirmPassword')" title="@L["Show password"]" aria-label="@L["Show password"]">
-                            <i class="fa-regular fa-eye" id="ConfirmPassword-icon"></i>
-                        </button>
+                    <div class="ip-pw-wrap">
+                        <input asp-for="ConfirmPassword" class="ip-input" type="password" placeholder="@L["Confirm password"]" autocomplete="new-password" />
+                        <button type="button" class="ip-btn-icon" data-password-toggle="ConfirmPassword" aria-pressed="false"
+                                title="@L["Show password"]" aria-label="@L["Show password"]"><i class="fa-regular fa-eye"></i></button>
                     </div>
                     <span asp-validation-for="ConfirmPassword" class="ip-error"></span>
                 </div>
@@ -77,33 +74,37 @@
         </section>
 
         <section class="ip-form-section">
-            <h2>@L["Access"]</h2>
-            <div class="ip-form-grid">
-                @* Only Admins pick the role, anyone else creates a User *@
-                @if (User.IsInRole("Admin"))
-                {
-                <div class="ip-field">
-                    <label asp-for="SelectedRole" class="ip-label"><span>@L["Role"]</span> <span class="req">*</span></label>
-                    <select asp-for="SelectedRole" class="ip-select">
-                        <option value="User" selected>@L["User"]</option>
-                        <option value="Admin">@L["Admin"]</option>
-                    </select>
-                    <span class="ip-hint">@L["A User sees only what you grant on the Edit page after creating the account."]</span>
-                    <span asp-validation-for="SelectedRole" class="ip-error"></span>
-                </div>
-                }
-                else
-                {
-                    <input type="hidden" asp-for="SelectedRole" value="User" />
-                }
-            </div>
-            <div class="ip-switch-list mt-3">
+            <h2>@L["Status"]</h2>
+            <div class="ip-switch-list">
                 <label class="ip-switch-row">
                     <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
                     <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
                 </label>
             </div>
         </section>
+
+        @* Only Admins pick the role, anyone else creates a User *@
+        @if (User.IsInRole("Admin"))
+        {
+            <section class="ip-form-section">
+                <h2>@L["Role"]</h2>
+                <div class="d-flex flex-column" role="radiogroup" aria-label="@L["Role"]">
+                    @foreach (var (role, hint) in new[] { ("User", "A User sees only what you grant on the Edit page after creating the account."), ("Admin", "All pages and actions; no permissions need to be granted.") })
+                    {
+                        <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
+                            <input type="radio" class="ip-check" name="SelectedRole" value="@role" id="role_@role"
+                                   @(chosenRole == role ? "checked" : "") />
+                            <span><span class="d-block fw-medium">@L[role]</span><span class="ip-hint">@L[hint]</span></span>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="SelectedRole" class="ip-error"></span>
+            </section>
+        }
+        else
+        {
+            <input type="hidden" asp-for="SelectedRole" value="User" />
+        }
 
         <div class="ip-form-foot">
             <span class="note"></span>
@@ -116,21 +117,8 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/password-fields.js" asp-append-version="true"></script>
     <script>
-        function togglePassword(fieldId) {
-            const passwordField = document.getElementById(fieldId);
-            const icon = document.getElementById(fieldId + '-icon');
-            const button = icon.closest('button');
-            const show = passwordField.type === 'password';
-
-            passwordField.type = show ? 'text' : 'password';
-            icon.classList.toggle('fa-eye', !show);
-            icon.classList.toggle('fa-eye-slash', show);
-            const label = show ? t('Hide password') : t('Show password');
-            button.title = label;
-            button.setAttribute('aria-label', label);
-        }
-
         // Suggest a username from the first and last name until the admin types one of their own
         document.getElementById('FirstName').addEventListener('input', generateUsername);
         document.getElementById('LastName').addEventListener('input', generateUsername);

@@ -1273,3 +1273,30 @@ a.request-photo:focus-visible { outline: 2px solid var(--ip-accent); outline-off
   .ip-login-head .ip-seg > * { height: 44px; min-width: 44px; justify-content: center; }
   .ip-login-head .ip-btn-icon.lg { width: 44px; height: 44px; }
 }
+/* Users: account forms in two columns, role radios in the accent, password fields with show and copy buttons, ticked password rules */
+@media (min-width: 768px) { .ip-form-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+input[type="radio"].ip-check { width: 18px; height: 18px; flex: none; accent-color: var(--ip-accent); }
+.ip-form .ip-pw-wrap .ip-btn-icon { top: 0; bottom: 0; margin: auto 0; }
+.ip-pw-wrap.has-copy .ip-input { padding-right: 84px; }
+.ip-pw-wrap.has-copy [data-password-copy] { right: 42px; }
+.ip-pw-rules li { display: flex; align-items: baseline; gap: 8px; }
+.ip-pw-rules li > i { color: var(--ip-text-3); }
+.ip-pw-rules li.is-met { color: var(--ip-text-1); }
+.ip-pw-rules li.is-met > i { color: var(--ip-success-text); }
+/* Users: a server error summary is one banner line with an icon, not a bulleted list, and is not shown while empty */
+.ip-banner.validation-summary-valid { display: none; }
+.ip-banner.validation-summary-errors::before { content: "\f06a"; font-family: "Font Awesome 7 Free", "Font Awesome 6 Free"; font-weight: 900; flex: none; }
+.ip-banner.validation-summary-errors ul { flex: 1 1 200px; min-width: 0; list-style: none; margin: 0; padding: 0; }
+/* Users: the permission cards are packed in columns without holes, the whole switch row toggles, the chosen level stands out and Russian labels fit on phones */
+.ip-perm-grid { display: block; columns: 2 420px; column-gap: var(--ip-space-4); }
+.ip-perm-area { break-inside: avoid; margin-bottom: var(--ip-space-4); }
+.ip-perm-saved { min-height: 20px; margin: 0 0 var(--ip-space-2); text-align: right; }
+.ip-perm-saved:empty { visibility: hidden; }
+label.ip-perm-row { margin: 0; font-weight: inherit; }
+label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
+.ip-seg.ip-seg-sm > * { white-space: nowrap; }
+.ip-seg.ip-seg-sm > .active { box-shadow: inset 0 0 0 1px var(--ip-border-strong); }
+.ip-seg.ip-seg-sm > [data-level="none"].active { background: var(--ip-surface); color: var(--ip-text-1); }
+@media (max-width: 575.98px) { .ip-perm-row .ip-seg-sm > * { flex: 1 1 auto; padding: 0 8px; } }
+/* Users: the tabs already separate the edit form from the page head */
+#accountPanel[role="tabpanel"] .ip-form-section:first-of-type { border-top: 0; padding-top: 0; }

@@ -66,9 +66,22 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", Tr(error ?? "Failed to create user"));
+            ModelState.AddModelError(CreateErrorField(error), Tr(error ?? "Failed to create user"));
             await LoadRoles(model);
             return View(model);
+        }
+
+        /// <summary>The form field an identity error is about, so the message shows under that field.</summary>
+        private static string CreateErrorField(string? error)
+        {
+            if (string.IsNullOrEmpty(error)) return "";
+            if (error.StartsWith("Username", StringComparison.OrdinalIgnoreCase) || error.StartsWith("User name", StringComparison.OrdinalIgnoreCase))
+                return nameof(CreateUserViewModel.Username);
+            if (error.StartsWith("Email", StringComparison.OrdinalIgnoreCase))
+                return nameof(CreateUserViewModel.Email);
+            if (error.StartsWith("Password", StringComparison.OrdinalIgnoreCase))
+                return nameof(CreateUserViewModel.Password);
+            return "";
         }
 
 
