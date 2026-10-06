@@ -684,10 +684,6 @@ window.TableColumns = (function () {
             const [sort, dir] = sortSelect.value.split(':');
             go(sortSelect.selectedIndex === 0 ? { sort: '', dir: '' } : { sort: sort, dir: dir });
         });
-        if (search) search.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { e.preventDefault(); go({ search: search.value.trim() }); }
-        });
-
         // The bar is not swapped with the list, so it follows the URL after paging, header clicks and Back
         function sync() {
             const p = new URLSearchParams(window.location.search);

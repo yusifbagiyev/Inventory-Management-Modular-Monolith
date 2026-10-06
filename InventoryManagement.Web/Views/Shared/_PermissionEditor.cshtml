@@ -53,7 +53,6 @@
                         {
                             <input type="checkbox" class="ip-switch" role="switch" aria-label="@label"
                                    data-perm="@item.Permission" data-view="@(item.IsView ? "true" : "false")"
-                                   data-own="@(ownLevel != "none" ? "true" : "false")"
                                    checked="@(shown != "none")" disabled="@(roleLevel != "none")" />
                         }
                         else
@@ -97,7 +96,6 @@
                         else
                         {
                             <input type="checkbox" class="ip-switch" role="switch" aria-label="@label" data-perm="@other.Name" data-view="false"
-                                   data-own="@(own.Contains(other.Name) ? "true" : "false")"
                                    checked="@held.Contains(other.Name)" disabled="@role.Contains(other.Name)" />
                         }
                     @:</@otherTag>

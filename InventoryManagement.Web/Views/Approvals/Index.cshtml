@@ -58,7 +58,7 @@
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
                             var statusLabel = L[request.Status is "Pending" or "Rejected" or "Failed" ? request.Status : "Approved"].Value;
-                            <tr data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
+                            <tr class="ip-clickable" onclick="viewDetails(@request.Id)">
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">

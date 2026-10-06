@@ -9,7 +9,6 @@ window.AjaxHandler = (function () {
             successMessage: t('Operation completed successfully'),
             successRedirect: null,
             redirectDelay: 1500,
-            resetFormOnSuccess: false,
             onSuccess: null,
             onError: null,
             onBeforeSubmit: null
@@ -90,12 +89,6 @@ window.AjaxHandler = (function () {
                         $currentSubmitBtn.prop('disabled', originalButtonDisabled).html(originalButtonHtml);
                         return false;
                     }
-
-                    if ($.validator && !$(form).valid()) {
-                        formState.isSubmitting = false;
-                        $currentSubmitBtn.prop('disabled', originalButtonDisabled).html(originalButtonHtml);
-                        return false;
-                    }
                 }
 
                 if (settings.onBeforeSubmit) {
@@ -106,9 +99,6 @@ window.AjaxHandler = (function () {
                         return false;
                     }
                 }
-
-                $currentSubmitBtn.prop('disabled', true)
-                    .html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Processing...'));
 
                 const formData = new FormData(form);
 
@@ -170,7 +160,6 @@ window.AjaxHandler = (function () {
 
         if (response && (
             response.isSuccess === false ||
-            response.success === false ||
             (response.message && response.message.toLowerCase().includes('error'))
         )) {
             const errorMessage = response.message || t('Operation failed');
@@ -190,10 +179,6 @@ window.AjaxHandler = (function () {
         }
 
         showToast(settings.successMessage, 'success');
-
-        if (settings.resetFormOnSuccess) {
-            form.reset();
-        }
 
         if (settings.successRedirect) {
             setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
@@ -256,9 +241,7 @@ window.AjaxHandler = (function () {
 
         return response.isApprovalRequest === true ||
             response.status === 'PendingApproval' ||
-            response.Status === 'PendingApproval' ||
-            response.approvalRequestId != null ||
-            response.ApprovalRequestId != null;
+            response.approvalRequestId != null;
     }
 
     function displayValidationErrors(form, errors) {

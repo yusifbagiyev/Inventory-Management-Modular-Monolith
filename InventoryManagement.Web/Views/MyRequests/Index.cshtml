@@ -54,7 +54,7 @@
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
                             var statusLabel = L[StatusLabel(request.Status)].Value;
-                            <tr data-status="@GetStatusFilter(request.Status)" data-request-id="@request.Id" class="ip-clickable" onclick="viewDetails(@request.Id)">
+                            <tr data-status="@GetStatusFilter(request.Status)" class="ip-clickable" onclick="viewDetails(@request.Id)">
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
@@ -268,23 +268,8 @@
                         __RequestVerificationToken: token
                     },
                     success: function(response) {
-                        let isSuccess = false;
-                        let message = t('Request cancelled successfully');
-
-                        // Accept every success shape the server may answer with
-                        if (typeof response === 'object' && response !== null) {
-                            isSuccess = response.success === true ||
-                                       response.isSuccess === true ||
-                                       response.Success === true;
-
-                            if (response.message) message = response.message;
-                            else if (response.Message) message = response.Message;
-                        } else if (typeof response === 'string') {
-                            isSuccess = true;
-                            message = response;
-                        } else {
-                            isSuccess = true;
-                        }
+                        const isSuccess = response && response.isSuccess === true;
+                        const message = (response && response.message) || t('Request cancelled successfully');
 
                         if (isSuccess) {
                             showToast(message, 'success');

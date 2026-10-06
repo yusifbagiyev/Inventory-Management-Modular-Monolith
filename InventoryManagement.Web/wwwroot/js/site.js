@@ -141,13 +141,8 @@ function replaceKeepingFocus(current, fresh) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
     // Layout forms like sign out navigate at once, so their buttons get no spinner
-    const forms = document.querySelectorAll('form:not(.no-spinner):not([data-no-ajax])');
+    const forms = document.querySelectorAll('form:not([data-no-ajax])');
     forms.forEach(function (form) {
         form.addEventListener('submit', function () {
             const submitBtn = form.querySelector('button[type="submit"]');
@@ -277,7 +272,7 @@ function thumbUrl(url, width) {
 
 function showToast(message, type = 'info', duration = 4000) {
     message = typeof message === 'string' ? t(message) : message;
-    const validTypes = ['success', 'error', 'danger', 'warning', 'info', 'secondary'];
+    const validTypes = ['success', 'error', 'danger', 'warning', 'info'];
     if (!validTypes.includes(type)) {
         type = 'info';
     }
@@ -320,9 +315,6 @@ function showToast(message, type = 'info', duration = 4000) {
     toastElement.addEventListener('hidden.bs.toast', function () {
         toastElement.remove();
     });
-
-    // Returned so callers can attach their own handlers, like click-to-refresh
-    return toastElement;
 }
 
 
@@ -331,8 +323,7 @@ function getToastIcon(type) {
         'success': 'circle-check',
         'danger': 'circle-xmark',
         'warning': 'triangle-exclamation',
-        'info': 'circle-info',
-        'secondary': 'circle-info'
+        'info': 'circle-info'
     };
     return icons[type] || 'circle-info';
 }
@@ -378,8 +369,6 @@ function setupSessionMonitor() {
             console.error('Session check failed:', error);
         }
     }, 5 * 60 * 1000);
-
-    window.sessionMonitorInterval = monitorInterval;
 }
 
 
@@ -413,7 +402,7 @@ window.ListNav = (function () {
             window.location.href = target.href;
             return;
         }
-        if (target.href === window.location.href && !options.force) return;
+        if (target.href === window.location.href) return;
         history[options.replace ? 'replaceState' : 'pushState']({ listNav: true }, '', target.href);
         load(options);
     }
@@ -574,7 +563,7 @@ function skeletonHtml(lines) {
 }
 
 // Theme toggle that fires themechange so charts can redraw, while _Layout applies it before paint
-window.Theme = (function () {
+(function () {
     const KEY = 'theme';
     const root = document.documentElement;
 
@@ -616,11 +605,10 @@ window.Theme = (function () {
     }
 
     syncButtons();
-    return { current: current, apply: apply };
 })();
 
 // Sidebar rail, remembered on wide screens, collapsed by default on tablets and a drawer on phones
-window.Rail = (function () {
+(function () {
     const KEY = 'ip-rail';
     const phone = window.matchMedia('(max-width: 767.98px)');
     const narrow = window.matchMedia('(max-width: 1024px)');
@@ -716,8 +704,6 @@ window.Rail = (function () {
     phone.addEventListener('change', layout);
     narrow.addEventListener('change', layout);
     document.addEventListener('DOMContentLoaded', layout);
-
-    return { toggle: toggle, open: openDrawer, close: closeDrawer };
 })();
 
 /** Opens an approval request in a dialog and resolves with its head element, which carries data-status. */
@@ -823,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Phone cards get header labels on cells without a role class, and plain filter bars fold away
-window.MobileLayout = (function () {
+(function () {
     'use strict';
 
     const ROLES = ['thumb', 'code', 'title', 'meta', 'state', 'date', 'actions', 'hide-sm', 'field', 'old', 'arrow', 'empty'];
@@ -898,8 +884,6 @@ window.MobileLayout = (function () {
                 schedule();
         }).observe(document.body, { childList: true, subtree: true });
     });
-
-    return { apply: apply };
 })();
 
 // Send again queues a failed WhatsApp message once more and live updates show the outcome later

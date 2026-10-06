@@ -19,25 +19,9 @@
     <link rel="icon" href="~/favicon.svg" type="image/svg+xml" asp-append-version="true" />
     <link rel="icon" href="~/favicon.ico" sizes="any" asp-append-version="true" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" asp-append-version="true" />
-    @* Names the rail and toolbar only during a view transition, inline since it must run before first render *@
+    @* Browsers without view transitions get the plain entrance, inline since it must run before first render *@
     <script>
-        (function () {
-            var root = document.documentElement;
-            if (!('onpagereveal' in window)) { root.classList.add('no-vt'); return; }
-            function name(on) {
-                var rail = document.querySelector('.ip-rail'), bar = document.querySelector('.ip-toolbar');
-                if (rail) rail.style.viewTransitionName = on ? 'ip-rail' : '';
-                if (bar) bar.style.viewTransitionName = on ? 'ip-toolbar' : '';
-            }
-            window.addEventListener('pageswap', function (e) { if (e.viewTransition) name(true); });
-            window.addEventListener('pagereveal', function (e) {
-                if (!e.viewTransition) return;
-                name(true);
-                e.viewTransition.finished.finally(function () { name(false); });
-            });
-            // A page restored from the back/forward cache still has the names from its swap
-            window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
-        })();
+        if (!('onpagereveal' in window)) document.documentElement.classList.add('no-vt');
     </script>
 
     @* Sets the theme before first paint so dark pages don't flash light, same storage key as Theme in site.js *@

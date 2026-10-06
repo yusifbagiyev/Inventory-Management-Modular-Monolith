@@ -46,7 +46,7 @@ function readCellText(td) {
         return clone.textContent;
     };
 
-    const blocks = td.querySelectorAll('.cell-title, .cell-sub, .state, .badge, .ip-badge, .ip-status-text, .ip-tag-plain');
+    const blocks = td.querySelectorAll('.cell-title, .cell-sub, .ip-badge, .ip-status-text, .ip-tag-plain');
     if (blocks.length) {
         blocks.forEach(b => { if (!b.closest('.pdf-omit')) add(textWithoutPlaceholders(b)); });
     } else {

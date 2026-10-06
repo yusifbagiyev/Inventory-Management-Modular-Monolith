@@ -1,6 +1,6 @@
 // User or role permission editor that saves each change at once and puts the control back if it fails
 
-window.PermissionEditor = (function () {
+(function () {
     'use strict';
 
     function post(url, name, grant) {
@@ -45,7 +45,6 @@ window.PermissionEditor = (function () {
             view.checked = true;
             try {
                 await post(url, view.dataset.perm, true);
-                view.dataset.own = 'true';
                 showToast(t('Viewing permission was granted too.'), 'info');
             } catch (e) {
                 view.checked = false;
@@ -60,7 +59,6 @@ window.PermissionEditor = (function () {
             sw.disabled = true;
             try {
                 await post(url, sw.dataset.perm, grant);
-                sw.dataset.own = grant ? 'true' : 'false';
                 if (grant && sw.dataset.view !== 'true') await ensureView(area);
                 markSaved();
             } catch (err) {
@@ -153,6 +151,4 @@ window.PermissionEditor = (function () {
         document.querySelectorAll('.ip-perm-editor').forEach(init);
         initSearch();
     });
-
-    return { init: init };
 })();

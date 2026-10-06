@@ -140,14 +140,6 @@
                     isSubmitting = true;
                     return true;
                 },
-                onSuccess: function(response) {
-                    if (response.isApprovalRequest || response.approvalRequestId) {
-                        showToast(response.message || t('Transfer request submitted for approval'), 'info');
-                        setTimeout(() => window.location.href = '/Routes', 2000);
-                        return false;
-                    }
-                    return true;
-                },
                 onError: function(errorMessage) {
                     isSubmitting = false;
                     $submitBtn.prop('disabled', false).html(originalButtonHtml);

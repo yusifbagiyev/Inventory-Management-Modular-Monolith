@@ -4,9 +4,6 @@ window.AppConfig = (function () {
     'use strict';
 
     const config = {
-        api: {
-            gateway: '/api'
-        },
         signalR: {
             notificationHub: '/notificationHub'
         }

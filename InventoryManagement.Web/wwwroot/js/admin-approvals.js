@@ -28,9 +28,6 @@ function debouncedLoadPendingApprovalsCount() {
     window.approvalsLoadTimeout = setTimeout(loadPendingApprovalsCount, 500);
 }
 
-window.loadPendingApprovalsCount = loadPendingApprovalsCount;
-window.debouncedLoadPendingApprovalsCount = debouncedLoadPendingApprovalsCount;
-
 // Any decided, cancelled or new request changes the pending count
 window.addEventListener('live:changed', function (e) {
     const changes = (e.detail && e.detail.changes) || [];

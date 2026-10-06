@@ -185,11 +185,6 @@
                 const $submitBtn = $('#submitBtn');
                 const originalButtonHtml = $submitBtn.html();
 
-                // Drop handlers bound earlier, otherwise the form is sent twice
-                $form.off('submit');
-                $form.off('submit.ajaxHandler');
-                $submitBtn.off('click');
-
                 AjaxHandler.handleForm('#editRouteForm', {
                     successMessage: t('Route updated successfully!'),
                     successRedirect: '/Routes',

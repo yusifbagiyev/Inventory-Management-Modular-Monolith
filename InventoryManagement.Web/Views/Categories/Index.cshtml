@@ -78,7 +78,7 @@
                     <tbody id="categoriesTable">
                         @foreach (var category in Model.Items)
                         {
-                            <tr class="category-item" data-href="@Url.Action("Details", new { id = category.Id })">
+                            <tr data-href="@Url.Action("Details", new { id = category.Id })">
                                 <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = category.Id })" title="@category.Name">@category.Name</a>

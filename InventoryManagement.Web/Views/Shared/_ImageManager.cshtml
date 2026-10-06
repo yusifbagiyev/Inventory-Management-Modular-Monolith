@@ -10,7 +10,7 @@
         <span class="ip-hint ip-num ms-auto" data-im-count></span>
     </div>
 
-    <div class="ip-images im-grid" data-im-grid>
+    <div class="ip-images" data-im-grid>
         @foreach (var url in Model.Existing)
         {
             <div class="im-tile" data-im-existing="@url">
@@ -23,7 +23,7 @@
             </div>
         }
 
-        <label class="ip-image-add im-add" data-im-add>
+        <label class="ip-image-add" data-im-add>
             <input type="file" name="ImageFiles" multiple accept="image/jpeg,image/png,.jpg,.jpeg,.png" data-im-input />
             <i class="fa-solid fa-plus fa-lg"></i>
             <span class="fw-semibold">@L["Add image"]</span>

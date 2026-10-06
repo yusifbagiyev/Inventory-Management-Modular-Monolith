@@ -135,7 +135,7 @@ window.ImageManager = (function () {
 
         state.files.forEach(function (item, index) {
             const tile = document.createElement('div');
-            tile.className = 'im-tile im-tile-new';
+            tile.className = 'im-tile';
             tile.dataset.imNew = String(index);
             tile.innerHTML =
                 '<div class="ip-image-tile">' +
@@ -275,5 +275,5 @@ window.ImageManager = (function () {
 
     document.addEventListener('DOMContentLoaded', function () { initAll(); });
 
-    return { init: init, initAll: initAll, reset: reset };
+    return { reset: reset };
 })();

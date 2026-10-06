@@ -57,8 +57,8 @@ window.ListFilters = (function () {
             return value && value !== SEVERAL ? toCategoryKey(value) : null;
         }
 
-        function navigate(params, options) {
-            ListNav.go(config.basePath + '?' + params.toString(), options);
+        function navigate(params) {
+            ListNav.go(config.basePath + '?' + params.toString());
         }
 
         function currentParams() {
@@ -207,15 +207,11 @@ window.ListFilters = (function () {
             apply();
         }
 
-        /** Removes one applied filter, where the dates key removes both ends of the range. */
-        function remove(key) {
+        /** Removes both ends of the date range. */
+        function removeDates() {
             const params = currentParams();
-            if (key === 'dates') {
-                params.delete('startDate');
-                params.delete('endDate');
-            } else {
-                params.delete(key);
-            }
+            params.delete('startDate');
+            params.delete('endDate');
             params.set('pageNumber', '1');
             navigate(params);
         }
@@ -238,7 +234,7 @@ window.ListFilters = (function () {
                 onApply: apply,
                 // Clear reloads only if a date filter was actually set
                 onClear: function () {
-                    if (currentParams().has('startDate')) remove('dates');
+                    if (currentParams().has('startDate')) removeDates();
                 }
             });
 
@@ -491,8 +487,6 @@ window.ListFilters = (function () {
 
         return {
             apply: apply,
-            collect: collect,
-            remove: remove,
             toggleFlag: toggleFlag,
             reset: reset,
             onDepartmentChange: onDepartmentChange,

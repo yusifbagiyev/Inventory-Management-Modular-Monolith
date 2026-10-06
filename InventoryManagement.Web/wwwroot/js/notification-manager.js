@@ -218,8 +218,6 @@ window.NotificationManager = (function () {
             if (window.isAdmin) {
                 if (typeof debouncedLoadPendingApprovalsCount === 'function') {
                     debouncedLoadPendingApprovalsCount();
-                } else if (typeof loadPendingApprovalsCount === 'function') {
-                    loadPendingApprovalsCount();
                 }
 
             }
@@ -448,26 +446,5 @@ window.NotificationManager = (function () {
 
 
 
-    return {
-        initialize: initialize,
-        getConnection: () => connection,
-        getConnectionState: () => connectionState,
-        isConnected: () => connectionState === 'connected',
-        reconnect: () => {
-            if (connectionState !== 'connected' && connectionState !== 'connecting') {
-                connectionRetryCount = 0;
-                establishConnection();
-            }
-        },
-        disconnect: () => {
-            isInitialized = false;
-            if (connection) {
-                connection.stop();
-            }
-            if (reconnectTimeout) {
-                clearTimeout(reconnectTimeout);
-                reconnectTimeout = null;
-            }
-        }
-    };
+    return { initialize: initialize };
 })();

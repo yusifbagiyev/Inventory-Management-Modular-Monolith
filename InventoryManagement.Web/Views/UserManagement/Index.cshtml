@@ -283,7 +283,7 @@
 
         function exportUsersToPDF() {
             const table = document.getElementById('usersTable');
-            if (!table || typeof collectTableData !== 'function') return;
+            if (!table) return;
             const data = collectTableData(table, [t('Actions')]);
             if (!data.rows.length) { showToast(t('Nothing to export'), 'warning'); return; }
             renderPrintDocument({ title: t('Users'), headers: data.headers, rows: data.rows });
@@ -291,9 +291,9 @@
 
         document.getElementById('searchInput').addEventListener('input', applyUserFilters);
 
-        // Razor renders the flag unquoted, so isActive is usually a real boolean
+        // Razor renders the flag unquoted, so isActive is a real boolean
         function toggleUserStatus(userId, isActive) {
-            const deactivating = (isActive === true || isActive === 'true');
+            const deactivating = isActive === true;
             confirmAction({
                 title: deactivating ? t('Deactivate user') : t('Activate user'),
                 message: deactivating

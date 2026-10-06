@@ -66,7 +66,7 @@
 <body>
     @{ var signedIn = User.Identity?.IsAuthenticated ?? false; }
     <a class="ip-skip" href="#page-body">@L["Skip to content"]</a>
-    <div class="ip-app" id="wrapper">
+    <div class="ip-app">
         @if (signedIn)
         {
             @* Phone app bar below 768px, where site.js turns the menu button into a back arrow on breadcrumb pages *@
@@ -87,7 +87,7 @@
             <partial name="_Sidebar" />
         }
 
-        <main class="ip-main page-content@(signedIn ? "" : " ip-guest")" id="page-content-wrapper">
+        <main class="ip-main@(signedIn ? "" : " ip-guest")">
             @if (!signedIn)
             {
                 @* Error pages reached while signed out get the sign-in page's header instead of the toolbar *@
@@ -183,7 +183,7 @@
 
     @* Used through confirmAction() instead of the browser's confirm(), which cannot be styled *@
     <div class="modal fade ip-modal" id="globalConfirmModal" tabindex="-1" aria-labelledby="globalConfirmTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm-plus">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="globalConfirmTitle">@L["Please confirm"]</h5>
@@ -359,10 +359,7 @@
                 'ApprovalRequest': 'warning',
                 'ApprovalResponse': 'success',
                 'ProductUpdate': 'info',
-                'RouteUpdate': 'info',
-                'RouteCompleted': 'success',
-                'TransferCompleted': 'success',
-                'System': 'secondary'
+                'RouteUpdate': 'info'
             };
             return types[type] || 'info';
         };

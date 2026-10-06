@@ -68,16 +68,6 @@
                     return true;
                 },
 
-                onSuccess: function(response) {
-                    // Without product.update.direct the change waits for approval
-                    if (response.isApprovalRequest || response.approvalRequestId) {
-                        showToast(response.message || t('Product update submitted for approval'), 'info', 3000);
-                        setTimeout(() => { window.location.href = '@Url.Action("Details", new { id = Model.Id })'; }, 2000);
-                        return false;
-                    }
-                    return true;
-                },
-
                 onError: function() {
                     isSubmitting = false;
                     $submitBtn.prop('disabled', false).html(originalButtonHtml);
