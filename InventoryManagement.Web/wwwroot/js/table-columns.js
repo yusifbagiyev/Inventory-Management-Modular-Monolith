@@ -7,6 +7,10 @@ window.TableColumns = (function () {
 
     let panel = null;
     let panelHeader = null;
+    let panelOpener = null;
+
+    // The header control that takes focus again once a reload has rebuilt the headers
+    let refocus = null;
 
     // Client tables keep their filters here, keyed by header cell
     const clientFilters = new WeakMap();
@@ -42,6 +46,25 @@ window.TableColumns = (function () {
 
     function label(th) {
         return th.dataset.label || (th.querySelector('.ip-th-label') || th).textContent.trim();
+    }
+
+    // A swapped table has new header cells, so a column is found again by its table and position
+    function mark(th, control) {
+        return { table: th.closest('table').id || '', index: columnIndex(th), filter: th.dataset.filter || '', control: control };
+    }
+
+    function findHeader(place) {
+        return Array.from(document.querySelectorAll('th[data-decorated]')).find(function (th) {
+            return (th.closest('table').id || '') === place.table && columnIndex(th) === place.index && (th.dataset.filter || '') === place.filter;
+        }) || null;
+    }
+
+    function focusQuietly(el) {
+        if (el && el.isConnected) el.focus({ preventScroll: true });
+    }
+
+    function focusIsFree() {
+        return !document.activeElement || document.activeElement === document.body;
     }
 
     function fold(text) {
@@ -138,6 +161,7 @@ window.TableColumns = (function () {
         else if ((p.get('dir') || 'asc') === first) p.set('dir', second);
         else { p.delete('sort'); p.delete('dir'); }
         p.delete('pageNumber');
+        refocus = mark(th, '.ip-th-sort');
         navigate(url);
     }
 
@@ -160,7 +184,9 @@ window.TableColumns = (function () {
         remember(th, { sortDir: next });
         const body = table.tBodies[0];
         if (!body) return;
-        if (!table._originalOrder) table._originalOrder = Array.from(body.rows);
+        // The row that says nothing matches is not data, so it is neither remembered nor sorted
+        const isData = function (row) { return !row.classList.contains('ip-colfilter-empty'); };
+        if (!table._originalOrder) table._originalOrder = Array.from(body.rows).filter(isData);
         const index = columnIndex(th);
         let rows = table._originalOrder.slice();
         if (next) {
@@ -171,6 +197,7 @@ window.TableColumns = (function () {
             });
         }
         rows.forEach(function (row) { body.appendChild(row); });
+        Array.from(body.rows).filter(function (row) { return !isData(row); }).forEach(function (row) { body.appendChild(row); });
         syncHeaders();
         changed(table);
     }
@@ -193,6 +220,8 @@ window.TableColumns = (function () {
             else if (value !== '' && value != null) p.set(name, value);
         });
         p.delete('pageNumber');
+        // Nothing reloads when the address stays the same, so there is no rebuilt header to wait for
+        if (url.href !== window.location.href) refocus = mark(th, '.ip-th-filter');
         navigate(url);
     }
 
@@ -275,6 +304,41 @@ window.TableColumns = (function () {
         return paramNames(th).map(function (name) { return name ? p.getAll(name) : []; });
     }
 
+    /** The filter a header holds in words, such as the names picked from a list or the two ends of a range. */
+    function describe(th, values) {
+        const first = function (i) { return (values[i] || []).filter(Boolean)[0] || ''; };
+        switch (th.dataset.filter) {
+            case 'list': {
+                const names = new Map(optionsOf(th).map(function (o) { return [String(o.value), o.label]; }));
+                return (values[0] || []).filter(Boolean).map(function (v) { return names.get(String(v)) || v; }).join(', ');
+            }
+            case 'date': {
+                const days = [first(0), first(1)].filter(Boolean).map(function (iso) {
+                    const day = window.DateRange ? DateRange.fromIso(iso) : null;
+                    return day ? DateRange.text(day) : iso;
+                });
+                return days.length < 2 || days[0] === days[1] ? days[0] : days.join(' – ');
+            }
+            case 'range': {
+                const min = first(0), max = first(1);
+                return min && max ? min + ' – ' + max : min ? '≥ ' + min : '≤ ' + max;
+            }
+            default:
+                return first(0);
+        }
+    }
+
+    /** The header filters in effect as { label, text, params }, for places that list them away from the header. */
+    function activeFilters(root) {
+        const found = [];
+        (root || document).querySelectorAll('th[data-filter]').forEach(function (th) {
+            const values = currentValues(th);
+            if (!values.some(function (v) { return (v || []).some(Boolean); })) return;
+            found.push({ label: label(th), text: describe(th, values), params: paramNames(th).filter(Boolean) });
+        });
+        return found;
+    }
+
     function body(th) {
         const type = th.dataset.filter;
         const values = currentValues(th);
@@ -283,36 +347,90 @@ window.TableColumns = (function () {
             const options = optionsOf(th);
             const multi = th.dataset.multi !== 'false';
             const search = options.length > 8
-                ? `<input type="search" class="ip-input ip-input-sm" data-colfilter-find placeholder="${escapeHtml(t('Search...'))}" />` : '';
+                ? `<input type="search" class="ip-input" data-colfilter-find placeholder="${escapeHtml(t('Search...'))}" aria-label="${escapeHtml(t('Search'))}" />` : '';
             const items = options.length
                 ? options.map(function (o) {
                     return `<label class="ip-colfilter-opt"><input type="${multi ? 'checkbox' : 'radio'}" name="colfilter" value="${escapeHtml(o.value)}" ${selected.has(String(o.value)) ? 'checked' : ''} /><span>${escapeHtml(o.label)}</span></label>`;
                 }).join('')
                 : `<div class="ip-faint small">${escapeHtml(t('No values'))}</div>`;
-            return `${search}<div class="ip-colfilter-list">${items}</div>`;
+            return `${search}<div class="ip-colfilter-list" role="group" aria-label="${escapeHtml(label(th))}">${items}</div>`;
         }
         if (type === 'date') {
-            return `<div data-colfilter-calendar></div>`;
+            // The two fields are the keyboard's way to a range, and the calendar under them fills the same fields
+            const field = function (end, name) {
+                return `<label class="ip-colfilter-date"><span>${escapeHtml(name)}</span><input type="text" class="ip-input" data-colfilter-${end} inputmode="numeric" autocomplete="off" size="10" maxlength="10" placeholder="${escapeHtml(t('dd.mm.yyyy'))}" aria-describedby="colfilterDateError" /></label>`;
+            };
+            return `<div class="ip-colfilter-dates">${field('from', t('Start date'))}${field('to', t('End date'))}</div>
+                <div class="ip-colfilter-error" id="colfilterDateError" role="alert" hidden>${escapeHtml(t('Enter the date as dd.mm.yyyy'))}</div>
+                <div data-colfilter-calendar aria-hidden="true"></div>`;
         }
         if (type === 'range') {
             const [min, max] = [(values[0] || [])[0] || '', (values[1] || [])[0] || ''];
             return `<div class="ip-colfilter-range">
-                <input type="number" class="ip-input ip-input-sm" data-colfilter-min placeholder="${escapeHtml(t('Minimum'))}" value="${escapeHtml(min)}" />
+                <input type="number" class="ip-input" data-colfilter-min placeholder="${escapeHtml(t('Minimum'))}" aria-label="${escapeHtml(t('Minimum'))}" value="${escapeHtml(min)}" />
                 <span aria-hidden="true">–</span>
-                <input type="number" class="ip-input ip-input-sm" data-colfilter-max placeholder="${escapeHtml(t('Maximum'))}" value="${escapeHtml(max)}" />
+                <input type="number" class="ip-input" data-colfilter-max placeholder="${escapeHtml(t('Maximum'))}" aria-label="${escapeHtml(t('Maximum'))}" value="${escapeHtml(max)}" />
             </div>`;
         }
         const text = (values[0] || [])[0] || '';
-        return `<input type="search" class="ip-input ip-input-sm" data-colfilter-text placeholder="${escapeHtml(t('Search...'))}" value="${escapeHtml(text)}" />`;
+        return `<input type="search" class="ip-input" data-colfilter-text placeholder="${escapeHtml(t('Search...'))}" aria-label="${escapeHtml(label(th))}" value="${escapeHtml(text)}" />`;
+    }
+
+    function dateFields() {
+        return [panel.querySelector('[data-colfilter-from]'), panel.querySelector('[data-colfilter-to]')];
+    }
+
+    function markDates(wrong) {
+        dateFields().forEach(function (field) {
+            const invalid = field === wrong;
+            field.classList.toggle('is-invalid', invalid);
+            if (invalid) field.setAttribute('aria-invalid', 'true'); else field.removeAttribute('aria-invalid');
+        });
+        panel.querySelector('.ip-colfilter-error').hidden = !wrong;
+    }
+
+    function attachCalendar(th) {
+        const holder = panel.querySelector('[data-colfilter-calendar]');
+        const fields = dateFields();
+        const owner = panel;
+        DateRange.attach(holder, {
+            inline: true,
+            // The picker reports a moment later, when this panel may already be closed
+            onChange: function (dates) {
+                if (panel !== owner) return;
+                fields.forEach(function (field, i) { field.value = dates[i] ? DateRange.text(dates[i]) : ''; });
+                markDates(null);
+            }
+        });
+        const values = currentValues(th);
+        const from = DateRange.fromIso((values[0] || [])[0]);
+        const to = DateRange.fromIso((values[1] || [])[0]);
+        if (from && to) {
+            DateRange.set(holder, from, to);
+            fields[0].value = DateRange.text(from);
+            fields[1].value = DateRange.text(to);
+        }
+    }
+
+    // Typed days show in the calendar as soon as they read as dates
+    function syncCalendar() {
+        const holder = panel.querySelector('[data-colfilter-calendar]');
+        const days = dateFields().map(function (field) { return DateRange.day(field.value); });
+        markDates(null);
+        const from = days[0] || days[1], to = days[1] || days[0];
+        if (from) DateRange.set(holder, from <= to ? from : to, from <= to ? to : from);
+        else if (dateFields().every(function (field) { return !field.value.trim(); })) DateRange.clear(holder);
     }
 
     function open(th, button) {
         close();
         panelHeader = th;
+        panelOpener = button;
         panel = document.createElement('div');
         panel.className = 'ip-colfilter';
         panel.setAttribute('role', 'dialog');
         panel.setAttribute('aria-label', t('Filter by {0}').replace('{0}', label(th)));
+        panel.tabIndex = -1;
         panel.innerHTML = `<div class="ip-colfilter-head">${escapeHtml(label(th))}</div>
             <div class="ip-colfilter-body">${body(th)}</div>
             <div class="ip-colfilter-foot">
@@ -321,19 +439,14 @@ window.TableColumns = (function () {
             </div>`;
         document.body.appendChild(panel);
 
-        if (th.dataset.filter === 'date') {
-            const holder = panel.querySelector('[data-colfilter-calendar]');
-            DateRange.attach(holder, { inline: true });
-            const values = currentValues(th);
-            const from = DateRange.fromIso((values[0] || [])[0]);
-            const to = DateRange.fromIso((values[1] || [])[0]);
-            if (from && to) DateRange.set(holder, from, to);
-        }
+        if (th.dataset.filter === 'date') attachCalendar(th);
 
         place(button);
         button.setAttribute('aria-expanded', 'true');
-        const first = panel.querySelector('input:not([type=checkbox]):not([type=radio]), input');
-        if (first && window.matchMedia('(pointer: fine)').matches) first.focus();
+        // A touch screen would raise its keyboard for a focused field, so there the panel itself takes the focus
+        const first = window.matchMedia('(pointer: fine)').matches
+            ? panel.querySelector('input:not([type=checkbox]):not([type=radio]), input') : null;
+        focusQuietly(first || panel);
     }
 
     function place(button) {
@@ -343,29 +456,64 @@ window.TableColumns = (function () {
             return;
         }
         const rect = button.getBoundingClientRect();
+        const column = (button.closest('.ip-th') || button).getBoundingClientRect();
         const width = panel.offsetWidth;
-        const left = Math.min(Math.max(8, rect.right - width), window.innerWidth - width - 8);
+        // Opens under its column and turns left only when the window has no room, and never lies over the menu
+        const main = document.querySelector('.ip-main');
+        const min = (main ? Math.max(0, main.getBoundingClientRect().left) : 0) + 8;
+        const max = window.innerWidth - width - 8;
+        const left = Math.max(min, Math.min(column.left <= max ? column.left : rect.right - width, max));
         panel.style.left = (left + window.scrollX) + 'px';
         panel.style.top = (rect.bottom + window.scrollY + 6) + 'px';
     }
 
     function close() {
         if (!panel) return;
+        const opener = panelOpener;
+        // Focus goes back to the button that opened the panel unless the user has already put it somewhere else
+        const back = focusIsFree() || panel.contains(document.activeElement);
         panel.remove();
         panel = null;
         document.querySelectorAll('.ip-th-filter[aria-expanded="true"]').forEach(function (b) { b.removeAttribute('aria-expanded'); });
         panelHeader = null;
+        panelOpener = null;
+        if (back) focusQuietly(opener);
     }
 
+    /** Keeps Tab inside the open panel, which sits at the end of the page and not next to its button. */
+    function trapTab(e) {
+        const stops = Array.from(panel.querySelectorAll('input, button, select, [tabindex]:not([tabindex="-1"])'))
+            .filter(function (el, i, all) {
+                if (el.disabled || el.closest('[hidden]')) return false;
+                if (el.type !== 'radio') return true;
+                // Radio buttons of one group are a single stop, the chosen one or else the first
+                const group = all.filter(function (other) { return other.type === 'radio' && other.name === el.name; });
+                return el === (group.find(function (other) { return other.checked; }) || group[0]);
+            });
+        if (!stops.length) { e.preventDefault(); focusQuietly(panel); return; }
+        const active = document.activeElement;
+        const outside = !active || !panel.contains(active) || active === panel;
+        const atStart = !outside && (active === stops[0] || (active.type === 'radio' && stops[0].type === 'radio' && active.name === stops[0].name));
+        if (e.shiftKey && (outside || atStart)) { e.preventDefault(); stops[stops.length - 1].focus(); }
+        else if (!e.shiftKey && (outside || active === stops[stops.length - 1])) { e.preventDefault(); stops[0].focus(); }
+    }
+
+    /** The values the panel holds, or null while a typed date cannot be read. */
     function readPanel(th) {
         const type = th.dataset.filter;
         if (type === 'list') {
             return [Array.from(panel.querySelectorAll('.ip-colfilter-list input:checked')).map(function (i) { return i.value; })];
         }
         if (type === 'date') {
-            const picker = panel.querySelector('[data-colfilter-calendar]');
-            const dates = DateRange.selected(picker);
-            return dates.length === 2 ? [DateRange.iso(dates[0]), DateRange.iso(dates[1])] : ['', ''];
+            const fields = dateFields();
+            const days = fields.map(function (field) { return DateRange.day(field.value); });
+            const wrong = fields.find(function (field, i) { return field.value.trim() && !days[i]; });
+            markDates(wrong || null);
+            if (wrong) { wrong.focus(); wrong.select(); return null; }
+            // One day alone filters that day, and ends given the wrong way round are swapped
+            const from = days[0] || days[1], to = days[1] || days[0];
+            if (!from) return ['', ''];
+            return [DateRange.iso(from <= to ? from : to), DateRange.iso(from <= to ? to : from)];
         }
         if (type === 'range') {
             return [panel.querySelector('[data-colfilter-min]').value.trim(), panel.querySelector('[data-colfilter-max]').value.trim()];
@@ -401,6 +549,7 @@ window.TableColumns = (function () {
     }
 
     function apply(th, values) {
+        if (!values) return;
         close();
         if (isClient(th)) {
             th._clientValues = values.map(function (v) { return Array.isArray(v) ? v : (v ? [v] : []); });
@@ -444,12 +593,14 @@ window.TableColumns = (function () {
         if (!panel) return;
         if (e.target.closest('[data-colfilter-apply]')) { apply(panelHeader, readPanel(panelHeader)); return; }
         if (e.target.closest('[data-colfilter-clear]')) { apply(panelHeader, emptyValues(panelHeader)); return; }
-        if (!e.target.closest('.ip-colfilter') && !e.target.closest('.air-datepicker')) close();
+        // The calendar redraws its cells on a click, so the target may have left the page by now and the path is asked instead
+        if (!e.composedPath().includes(panel)) close();
     });
 
     document.addEventListener('keydown', function (e) {
         if (!panel) return;
         if (e.key === 'Escape') { close(); return; }
+        if (e.key === 'Tab') { trapTab(e); return; }
         if (e.key === 'Enter' && e.target.closest('.ip-colfilter') && e.target.matches('input')) {
             e.preventDefault();
             apply(panelHeader, readPanel(panelHeader));
@@ -457,6 +608,8 @@ window.TableColumns = (function () {
     });
 
     document.addEventListener('input', function (e) {
+        if (!panel) return;
+        if (e.target.matches('[data-colfilter-from], [data-colfilter-to]')) { syncCalendar(); return; }
         if (!e.target.matches('[data-colfilter-find]')) return;
         const needle = fold(e.target.value);
         panel.querySelectorAll('.ip-colfilter-opt').forEach(function (opt) {
@@ -464,14 +617,38 @@ window.TableColumns = (function () {
         });
     });
 
+    // A day typed loosely, like 5.1.2026, is rewritten the way the lists show dates once the field is left
+    document.addEventListener('change', function (e) {
+        if (!panel || !e.target.matches('[data-colfilter-from], [data-colfilter-to]')) return;
+        const day = DateRange.day(e.target.value);
+        if (day) e.target.value = DateRange.text(day);
+    });
+
     // A phone keyboard resizes the window too, which must not close the sheet
     window.addEventListener('resize', function () { if (panel && !panel.classList.contains('is-sheet')) close(); });
-    window.addEventListener('popstate', function () { close(); syncHeaders(); });
-    document.addEventListener('listnav:loaded', function () { close(); decorate(); syncHeaders(); });
+    window.addEventListener('popstate', function () { refocus = null; close(); syncHeaders(); });
+    document.addEventListener('listnav:loaded', function () {
+        close();
+        decorate();
+        syncHeaders();
+        // The reload replaced the header that was sorted or filtered from, so its new copy takes the focus it had
+        const th = refocus && findHeader(refocus);
+        if (th && focusIsFree()) focusQuietly(th.querySelector(refocus.control));
+        refocus = null;
+    });
 
     // Live updates and list navigation swap the table, so new headers are decorated as they appear
-    new MutationObserver(function () { decorate(); })
-        .observe(document.documentElement, { childList: true, subtree: true });
+    new MutationObserver(function () {
+        decorate();
+        // An open panel follows its column into the new table, or closes when the column is gone
+        if (!panel || panelHeader.isConnected) return;
+        const th = findHeader(mark(panelHeader));
+        const button = th && th.querySelector('.ip-th-filter');
+        if (!button) { close(); return; }
+        panelHeader = th;
+        panelOpener = button;
+        button.setAttribute('aria-expanded', 'true');
+    }).observe(document.documentElement, { childList: true, subtree: true });
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { decorate(); });
     else decorate();
@@ -495,10 +672,14 @@ window.TableColumns = (function () {
             navigate(url);
         }
 
+        // The PDF export reads which query values each control holds, so it does not repeat them from the headers
         Object.entries(fields).forEach(function ([selector, param]) {
             const select = document.querySelector(selector);
+            if (select) select.dataset.query = param;
             if (select) select.addEventListener('change', function () { go({ [param]: select.value }); });
         });
+        if (sortSelect) sortSelect.dataset.query = 'sort dir';
+        if (search) search.dataset.query = 'search';
         if (sortSelect) sortSelect.addEventListener('change', function () {
             const [sort, dir] = sortSelect.value.split(':');
             go(sortSelect.selectedIndex === 0 ? { sort: '', dir: '' } : { sort: sort, dir: dir });
@@ -510,7 +691,8 @@ window.TableColumns = (function () {
         // The bar is not swapped with the list, so it follows the URL after paging, header clicks and Back
         function sync() {
             const p = new URLSearchParams(window.location.search);
-            if (search) search.value = p.get('search') || '';
+            // Left alone while it has focus, since the answer to an earlier search can arrive during typing
+            if (search && document.activeElement !== search) search.value = p.get('search') || '';
             Object.entries(fields).forEach(function ([selector, param]) {
                 const select = document.querySelector(selector);
                 if (select) select.value = p.getAll(param).length === 1 ? p.get(param) : '';
@@ -527,5 +709,5 @@ window.TableColumns = (function () {
         sync();
     }
 
-    return { decorate: decorate, clear: clearAll, bindBar: bindBar };
+    return { decorate: decorate, clear: clearAll, bindBar: bindBar, filters: activeFilters };
 })();

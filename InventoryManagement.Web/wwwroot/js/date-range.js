@@ -73,9 +73,12 @@ window.DateRange = (function () {
             autoClose: !opts.inline,
             buttons: opts.inline ? false : ['clear'],
             position: opts.position || 'bottom left',
+            // A second click on the only picked day makes a one-day range, and an end of a full range is still released by a click
+            toggleSelected: function ({ datepicker }) { return datepicker.selectedDates.length !== 1; },
             // Only real picks arrive here because set() and clear() are silent
             onSelect: function ({ date }) {
                 const dates = Array.isArray(date) ? date : (date ? [date] : []);
+                if (typeof opts.onChange === 'function') opts.onChange(dates);
                 if (dates.length === 2 && typeof opts.onApply === 'function') opts.onApply(dates[0], dates[1]);
                 else if (dates.length === 0 && typeof opts.onClear === 'function') opts.onClear();
             }
@@ -88,7 +91,10 @@ window.DateRange = (function () {
     // onSelect fires in a later tick, so a non-silent restore on load would reload the page in a loop
     function set(target, start, end) {
         const picker = pickers.get(element(target));
-        if (picker && start && end) picker.selectDate([start, end], { silent: true });
+        if (!picker || !start || !end) return;
+        // A day left from an unfinished pick would pair up with the first of the new ones
+        picker.clear({ silent: true });
+        picker.selectDate([start, end], { silent: true });
     }
 
     function clear(target) {
@@ -102,9 +108,19 @@ window.DateRange = (function () {
         return picker ? picker.selectedDates.slice() : [];
     }
 
+    /** Reads a day written as dd.MM.yyyy, also with one-digit parts or / and - between them, or returns null. */
     function parseDay(text) {
-        const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(String(text || '').trim());
-        return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+        const m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(String(text || '').trim());
+        if (!m) return null;
+        const date = new Date(+m[3], +m[2] - 1, +m[1]);
+        // The constructor turns 31.02 into a day in March, which nobody typed
+        return date.getMonth() === +m[2] - 1 && date.getDate() === +m[1] ? date : null;
+    }
+
+    /** Writes the local calendar day as dd.MM.yyyy. */
+    function text(date) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
     }
 
     /** Parses the input text into local start and end dates, or returns null. */
@@ -128,5 +144,5 @@ window.DateRange = (function () {
         return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
     }
 
-    return { attach: attach, set: set, clear: clear, selected: selected, parse: parse, iso: iso, fromIso: fromIso };
+    return { attach: attach, set: set, clear: clear, selected: selected, parse: parse, day: parseDay, text: text, iso: iso, fromIso: fromIso };
 })();

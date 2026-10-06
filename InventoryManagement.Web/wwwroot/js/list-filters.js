@@ -30,6 +30,24 @@ window.ListFilters = (function () {
         const owned = new Set(['search', 'startDate', 'endDate', 'pageSize', 'pageNumber']
             .concat(Object.keys(config.fields), config.urlFlags));
 
+        // The PDF export reads which query values each control holds, so it does not repeat them from the headers
+        Object.keys(config.fields).forEach(function (param) { $(config.fields[param]).attr('data-query', param); });
+        $('#searchInput').attr('data-query', 'search');
+        $('#dateRange').attr('data-query', 'startDate endDate');
+
+        // The pairs were built for the other filters of the request that rendered the page, and the bar is never swapped
+        const pairParams = config.pairParams || Object.keys(config.fields)
+            .filter(function (param) { return !['#departmentFilter', '#categoryFilter'].includes(config.fields[param]); })
+            .concat(config.urlFlags);
+        function pairState(query) {
+            const params = query || currentParams();
+            return pairParams.map(function (param) { return params.getAll(param).join(','); }).join('|');
+        }
+        const pairsBuiltFor = pairState();
+
+        /** False once a tab, state or flag of the address (or of the query given) differs from the page load, when the pairs no longer describe the list. */
+        function pairsHold(query) { return pairState(query) === pairsBuiltFor; }
+
         function selectedDepartment() {
             const value = $('#departmentFilter').val();
             return value && value !== SEVERAL ? toDepartmentKey(value) : null;
@@ -63,8 +81,9 @@ window.ListFilters = (function () {
             const current = currentParams();
             Object.keys(config.fields).forEach(function (param) {
                 const value = $(config.fields[param]).val();
-                if (value === SEVERAL) current.getAll(param).forEach(function (v) { params.append(param, v); });
-                else if (value !== undefined && value !== null && value !== '') params.append(param, value);
+                // A list with nothing selected holds a value it has no option for, which stays as the URL has it
+                if (value === SEVERAL || value === null) current.getAll(param).forEach(function (v) { params.append(param, v); });
+                else if (value !== undefined && value !== '') params.append(param, value);
             });
 
             // URL-only flags have no control, so they are carried over from the current URL
@@ -81,6 +100,15 @@ window.ListFilters = (function () {
         }
 
         function apply() { navigate(collect()); }
+
+        /** The name a column header gives a value, for options the bar's own list lacks. */
+        function optionLabel(param, value) {
+            const th = Array.from(document.querySelectorAll('th[data-options]')).find(function (h) { return h.dataset.param === param; });
+            let options = [];
+            try { options = th ? JSON.parse(th.dataset.options) : []; } catch (e) { options = []; }
+            const match = options.find(function (o) { return String(o.value) === value; });
+            return match ? match.label : value;
+        }
 
         function restore() {
             const params = currentParams();
@@ -99,12 +127,16 @@ window.ListFilters = (function () {
             Object.keys(config.fields).forEach(function (param) {
                 const select = $(config.fields[param]);
                 const values = params.getAll(param);
-                select.find('option[value="' + SEVERAL + '"]').remove();
+                select.find('option[value="' + SEVERAL + '"], option[data-carried]').remove();
                 if (values.length > 1) {
                     select.append($('<option>').val(SEVERAL).text(t('{0} selected', values.length)));
                     select.val(SEVERAL);
                 } else {
-                    select.val(values[0] || '');
+                    const value = values[0] || '';
+                    // The list is the one of the page load, so a value it lacks gets an option instead of being dropped
+                    if (value && select.length && !Array.from(select[0].options).some(function (o) { return o.value === value; }))
+                        select.append($('<option data-carried>').val(value).text(optionLabel(param, value)));
+                    select.val(value);
                 }
             });
         }
@@ -112,36 +144,35 @@ window.ListFilters = (function () {
         // Shows only the categories found in the selected department
         function cascadeCategoryOptions() {
             const dep = selectedDepartment();
-            const allowed = dep === null ? null : (deptToCats.get(dep) || new Set());
+            const allowed = dep === null || !pairsHold() ? null : (deptToCats.get(dep) || new Set());
             document.querySelectorAll('#categoryFilter option').forEach(function (opt) {
-                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && allowed !== null && !allowed.has(toCategoryKey(opt.value));
+                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && !opt.selected && allowed !== null && !allowed.has(toCategoryKey(opt.value));
             });
         }
 
         // Shows only the departments that hold the selected category
         function cascadeDepartmentOptions() {
             const cat = selectedCategory();
-            const allowed = cat === null ? null : (catToDepts.get(cat) || new Set());
+            const allowed = cat === null || !pairsHold() ? null : (catToDepts.get(cat) || new Set());
             document.querySelectorAll('#departmentFilter option').forEach(function (opt) {
-                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && allowed !== null && !allowed.has(toDepartmentKey(opt.value));
+                opt.hidden = opt.value !== '' && opt.value !== SEVERAL && !opt.selected && allowed !== null && !allowed.has(toDepartmentKey(opt.value));
             });
+        }
+
+        /** True when the pairs still describe the list and say this department holds nothing of this category. */
+        function incompatible(dep, cat, query) {
+            return dep !== null && cat !== null && pairsHold(query) && !(deptToCats.get(dep) || new Set()).has(cat);
         }
 
         // An incompatible pairing is dropped so the reload cannot land on an empty result
         function onDepartmentChange() {
-            const dep = selectedDepartment(), cat = selectedCategory();
-            if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) {
-                $('#categoryFilter').val('');
-            }
+            if (incompatible(selectedDepartment(), selectedCategory())) $('#categoryFilter').val('');
             cascadeCategoryOptions();
             apply();
         }
 
         function onCategoryChange() {
-            const cat = selectedCategory(), dep = selectedDepartment();
-            if (cat !== null && dep !== null && !(catToDepts.get(cat) || new Set()).has(dep)) {
-                $('#departmentFilter').val('');
-            }
+            if (incompatible(selectedDepartment(), selectedCategory())) $('#departmentFilter').val('');
             cascadeDepartmentOptions();
             apply();
         }
@@ -203,6 +234,12 @@ window.ListFilters = (function () {
         // Marked before DOMContentLoaded so MobileLayout leaves this bar to the sheet
         if (bar && config.sheet) bar.setAttribute('data-filter-sheet', '');
 
+        /** Filters set in a column header that the bar has no control for, which a phone cannot see or change otherwise. */
+        function headerFilters() {
+            return TableColumns.filters(document.querySelector('[data-list-region]'))
+                .filter(function (f) { return f.params.length && f.params.every(function (name) { return !owned.has(name); }); });
+        }
+
         function activeCount() {
             const params = collect();
             let n = 0;
@@ -212,7 +249,7 @@ window.ListFilters = (function () {
                 if (params.has(p) && bar && bar.querySelector(config.fields[p])) n++;
             });
             config.urlFlags.forEach(function (f) { if (params.get(f) === 'false') n++; });
-            return n;
+            return n + headerFilters().length;
         }
 
         function syncMoreButton() {
@@ -220,14 +257,45 @@ window.ListFilters = (function () {
             if (count) { const n = activeCount(); count.textContent = n ? String(n) : ''; }
         }
 
+        function press(b, on) {
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+
         function chip(group, value, text, active) {
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'ip-chip' + (active ? ' active' : '');
+            b.className = 'ip-chip';
             b.dataset.group = group;
             b.dataset.value = value;
-            b.textContent = text;
+            const name = document.createElement('span');
+            name.textContent = text;
+            b.appendChild(name);
+            press(b, !!active);
             return b;
+        }
+
+        /** Shows the order a sort chip stands for as an arrow, or none while another column sorts the list. */
+        function direct(b, dir) {
+            b.dataset.dir = dir;
+            b.querySelectorAll('i, .visually-hidden').forEach(function (el) { el.remove(); });
+            if (!dir) return;
+            b.insertAdjacentHTML('beforeend', '<i class="fa-solid ' + (dir === 'desc' ? 'fa-arrow-down' : 'fa-arrow-up') + ' ms-2" aria-hidden="true"></i>'
+                + '<span class="visually-hidden">, ' + escapeHtml(dir === 'desc' ? t('Descending') : t('Ascending')) + '</span>');
+        }
+
+        // Phones hide the table headers, so their sorting is offered here as one chip for each sortable column
+        function sortChips() {
+            const params = currentParams();
+            const sort = params.get('sort') || '', dir = params.get('dir') === 'desc' ? 'desc' : 'asc';
+            const chips = [chip('sort', '', t('Default order'), !sort)];
+            document.querySelectorAll('[data-list-region] th[data-sort]').forEach(function (th) {
+                const b = chip('sort', th.dataset.sort, th.dataset.label || th.textContent.trim(), th.dataset.sort === sort);
+                b.dataset.first = th.dataset.sortFirst === 'desc' ? 'desc' : 'asc';
+                direct(b, th.dataset.sort === sort ? dir : '');
+                chips.push(b);
+            });
+            return chips;
         }
 
         function section(title, chips, multi) {
@@ -258,6 +326,8 @@ window.ListFilters = (function () {
         function fillSheet() {
             const body = sheetEl.querySelector('.modal-body');
             body.innerHTML = '';
+            const sorting = sortChips();
+            if (sorting.length > 1) body.appendChild(section(t('Sort'), sorting, false));
             // Follow the bar's order, since config.fields can list them in any order
             const inBar = Object.keys(config.fields)
                 .map(function (param) { return { param: param, select: bar.querySelector(config.fields[param]) }; })
@@ -284,6 +354,13 @@ window.ListFilters = (function () {
                 });
                 body.appendChild(section(t('Other'), chips, true));
             }
+            // Each of these stays on until it is tapped off, and then Show results drops it
+            const fromHeaders = headerFilters().map(function (f) {
+                const b = chip('header', f.params.join(','), f.label + ': ' + f.text, true);
+                b.insertAdjacentHTML('beforeend', '<i class="fa-solid fa-xmark ms-2" aria-hidden="true"></i>');
+                return b;
+            });
+            if (fromHeaders.length) body.appendChild(section(t('Column filters'), fromHeaders, true));
         }
 
         function applySheet() {
@@ -295,10 +372,6 @@ window.ListFilters = (function () {
                 const select = bar.querySelector(config.fields[param]);
                 if (select) select.value = pick(param);
             });
-            // A department and category pair with no products keeps only the department
-            const dep = selectedDepartment(), cat = selectedCategory();
-            if (dep !== null && cat !== null && !(deptToCats.get(dep) || new Set()).has(cat)) $('#categoryFilter').val('');
-
             const params = collect();
             // Presets go straight into the query and the custom chip keeps the range picked in the bar
             const date = pick('date');
@@ -314,6 +387,20 @@ window.ListFilters = (function () {
                 const on = !!sheetEl.querySelector('.ip-chip.active[data-group="flag"][data-value="' + flag + '"]');
                 if (on) params.set(flag, 'false'); else params.delete(flag);
             });
+            // A department and category pair with no products keeps only the department, judged by the state and flags the sheet applies
+            if (incompatible(selectedDepartment(), selectedCategory(), params)) {
+                $('#categoryFilter').val('');
+                Object.keys(config.fields).forEach(function (param) { if (config.fields[param] === '#categoryFilter') params.delete(param); });
+            }
+            sheetEl.querySelectorAll('.ip-chip[data-group="header"]:not(.active)').forEach(function (c) {
+                c.dataset.value.split(',').forEach(function (name) { params.delete(name); });
+            });
+            const sorted = sheetEl.querySelector('.ip-chip.active[data-group="sort"]');
+            if (sorted) {
+                params.delete('sort');
+                params.delete('dir');
+                if (sorted.dataset.value) { params.set('sort', sorted.dataset.value); params.set('dir', sorted.dataset.dir); }
+            }
             bootstrap.Modal.getOrCreateInstance(sheetEl).hide();
             navigate(params);
         }
@@ -355,8 +442,14 @@ window.ListFilters = (function () {
                 const c = e.target.closest('.ip-chip');
                 if (c) {
                     const group = c.parentElement;
-                    if (group.hasAttribute('data-multi')) c.classList.toggle('active');
-                    else group.querySelectorAll('.ip-chip').forEach(function (o) { o.classList.toggle('active', o === c); });
+                    if (c.dataset.group === 'sort') {
+                        // A second tap on the chosen column turns its order around
+                        const dir = !c.dataset.value ? '' : !c.classList.contains('active') ? c.dataset.first : c.dataset.dir === 'asc' ? 'desc' : 'asc';
+                        group.querySelectorAll('.ip-chip').forEach(function (o) { direct(o, o === c ? dir : ''); });
+                    }
+                    if (group.hasAttribute('data-multi')) press(c, !c.classList.contains('active'));
+                    else group.querySelectorAll('.ip-chip').forEach(function (o) { press(o, o === c); });
+                    if (c.dataset.group === 'header') c.querySelector('i').hidden = !c.classList.contains('active');
                     return;
                 }
                 if (e.target.closest('[data-filter-apply]')) applySheet();

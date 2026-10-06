@@ -146,24 +146,48 @@ function openPrintFrame(html) {
     }, 350);
 }
 
-/** Summarises the active status tab and filters so the export says what it was filtered by. */
-function currentFilterSummary() {
+/** Summarises the active status tab, the filter bar and the column header filters so the export says what it was filtered by. */
+function currentFilterSummary(table) {
     const clean = s => (s || '').replace(/\s+/g, ' ').trim();
     const parts = [];
+    // Query names already described, so a header holding the same filter is not listed twice
+    const described = new Set();
     const tab = document.querySelector('[data-list-tabs] .ip-tab.active');
-    if (tab && tab !== document.querySelector('[data-list-tabs] .ip-tab')) {
+    const firstTab = document.querySelector('[data-list-tabs] .ip-tab');
+    if (tab && tab !== firstTab) {
         parts.push(clean(tab.firstChild?.textContent));
+        // The tab stands for the query values its link adds to the first tab's
+        if (tab.getAttribute('href') && firstTab.getAttribute('href')) {
+            const all = new URL(firstTab.href, window.location.href).searchParams;
+            new URL(tab.href, window.location.href).searchParams.forEach((value, name) => { if (!all.has(name)) described.add(name); });
+        }
     }
+    // A bar list showing only how many values a header picked leaves naming them to that header
+    const counted = [];
     document.querySelectorAll('.ip-filterbar .ip-filter').forEach(filter => {
-        const label = clean(filter.querySelector(':scope > span')?.textContent);
-        const select = filter.querySelector('select');
-        const input = filter.querySelector('input');
-        let value = '';
-        if (select && select.value) value = clean(select.selectedOptions[0]?.textContent);
-        else if (input && input.value) value = clean(input.value);
-        if (value) parts.push((label || t('Search')) + ': ' + value);
+        const control = filter.querySelector('select') || filter.querySelector('input');
+        if (!control || !control.value) return;
+        const query = (control.dataset.query || '').split(' ').filter(Boolean);
+        // The order of the rows is not a filter
+        if (query.includes('sort')) return;
+        const value = clean(control.tagName === 'SELECT' ? control.selectedOptions[0]?.textContent : control.value);
+        if (!value) return;
+        const label = clean(filter.querySelector(':scope > span')?.textContent) || clean(control.getAttribute('aria-label')) || t('Search');
+        if (control.value === '__several') { counted.push({ text: label + ': ' + value, query }); return; }
+        parts.push(label + ': ' + value);
+        query.forEach(name => described.add(name));
     });
     document.querySelectorAll('.ip-filterbar .ip-btn.is-on').forEach(b => parts.push(clean(b.textContent)));
+    const inHeaders = new Set();
+    if (table && window.TableColumns && TableColumns.filters) {
+        TableColumns.filters(table).forEach(f => {
+            if (f.params.length && f.params.every(name => described.has(name))) return;
+            if (!f.text) return;
+            parts.push(clean(f.label) + ': ' + clean(f.text));
+            f.params.forEach(name => inHeaders.add(name));
+        });
+    }
+    counted.forEach(c => { if (!c.query.some(name => inHeaders.has(name))) parts.push(c.text); });
     return parts.length ? t('Filters:') + ' ' + parts.filter(Boolean).join('   |   ') : '';
 }
 
@@ -194,13 +218,15 @@ async function exportListTable(table, title) {
         return;
     }
 
+    // Read from the headers on screen, since a client table keeps its filter values on those cells only
+    const filters = currentFilterSummary(table);
     table = await loadWholeList(table);
     const { headers, rows } = collectTableData(table, ['Actions']);
     if (!rows.length) {
         showToast(t('Nothing to export'), 'warning');
         return;
     }
-    renderPrintDocument({ title, headers, rows, filters: currentFilterSummary() });
+    renderPrintDocument({ title, headers, rows, filters });
 }
 
 function exportProductsToPDF() {
