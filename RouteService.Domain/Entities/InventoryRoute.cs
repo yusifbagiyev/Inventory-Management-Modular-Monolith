@@ -1,4 +1,5 @@
 using RouteService.Domain.Enums;
+using RouteService.Domain.Exceptions;
 using RouteService.Domain.ValueObjects;
 
 namespace RouteService.Domain.Entities
@@ -6,6 +7,9 @@ namespace RouteService.Domain.Entities
     /// <summary>A transfer or history entry, keeping the product details and department names of that moment.</summary>
     public class InventoryRoute
     {
+        public const int WorkerMaxLength = 100;
+        public const int NotesMaxLength = 500;
+
         public int Id { get; private set; }
         public RouteType RouteType { get; private set; }
         public ProductSnapshot ProductSnapshot { get; private set; } = null!;
@@ -51,10 +55,10 @@ namespace RouteService.Domain.Entities
                 ToDepartmentId = toDepartmentId,
                 ToDepartmentName = toDepartmentName,
                 FromWorker = null,
-                ToWorker = toWorker,
+                ToWorker = Fit(toWorker, WorkerMaxLength),
                 ImageUrl = imageUrl,
                 ImageUrls = string.IsNullOrEmpty(imageUrl) ? [] : [imageUrl],
-                Notes = notes,
+                Notes = Fit(notes, NotesMaxLength),
                 IsCompleted = false,
                 CreatedAt = DateTime.Now
             };
@@ -81,11 +85,11 @@ namespace RouteService.Domain.Entities
                 FromDepartmentName = fromDepartmentName,
                 ToDepartmentId = toDepartmentId,
                 ToDepartmentName = toDepartmentName,
-                FromWorker = fromWorker,
-                ToWorker = toWorker,
+                FromWorker = Fit(fromWorker, WorkerMaxLength),
+                ToWorker = Fit(toWorker, WorkerMaxLength),
                 ImageUrl = imageUrls?.FirstOrDefault(),
                 ImageUrls = imageUrls?.ToList() ?? [],
-                Notes = notes,
+                Notes = Fit(notes, NotesMaxLength),
                 IsCompleted = false,
                 CreatedAt = DateTime.Now
             };
@@ -110,9 +114,9 @@ namespace RouteService.Domain.Entities
                 FromDepartmentName = fromDepartmentName,
                 ToDepartmentId = 0, // No destination for removal
                 ToDepartmentName = "Removed",
-                FromWorker = fromWorker,
-                ToWorker = removedBy,
-                Notes = reason,
+                FromWorker = Fit(fromWorker, WorkerMaxLength),
+                ToWorker = Fit(removedBy, WorkerMaxLength),
+                Notes = Fit(reason, NotesMaxLength),
                 IsCompleted = true,
                 CreatedAt = DateTime.Now
             };
@@ -137,13 +141,26 @@ namespace RouteService.Domain.Entities
                 FromDepartmentName = changedProduct.DepartmentName,
                 ToDepartmentId = departmentId,
                 ToDepartmentName = departmentName,
-                FromWorker = changedProduct.Worker,
-                ToWorker = worker,
+                FromWorker = Fit(changedProduct.Worker, WorkerMaxLength),
+                ToWorker = Fit(worker, WorkerMaxLength),
                 ImageUrl = imageUrl,
                 ImageUrls = string.IsNullOrEmpty(imageUrl) ? [] : [imageUrl],
-                Notes = notes,
+                Notes = Fit(notes, NotesMaxLength),
                 CreatedAt = DateTime.Now
             };
+        }
+
+        /// <summary>Refuses a transfer that would leave the product in its department with the worker it already has.</summary>
+        public static void RequireMove(int currentDepartmentId, string? currentWorker, int toDepartmentId, string? toWorker)
+        {
+            if (toDepartmentId != currentDepartmentId)
+                return;
+
+            var worker = (toWorker ?? string.Empty).Trim();
+            if (worker.Length == 0)
+                throw new RouteException("Enter the new worker to transfer within the same department.");
+            if (string.Equals(worker, (currentWorker ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase))
+                throw new RouteException("The product is already with this worker. Enter another worker or choose another department.");
         }
 
         /// <summary>A code change in place, with the new code in the snapshot and the old one in the notes.</summary>
@@ -160,10 +177,23 @@ namespace RouteService.Domain.Entities
                 ProductSnapshot = productSnapshot,
                 ToDepartmentId = departmentId,
                 ToDepartmentName = departmentName,
-                ToWorker = worker,
-                Notes = notes,
+                ToWorker = Fit(worker, WorkerMaxLength),
+                Notes = Fit(notes, NotesMaxLength),
                 CreatedAt = DateTime.Now
             };
+        }
+
+        // History text comes from product fields that have no limit, so it is cut to the column instead of failing the save
+        private static string? Fit(string? text, int maxLength)
+        {
+            if (text == null || text.Length <= maxLength)
+                return text;
+
+            // A cut between the two halves of a surrogate pair would leave text the database refuses
+            var keep = maxLength - 1;
+            if (char.IsHighSurrogate(text[keep - 1]))
+                keep--;
+            return text[..keep] + "…";
         }
 
         public void SetWhatsAppStatus(string status, string? error)
@@ -186,11 +216,26 @@ namespace RouteService.Domain.Entities
             ImageUrls = imageUrls.ToList();
             ImageUrl = ImageUrls.FirstOrDefault();
         }
-        public void UpdateExistingRoute(string? toWorker,string? notes)
+
+        /// <summary>Takes the product's current details and place as the start of a pending transfer.</summary>
+        public void RefreshSource(ProductSnapshot product, int fromDepartmentId, string fromDepartmentName, string? fromWorker)
         {
-            ToWorker= toWorker;
-            Notes = notes;
+            if (IsCompleted || RouteType != RouteType.Transfer)
+                throw new InvalidOperationException("Only a pending transfer follows the product");
+            if (product.ProductId != ProductSnapshot.ProductId)
+                throw new ArgumentException("The details belong to another product", nameof(product));
+
+            ProductSnapshot.CopyFrom(product);
+            FromDepartmentId = fromDepartmentId;
+            FromDepartmentName = fromDepartmentName;
+            FromWorker = Fit(fromWorker, WorkerMaxLength);
         }
+
+        /// <summary>Names who receives the item, where a blank name means nobody.</summary>
+        public void SetToWorker(string? toWorker) => ToWorker = string.IsNullOrWhiteSpace(toWorker) ? null : toWorker.Trim();
+
+        /// <summary>Replaces the notes, where blank text removes them.</summary>
+        public void SetNotes(string? notes) => Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
 
         /// <summary>Points a pending route at another destination, keeping the stored id and name in sync.</summary>
         public void UpdateDestination(int departmentId, string departmentName)

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using RouteService.Application.DTOs;
 using RouteService.Application.Interfaces;
+using RouteService.Domain.Entities;
 using RouteService.Domain.Exceptions;
 using RouteService.Domain.Repositories;
 using SharedServices.Contracts;
@@ -21,8 +22,10 @@ namespace RouteService.Application.Features.Routes.Commands
             public Validator()
             {
                 RuleFor(x => x.Id).GreaterThan(0);
+                RuleFor(x => x.Dto.ToWorker)
+                    .MaximumLength(InventoryRoute.WorkerMaxLength).WithMessage("Worker name cannot exceed 100 characters");
                 RuleFor(x => x.Dto.Notes)
-                    .MaximumLength(500).WithMessage("Notes cannot exceed 500 characters");
+                    .MaximumLength(InventoryRoute.NotesMaxLength).WithMessage("Notes cannot exceed 500 characters");
                 RuleFor(x => ImageSet.Files(x.Dto.ImageFile, x.Dto.ImageFiles).Count)
                     .LessThanOrEqualTo(ImageSet.MaxImages).WithMessage($"An item can have at most {ImageSet.MaxImages} images");
             }
@@ -59,10 +62,13 @@ namespace RouteService.Application.Features.Routes.Commands
                     throw new RouteException("Cannot update a completed route");
 
                 var dto = request.Dto;
+                var destinationBefore = (route.ToDepartmentId, route.ToWorker);
 
-                // The edit form posts both fields, so this also lets a worker or note be cleared
-                if (dto.ToWorker != null || dto.Notes != null)
-                    route.UpdateExistingRoute(dto.ToWorker, dto.Notes);
+                // A field that was not sent keeps its value, and one sent blank is cleared
+                if (dto.ToWorker != null)
+                    route.SetToWorker(dto.ToWorker);
+                if (dto.Notes != null)
+                    route.SetNotes(dto.Notes);
 
                 // Look the name up here so the stored id and name can't disagree
                 if (dto.ToDepartmentId.HasValue && dto.ToDepartmentId.Value != route.ToDepartmentId)
@@ -73,6 +79,14 @@ namespace RouteService.Application.Features.Routes.Commands
                         throw new RouteException($"The department {department.Name} is inactive. Choose an active department.");
 
                     route.UpdateDestination(department.Id, department.Name);
+                }
+
+                // An edit must not turn the transfer into one that moves nothing
+                if (destinationBefore != (route.ToDepartmentId, route.ToWorker))
+                {
+                    var product = await _productCatalog.GetProductAsync(route.ProductSnapshot.ProductId, cancellationToken);
+                    if (product != null)
+                        InventoryRoute.RequireMove(product.DepartmentId, product.Worker, route.ToDepartmentId, route.ToWorker);
                 }
 
                 var added = new List<string>();

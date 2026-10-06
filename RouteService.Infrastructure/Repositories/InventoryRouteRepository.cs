@@ -6,12 +6,14 @@ using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Repositories;
 using RouteService.Infrastructure.Data;
-using SharedServices.Services;
 
 namespace RouteService.Infrastructure.Repositories
 {
     public class InventoryRouteRepository : IInventoryRouteRepository
     {
+        // First key of the advisory lock, which keeps it apart from any other lock taken on a product id
+        private const int TransferLockSpace = 7001;
+
         private readonly RouteDbContext _context;
 
         public InventoryRouteRepository(RouteDbContext context)
@@ -105,12 +107,64 @@ namespace RouteService.Infrastructure.Repositories
             RouteType? routeType = null,
             CancellationToken cancellationToken = default,
             string? departmentName = null,
-            RouteListFilter? filter = null)
+            RouteListFilter? filter = null,
+            int? knownTotal = null)
         {
             filter ??= new RouteListFilter();
             // Clamp against a negative Skip but leave the size uncapped, since exports ask for more on purpose
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Max(1, pageSize);
+
+            var query = Filtered(search, isCompleted, startDate, endDate, departmentId, categoryName, routeType, departmentName, filter);
+
+            // Counted and paged in the database, so a search never loads more rows than the page shows
+            var totalCount = knownTotal ?? await query.CountAsync(cancellationToken);
+            var items = await Sort(query, filter)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+            return new PagedResult<InventoryRoute>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+
+        public async Task<(int Pending, int Completed)> CountByCompletionAsync(
+            string? search = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int? departmentId = null,
+            string? departmentName = null,
+            RouteListFilter? filter = null,
+            CancellationToken cancellationToken = default)
+        {
+            var counts = await Filtered(search, null, startDate, endDate, departmentId, null, null, departmentName, filter ?? new RouteListFilter())
+                .GroupBy(r => r.IsCompleted)
+                .Select(g => new { IsCompleted = g.Key, Count = g.Count() })
+                .ToListAsync(cancellationToken);
+
+            return (counts.FirstOrDefault(c => !c.IsCompleted)?.Count ?? 0,
+                    counts.FirstOrDefault(c => c.IsCompleted)?.Count ?? 0);
+        }
+
+
+        /// <summary>The routes left by the list's filters and search, before sorting and paging.</summary>
+        private IQueryable<InventoryRoute> Filtered(
+            string? search,
+            bool? isCompleted,
+            DateTime? startDate,
+            DateTime? endDate,
+            int? departmentId,
+            string? categoryName,
+            RouteType? routeType,
+            string? departmentName,
+            RouteListFilter filter)
+        {
             var query = _context.InventoryRoutes.AsNoTracking().AsQueryable();
 
             if (isCompleted.HasValue)
@@ -145,88 +199,33 @@ namespace RouteService.Infrastructure.Repositories
 
             query = ApplyColumnFilters(query, filter);
 
-            IEnumerable<InventoryRoute> items;
-            int totalCount;
-
-            var tokens = Words(search);
-            var productWords = Words(filter.Product);
-
-            if (tokens.Length > 0 || productWords.Length > 0)
+            // Each word must match some field, since the words of a phrase often sit in different columns
+            foreach (var word in Words(search))
             {
-                // Every word has to match some field, with Azerbaijani letters folded in the database
-                var broadQuery = query;
-
-                // Each word must match some field, since the words of a phrase often sit in different columns
-                foreach (var word in tokens)
-                {
-                    var t = word;
-                    broadQuery = broadQuery.Where(r =>
-                        EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.CategoryName), SearchSql.Contains(t)) ||
-                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Vendor), SearchSql.Contains(t)) ||
-                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), SearchSql.Contains(t)) ||
-                        (r.FromDepartmentName != null && EF.Functions.ILike(SearchSql.Fold(r.FromDepartmentName), SearchSql.Contains(t))) ||
-                        EF.Functions.ILike(SearchSql.Fold(r.ToDepartmentName), SearchSql.Contains(t)) ||
-                        (r.FromWorker != null && EF.Functions.ILike(SearchSql.Fold(r.FromWorker), SearchSql.Contains(t))) ||
-                        (r.ToWorker != null && EF.Functions.ILike(SearchSql.Fold(r.ToWorker), SearchSql.Contains(t)))
-                    );
-                }
-
-                // The product column filter matches the code or the model the same way
-                foreach (var word in productWords)
-                {
-                    var t = word;
-                    broadQuery = broadQuery.Where(r =>
-                        EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), $"%{t}%") ||
-                        EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), SearchSql.Contains(t)));
-                }
-
-                var allFilteredItems = await Sort(broadQuery, filter).ToListAsync(cancellationToken);
-
-                // The same rule again in memory, together with the column text filters
-                items = allFilteredItems.Where(r =>
-                {
-                    var code = r.ProductSnapshot.InventoryCode.ToString();
-                    var fields = new[]
-                    {
-                        code,
-                        r.ProductSnapshot.CategoryName,
-                        r.ProductSnapshot.Vendor,
-                        r.ProductSnapshot.Model,
-                        r.FromDepartmentName,
-                        r.ToDepartmentName,
-                        r.FromWorker,
-                        r.ToWorker
-                    };
-                    return tokens.All(word => fields.Any(f => SearchHelper.ContainsAzerbaijani(f, word)))
-                        && productWords.All(word => SearchHelper.ContainsAzerbaijani(code, word)
-                                                    || SearchHelper.ContainsAzerbaijani(r.ProductSnapshot.Model, word));
-                }).ToList();
-
-                totalCount = items.Count();
-
-                items = items
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-            }
-            else
-            {
-                totalCount = await query.CountAsync(cancellationToken);
-
-                items = await Sort(query, filter)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync(cancellationToken);
+                // One pattern serves every column, with Azerbaijani letters folded and the word's own wildcards taken literally
+                var pattern = SearchSql.Contains(word);
+                query = query.Where(r =>
+                    EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.CategoryName), pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Vendor), pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), pattern) ||
+                    (r.FromDepartmentName != null && EF.Functions.ILike(SearchSql.Fold(r.FromDepartmentName), pattern)) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.ToDepartmentName), pattern) ||
+                    (r.FromWorker != null && EF.Functions.ILike(SearchSql.Fold(r.FromWorker), pattern)) ||
+                    (r.ToWorker != null && EF.Functions.ILike(SearchSql.Fold(r.ToWorker), pattern))
+                );
             }
 
-            return new PagedResult<InventoryRoute>
+            // The product column filter matches the code or the model the same way
+            foreach (var word in Words(filter.Product))
             {
-                Items = items,
-                TotalCount = totalCount,
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
+                var pattern = SearchSql.Contains(word);
+                query = query.Where(r =>
+                    EF.Functions.ILike(r.ProductSnapshot.InventoryCode.ToString(), pattern) ||
+                    EF.Functions.ILike(SearchSql.Fold(r.ProductSnapshot.Model), pattern));
+            }
+
+            return query;
         }
 
 
@@ -327,10 +326,21 @@ namespace RouteService.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
 
+        public Task LockProductTransfersAsync(int productId, CancellationToken cancellationToken = default)
+            => _context.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({TransferLockSpace}, {productId})", cancellationToken);
+
+
         public Task<bool> HasPendingRouteForProductAsync(int productId, CancellationToken cancellationToken = default)
             => _context.InventoryRoutes.AnyAsync(
                 r => r.ProductSnapshot.ProductId == productId && !r.IsCompleted && r.RouteType == RouteType.Transfer,
                 cancellationToken);
+
+
+        public async Task<IReadOnlyList<InventoryRoute>> GetPendingTransfersForProductAsync(int productId, CancellationToken cancellationToken = default)
+            => await _context.InventoryRoutes
+                .Where(r => r.ProductSnapshot.ProductId == productId && !r.IsCompleted && r.RouteType == RouteType.Transfer)
+                .ToListAsync(cancellationToken);
 
 
         public Task DeleteAsync(InventoryRoute route, CancellationToken cancellationToken = default)

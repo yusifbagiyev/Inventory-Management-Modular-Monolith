@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using InventoryManagement.Web.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace InventoryManagement.Web.Models.ViewModels
@@ -34,6 +35,27 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? WhatsAppStatus { get; set; }
         public string? WhatsAppError { get; set; }
         public DateTime? WhatsAppAt { get; set; }
+
+        /// <summary>Translates the words stored in place of a missing model, vendor, worker or destination.</summary>
+        public RouteViewModel LocalizePlaceholders()
+        {
+            Model = StoredPlaceholders.Name(Model);
+            Vendor = StoredPlaceholders.Name(Vendor);
+            FromWorker = StoredPlaceholders.Worker(FromWorker);
+            ToDepartmentName = StoredPlaceholders.Destination(ToDepartmentId, ToDepartmentName);
+            return this;
+        }
+
+        /// <summary>Also translates system-written notes and delivery errors, while notes typed by people match no key and stay as written.</summary>
+        public RouteViewModel Localize()
+        {
+            LocalizePlaceholders();
+            if (Notes != null)
+                Notes = JsonStringLocalizer.TranslateMessage(Notes);
+            if (WhatsAppError != null)
+                WhatsAppError = JsonStringLocalizer.TranslateMessage(WhatsAppError);
+            return this;
+        }
     }
 
     public record TransferViewModel
@@ -47,6 +69,7 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int ToDepartmentId { get; set; }
 
         [Display(Name = "To Worker")]
+        [MaxLength(100)]
         public string? ToWorker { get; set; }
 
         [Display(Name = "Images")]

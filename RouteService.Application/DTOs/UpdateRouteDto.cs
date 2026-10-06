@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace RouteService.Application.DTOs
 {
@@ -14,7 +15,11 @@ namespace RouteService.Application.DTOs
         public string? CoverImageUrl { get; set; }
         /// <summary>New destination department or null to keep it, the server looks up its name.</summary>
         public int? ToDepartmentId { get; set; }
+        /// <summary>Null keeps the worker and an empty value clears it, so a posted empty field must stay empty.</summary>
+        [DisplayFormat(ConvertEmptyStringToNull = false)]
         public string? ToWorker { get; set; }
+        /// <summary>Null keeps the notes and an empty value clears them.</summary>
+        [DisplayFormat(ConvertEmptyStringToNull = false)]
         public string? Notes { get; set; }
     }
 }

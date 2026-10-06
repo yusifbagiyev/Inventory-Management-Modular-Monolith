@@ -37,9 +37,9 @@ namespace RouteService.Infrastructure.Data
                 entity.Property(e => e.RouteType).HasConversion<string>();
                 entity.Property(e => e.FromDepartmentName).HasMaxLength(100);
                 entity.Property(e => e.ToDepartmentName).HasMaxLength(100);
-                entity.Property(e => e.FromWorker).HasMaxLength(100);
-                entity.Property(e => e.ToWorker).HasMaxLength(100);
-                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.FromWorker).HasMaxLength(InventoryRoute.WorkerMaxLength);
+                entity.Property(e => e.ToWorker).HasMaxLength(InventoryRoute.WorkerMaxLength);
+                entity.Property(e => e.Notes).HasMaxLength(InventoryRoute.NotesMaxLength);
                 entity.Property(e => e.CreatedAt)
                       .HasColumnType("timestamp without time zone");
                 entity.Property(e => e.WhatsAppStatus).HasMaxLength(20);

@@ -20,5 +20,15 @@
             CategoryName = categoryName;
             IsWorking = isWorking;
         }
+
+        // Changed in place, since EF Core would track a new instance of an owned type as a delete and an insert
+        internal void CopyFrom(ProductSnapshot other)
+        {
+            InventoryCode = other.InventoryCode;
+            Model = other.Model;
+            Vendor = other.Vendor;
+            CategoryName = other.CategoryName;
+            IsWorking = other.IsWorking;
+        }
     }
 }

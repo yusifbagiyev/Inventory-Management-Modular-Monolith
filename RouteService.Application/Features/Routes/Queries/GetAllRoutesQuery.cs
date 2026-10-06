@@ -18,7 +18,8 @@ namespace RouteService.Application.Features.Routes.Queries
         string? CategoryName = null,
         RouteType? RouteType = null,
         string? DepartmentName = null,
-        RouteListFilter? Filter = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
+        RouteListFilter? Filter = null,
+        int? KnownTotal = null) : IRequest<PagedResultDto<InventoryRouteDto>>;
 
     public class GetAllRoutesHandler : IRequestHandler<GetAllRoutesQuery, PagedResultDto<InventoryRouteDto>>
     {
@@ -43,7 +44,8 @@ namespace RouteService.Application.Features.Routes.Queries
                 request.RouteType,
                 cancellationToken,
                 request.DepartmentName,
-                request.Filter);
+                request.Filter,
+                request.KnownTotal);
 
             return new PagedResultDto<InventoryRouteDto>
             {

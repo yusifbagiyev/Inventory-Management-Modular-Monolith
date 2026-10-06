@@ -101,7 +101,7 @@
                 <div class="ip-field">
                     <label class="ip-label" for="ToWorker">@L["To Worker"]</label>
                     <input type="text" name="ToWorker" id="ToWorker" class="ip-input" value="@Model.ToWorker"
-                           placeholder="@L["Not assigned"]" />
+                           maxlength="100" placeholder="@L["Not assigned"]" />
                 </div>
             </div>
         </section>
@@ -113,7 +113,7 @@
 
         <section class="ip-form-section">
             <h2>@L["Notes"]</h2>
-            <textarea name="Notes" id="Notes" class="ip-textarea" rows="3" aria-label="@L["Notes"]"
+            <textarea name="Notes" id="Notes" class="ip-textarea" rows="3" maxlength="500" aria-label="@L["Notes"]"
                       placeholder="@L["Add any notes..."]">@Model.Notes</textarea>
         </section>
 

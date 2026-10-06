@@ -2,10 +2,8 @@ using System.Text.Json;
 using MediatR;
 using RouteService.Application.DTOs;
 using RouteService.Application.Features.Routes.Commands;
-using RouteService.Application.Features.Routes.Queries;
 using SharedServices.Contracts;
 using SharedServices.Enum;
-using SharedServices.Exceptions;
 
 namespace RouteService.Application.Services
 {
@@ -45,19 +43,16 @@ namespace RouteService.Application.Services
             return _mediator.Send(new TransferInventory.Command(dto), cancellationToken);
         }
 
-        private async Task UpdateAsync(JsonElement root, CancellationToken cancellationToken)
+        private Task UpdateAsync(JsonElement root, CancellationToken cancellationToken)
         {
             var routeId = RequireId(root, "routeId");
             var data = root.Section("UpdateData");
 
-            var existing = await _mediator.Send(new GetRouteByIdQuery(routeId), cancellationToken)
-                ?? throw new NotFoundException($"Route with ID {routeId} not found");
-
-            // The request carries only the changed fields, everything else keeps its current value
+            // The request carries only the changed fields, and a missing one keeps the value the route has by now
             var dto = new UpdateRouteDto
             {
-                Notes = data.Has("notes") ? data.GetString("notes") : existing.Notes,
-                ToWorker = data.Has("toWorker") ? data.GetString("toWorker") : existing.ToWorker,
+                Notes = data.Has("notes") ? data.GetString("notes") : null,
+                ToWorker = data.Has("toWorker") ? data.GetString("toWorker") : null,
                 ToDepartmentId = data.Has("toDepartmentId") ? data.GetInt("toDepartmentId") : null,
                 // Older requests carry a single image that replaces all images
                 ImageFile = data.GetImage() ?? data.GetImages("replaceImages").FirstOrDefault(),
@@ -65,7 +60,7 @@ namespace RouteService.Application.Services
                 RemoveImageUrls = data.GetStrings("removeImageUrls"),
                 CoverImageUrl = data.Has("coverImageUrl") ? data.GetString("coverImageUrl") : null
             };
-            await _mediator.Send(new UpdateRoute.Command(routeId, dto), cancellationToken);
+            return _mediator.Send(new UpdateRoute.Command(routeId, dto), cancellationToken);
         }
 
         private static int RequireId(JsonElement element, string name)

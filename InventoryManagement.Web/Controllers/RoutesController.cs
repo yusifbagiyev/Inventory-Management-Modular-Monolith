@@ -50,7 +50,8 @@ namespace InventoryManagement.Web.Controllers
             string? product = null,
             string[]? fromDepartment = null,
             string[]? toDepartment = null,
-            string[]? whatsApp = null)
+            string[]? whatsApp = null,
+            CancellationToken cancellationToken = default)
         {
             // The filter bar sends one value and the column headers several, so both arrive as lists
             var types = (routeType ?? []).Select(ParseRouteType).OfType<RouteType>().Distinct().ToArray();
@@ -66,15 +67,6 @@ namespace InventoryManagement.Web.Controllers
                 WhatsApp = NonEmpty(whatsApp)
             };
 
-            // The department filter matches either end of a route, and routes store only the category name
-            var result = await _mediator.Send(new GetAllRoutesQuery(
-                pageNumber, pageSize, search, isCompleted, startDate, endDate,
-                departmentId, null, null, departmentName, filter));
-            var routes = ModelMapper.Map<PagedResultDto<RouteViewModel>>(result);
-            foreach (var r in routes.Items)
-                TranslateNotes(r);
-
-
             ViewBag.CurrentFilter = isCompleted;
             ViewBag.StartDate = startDate;
             ViewBag.CurrentSearch = search;
@@ -85,15 +77,37 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentDepartmentId = departmentId;
             ViewBag.CurrentDepartmentName = departmentName;
 
-            await LoadFilterLists(isCompleted, types.Length == 1 ? types[0] : null);
+            try
+            {
+                // Both tab counts come from one grouped query, which also gives the list its total
+                var counts = await _mediator.Send(
+                    new GetRouteCountsQuery(search, startDate, endDate, departmentId, departmentName, filter), cancellationToken);
+                ViewBag.PendingCount = counts.Pending;
+                ViewBag.CompletedCount = counts.Completed;
+                var total = isCompleted switch
+                {
+                    true => counts.Completed,
+                    false => counts.Pending,
+                    null => counts.Pending + counts.Completed
+                };
 
-            // Tab counts use the same filters with each completion state
-            ViewBag.PendingCount = isCompleted == false ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, false, startDate, endDate, departmentId, null, null, departmentName, filter))).TotalCount;
-            ViewBag.CompletedCount = isCompleted == true ? routes.TotalCount
-                : (await _mediator.Send(new GetAllRoutesQuery(1, 1, search, true, startDate, endDate, departmentId, null, null, departmentName, filter))).TotalCount;
+                // The department filter matches either end of a route, and routes store only the category name
+                var result = await _mediator.Send(new GetAllRoutesQuery(
+                    pageNumber, pageSize, search, isCompleted, startDate, endDate,
+                    departmentId, null, null, departmentName, filter, total), cancellationToken);
+                var routes = ModelMapper.Map<PagedResultDto<RouteViewModel>>(result);
+                foreach (var r in routes.Items)
+                    r.Localize();
 
-            return View(routes);
+                await LoadFilterLists(isCompleted, types.Length == 1 ? types[0] : null, cancellationToken);
+
+                return View(routes);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // A newer search replaced this one in the browser, so nobody reads the answer
+                return new EmptyResult();
+            }
         }
 
         private static string[]? NonEmpty(string[]? values)
@@ -148,7 +162,8 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToNotFound();
 
             ViewBag.Departments = await GetDepartmentOptions(route.ToDepartmentId);
-            return View(ModelMapper.Map<RouteViewModel>(route));
+            // The notes go into an input here, so only the placeholder words are translated
+            return View(ModelMapper.Map<RouteViewModel>(route).LocalizePlaceholders());
         }
 
 
@@ -169,8 +184,9 @@ namespace InventoryManagement.Web.Controllers
                 RemoveImageUrls = model.RemoveImageUrls,
                 CoverImageUrl = model.CoverImageUrl,
                 ToDepartmentId = model.ToDepartmentId,
-                ToWorker = model.ToWorker,
-                Notes = model.Notes
+                // The form always posts both, and an emptied field arrives as null but means cleared
+                ToWorker = model.ToWorker ?? string.Empty,
+                Notes = model.Notes ?? string.Empty
             };
 
             var response = await RunAsync(
@@ -185,7 +201,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var routes = await _mediator.Send(new GetRoutesByProductQuery(productId));
             ViewBag.ProductId = productId;
-            return View(ModelMapper.MapList<RouteViewModel>(routes).Select(TranslateNotes).ToList());
+            return View(ModelMapper.MapList<RouteViewModel>(routes).Select(r => r.Localize()).ToList());
         }
 
 
@@ -195,14 +211,7 @@ namespace InventoryManagement.Web.Controllers
             var route = await _mediator.Send(new GetRouteByIdQuery(id));
             return route == null
                 ? RedirectToNotFound()
-                : View(TranslateNotes(ModelMapper.Map<RouteViewModel>(route)));
-        }
-
-        /// <summary>Translates system-written notes, while notes typed by people match no key and stay as written.</summary>
-        private static RouteViewModel TranslateNotes(RouteViewModel route)
-        {
-            route.Notes = Tr(route.Notes);
-            return route;
+                : View(ModelMapper.Map<RouteViewModel>(route).Localize());
         }
 
 
@@ -277,9 +286,9 @@ namespace InventoryManagement.Web.Controllers
             => model.Departments = await GetDepartmentOptions();
 
         /// <summary>Filter options come from the names stored on routes, so renamed and deleted departments still show up.</summary>
-        private async Task LoadFilterLists(bool? isCompleted, RouteType? routeType)
+        private async Task LoadFilterLists(bool? isCompleted, RouteType? routeType, CancellationToken cancellationToken)
         {
-            var facets = await _mediator.Send(new GetRouteFilterFacetsQuery(isCompleted, routeType));
+            var facets = await _mediator.Send(new GetRouteFilterFacetsQuery(isCompleted, routeType), cancellationToken);
             static List<SelectListItem> Options(IEnumerable<string> names) => names
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)

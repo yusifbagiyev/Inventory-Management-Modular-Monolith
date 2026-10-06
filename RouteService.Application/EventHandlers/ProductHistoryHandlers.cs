@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Repositories;
 using RouteService.Domain.ValueObjects;
@@ -54,6 +55,10 @@ namespace RouteService.Application.EventHandlers
             var before = notification.Before;
             var after = notification.After;
 
+            // A pending transfer shows and completes under the product's current code, details and place
+            foreach (var pending in await _repository.GetPendingTransfersForProductAsync(after.ProductId, cancellationToken))
+                pending.RefreshSource(Snapshot(after), after.DepartmentId, after.DepartmentName, after.Worker);
+
             // Only UpdateProductInventoryCode changes the code, and it changes nothing else
             if (before.InventoryCode != after.InventoryCode)
             {
@@ -97,6 +102,15 @@ namespace RouteService.Application.EventHandlers
         public async Task Handle(ProductDeletedEvent notification, CancellationToken cancellationToken)
         {
             var product = notification.Product;
+
+            // A transfer of a deleted product could never be completed, so it goes with the product
+            await _repository.LockProductTransfersAsync(product.ProductId, cancellationToken);
+            foreach (var pending in await _repository.GetPendingTransfersForProductAsync(product.ProductId, cancellationToken))
+            {
+                await _repository.DeleteAsync(pending, cancellationToken);
+                foreach (var imageUrl in pending.ImageUrls)
+                    _session.AfterCommit((sp, _) => sp.GetRequiredService<ImageStorage>().DeleteAsync(imageUrl));
+            }
 
             var route = InventoryRoute.CreateRemoval(
                 Snapshot(product),

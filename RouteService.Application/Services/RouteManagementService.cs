@@ -1,9 +1,12 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using RouteService.Application.DTOs;
 using RouteService.Application.Features.Routes.Commands;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Application.Interfaces;
+using RouteService.Domain.Entities;
+using RouteService.Domain.Exceptions;
 using SharedServices.Contracts;
 using SharedServices.Storage;
 using SharedServices.DTOs;
@@ -20,17 +23,23 @@ namespace RouteService.Application.Services
         private readonly IMediator _mediator;
         private readonly IApprovalRequests _approvalRequests;
         private readonly IProductCatalog _productCatalog;
+        private readonly IValidator<TransferInventory.Command> _transferValidator;
+        private readonly IValidator<UpdateRoute.Command> _updateValidator;
         private readonly ILogger<RouteManagementService> _logger;
 
         public RouteManagementService(
             IMediator mediator,
             IApprovalRequests approvalRequests,
             IProductCatalog productCatalog,
+            IValidator<TransferInventory.Command> transferValidator,
+            IValidator<UpdateRoute.Command> updateValidator,
             ILogger<RouteManagementService> logger)
         {
             _mediator = mediator;
             _approvalRequests = approvalRequests;
             _productCatalog = productCatalog;
+            _transferValidator = transferValidator;
+            _updateValidator = updateValidator;
             _logger = logger;
         }
 
@@ -50,6 +59,9 @@ namespace RouteService.Application.Services
             {
                 throw new InsufficientPermissionsException("You don't have permission to create transfers");
             }
+
+            // What the command would refuse on approval is refused before it reaches the queue
+            await _transferValidator.ValidateAndThrowAsync(new TransferInventory.Command(dto));
 
             var transferData = await BuildTransferApprovalData(dto);
 
@@ -99,7 +111,13 @@ namespace RouteService.Application.Services
                 throw new InsufficientPermissionsException("You don't have permission to update routes");
             }
 
-            var updateData = await BuildRouteUpdateData(existingRoute, dto);
+            await _updateValidator.ValidateAndThrowAsync(new UpdateRoute.Command(id, dto));
+
+            var (updateData, changes) = await BuildRouteUpdateData(existingRoute, dto);
+            if (changes.Count == 0)
+            {
+                throw new RouteException("No changes were made to the route.");
+            }
 
             var approvalRequest = new CreateApprovalRequestDto
             {
@@ -114,7 +132,8 @@ namespace RouteService.Application.Services
                     existingRoute.Model,
                     existingRoute.FromDepartmentName,
                     existingRoute.ToDepartmentName,
-                    Changes = BuildRouteChangeSummary(existingRoute, dto)
+                    CurrentNotes = existingRoute.Notes,
+                    Changes = changes
                 }
             };
 
@@ -195,10 +214,10 @@ namespace RouteService.Application.Services
             // Refuse it before it reaches the approval queue
             if (!toDepartment.IsActive)
             {
-                throw new RouteService.Domain.Exceptions.RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
+                throw new RouteException($"The department {toDepartment.Name} is inactive. Choose an active department.");
             }
+            InventoryRoute.RequireMove(product.DepartmentId, product.Worker, toDepartment.Id, dto.ToWorker);
 
-            
             var actionData = new Dictionary<string, object>
             {
                 ["productId"] = dto.ProductId,
@@ -224,33 +243,51 @@ namespace RouteService.Application.Services
         }
 
 
-        private async Task<Dictionary<string, object>> BuildRouteUpdateData(InventoryRouteDto existing, UpdateRouteDto updated)
+        /// <summary>The request payload with only the fields that change, and one line per change for the approver.</summary>
+        private async Task<(Dictionary<string, object> Data, List<string> Changes)> BuildRouteUpdateData(
+            InventoryRouteDto existing, UpdateRouteDto updated)
         {
-            var updateData = new Dictionary<string, object>
-            {
-                ["notes"] = updated.Notes ?? existing.Notes ?? ""
-            };
-
+            var updateData = new Dictionary<string, object>();
             var changes = new List<string>();
 
-            if (existing.Notes != updated.Notes && !string.IsNullOrEmpty(updated.Notes))
+            // A field goes into the payload only when it changes, so approval leaves the others as they are by then
+            if (TextChanges(updated.Notes, existing.Notes))
             {
-                changes.Add($"Notes updated");
+                updateData["notes"] = updated.Notes!.Trim();
+                changes.Add(string.IsNullOrWhiteSpace(updated.Notes) ? "Notes cleared" : "Notes updated");
             }
 
-            // Worker and destination go into the payload only when they change, so approval applies just those
-            if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
+            if (TextChanges(updated.ToWorker, existing.ToWorker))
             {
-                updateData["toWorker"] = updated.ToWorker;
-                changes.Add(string.IsNullOrWhiteSpace(updated.ToWorker)
-                    ? "Worker cleared"
-                    : $"Worker changed to {updated.ToWorker}");
+                updateData["toWorker"] = updated.ToWorker!.Trim();
+                changes.Add($"Worker: {OrNone(existing.ToWorker)} -> {OrNone(updated.ToWorker)}");
             }
 
             if (updated.ToDepartmentId.HasValue && updated.ToDepartmentId.Value != existing.ToDepartmentId)
             {
-                updateData["toDepartmentId"] = updated.ToDepartmentId.Value;
-                changes.Add("Destination department changed");
+                var department = await _productCatalog.GetDepartmentAsync(updated.ToDepartmentId.Value)
+                    ?? throw new NotFoundException($"Department with ID {updated.ToDepartmentId.Value} not found");
+                if (!department.IsActive)
+                {
+                    throw new RouteException($"The department {department.Name} is inactive. Choose an active department.");
+                }
+
+                updateData["toDepartmentId"] = department.Id;
+                changes.Add($"Destination: {existing.ToDepartmentName} -> {department.Name}");
+            }
+
+            // Refused here like on a direct edit, when the changed destination or worker would move nothing
+            if (updateData.ContainsKey("toDepartmentId") || updateData.ContainsKey("toWorker"))
+            {
+                var product = await _productCatalog.GetProductAsync(existing.ProductId);
+                if (product != null)
+                {
+                    InventoryRoute.RequireMove(
+                        product.DepartmentId,
+                        product.Worker,
+                        updated.ToDepartmentId ?? existing.ToDepartmentId,
+                        updateData.ContainsKey("toWorker") ? updated.ToWorker : existing.ToWorker);
+                }
             }
 
             // A single legacy ImageFile still means replace all images
@@ -268,39 +305,14 @@ namespace RouteService.Application.Services
 
             updateData["changesSummary"] = string.Join(", ", changes);
 
-            return updateData;
+            return (updateData, changes);
         }
 
+        /// <summary>True when the field was sent and differs from the stored text, with blank and missing as the same.</summary>
+        private static bool TextChanges(string? sent, string? stored)
+            => sent != null && !string.Equals(sent.Trim(), (stored ?? "").Trim(), StringComparison.Ordinal);
 
-        private string BuildRouteChangeSummary(InventoryRouteDto existing, UpdateRouteDto updated)
-        {
-            var changes = new List<string>();
-
-            if (!string.IsNullOrEmpty(updated.Notes) && existing.Notes != updated.Notes)
-            {
-                changes.Add("Notes updated");
-            }
-
-            if (updated.ToWorker != null && updated.ToWorker != existing.ToWorker)
-            {
-                changes.Add(string.IsNullOrWhiteSpace(updated.ToWorker)
-                    ? "Worker cleared"
-                    : $"Worker: {existing.ToWorker} -> {updated.ToWorker}");
-            }
-
-            if (updated.ToDepartmentId.HasValue && updated.ToDepartmentId.Value != existing.ToDepartmentId)
-            {
-                changes.Add($"Destination: {existing.ToDepartmentName} -> department #{updated.ToDepartmentId.Value}");
-            }
-
-            if (ImageSet.Changes(existing.ImageUrls, updated.RemoveImageUrls,
-                    ImageSet.Files(updated.ImageFile, updated.ImageFiles).Count, updated.CoverImageUrl))
-            {
-                changes.Add("Images updated");
-            }
-
-            return changes.Any() ? string.Join(", ", changes) : "No changes";
-        }
+        private static string OrNone(string? value) => string.IsNullOrWhiteSpace(value) ? "None" : value.Trim();
 
 
 

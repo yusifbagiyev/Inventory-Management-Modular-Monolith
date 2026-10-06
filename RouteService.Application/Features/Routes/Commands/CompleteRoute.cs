@@ -1,7 +1,9 @@
 using MediatR;
+using RouteService.Domain.Entities;
 using RouteService.Domain.Enums;
 using RouteService.Domain.Exceptions;
 using RouteService.Domain.Repositories;
+using RouteService.Domain.ValueObjects;
 using SharedServices.Contracts;
 using SharedServices.Events;
 using SharedServices.Exceptions;
@@ -49,6 +51,16 @@ namespace RouteService.Application.Features.Routes.Commands
                     var destination = await _productCatalog.GetDepartmentAsync(route.ToDepartmentId, cancellationToken);
                     if (destination is not { IsActive: true })
                         throw new RouteException($"The department {route.ToDepartmentName} is no longer available. Change the transfer's destination before completing it.");
+
+                    // The history row and the announcement use the product as it is now, not as it was when the transfer was made
+                    var product = await _productCatalog.GetProductAsync(route.ProductSnapshot.ProductId, cancellationToken)
+                        ?? throw new RouteException("The product of this transfer has been deleted. Delete the transfer instead.");
+                    route.RefreshSource(
+                        new ProductSnapshot(product.Id, product.InventoryCode, product.Model, product.Vendor, product.CategoryName, product.IsWorking),
+                        product.DepartmentId,
+                        product.DepartmentName,
+                        product.Worker);
+                    InventoryRoute.RequireMove(product.DepartmentId, product.Worker, route.ToDepartmentId, route.ToWorker);
                 }
 
                 route.Complete();
