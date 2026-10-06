@@ -42,9 +42,13 @@
                         <tr>
                             <th data-sort="id" data-sort-first="desc" data-filter="text">@L["Request"]</th>
                             <th data-sort="what" data-filter="text">@L["What changes"]</th>
-                            <th data-sort="requester" data-filter="list">@L["Requested By"]</th>
+                            <th class="hide-md" data-sort="requester" data-filter="list">@L["Requested By"]</th>
                             <th data-sort="date" data-sort-first="desc" data-filter="date">@L["Date"]</th>
-                            <th data-sort="status" data-filter="list">@L["Status"]</th>
+                            @* Every request on the pending tab is pending, so its status column would only repeat the tab *@
+                            @if (!pendingTab)
+                            {
+                                <th data-sort="status" data-filter="list">@L["Status"]</th>
+                            }
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -63,14 +67,17 @@
                                         {
                                             <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
                                         }
+                                        <span class="sub show-md">@request.RequestedByName</span>
                                     </div>
                                 </td>
-                                <td class="meta">@request.RequestedByName</td>
+                                <td class="meta hide-md">@request.RequestedByName</td>
                                 <td class="date ip-num text-nowrap" data-order="@request.CreatedAt.ToString("yyyy-MM-dd HH:mm")">
                                     @request.CreatedAt.ToString("dd.MM.yyyy")
                                     <div class="sub">@request.CreatedAt.ToString("HH:mm")</div>
                                 </td>
                                 @* The decider under the badge is left out of the status filter *@
+                                @if (!pendingTab)
+                                {
                                 <td class="state" data-filter-value="@statusLabel" data-filter-label="@statusLabel">
                                     @switch (request.Status)
                                     {
@@ -92,9 +99,12 @@
                                         <div class="sub">@request.ApprovedByName</div>
                                     }
                                 </td>
+                                }
                                 <td class="actions text-end">
-                                    <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" onclick="event.stopPropagation(); viewDetails(@request.Id)">
-                                        @(pendingTab && canDecide ? L["Review and decide"] : L["View"])
+                                    @{ var actionLabel = pendingTab && canDecide ? L["Review and decide"].Value : L["View"].Value; }
+                                    <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" title="@actionLabel" aria-label="@actionLabel"
+                                            onclick="event.stopPropagation(); viewDetails(@request.Id)">
+                                        <i class="@(pendingTab && canDecide ? "fa-solid fa-clipboard-check" : "fa-regular fa-eye")" aria-hidden="true"></i><span>@actionLabel</span>
                                     </button>
                                 </td>
                             </tr>

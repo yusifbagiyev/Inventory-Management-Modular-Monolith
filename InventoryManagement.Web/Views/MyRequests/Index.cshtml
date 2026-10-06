@@ -118,6 +118,7 @@
                                         @if (request.Status == "Pending")
                                         {
                                             <button type="button" class="ip-btn ip-btn-danger-ghost ip-btn-sm" data-cancel-id="@request.Id"
+                                                    title="@L["Cancel request"]" aria-label="@L["Cancel request"]"
                                                     onclick="event.stopPropagation(); cancelRequest(@request.Id)">
                                                 <i class="fa-solid fa-xmark"></i><span>@L["Cancel request"]</span>
                                             </button>

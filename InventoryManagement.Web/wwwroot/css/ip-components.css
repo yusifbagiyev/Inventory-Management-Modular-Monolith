@@ -1230,3 +1230,9 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
   #myRequestsTable td.state > .sub { flex: 0 0 100%; }
   #myRequestsTable td.state:has(> .sub) { padding-bottom: 22px; }
 }
+/* Approvals: on tablets the row buttons keep only their icon and the requester moves under the title, so the list fits without scrolling */
+@container (max-width: 951.98px) {
+  :is(#approvalsTable, #myRequestsTable) td.actions .ip-btn > span { display: none; }
+  :is(#approvalsTable, #myRequestsTable) td.actions .ip-btn-sm { padding-left: 8px; padding-right: 8px; }
+}
+@container (max-width: 743.98px) { #approvalsTable td.title .show-md { display: block; } }
