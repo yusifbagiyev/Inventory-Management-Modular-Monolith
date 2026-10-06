@@ -27,6 +27,7 @@
         "SignedOut" => "Signed out",
         _ => op
     };
+    var CanViewRequests = User.HasPermission("approval.view") || User.HasPermission("approval.decide");
     // Links to the record's page, and for a deletion only to a product's kept page since other records are gone
     string? RecordUrl(AuditEntryDto e)
     {
@@ -43,6 +44,7 @@
             "Category" when User.HasPermission("category.view") => $"/Categories/Details/{id}",
             "Department" when User.HasPermission("department.view") => $"/Departments/Details/{id}",
             "User" when User.HasPermission("user.view") => $"/UserManagement/Details/{id}",
+            "ApprovalRequest" when CanViewRequests => $"/Approvals?open={id}",
             _ => null
         };
     }
@@ -68,6 +70,13 @@
                 : i.ToString()));
             return cut ? text + " …" : text;
         }
+        if (field == "EntityType") return L[TypeLabel(value)].Value;
+        if (value == "(changed)") return L["(changed)"].Value;
+        // Notes and the words modules store for a missing value are English in the database
+        if (field.EndsWith("Notes")) return JsonStringLocalizer.TranslateMessage(value);
+        if (field.EndsWith("Model") || field.EndsWith("Vendor")) return StoredPlaceholders.Name(value);
+        if (field.EndsWith("Worker")) return StoredPlaceholders.Worker(value);
+        if (field.EndsWith("DepartmentName") && value == StoredPlaceholders.Removed) return JsonStringLocalizer.TranslateMessage(value);
         return field.EndsWith("Status") || field.EndsWith("RouteType") || field == "Reason" ? L[value].Value : value;
     }
     // Older rows hold long lists cut off mid-item with an ellipsis, so only their complete items are read
@@ -116,7 +125,16 @@
         return ListItems(value, out cut)?.Select(v => v.ToString()).Where(v => v.Length > 0).ToList();
     }
 
-    string LabelText(string label) => string.Join(" · ", label.Split(" · ").Select(p => AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
+    // Permission codes read as the permission editor names them, with the level for two-level actions
+    var permissionNames = new Dictionary<string, string>();
+    foreach (var item in PermissionCatalog.Areas.SelectMany(a => a.Items))
+    {
+        permissionNames[item.Permission] = item.Direct == null ? L[item.Label].Value : $"{L[item.Label]} ({L["With approval"]})";
+        if (item.Direct != null) permissionNames[item.Direct] = $"{L[item.Label]} ({L["Direct"]})";
+    }
+    string LabelText(AuditEntryDto entry) => string.Join(" · ", entry.Label!.Split(" · ").Select(p =>
+        entry.EntityType is "UserPermission" or "RolePermission" && permissionNames.TryGetValue(p, out var name) ? name
+        : AuditLabels.IsRequestType(p) ? L[AuditLabels.RequestType(p)].Value : p));
 
     // Splits the last part of a field path into words, which also serves as the text key
     string FieldLabel(string field)
@@ -130,7 +148,7 @@
 
 @{
     // Images render as thumbnails and department or category ids as names
-    void RenderValue(string field, string? value)
+    void RenderValue(string field, string? value, string? entityId)
     {
         if (IsImageField(field) && value != null && !value.StartsWith("01.01.0001") && ImageUrls(value, out var cut) is { } urls)
         {
@@ -145,6 +163,12 @@
                     <span class="ip-faint align-self-center">…</span>
                 }
             </span>
+            return;
+        }
+        // The stored request is machine data with photos, so it links to the request
+        if (field.EndsWith("ActionData") && int.TryParse(entityId, out var requestId))
+        {
+            <a href="/Approvals?open=@requestId">@L["View request #{0}", requestId]</a>
             return;
         }
         var name = IdName(field, value);
@@ -248,11 +272,11 @@
                                                     var url = RecordUrl(entry);
                                                     if (url != null)
                                                     {
-                                                        <a href="@url">@LabelText(entry.Label)</a>
+                                                        <a href="@url">@LabelText(entry)</a>
                                                     }
                                                     else
                                                     {
-                                                        <span>@LabelText(entry.Label)</span>
+                                                        <span>@LabelText(entry)</span>
                                                     }
                                                 }
                                                 @if (!string.IsNullOrEmpty(entry.EntityId) && entry.EntityType != "Session")
@@ -263,7 +287,9 @@
                                             @{
                                                 // Hide fields that repeat another one, like ImageUrl next to ImageUrls or an id next to its name
                                                 var shownChanges = entry.Changes.Where(c => !(c.Field.EndsWith("ImageUrl") && entry.Changes.Any(o => o.Field == c.Field + "s"))
-                                                    && !(c.Field.EndsWith("ById") && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))).ToList();
+                                                    && !((c.Field.EndsWith("ById") || c.Field.EndsWith("DepartmentId") || c.Field.EndsWith("CategoryId")) && entry.Changes.Any(o => o.Field == c.Field[..^2] + "Name"))
+                                                    // A request's stored data is opened on the Approvals page instead
+                                                    && !(c.Field.EndsWith("ActionData") && (!CanViewRequests || !int.TryParse(entry.EntityId, out _)))).ToList();
                                             }
                                             @if (shownChanges.Count > 0)
                                             {
@@ -284,7 +310,7 @@
                                                                         }
                                                                         else
                                                                         {
-                                                                            <span class="old">@{ RenderValue(change.Field, change.Old); }</span>
+                                                                            <span class="old">@{ RenderValue(change.Field, change.Old, entry.EntityId); }</span>
                                                                         }
                                                                         <i class="fa-solid fa-arrow-right ip-faint mx-1" aria-hidden="true"></i>
                                                                         if (IsEmpty(change.New))
@@ -293,12 +319,12 @@
                                                                         }
                                                                         else
                                                                         {
-                                                                            <span class="new">@{ RenderValue(change.Field, change.New); }</span>
+                                                                            <span class="new">@{ RenderValue(change.Field, change.New, entry.EntityId); }</span>
                                                                         }
                                                                     }
                                                                     else
                                                                     {
-                                                                        <span>@{ RenderValue(change.Field, change.New ?? change.Old); }</span>
+                                                                        <span>@{ RenderValue(change.Field, change.New ?? change.Old, entry.EntityId); }</span>
                                                                     }
                                                                 </dd>
                                                             </div>
