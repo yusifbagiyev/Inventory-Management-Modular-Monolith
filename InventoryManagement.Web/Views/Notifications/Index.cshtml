@@ -95,7 +95,7 @@
                             }
                             @{ var (icon, tone) = Icon(notification); }
                             <span class="ip-notif-icon @tone" aria-hidden="true"><i class="fa-solid @icon"></i></span>
-                            <div class="flex-grow-1" style="min-width: 0">
+                            <div class="flex-grow-1 ip-min0">
                                 <div class="d-flex justify-content-between align-items-baseline gap-3">
                                     <span class="title">@if (!notification.IsRead) {<span class="visually-hidden ip-notif-unread">@L["Unread notification"]: </span>}@notification.Title</span>
                                     <span class="time ip-num" title="@notification.CreatedAt.ToString("dd.MM.yyyy HH:mm")">@notification.CreatedAt.ToString("HH:mm")</span>

@@ -199,7 +199,7 @@
                                     var category = Model.CategoryDistributions[i];
                                     var label = CategoryLabel(category);
                                     <a class="ip-list-link" href="@RouteLink(category.IsOther ? transfersUrl : transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
-                                        <span class="d-flex align-items-center gap-2" style="min-width: 0">
+                                        <span class="d-flex align-items-center gap-2 ip-min0">
                                             <i class="ip-swatch" style="background: var(--ip-cat-@(category.IsOther ? 8 : i % 8 + 1))"></i>
                                             <span class="text-truncate" title="@label">@label</span>
                                         </span>

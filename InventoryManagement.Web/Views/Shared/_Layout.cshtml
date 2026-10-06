@@ -404,7 +404,7 @@
                 <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}" role="button" tabindex="0">
                     <span class="unread-dot" aria-hidden="true"></span>
                     <span class="ip-notif-icon ${tone}" aria-hidden="true"><i class="fa-solid ${icon}"></i></span>
-                    <div class="flex-grow-1" style="min-width: 0">
+                    <div class="flex-grow-1 ip-min0">
                         <div class="d-flex justify-content-between align-items-baseline gap-2">
                             <span class="title">${escapeHtml(notification.title)}</span>
                             <span class="time">${escapeHtml(formatTimeAgo(notification.createdAt))}</span>

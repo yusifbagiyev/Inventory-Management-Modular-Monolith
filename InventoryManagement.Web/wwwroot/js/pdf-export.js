@@ -1,3 +1,10 @@
+// Printed pages are always light, so they take the light theme's values from tokens.css under the same names
+const PRINT_COLORS = {
+    text1: '#1B1C1E', text2: '#4F5358', text3: '#6B6F75',
+    sunken: '#EFEFEC', surface2: '#FAFAF9', border: '#E4E4E1', borderStrong: '#CFCFCB',
+    successText: '#1E6B45', successSoft: '#E7F3EC', warningText: '#7F5200', warningSoft: '#FBF0D9'
+};
+
 // Exporters write textContent back as HTML, so all of it must pass through here or markup goes live
 function escapePdfText(value) {
     return String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -78,25 +85,25 @@ function renderPrintDocument({ title, headers, rows, filters }) {
 <style>
   @page { size: A4 landscape; margin: 10mm 8mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #1B1C1E; margin: 0; font-size: 9pt; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: ${PRINT_COLORS.text1}; margin: 0; font-size: 9pt; }
   header { display: flex; justify-content: space-between; align-items: flex-end;
-           border-bottom: 2px solid #1B1C1E; padding-bottom: 6px; margin-bottom: 4px; }
+           border-bottom: 2px solid ${PRINT_COLORS.text1}; padding-bottom: 6px; margin-bottom: 4px; }
   h1 { font-size: 15pt; margin: 0; font-weight: 650; letter-spacing: -.2px; }
-  .meta { text-align: right; font-size: 8pt; color: #4F5358; line-height: 1.5; }
-  .filters { font-size: 8pt; color: #4F5358; background: #EFEFEC; border-radius: 3px;
+  .meta { text-align: right; font-size: 8pt; color: ${PRINT_COLORS.text2}; line-height: 1.5; }
+  .filters { font-size: 8pt; color: ${PRINT_COLORS.text2}; background: ${PRINT_COLORS.sunken}; border-radius: 3px;
              padding: 4px 7px; margin-bottom: 8px; }
   table { width: 100%; border-collapse: collapse; table-layout: auto; }
   thead { display: table-header-group; }
-  th { background: #EFEFEC; text-align: left; font-size: 7.5pt; text-transform: uppercase;
-       letter-spacing: .04em; color: #4F5358; padding: 5px 6px; border-bottom: 1.2px solid #CFCFCB;
+  th { background: ${PRINT_COLORS.sunken}; text-align: left; font-size: 7.5pt; text-transform: uppercase;
+       letter-spacing: .04em; color: ${PRINT_COLORS.text2}; padding: 5px 6px; border-bottom: 1.2px solid ${PRINT_COLORS.borderStrong};
        white-space: nowrap; }
   /* overflow-wrap breaks only words that cannot fit, where word-break would split short ones */
-  td { padding: 4px 6px; border-bottom: .8px solid #E4E4E1; vertical-align: top;
+  td { padding: 4px 6px; border-bottom: .8px solid ${PRINT_COLORS.border}; vertical-align: top;
        overflow-wrap: break-word; hyphens: none; }
   tbody tr { page-break-inside: avoid; }
-  tbody tr:nth-child(even) td { background: #FAFAF9; }
-  .empty { color: #6B6F75; }
-  footer { margin-top: 8px; font-size: 7.5pt; color: #6B6F75; text-align: right; }
+  tbody tr:nth-child(even) td { background: ${PRINT_COLORS.surface2}; }
+  .empty { color: ${PRINT_COLORS.text3}; }
+  footer { margin-top: 8px; font-size: 7.5pt; color: ${PRINT_COLORS.text3}; text-align: right; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
 <header>
@@ -277,26 +284,26 @@ function exportTimelineToPDF() {
 <style>
   @page { size: A4 portrait; margin: 12mm; }
   * { box-sizing: border-box; }
-  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: #1B1C1E; margin: 0; }
-  header { border-bottom: 2px solid #1B1C1E; padding-bottom: 6px; margin-bottom: 12px; }
+  body { font-family: "Segoe UI", Roboto, Arial, sans-serif; font-size: 10pt; line-height: 1.4; color: ${PRINT_COLORS.text1}; margin: 0; }
+  header { border-bottom: 2px solid ${PRINT_COLORS.text1}; padding-bottom: 6px; margin-bottom: 12px; }
   h1 { font-size: 15pt; margin: 0; font-weight: 650; }
   .product { font-size: 11pt; font-weight: 600; margin-top: 2px; }
-  .meta { font-size: 8pt; color: #4F5358; margin-top: 4px; }
-  .timeline-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: .8px solid #E4E4E1; page-break-inside: avoid; }
+  .meta { font-size: 8pt; color: ${PRINT_COLORS.text2}; margin-top: 4px; }
+  .timeline-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: .8px solid ${PRINT_COLORS.border}; page-break-inside: avoid; }
   .timeline-item:last-child { border-bottom: 0; }
-  .timeline-marker { width: 8px; height: 8px; flex: none; margin-top: 5px; border-radius: 50%; background: #8A8E94; }
+  .timeline-marker { width: 8px; height: 8px; flex: none; margin-top: 5px; border-radius: 50%; background: ${PRINT_COLORS.text3}; }
   .timeline-content { flex: 1; min-width: 0; }
   .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .when { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .type { color: #6B6F75; font-size: 9pt; }
+  .type { color: ${PRINT_COLORS.text3}; font-size: 9pt; }
   .chip { font-size: 8pt; font-weight: 500; padding: 1px 6px; border-radius: 3px; }
-  .chip.ok { background: #E7F3EC; color: #1E6B45; }
-  .chip.wait { background: #FBF0D9; color: #7F5200; }
+  .chip.ok { background: ${PRINT_COLORS.successSoft}; color: ${PRINT_COLORS.successText}; }
+  .chip.wait { background: ${PRINT_COLORS.warningSoft}; color: ${PRINT_COLORS.warningText}; }
   .move { margin-top: 2px; }
-  .arrow { color: #6B6F75; }
-  .notes { color: #4F5358; margin-top: 2px; white-space: pre-wrap; }
-  .done { color: #6B6F75; font-size: 8pt; margin-top: 2px; font-variant-numeric: tabular-nums; }
-  footer { margin-top: 10px; font-size: 7.5pt; color: #6B6F75; text-align: right; }
+  .arrow { color: ${PRINT_COLORS.text3}; }
+  .notes { color: ${PRINT_COLORS.text2}; margin-top: 2px; white-space: pre-wrap; }
+  .done { color: ${PRINT_COLORS.text3}; font-size: 8pt; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 10px; font-size: 7.5pt; color: ${PRINT_COLORS.text3}; text-align: right; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>

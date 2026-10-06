@@ -40,16 +40,18 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--ip-bg); }
         [data-bs-theme="dark"] { color-scheme: dark; }
+        /* Bootstrap is not loaded here, so the head groups its brand and its controls itself */
+        .ip-login-head > div { display: flex; align-items: center; gap: 8px; }
     </style>
 </head>
 <body>
     <div class="ip-login">
         <header class="ip-login-head">
-            <div class="d-flex align-items-center gap-2" style="display: flex; align-items: center; gap: 8px;">
+            <div>
                 <span class="ip-logo brand" aria-hidden="true"><partial name="_BrandMark" /></span>
                 <strong class="ip-rail-name">@L["166 Inventory"]<small>@L["IT department"]</small></strong>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div>
                 <partial name="_LanguageSwitch" />
                 <button type="button" class="ip-btn-icon lg" id="themeToggle" aria-label="@L["Toggle dark mode"]" title="@L["Dark mode"]">
                     <i class="fa-solid fa-moon"></i>
