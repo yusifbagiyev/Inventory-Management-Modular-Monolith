@@ -105,12 +105,6 @@
             </div>
         </section>
 
-        <section class="ip-form-section">
-            <h2>@L["Notes"]</h2>
-            <textarea asp-for="Notes" class="ip-textarea" rows="3" placeholder="@L["Additional notes about this user..."]" aria-label="@L["Notes (Optional)"]"></textarea>
-            <span asp-validation-for="Notes" class="ip-error"></span>
-        </section>
-
         <div class="ip-form-foot">
             <span class="note"></span>
             <a href="@Url.Action("Index")" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
@@ -137,18 +131,30 @@
             button.setAttribute('aria-label', label);
         }
 
-        // Suggest a username from the first and last name while the field is empty
+        // Suggest a username from the first and last name until the admin types one of their own
         document.getElementById('FirstName').addEventListener('input', generateUsername);
         document.getElementById('LastName').addEventListener('input', generateUsername);
+        let suggestedUsername = '';
+
+        // Usernames take only Latin letters and digits here, so ə, ı and accented letters become their plain form
+        function usernamePart(name) {
+            return name
+                .replace(/[əƏ]/g, 'e')
+                .replace(/ı/g, 'i')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[^a-z0-9]/g, '');
+        }
 
         function generateUsername() {
-            const firstName = document.getElementById('FirstName').value.trim();
-            const lastName = document.getElementById('LastName').value.trim();
             const usernameField = document.getElementById('Username');
+            if (usernameField.value && usernameField.value !== suggestedUsername) return;
 
-            if (firstName && lastName && !usernameField.value) {
-                usernameField.value = (firstName + '.' + lastName).toLowerCase();
-            }
+            const firstName = usernamePart(document.getElementById('FirstName').value);
+            const lastName = usernamePart(document.getElementById('LastName').value);
+            // Nothing is better than a suggestion the server would refuse, as for a name in another alphabet
+            suggestedUsername = firstName && lastName ? (firstName + '.' + lastName).slice(0, usernameField.maxLength > 0 ? usernameField.maxLength : 50) : '';
+            usernameField.value = suggestedUsername;
         }
 
         // Looked up by id because the toolbar search is the first form on the page

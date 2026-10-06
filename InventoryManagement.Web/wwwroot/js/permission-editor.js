@@ -79,9 +79,10 @@ window.PermissionEditor = (function () {
             select(to);
             seg.classList.add('is-saving');
             try {
-                // A user holds at most one of the base permission and its .direct pair
-                if ((to === 'approval') !== (from === 'approval')) await post(url, seg.dataset.base, to === 'approval');
-                if ((to === 'direct') !== (from === 'direct')) await post(url, seg.dataset.direct, to === 'direct');
+                // Direct can mean both names are held, and revoking before granting leaves fewer rights when a step fails
+                if (to !== 'approval' && from !== 'none') await post(url, seg.dataset.base, false);
+                if (to !== 'direct' && from === 'direct') await post(url, seg.dataset.direct, false);
+                if (to !== 'none') await post(url, to === 'direct' ? seg.dataset.direct : seg.dataset.base, true);
                 seg.dataset.own = to;
                 if (to !== 'none') await ensureView(area);
             } catch (err) {

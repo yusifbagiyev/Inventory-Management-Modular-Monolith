@@ -17,8 +17,10 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public record CreateUserViewModel
     {
+        // The characters Identity accepts in a username, checked here so the message lands on the field
         [Required]
         [StringLength(50, MinimumLength = 3)]
+        [RegularExpression(@"^[a-zA-Z0-9._@+\-]+$", ErrorMessage = "The username can contain only Latin letters, digits and the symbols . _ - @ +")]
         public string Username { get; set; } = string.Empty;
 
         [Required]
@@ -35,6 +37,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         [Required]
         [StringLength(100, MinimumLength = SharedServices.Identity.PasswordRules.MinLength, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
+        [RegularExpression(SharedServices.Identity.PasswordRules.RequiredCharacters, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
@@ -47,9 +50,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string SelectedRole { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
-
-        [StringLength(500)]
-        public string Notes { get; set; } = string.Empty;
 
         public List<SelectListItem> Roles { get; set; } = new List<SelectListItem>();
     }
@@ -88,6 +88,7 @@ namespace InventoryManagement.Web.Models.ViewModels
 
         [Required]
         [StringLength(100, MinimumLength = SharedServices.Identity.PasswordRules.MinLength, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
+        [RegularExpression(SharedServices.Identity.PasswordRules.RequiredCharacters, ErrorMessage = SharedServices.Identity.PasswordRules.LengthMessage)]
         [DataType(DataType.Password)]
         public string NewPassword { get; set; } = string.Empty;
 

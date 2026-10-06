@@ -14,6 +14,7 @@ namespace IdentityService.API
         public static IServiceCollection AddIdentityModule(this IServiceCollection services)
         {
             services.AddInfrastructure();
+            services.AddScoped<SessionAudit>();
             return services;
         }
     }

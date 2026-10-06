@@ -5,6 +5,7 @@
     var activeCount = Model.Count(u => u.IsActive);
     var isAdminViewer = User.IsInRole("Admin");
     var canManage = User.HasPermission("user.manage");
+    var ownId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
 <div class="container-fluid px-4">
     <div class="ip-page-head">
@@ -144,25 +145,33 @@
                                     @* Admin accounts are changed by Admins only *@
                                     @if (canManage && (isAdminViewer || !user.Roles.Contains("Admin")))
                                     {
+                                    @* Nobody deactivates or deletes the account they are signed in with *@
+                                    var isOwn = user.Id.ToString() == ownId;
                                     <a href="@Url.Action("Edit", new { id = user.Id })" class="ip-btn-icon"
                                        title="@L["Edit User"]" aria-label="@L["Edit User"]">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
+                                    if (!isOwn)
+                                    {
                                     <button type="button" class="ip-btn-icon"
                                             onclick="toggleUserStatus(@user.Id, @user.IsActive.ToString().ToLower())"
                                             title="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])"
                                             aria-label="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])">
                                         <i class="fa-solid @(user.IsActive ? "fa-user-slash" : "fa-user-check")"></i>
                                     </button>
+                                    }
                                     <a href="@Url.Action("ResetPassword", new { id = user.Id })" class="ip-btn-icon"
                                        title="@L["Reset Password"]" aria-label="@L["Reset Password"]">
                                         <i class="fa-solid fa-key"></i>
                                     </a>
+                                    if (!isOwn)
+                                    {
                                     <button type="button" class="ip-btn-icon ip-btn-icon-danger"
                                             data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
                                             title="@L["Delete User"]" aria-label="@L["Delete User"]">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
+                                    }
                                     }
                                 </div>
                             </td>

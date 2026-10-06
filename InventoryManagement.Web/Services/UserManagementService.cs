@@ -87,7 +87,7 @@ namespace InventoryManagement.Web.Services
             };
         }
 
-        public async Task<bool> CreateUserAsync(CreateUserViewModel model)
+        public async Task<(bool Success, string? Error)> CreateUserAsync(CreateUserViewModel model)
         {
             try
             {
@@ -98,18 +98,20 @@ namespace InventoryManagement.Web.Services
                     Password = model.Password,
                     FirstName = model.FirstName,
                     LastName = model.LastName,
-                    SelectedRole = model.SelectedRole
+                    SelectedRole = model.SelectedRole,
+                    IsActive = model.IsActive
                 });
-                return true;
+                return (true, null);
             }
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning("Creating user {Username} failed: {Reason}", model.Username, ex.Message);
-                return false;
+                // The identity module's own reasons are shown, such as a taken username or e-mail
+                return (false, SharedServices.Web.UserFacingErrors.IsUserFacing(ex) ? ex.Message : null);
             }
         }
 
-        public async Task<bool> UpdateUserAsync(EditUserViewModel model)
+        public async Task<(bool Success, string? Error)> UpdateUserAsync(EditUserViewModel model)
         {
             var updated = await _auth.UpdateUserAsync(new UpdateUserDto
             {
@@ -122,16 +124,16 @@ namespace InventoryManagement.Web.Services
             });
 
             // No selected roles leaves the roles alone, and a failed role change still reports failure
-            if (!updated || model.SelectedRoles is not { Count: > 0 })
+            if (!updated.Succeeded || model.SelectedRoles is not { Count: > 0 })
                 return updated;
             return await _auth.SetRolesAsync(model.Id, model.SelectedRoles);
         }
 
-        public Task<bool> DeleteUserAsync(int id) => _auth.DeleteUserAsync(id);
+        public Task<(bool Success, string? Error)> DeleteUserAsync(int id) => _auth.DeleteUserAsync(id);
 
-        public Task<bool> ToggleUserStatusAsync(int id) => _auth.ToggleUserStatusAsync(id);
+        public Task<(bool Success, string? Error)> ToggleUserStatusAsync(int id) => _auth.ToggleUserStatusAsync(id);
 
-        public Task<bool> ResetPasswordAsync(int userId, string newPassword) => _auth.ResetPasswordAsync(userId, newPassword);
+        public Task<(bool Success, string? Error)> ResetPasswordAsync(int userId, string newPassword) => _auth.ResetPasswordAsync(userId, newPassword);
 
         public async Task<(bool Success, string? Error)> ChangePasswordAsync(string currentPassword, string newPassword)
         {

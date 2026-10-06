@@ -38,6 +38,13 @@ namespace InventoryManagement.Web.Extensions
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
                 options.Events.OnValidatePrincipal = UserPrincipalFactory.RefreshAsync;
+                // An open tab's session check must not keep an unattended session alive past the idle timeout
+                options.Events.OnCheckSlidingExpiration = context =>
+                {
+                    if (IsSessionCheck(context.Request))
+                        context.ShouldRenew = false;
+                    return Task.CompletedTask;
+                };
 
                 // AJAX and API callers get a status code instead of a redirect to the login page
                 options.Events.OnRedirectToLogin = context =>
@@ -124,6 +131,10 @@ namespace InventoryManagement.Web.Extensions
         }
 
         public const string SessionStampClaim = "SessionStamp";
+
+        /// <summary>The background request with which an open page checks that it is still signed in.</summary>
+        public static bool IsSessionCheck(HttpRequest request)
+            => request.Path.StartsWithSegments("/Account/Ping", StringComparison.OrdinalIgnoreCase);
 
         private static bool WantsStatusCode(HttpRequest request)
             => ModuleHostExtensions.IsApiRequest(request.HttpContext)

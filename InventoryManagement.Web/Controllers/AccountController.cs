@@ -1,4 +1,5 @@
 using IdentityService.API;
+using InventoryManagement.Web.Filters;
 using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using SharedServices.Auditing;
 using SharedServices.Identity;
 using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
@@ -23,23 +23,20 @@ namespace InventoryManagement.Web.Controllers
         private readonly IdentityAuth _identity;
         private readonly IUserManagementService _userManagementService;
         private readonly ILogger<AccountController> _logger;
-        private readonly AuditContext _audit;
-        private readonly IAuditSink _auditLog;
+        private readonly SessionAudit _sessionAudit;
         private readonly LoginThrottle _throttle;
 
         public AccountController(
             IdentityAuth identity,
             IUserManagementService userManagementService,
             ILogger<AccountController> logger,
-            AuditContext audit,
-            IAuditSink auditLog,
+            SessionAudit sessionAudit,
             LoginThrottle throttle)
         {
             _identity = identity;
             _userManagementService = userManagementService;
             _logger = logger;
-            _audit = audit;
-            _auditLog = auditLog;
+            _sessionAudit = sessionAudit;
             _throttle = throttle;
         }
 
@@ -57,10 +54,6 @@ namespace InventoryManagement.Web.Controllers
                     AllowRefresh = true
                 });
         }
-
-        private Task AuditSessionAsync(string operation, int? userId, string? userName, string? username, string? reason = null)
-            => _auditLog.WriteAsync([_audit.Record("Session", userId?.ToString(), username, operation,
-                reason == null ? null : [new AuditFieldChange("Reason", null, reason)], userId, userName)]);
 
         /// <summary>Sign-in in two steps, picking an account remembered on this browser and then entering the password.</summary>
         [AllowAnonymous]
@@ -115,6 +108,7 @@ namespace InventoryManagement.Web.Controllers
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [SignInFormExpired]
         public IActionResult ForgetAccount(string login, string? returnUrl = null)
         {
             RecentAccounts.Forget(HttpContext, login);
@@ -124,6 +118,7 @@ namespace InventoryManagement.Web.Controllers
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [SignInFormExpired]
         [EnableRateLimiting(IdentityModule.LoginRateLimitPolicy)]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
@@ -132,7 +127,7 @@ namespace InventoryManagement.Web.Controllers
             if (!ModelState.IsValid)
                 return View(Prepare(model));
 
-            var address = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var address = HttpContext.Connection.RemoteIpAddress;
             if (_throttle.RetryAfter(address) is { } wait)
             {
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
@@ -153,9 +148,7 @@ namespace InventoryManagement.Web.Controllers
                 Response.Cookies.Delete(OldUsernameCookie);
 
                 _logger.LogInformation("User {Username} signed in from {Ip}", model.Username, HttpContext.Connection.RemoteIpAddress);
-                var fullName = $"{user.FirstName} {user.LastName}".Trim();
-                await AuditSessionAsync(AuditOperations.SignedIn, user.Id,
-                    fullName.Length > 0 ? $"{fullName} ({user.Username})" : user.Username, user.Username);
+                await _sessionAudit.SignedInAsync(user);
 
                 return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
                     ? Redirect(returnUrl)
@@ -166,7 +159,7 @@ namespace InventoryManagement.Web.Controllers
                 _throttle.RecordFailure(address);
                 _logger.LogWarning("Failed sign-in for {Username} from {Ip}: {Reason}",
                     model.Username, HttpContext.Connection.RemoteIpAddress, ex.Message);
-                await AuditSessionAsync(AuditOperations.SignInFailed, null, model.Username, model.Username, ex.Message);
+                await _sessionAudit.SignInFailedAsync(model.Username, ex.Message);
                 // Same answer for every failure so it cannot be used to probe usernames
                 ModelState.AddModelError(string.Empty, JsonStringLocalizer.TranslateMessage(
                     "Invalid username or password. After repeated failed attempts, sign-in is suspended for 15 minutes."));
@@ -177,13 +170,14 @@ namespace InventoryManagement.Web.Controllers
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [SignInFormExpired]
         public async Task<IActionResult> Logout()
         {
             // Anyone can post here, so only a signed-in user's sign-out is audited
             if (User.Identity?.IsAuthenticated == true)
             {
                 _logger.LogInformation("User {Username} signed out", User.Identity?.Name);
-                await AuditSessionAsync(AuditOperations.SignedOut, _audit.UserId, _audit.UserName, User.Identity?.Name);
+                await _sessionAudit.SignedOutAsync(User.Identity?.Name);
             }
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction(nameof(Login));

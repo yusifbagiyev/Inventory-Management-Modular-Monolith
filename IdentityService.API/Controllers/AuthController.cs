@@ -3,9 +3,11 @@ using IdentityService.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using SharedServices.Authorization;
 using SharedServices.Identity;
+using SharedServices.Web;
 
 namespace IdentityService.API.Controllers
 {
@@ -17,12 +19,14 @@ namespace IdentityService.API.Controllers
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
         private readonly LoginThrottle _throttle;
+        private readonly SessionAudit _sessionAudit;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger, LoginThrottle throttle)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, LoginThrottle throttle, SessionAudit sessionAudit)
         {
             _authService = authService;
             _logger = logger;
             _throttle = throttle;
+            _sessionAudit = sessionAudit;
         }
 
 
@@ -32,8 +36,9 @@ namespace IdentityService.API.Controllers
         public async Task<ActionResult<TokenDto>> Login(LoginDto dto)
         {
             // RemoteIpAddress already comes from the trusted proxy, while X-Forwarded-For is client-controlled
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (_throttle.RetryAfter(ipAddress) is { } wait)
+            var address = HttpContext.Connection.RemoteIpAddress;
+            var ipAddress = address?.ToString() ?? "unknown";
+            if (_throttle.RetryAfter(address) is { } wait)
             {
                 Response.Headers.RetryAfter = ((int)Math.Ceiling(wait.TotalSeconds)).ToString();
                 return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many failed sign-ins. Try again later." });
@@ -52,17 +57,20 @@ namespace IdentityService.API.Controllers
                     "Login successful for user {Username} from IP {IpAddress}",
                     dto.Username,
                     ipAddress);
+                // API sign-ins show in the audit log next to those made on the sign-in page
+                await _sessionAudit.SignedInAsync(result.User);
 
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _throttle.RecordFailure(ipAddress);
+                _throttle.RecordFailure(address);
                 _logger.LogWarning(
                     "Login failed for user {Username} from IP {IpAddress}: {Reason}",
                     dto.Username,
                     ipAddress,
                     ex.Message);
+                await _sessionAudit.SignInFailedAsync(dto.Username, ex.Message);
 
                 return Unauthorized(new { message = "Invalid credentials" });
             }
@@ -93,7 +101,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -113,7 +121,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -136,7 +144,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -152,7 +160,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -170,7 +178,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -185,16 +193,18 @@ namespace IdentityService.API.Controllers
                     return Forbid();
                 if (id != dto.Id)
                     return BadRequest(new { message = "User ID mismatch" });
+                if (dto.IsActive == false && IsOwnAccount(id))
+                    return BadRequest(new { message = OwnAccountMessage });
 
-                var result = await _authService.UpdateUserAsync(dto);
-                if (!result)
-                    return BadRequest(new { message = "Failed to update user" });
+                var (succeeded, error) = await _authService.UpdateUserAsync(dto);
+                if (!succeeded)
+                    return BadRequest(new { message = error ?? "Failed to update user" });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -207,15 +217,18 @@ namespace IdentityService.API.Controllers
             {
                 if (await IsProtectedAsync(id))
                     return Forbid();
-                var result = await _authService.DeleteUserAsync(id);
-                if (!result)
-                    return BadRequest(new { message = "Failed to delete user" });
+                if (IsOwnAccount(id))
+                    return BadRequest(new { message = OwnAccountMessage });
+
+                var (succeeded, error) = await _authService.DeleteUserAsync(id);
+                if (!succeeded)
+                    return BadRequest(new { message = error ?? "Failed to delete user" });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -228,15 +241,18 @@ namespace IdentityService.API.Controllers
             {
                 if (await IsProtectedAsync(id))
                     return Forbid();
-                var result = await _authService.ToggleUserStatusAsync(id);
-                if (!result)
-                    return BadRequest(new { message = "Failed to toggle user status" });
+                if (IsOwnAccount(id))
+                    return BadRequest(new { message = OwnAccountMessage });
+
+                var (succeeded, error) = await _authService.ToggleUserStatusAsync(id);
+                if (!succeeded)
+                    return BadRequest(new { message = error ?? "Failed to toggle user status" });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -249,15 +265,15 @@ namespace IdentityService.API.Controllers
             {
                 if (await IsProtectedAsync(id))
                     return Forbid();
-                var result = await _authService.ResetPasswordAsync(id, dto.NewPassword);
-                if (!result)
-                    return BadRequest(new { message = "Failed to reset password" });
+                var (succeeded, error) = await _authService.ResetPasswordAsync(id, dto.NewPassword);
+                if (!succeeded)
+                    return BadRequest(new { message = error ?? "Failed to reset password" });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -273,7 +289,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -289,7 +305,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -308,7 +324,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -319,15 +335,15 @@ namespace IdentityService.API.Controllers
         {
             try
             {
-                var result = await _authService.RemoveRoleAsync(id, dto.RoleName);
-                if (!result)
-                    return BadRequest(new { message = "Failed to remove role" });
+                var (succeeded, error) = await _authService.RemoveRoleAsync(id, dto.RoleName);
+                if (!succeeded)
+                    return BadRequest(new { message = error ?? "Failed to remove role" });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -343,7 +359,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -355,11 +371,12 @@ namespace IdentityService.API.Controllers
             try
             {
                 await _authService.LogoutAsync(dto.RefreshToken);
+                await _sessionAudit.SignedOutAsync(User.Identity?.Name);
                 return NoContent();
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -382,7 +399,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -402,7 +419,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -420,7 +437,7 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
 
@@ -435,9 +452,28 @@ namespace IdentityService.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return Failure(ex);
             }
         }
+
+        /// <summary>A refused request keeps the module's own message, while any other error is logged and answered generically.</summary>
+        private ObjectResult Failure(Exception exception, [CallerMemberName] string action = "")
+        {
+            if ((exception is InvalidOperationException or ArgumentException) && UserFacingErrors.IsUserFacing(exception))
+            {
+                _logger.LogInformation("Auth {Action} refused: {Message}", action, exception.Message);
+                return BadRequest(new { message = exception.Message });
+            }
+
+            _logger.LogError(exception, "Auth {Action} failed", action);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = UserFacingErrors.Generic });
+        }
+
+        private const string OwnAccountMessage = "You cannot delete or deactivate your own account.";
+
+        /// <summary>Nobody removes their own access by mistake, since only someone else could give it back.</summary>
+        private bool IsOwnAccount(int userId)
+            => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var callerId) && callerId == userId;
 
         /// <summary>True when only an Admin may change the account, being an Admin or holding a permission the caller lacks.</summary>
         private async Task<bool> IsProtectedAsync(int userId)

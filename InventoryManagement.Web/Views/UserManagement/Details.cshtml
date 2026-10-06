@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "User Details";
     var fullName = $"{Model.FirstName} {Model.LastName}".Trim();
+    var isOwnAccount = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == Model.Id.ToString();
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
@@ -35,6 +36,9 @@
     @if (User.HasPermission("user.manage") && (User.IsInRole("Admin") || !Model.CurrentRoles.Contains("Admin")))
     {
     <div class="ip-page-actions mb-4">
+        @* Nobody deletes or deactivates the account they are signed in with *@
+        @if (!isOwnAccount)
+        {
         <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
             <i class="fa-solid fa-trash-can"></i><span>@L["Delete User"]</span>
         </button>
@@ -48,6 +52,7 @@
                 <i class="fa-solid fa-user-check"></i><span>@L["Activate User"]</span>
             }
         </button>
+        }
         <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="ip-btn ip-btn-secondary">
             <i class="fa-solid fa-key"></i><span>@L["Reset Password"]</span>
         </a>

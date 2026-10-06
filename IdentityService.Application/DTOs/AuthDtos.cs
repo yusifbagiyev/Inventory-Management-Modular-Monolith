@@ -47,6 +47,9 @@ namespace IdentityService.Application.DTOs
         public string LastName { get; init; } = string.Empty;
 
         public string? SelectedRole { get; init; }
+
+        /// <summary>False creates an account that cannot sign in until it is activated.</summary>
+        public bool IsActive { get; init; } = true;
     }
 
     public record TokenDto

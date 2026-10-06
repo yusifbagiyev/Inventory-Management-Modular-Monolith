@@ -55,14 +55,16 @@ namespace IdentityService.Infrastructure.Services
                 throw new UnauthorizedAccessException("Invalid credentials");
             }
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
-            if (result.IsLockedOut)
+            if (IsLockedOut(user))
             {
                 // A locked account answers without hashing, so spend the time here
                 SpendPasswordCheck(password);
                 _logger.LogWarning("Sign-in to locked-out account {Username}", user.UserName);
                 throw new UnauthorizedAccessException("Invalid credentials");
             }
+
+            // The failure that locks the account has hashed once like any other, so it gets no extra check
+            var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
             if (!result.Succeeded)
                 throw new UnauthorizedAccessException("Invalid credentials");
 
@@ -77,6 +79,9 @@ namespace IdentityService.Infrastructure.Services
             _dummyHash ??= _userManager.PasswordHasher.HashPassword(new User(), Guid.NewGuid().ToString());
             _userManager.PasswordHasher.VerifyHashedPassword(new User(), _dummyHash, password);
         }
+
+        /// <summary>Reads the lock itself, because Identity ignores it for accounts stored with LockoutEnabled off, as the seeded and imported ones are.</summary>
+        private static bool IsLockedOut(User user) => user.LockoutEnd is { } until && until > DateTimeOffset.UtcNow;
 
         public async Task<string?> GetSessionStampAsync(int userId)
         {
@@ -104,6 +109,11 @@ namespace IdentityService.Infrastructure.Services
 
         public async Task<TokenDto> RegisterAsync(RegisterDto dto)
         {
+            // Only existing roles, checked first so a wrong name does not leave an account without a role behind
+            var role = dto.SelectedRole ?? AllRoles.User;
+            if (!await _roleManager.RoleExistsAsync(role))
+                throw new InvalidOperationException($"Invalid role: {role}");
+
             var user = new User
             {
                 UserName = dto.Username,
@@ -111,18 +121,23 @@ namespace IdentityService.Infrastructure.Services
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 CreatedAt = DateTime.Now,
-                IsActive= true
+                IsActive = dto.IsActive
             };
 
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join(", ", result.Errors.Select(e => e.Description)));
 
-            // Only existing roles, so a caller cannot pass an arbitrary role name
-            var role = dto.SelectedRole ?? AllRoles.User;
-            if (!await _roleManager.RoleExistsAsync(role))
-                throw new InvalidOperationException($"Invalid role: {role}");
-            await _userManager.AddToRoleAsync(user, role);
+            var added = await _userManager.AddToRoleAsync(user, role);
+            if (!added.Succeeded)
+            {
+                await _userManager.DeleteAsync(user);
+                throw new InvalidOperationException(string.Join(", ", added.Errors.Select(e => e.Description)));
+            }
+
+            // An account created inactive gets no tokens, since they would start working the day it is activated
+            if (!user.IsActive)
+                return new TokenDto { User = (await GetUserAsync(user.Id))! };
 
             return await GenerateTokenResponse(user);
         }
@@ -198,6 +213,8 @@ namespace IdentityService.Infrastructure.Services
         #endregion
 
         #region User Management Methods
+
+        private const string LastAdminMessage = "This is the only active administrator, so it cannot be deleted, deactivated or given another role.";
 
         public async Task<UserDto?> GetUserAsync(int userId)
         {
@@ -279,11 +296,15 @@ namespace IdentityService.Infrastructure.Services
             }).ToList();
         }
 
-        public async Task<bool> UpdateUserAsync(UpdateUserDto dto)
+        public async Task<(bool Succeeded, string? Error)> UpdateUserAsync(UpdateUserDto dto)
         {
             var user = await _userManager.FindByIdAsync(dto.Id.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
+
+            var deactivating = user.IsActive && dto.IsActive == false;
+            if (deactivating && await IsLastActiveAdminAsync(user))
+                return (false, LastAdminMessage);
 
             user.UserName = dto.Username;
             user.Email = dto.Email;
@@ -294,61 +315,97 @@ namespace IdentityService.Infrastructure.Services
                 user.IsActive = dto.IsActive.Value;
 
             var result = await _userManager.UpdateAsync(user);
-            return result.Succeeded;
+            // Only on deactivation, or every profile edit would sign the user out
+            if (result.Succeeded && deactivating)
+                await EndSessionsAsync(user);
+
+            return Outcome(result);
         }
 
-        public async Task<bool> DeleteUserAsync(int userId)
+        public async Task<(bool Succeeded, string? Error)> DeleteUserAsync(int userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
+
+            if (await IsLastActiveAdminAsync(user))
+                return (false, LastAdminMessage);
 
             var result = await _userManager.DeleteAsync(user);
 
             await RevokeAllUserRefreshTokensAsync(userId);
 
-            return result.Succeeded;
+            return Outcome(result);
         }
 
-        public async Task<bool> ToggleUserStatusAsync(int userId)
+        public async Task<(bool Succeeded, string? Error)> ToggleUserStatusAsync(int userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
+
+            if (user.IsActive && await IsLastActiveAdminAsync(user))
+                return (false, LastAdminMessage);
 
             user.IsActive = !user.IsActive;
             var result = await _userManager.UpdateAsync(user);
-            // A new stamp ends the deactivated user's cookie sessions and access tokens
-            if (!user.IsActive)
-                await _userManager.UpdateSecurityStampAsync(user);
+            if (result.Succeeded && !user.IsActive)
+                await EndSessionsAsync(user);
 
-            if (!user.IsActive)
-            {
-                await RevokeAllUserRefreshTokensAsync(userId);
-            }
-
-            return result.Succeeded;
+            return Outcome(result);
         }
+
+        /// <summary>Ends what was issued to a deactivated user, so none of it works again once the account is switched back on.</summary>
+        private async Task EndSessionsAsync(User user)
+        {
+            // A new stamp ends the cookie sessions and access tokens
+            await _userManager.UpdateSecurityStampAsync(user);
+            await RevokeAllUserRefreshTokensAsync(user.Id);
+        }
+
+        /// <summary>Without another active Admin nobody could manage roles, permissions or Admin accounts any more.</summary>
+        private async Task<bool> IsLastActiveAdminAsync(User user)
+        {
+            if (!user.IsActive || !await _userManager.IsInRoleAsync(user, AllRoles.Admin))
+                return false;
+
+            return !await (from userRole in _context.UserRoles
+                           join role in _context.Roles on userRole.RoleId equals role.Id
+                           join other in _context.Users on userRole.UserId equals other.Id
+                           where role.Name == AllRoles.Admin && other.IsActive && other.Id != user.Id
+                           select other.Id).AnyAsync();
+        }
+
+        private static (bool Succeeded, string? Error) Outcome(IdentityResult result)
+            => result.Succeeded ? (true, null) : (false, string.Join(", ", result.Errors.Select(e => e.Description)));
 
         #endregion
 
         #region Password Management
 
-        public async Task<bool> ResetPasswordAsync(int userId, string newPassword)
+        public async Task<(bool Succeeded, string? Error)> ResetPasswordAsync(int userId, string newPassword)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
 
             if (result.Succeeded)
             {
+                // A locked-out user can sign in with the new password at once, without waiting for the lock to expire
+                if (user.LockoutEnd != null || user.AccessFailedCount > 0)
+                {
+                    user.LockoutEnd = null;
+                    user.AccessFailedCount = 0;
+                    await _userManager.UpdateAsync(user);
+                }
+
                 await RevokeAllUserRefreshTokensAsync(userId);
             }
 
-            return result.Succeeded;
+            return Outcome(result);
         }
 
         public async Task<(bool Succeeded, string? Error)> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
@@ -357,12 +414,14 @@ namespace IdentityService.Infrastructure.Services
             if (user == null)
                 return (false, "User not found");
 
+            const string lockedOut = "Too many failed attempts. Please try again in 15 minutes.";
+            if (IsLockedOut(user))
+                return (false, lockedOut);
+
             // Counts toward lockout, so an unattended session cannot be used to guess the password
             var check = await _signInManager.CheckPasswordSignInAsync(user, currentPassword, lockoutOnFailure: true);
             if (!check.Succeeded)
-                return (false, check.IsLockedOut
-                    ? "Too many failed attempts. Please try again in 15 minutes."
-                    : "The current password is incorrect.");
+                return (false, IsLockedOut(user) ? lockedOut : "The current password is incorrect.");
 
             var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
             if (!result.Succeeded)
@@ -400,39 +459,46 @@ namespace IdentityService.Infrastructure.Services
             return result.Succeeded;
         }
 
-        public async Task<bool> SetRolesAsync(int userId, IEnumerable<string> roleNames)
+        public async Task<(bool Succeeded, string? Error)> SetRolesAsync(int userId, IEnumerable<string> roleNames)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
 
             var wanted = roleNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             foreach (var role in wanted)
             {
                 if (!await _roleManager.RoleExistsAsync(role))
-                    return false;
+                    return (false, $"Invalid role: {role}");
             }
 
             var current = await _userManager.GetRolesAsync(user);
             var toRemove = current.Except(wanted, StringComparer.OrdinalIgnoreCase).ToList();
             var toAdd = wanted.Except(current, StringComparer.OrdinalIgnoreCase).ToList();
 
-            if (toRemove.Count > 0 && !(await _userManager.RemoveFromRolesAsync(user, toRemove)).Succeeded)
-                return false;
-            if (toAdd.Count > 0 && !(await _userManager.AddToRolesAsync(user, toAdd)).Succeeded)
-                return false;
+            if (toRemove.Contains(AllRoles.Admin, StringComparer.OrdinalIgnoreCase) && await IsLastActiveAdminAsync(user))
+                return (false, LastAdminMessage);
 
-            return true;
+            if (toRemove.Count > 0)
+            {
+                var removed = await _userManager.RemoveFromRolesAsync(user, toRemove);
+                if (!removed.Succeeded)
+                    return Outcome(removed);
+            }
+
+            return toAdd.Count > 0 ? Outcome(await _userManager.AddToRolesAsync(user, toAdd)) : (true, null);
         }
 
-        public async Task<bool> RemoveRoleAsync(int userId, string roleName)
+        public async Task<(bool Succeeded, string? Error)> RemoveRoleAsync(int userId, string roleName)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                return false;
+                return (false, "User not found");
 
-            var result = await _userManager.RemoveFromRoleAsync(user, roleName);
-            return result.Succeeded;
+            if (string.Equals(roleName, AllRoles.Admin, StringComparison.OrdinalIgnoreCase) && await IsLastActiveAdminAsync(user))
+                return (false, LastAdminMessage);
+
+            return Outcome(await _userManager.RemoveFromRoleAsync(user, roleName));
         }
 
         #endregion
@@ -452,14 +518,10 @@ namespace IdentityService.Infrastructure.Services
             if (user == null || !user.IsActive)
                 return false;
 
+            // Answers as the real checks do, where an Admin passes everything and the user's own grants count next to the role's
             var userRoles = await _userManager.GetRolesAsync(user);
-
-            var hasPermission = await _context.RolePermissions
-                .Include(rp => rp.Role)
-                .Include(rp => rp.Permission)
-                .AnyAsync(rp => userRoles.Contains(rp.Role.Name!) && rp.Permission.Name == permission);
-
-            return hasPermission;
+            return userRoles.Contains(AllRoles.Admin)
+                || (await GetUserPermissionsAsync(userId, userRoles)).Contains(permission);
         }
 
         public async Task<bool> GrantPermissionToUserAsync(int userId, string permissionName, string grantedBy)

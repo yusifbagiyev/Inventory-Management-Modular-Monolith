@@ -75,7 +75,8 @@ namespace InventoryManagement.Web.Services
             }
 
             context.ReplacePrincipal(Create(user, stamp, signedInAt));
-            context.ShouldRenew = true;
+            // The session check is still validated above, but only the user's own requests extend the session
+            context.ShouldRenew = !InventoryManagement.Web.Extensions.AuthenticationExtensions.IsSessionCheck(context.Request);
         }
     }
 }

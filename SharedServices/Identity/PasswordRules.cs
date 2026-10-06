@@ -9,6 +9,9 @@ namespace SharedServices.Identity
         /// <summary>Also the translation key in the language files.</summary>
         public const string LengthMessage = "Password must be at least 10 characters long, with an uppercase letter, a lowercase letter and a digit.";
 
+        /// <summary>The character classes Identity asks for, in plain ASCII as its validators test them.</summary>
+        public const string RequiredCharacters = @"^(?=[\s\S]*[a-z])(?=[\s\S]*[A-Z])(?=[\s\S]*[0-9])[\s\S]*$";
+
         /// <summary>Caps sign-in input so a failed attempt cannot write megabytes to the logs.</summary>
         public const int MaxUsernameLength = 256;
         public const int MaxPasswordLength = 512;

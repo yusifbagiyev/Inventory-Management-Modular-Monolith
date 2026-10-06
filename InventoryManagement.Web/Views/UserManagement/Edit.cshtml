@@ -2,7 +2,11 @@
 @{
     ViewData["Title"] = "Edit User";
     var isAdminViewer = User.IsInRole("Admin");
-    var userRole = Model.CurrentRoles.Contains("Admin") ? "Admin" : "User";
+    var isAdminAccount = Model.CurrentRoles.Contains("Admin");
+    var isOwnAccount = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == Model.Id.ToString();
+    // After a failed save the posted choice is shown, never a default that the next save would store
+    var chosenRoles = Model.SelectedRoles is { Count: > 0 } ? Model.SelectedRoles : Model.CurrentRoles;
+    var userRole = chosenRoles.Contains("Admin") ? "Admin" : "User";
 }
 
 <div class="container-fluid px-4">
@@ -60,10 +64,22 @@
         <section class="ip-form-section">
             <h2>@L["Status"]</h2>
             <div class="ip-switch-list">
-                <label class="ip-switch-row">
-                    <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
-                    <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
-                </label>
+                @if (isOwnAccount)
+                {
+                    @* Only someone else could switch the account on again, so its owner cannot switch it off *@
+                    <label class="ip-switch-row">
+                        <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["You cannot delete or deactivate your own account."]</span></span>
+                        <input type="hidden" name="IsActive" value="true" />
+                        <input type="checkbox" role="switch" class="ip-switch" checked disabled />
+                    </label>
+                }
+                else
+                {
+                    <label class="ip-switch-row">
+                        <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
+                        <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
+                    </label>
+                }
             </div>
         </section>
 
@@ -95,7 +111,7 @@
     </form>
 
     @* Each permission change saves on its own, so this sits outside the form and its Save button *@
-    @if (isAdminViewer && userRole == "Admin")
+    @if (isAdminViewer && isAdminAccount)
     {
         <section class="ip-section ip-form mt-5">
             <h2 class="mb-1">@L["User Permissions"]</h2>

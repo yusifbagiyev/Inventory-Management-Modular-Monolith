@@ -56,9 +56,9 @@ namespace InventoryManagement.Web.Controllers
             if (!User.IsInRole(AllRoles.Admin))
                 model.SelectedRole = AllRoles.User;
 
-            var success = await _userManagementService.CreateUserAsync(model);
+            var (success, error) = await _userManagementService.CreateUserAsync(model);
             if (IsAjaxRequest())
-                return AjaxResponse(success, success ? "User created successfully" : "Failed to create user");
+                return AjaxResponse(success, success ? "User created successfully" : error ?? "Failed to create user");
 
             if (success)
             {
@@ -66,7 +66,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", Tr("Failed to create user"));
+            ModelState.AddModelError("", Tr(error ?? "Failed to create user"));
             await LoadRoles(model);
             return View(model);
         }
@@ -83,16 +83,29 @@ namespace InventoryManagement.Web.Controllers
             if (user == null)
                 return RedirectToNotFound();
 
-            // Only Admins get the permission editor, and Admin accounts already hold everything
-            if (User.IsInRole(AllRoles.Admin) && !user.CurrentRoles.Contains(AllRoles.Admin))
-            {
-                var own = (await _identity.GetUserDirectPermissionsAsync(id)).Select(p => p.Name);
-                var fromRole = new List<string>();
-                foreach (var role in user.CurrentRoles)
-                    fromRole.AddRange(await _identity.GetRolePermissionsAsync(role));
-                ViewBag.PermissionEditor = await EditorAsync(own, fromRole, Url.Action(nameof(TogglePermission), new { id })!);
-            }
+            await LoadPermissionEditorAsync(user);
             return View(user);
+        }
+
+        /// <summary>Only Admins get the permission editor, and Admin accounts already hold everything.</summary>
+        private async Task LoadPermissionEditorAsync(EditUserViewModel user)
+        {
+            if (!User.IsInRole(AllRoles.Admin) || user.CurrentRoles.Contains(AllRoles.Admin))
+                return;
+
+            var own = (await _identity.GetUserDirectPermissionsAsync(user.Id)).Select(p => p.Name);
+            var fromRole = new List<string>();
+            foreach (var role in user.CurrentRoles)
+                fromRole.AddRange(await _identity.GetRolePermissionsAsync(role));
+            ViewBag.PermissionEditor = await EditorAsync(own, fromRole, Url.Action(nameof(TogglePermission), new { id = user.Id })!);
+        }
+
+        /// <summary>Restores what the Edit form does not post back, so a failed save shows the stored role and the permissions again.</summary>
+        private async Task ReloadEditAsync(EditUserViewModel model)
+        {
+            model.CurrentRoles = (await _identity.GetUserAsync(model.Id))?.Roles ?? [];
+            await LoadRoles(model);
+            await LoadPermissionEditorAsync(model);
         }
 
         /// <summary>Edits what every user of a role gets, except the Admin role which holds everything.</summary>
@@ -144,7 +157,7 @@ namespace InventoryManagement.Web.Controllers
 
             if (!ModelState.IsValid)
             {
-                await LoadRoles(model);
+                await ReloadEditAsync(model);
                 return HandleValidationErrors(model);
             }
 
@@ -152,9 +165,11 @@ namespace InventoryManagement.Web.Controllers
             if (!User.IsInRole(AllRoles.Admin))
                 model.SelectedRoles = null;
 
-            var success = await _userManagementService.UpdateUserAsync(model);
+            var (success, error) = model.Id == GetCurrentUserId() && !model.IsActive
+                ? (false, OwnAccountMessage)
+                : await _userManagementService.UpdateUserAsync(model);
             if (IsAjaxRequest())
-                return AjaxResponse(success, success ? "User updated successfully" : "Failed to update user");
+                return AjaxResponse(success, success ? "User updated successfully" : error ?? "Failed to update user");
 
             if (success)
             {
@@ -162,8 +177,8 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", Tr("Failed to update user"));
-            await LoadRoles(model);
+            ModelState.AddModelError("", Tr(error ?? "Failed to update user"));
+            await ReloadEditAsync(model);
             return View(model);
         }
 
@@ -176,11 +191,14 @@ namespace InventoryManagement.Web.Controllers
             if (await IsProtectedAsync(id))
                 return Forbidden();
 
-            var success = await _userManagementService.DeleteUserAsync(id);
+            var (success, error) = id == GetCurrentUserId()
+                ? (false, OwnAccountMessage)
+                : await _userManagementService.DeleteUserAsync(id);
+            var message = success ? "User deleted successfully" : error ?? "Failed to delete user";
             if (IsAjaxRequest())
-                return AjaxResponse(success, success ? "User deleted successfully" : "Failed to delete user");
+                return AjaxResponse(success, message);
 
-            TempData[success ? "Success" : "Error"] = Tr(success ? "User deleted successfully" : "Failed to delete user");
+            TempData[success ? "Success" : "Error"] = Tr(message);
             return RedirectToAction(nameof(Index));
         }
 
@@ -193,10 +211,13 @@ namespace InventoryManagement.Web.Controllers
             if (await IsProtectedAsync(id))
                 return Forbidden();
 
-            var success = await _userManagementService.ToggleUserStatusAsync(id);
-            return IsAjaxRequest()
-                ? AjaxResponse(success, success ? "User status updated successfully" : "Failed to update user status")
-                : RedirectToAction(nameof(Index));
+            var (success, error) = await ToggleStatusAsync(id);
+            if (IsAjaxRequest())
+                return AjaxResponse(success, success ? "User status updated successfully" : error ?? "Failed to update user status");
+
+            if (!success)
+                TempData["Error"] = Tr(error ?? "Failed to update user status");
+            return RedirectToAction(nameof(Index));
         }
 
 
@@ -225,9 +246,9 @@ namespace InventoryManagement.Web.Controllers
             if (!ModelState.IsValid)
                 return HandleValidationErrors(model);
 
-            var success = await _userManagementService.ResetPasswordAsync(model.UserId, model.NewPassword);
+            var (success, error) = await _userManagementService.ResetPasswordAsync(model.UserId, model.NewPassword);
             if (IsAjaxRequest())
-                return AjaxResponse(success, success ? "Password reset successfully" : "Failed to reset password");
+                return AjaxResponse(success, success ? "Password reset successfully" : error ?? "Failed to reset password");
 
             if (success)
             {
@@ -235,7 +256,7 @@ namespace InventoryManagement.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            ModelState.AddModelError("", Tr("Failed to reset password"));
+            ModelState.AddModelError("", Tr(error ?? "Failed to reset password"));
             return View(model);
         }
 
@@ -256,7 +277,9 @@ namespace InventoryManagement.Web.Controllers
         {
             if (await IsProtectedAsync(id))
                 return Json(new { success = false });
-            return Json(new { success = await _userManagementService.ToggleUserStatusAsync(id) });
+
+            var (success, error) = await ToggleStatusAsync(id);
+            return Json(new { success, message = success ? null : Tr(error ?? "Failed to update user status") });
         }
 
 
@@ -275,6 +298,14 @@ namespace InventoryManagement.Web.Controllers
                 : new { success = false, message = (string?)Tr("Permission change failed") });
         }
 
+
+        private const string OwnAccountMessage = "You cannot delete or deactivate your own account.";
+
+        /// <summary>Nobody switches their own account off, since only someone else could switch it on again.</summary>
+        private async Task<(bool Success, string? Error)> ToggleStatusAsync(int id)
+            => id == GetCurrentUserId()
+                ? (false, OwnAccountMessage)
+                : await _userManagementService.ToggleUserStatusAsync(id);
 
         /// <summary>Non-admins may not touch Admins or anyone holding a permission they lack, since a reset would hand it over.</summary>
         private async Task<bool> IsProtectedAsync(int userId)
