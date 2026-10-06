@@ -81,11 +81,12 @@
 
     <hr class="ip-rule" />
 
-    <div class="row g-5 pt-4">
-        <div class="col-lg-6">
+    @* From tablets the photo sits beside the facts, so they are on the first screen *@
+    <div class="row g-4 g-lg-5 pt-4">
+        <div class="col-md-5 col-lg-6">
             <partial name="_ImageGallery" model='new ImageGalleryModel { Images = Model.ImageUrls, Title = Model.Model ?? "", EmptyText = "No image available" }' />
         </div>
-        <div class="col-lg-6">
+        <div class="col-md-7 col-lg-6">
             <dl class="ip-dl">
                 <div><dt>@L["Inventory Code"]</dt><dd class="ip-mono">@Model.InventoryCode</dd></div>
                 <div><dt>@L["Model"]</dt><dd>@Or(Model.Model, "-")</dd></div>
