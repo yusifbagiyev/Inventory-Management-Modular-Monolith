@@ -1214,3 +1214,11 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
 /* The gallery photo and picker tiles clip their children, so their focus ring is drawn inside */
 [data-ig-zoom]:focus-visible, [data-im-preview]:focus-visible { outline: 2px solid var(--ip-accent); outline-offset: -3px; }
 [data-im-preview] { cursor: zoom-in; }
+/* Catalog: department and category names take two lines on the lists, phone cards give the name the room of the code they lack, and details pages leave the name to the app bar */
+@media (min-width: 768px) { .catalog-list td.title .cell-title { -webkit-line-clamp: 2; word-break: normal; } }
+@media (max-width: 767.98px) {
+  .catalog-list td.title { padding-right: 0; }
+  .catalog-list td.title .cell-title { white-space: normal; overflow-wrap: anywhere; }
+  .catalog-details .ip-page-head .breadcrumb { display: none; }
+}
+@media (max-width: 767.98px) { body:has(.catalog-details) .ip-appbar .title small { font-family: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }

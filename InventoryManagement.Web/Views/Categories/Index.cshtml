@@ -7,6 +7,10 @@
     object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.CategoriesInWithProducts ?? 0;
     // Any query value besides paging is a filter or sort the reset button undoes
     var hasFilters = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
+    // The counts are totals, so a narrowed list says how many it shows before them
+    var isFiltered = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize" or "sort" or "dir"));
+    var totalCount = Convert.ToInt32(activeCount) + Convert.ToInt32(inactiveCount);
+    var canUpdate = User.HasPermission("category.update");
     var statusOptions = Json.Serialize(new[] { new { value = "true", label = L["Active"].Value }, new { value = "false", label = L["Inactive"].Value } }).ToString();
 }
 
@@ -15,7 +19,7 @@
         <div>
             <h1>@L["Categories"]</h1>
             <div class="ip-sub ip-num" id="categoriesSummary">
-                @L.Plural(Model.TotalCount, "{0} category", "{0} categories") · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
+                @if (isFiltered) {<text>@L["{0} found", Model.TotalCount] · </text>}@L.Plural(totalCount, "{0} category", "{0} categories") · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
             </div>
         </div>
         <div class="ip-page-actions">
@@ -61,11 +65,10 @@
 
     <div id="categoriesRegion" data-list-region>
         <div class="ip-table-wrap">
-                <table class="ip-table">
+                <table class="ip-table catalog-list">
                     <thead>
                         <tr>
                             <th data-sort="name" data-filter="text" data-param="name">@L["Category"]</th>
-                            <th data-sort="description" data-filter="text" data-param="description">@L["Description"]</th>
                             <th data-sort="products" data-sort-first="desc" data-filter="range" data-param-min="productsMin" data-param-max="productsMax">@L["Products"]</th>
                             <th data-sort="status" data-filter="list" data-param="active" data-options="@statusOptions">@L["Status"]</th>
                             <th data-sort="created" data-sort-first="desc" data-filter="date" data-param-from="createdFrom" data-param-to="createdTo">@L["Created"]</th>
@@ -79,23 +82,15 @@
                                 <td class="title">
                                     <div class="cell-text">
                                         <a class="cell-title text-reset" href="@Url.Action("Details", new { id = category.Id })" title="@category.Name">@category.Name</a>
+                                        @if (!string.IsNullOrEmpty(category.Description))
+                                        {
+                                            <span class="cell-sub" title="@category.Description">@category.Description</span>
+                                        }
+                                        @* Phone cards have no number column, so the count follows the description *@
+                                        <span class="cell-sub d-md-none pdf-omit">@L.Plural(category.ProductCount, "{0} product", "{0} products")</span>
                                     </div>
                                 </td>
-                                <td class="meta">
-                                    <div class="cell-text">
-                                        @if (string.IsNullOrEmpty(category.Description))
-                                        {
-                                            <span class="cell-sub pdf-omit">@L["No description"]</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="cell-sub" title="@category.Description">
-                                                @(category.Description.Length > 100 ? category.Description.Substring(0, 100) + "..." : category.Description)
-                                            </span>
-                                        }
-                                    </div>
-                                </td>
-                                <td class="ip-num">@category.ProductCount</td>
+                                <td class="ip-num hide-sm">@category.ProductCount</td>
                                 <td class="state">
                                     @if (category.IsActive)
                                     {
@@ -112,7 +107,7 @@
                                         <a asp-action="Details" asp-route-id="@category.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
                                         </a>
-                                        @if (User.HasPermission("category.update"))
+                                        @if (canUpdate)
                                         {
                                         <a asp-action="Edit" asp-route-id="@category.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
                                             <i class="fa-solid fa-pen"></i>
@@ -121,7 +116,8 @@
                                         @if (User.HasPermission("category.delete"))
                                         {
                                         <button type="button" class="ip-btn-icon ip-btn-icon-danger" title="@L["Delete"]" aria-label="@L["Delete"]"
-                                                data-id="@category.Id" data-name="@category.Name" onclick="deleteCategory(this.dataset.id, this.dataset.name)">
+                                                data-catalog-delete="category" data-name="@category.Name" data-products="@category.ProductCount"
+                                                data-url="@Url.Action("Delete", new { id = category.Id })" data-edit-url="@(canUpdate ? Url.Action("Edit", new { id = category.Id }) : null)">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                         }
@@ -133,7 +129,7 @@
                         @if (!Model.Items.Any())
                         {
                             <tr class="ip-empty-row">
-                                <td class="empty" colspan="6">
+                                <td class="empty" colspan="5">
                                     <div class="ip-empty">
                                         <span class="icon"><i class="fa-solid fa-tags"></i></span>
                                         <div class="title">@L[hasFilters ? "No categories match these filters" : "No categories found"]</div>
@@ -159,50 +155,20 @@
     </div>
 </div>
 
-<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalTitle">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <p>@L["Are you sure you want to delete this category?"] <strong id="categoryName"></strong></p>
-                <div class="ip-banner ip-banner-warning">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>@L["This will permanently delete the category and affect associated products."]</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form id="deleteForm" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="ip-btn ip-btn-danger">
-                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<form id="catalogDeleteForm" method="post" class="d-none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
     <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
     <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
+    <script src="~/js/catalog-delete.js" asp-append-version="true"></script>
     <script>
         // The filter bar writes the same query values as the column headers
         TableColumns.bindBar({ fields: { '#statusFilter': 'active' }, sort: '#sortBy', search: '#searchInput', reset: '#resetFiltersBtn' });
 
         function resetFilters() {
             ListNav.go(window.location.pathname);
-        }
-
-        function deleteCategory(id, name) {
-            $('#categoryName').text(name);
-            $('#deleteForm').attr('action', '/Categories/Delete/' + id);
-            $('#deleteModal').modal('show');
         }
 
         // Other users' changes refresh the count and the table in place

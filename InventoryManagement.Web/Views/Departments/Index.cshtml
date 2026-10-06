@@ -7,6 +7,10 @@
     object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.DepartmentsInWithProducts ?? 0;
     // Any query value besides paging is a filter or sort the reset button undoes
     var hasFilters = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
+    // The counts are totals, so a narrowed list says how many it shows before them
+    var isFiltered = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize" or "sort" or "dir"));
+    var totalCount = Convert.ToInt32(activeCount) + Convert.ToInt32(inactiveCount);
+    var canUpdate = User.HasPermission("department.update");
     var activeParam = Context.Request.Query["active"].ToString();
     var currentSort = $"{Context.Request.Query["sort"]}:{Context.Request.Query["dir"]}";
     var statusOptions = Json.Serialize(new[] { new { value = "true", label = L["Active"].Value }, new { value = "false", label = L["Inactive"].Value } }).ToString();
@@ -17,7 +21,7 @@
         <div>
             <h1>@L["Departments"]</h1>
             <div class="ip-sub ip-num" id="departmentsSummary">
-                @L.Plural(Model.TotalCount, "{0} department", "{0} departments") · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
+                @if (isFiltered) {<text>@L["{0} found", Model.TotalCount] · </text>}@L.Plural(totalCount, "{0} department", "{0} departments") · @L["{0} active", activeCount] · @L["{0} inactive", inactiveCount] · @L["{0} with products", withProductsCount]
             </div>
         </div>
         <div class="ip-page-actions">
@@ -64,16 +68,15 @@
 
     <div id="departmentsRegion" data-list-region>
         <div class="ip-table-wrap">
-                <table class="ip-table" id="departmentsTable">
+                <table class="ip-table catalog-list" id="departmentsTable">
                     <thead>
                         <tr>
                             <th data-sort="name" data-filter="text" data-param="name">@L["Department"]</th>
                             <th data-sort="head" data-filter="text" data-param="head">@L["Department Head"]</th>
-                            <th data-sort="description" data-filter="text" data-param="description">@L["Description"]</th>
                             <th data-sort="products" data-sort-first="desc" data-filter="range" data-param-min="productsMin" data-param-max="productsMax">@L["Products"]</th>
-                            <th data-sort="workers" data-sort-first="desc" data-filter="range" data-param-min="workersMin" data-param-max="workersMax">@L["Workers"]</th>
+                            <th class="hide-md" data-sort="workers" data-sort-first="desc" data-filter="range" data-param-min="workersMin" data-param-max="workersMax">@L["Workers"]</th>
                             <th data-sort="status" data-filter="list" data-param="active" data-options="@statusOptions">@L["Status"]</th>
-                            <th data-sort="created" data-sort-first="desc" data-filter="date" data-param-from="createdFrom" data-param-to="createdTo">@L["Created"]</th>
+                            <th class="hide-lg" data-sort="created" data-sort-first="desc" data-filter="date" data-param-from="createdFrom" data-param-to="createdTo">@L["Created"]</th>
                             <th class="actions-column"><span class="visually-hidden">@L["Actions"]</span></th>
                         </tr>
                     </thead>
@@ -83,34 +86,27 @@
                             <tr data-href="@Url.Action("Details", new { id = department.Id })">
                                 <td class="title">
                                     <div class="cell-text">
-                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = department.Id })">@department.Name</a>
+                                        <a class="cell-title text-reset" href="@Url.Action("Details", new { id = department.Id })" title="@department.Name">@department.Name</a>
+                                        @if (!string.IsNullOrEmpty(department.Description))
+                                        {
+                                            <span class="cell-sub" title="@department.Description">@department.Description</span>
+                                        }
                                     </div>
                                 </td>
                                 <td class="meta">
                                     @if (!string.IsNullOrEmpty(department.DepartmentHead))
                                     {
-                                        @department.DepartmentHead
+                                        <span class="cell-title fw-normal" title="@department.DepartmentHead">@department.DepartmentHead</span>
                                     }
                                     else
                                     {
-                                        <span class="ip-faint pdf-omit">@L["Not assigned"]</span>
+                                        <span class="cell-title fw-normal"><span class="ip-faint pdf-omit">@L["Not assigned"]</span></span>
                                     }
+                                    @* Phone cards have no number columns, so the counts follow the head *@
+                                    <span class="cell-sub d-md-none pdf-omit">@L.Plural(department.ProductCount, "{0} product", "{0} products") · @L.Plural(department.WorkerCount, "{0} worker", "{0} workers")</span>
                                 </td>
-                                <td class="hide-sm">
-                                    @* The ellipsis needs a max-width in an auto-layout table *@
-                                    <div class="cell-sub text-truncate" style="max-width: 300px;" title="@department.Description">
-                                        @if (!string.IsNullOrEmpty(department.Description))
-                                        {
-                                            @department.Description
-                                        }
-                                        else
-                                        {
-                                            <span class="pdf-omit">@L["No description provided"]</span>
-                                        }
-                                    </div>
-                                </td>
-                                <td class="ip-num">@department.ProductCount</td>
-                                <td class="ip-num">@department.WorkerCount</td>
+                                <td class="ip-num hide-sm">@department.ProductCount</td>
+                                <td class="ip-num hide-sm hide-md">@department.WorkerCount</td>
                                 <td class="state">
                                     @if (department.IsActive)
                                     {
@@ -121,13 +117,13 @@
                                         <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
                                     }
                                 </td>
-                                <td class="date ip-num text-nowrap">@department.CreatedAt.ToString("dd.MM.yyyy")</td>
+                                <td class="date ip-num text-nowrap hide-lg">@department.CreatedAt.ToString("dd.MM.yyyy")</td>
                                 <td class="actions" data-no-row-link>
                                     <div class="actions">
                                         <a asp-action="Details" asp-route-id="@department.Id" class="ip-btn-icon" title="@L["View"]" aria-label="@L["View"]">
                                             <i class="fa-regular fa-eye"></i>
                                         </a>
-                                        @if (User.HasPermission("department.update"))
+                                        @if (canUpdate)
                                         {
                                         <a asp-action="Edit" asp-route-id="@department.Id" class="ip-btn-icon" title="@L["Edit"]" aria-label="@L["Edit"]">
                                             <i class="fa-solid fa-pen"></i>
@@ -136,7 +132,8 @@
                                         @if (User.HasPermission("department.delete"))
                                         {
                                         <button type="button" class="ip-btn-icon ip-btn-icon-danger" title="@L["Delete"]" aria-label="@L["Delete"]"
-                                                data-id="@department.Id" data-name="@department.Name" onclick="deleteDepartment(this.dataset.id, this.dataset.name)">
+                                                data-catalog-delete="department" data-name="@department.Name" data-products="@department.ProductCount"
+                                                data-url="@Url.Action("Delete", new { id = department.Id })" data-edit-url="@(canUpdate ? Url.Action("Edit", new { id = department.Id }) : null)">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                         }
@@ -148,7 +145,7 @@
                         @if (!Model.Items.Any())
                         {
                             <tr class="ip-empty-row">
-                                <td class="empty" colspan="8">
+                                <td class="empty" colspan="7">
                                     <div class="ip-empty">
                                         <span class="icon"><i class="fa-solid fa-building"></i></span>
                                         <div class="title">@L[hasFilters ? "No departments match these filters" : "No departments found"]</div>
@@ -174,50 +171,20 @@
     </div>
 </div>
 
-<div class="modal fade ip-modal" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalTitle">@L["Confirm Delete"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <p>@L["Are you sure you want to delete"] <strong id="departmentName"></strong>?</p>
-                <div class="ip-banner ip-banner-warning">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>@L["This will permanently delete the department and affect associated products."]</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal">@L["Cancel"]</button>
-                <form id="deleteForm" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="ip-btn ip-btn-danger">
-                        <span>@L["Delete"]</span><i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<form id="catalogDeleteForm" method="post" class="d-none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
     <link rel="stylesheet" href="~/lib/air-datepicker/air-datepicker.css" asp-append-version="true" />
     <script src="~/lib/air-datepicker/air-datepicker.js" asp-append-version="true"></script>
     <script src="~/js/date-range.js" asp-append-version="true"></script>
     <script src="~/js/pdf-export.js" asp-append-version="true"></script>
+    <script src="~/js/catalog-delete.js" asp-append-version="true"></script>
     <script>
         // The filter bar writes the same query values as the column headers
         TableColumns.bindBar({ fields: { '#statusFilter': 'active' }, sort: '#sortBy', search: '#searchInput', reset: '#resetFiltersBtn' });
 
         function resetFilters() {
             ListNav.go(window.location.pathname);
-        }
-
-        function deleteDepartment(id, name) {
-            $('#departmentName').text(name);
-            $('#deleteForm').attr('action', '/Departments/Delete/' + id);
-            $('#deleteModal').modal('show');
         }
 
         // Other users' changes refresh the count and the table in place
