@@ -26,8 +26,16 @@
     var canRoutes = User.HasPermission("route.view");
     string? ProductLink(string url) => canProducts ? url : null;
     string? RouteLink(string url) => canRoutes ? url : null;
-    var categoryTotal = Model.CategoryDistributions.Sum(c => c.Count);
     var maxDepartment = Math.Max(1, Model.DepartmentStats.Select(d => d.PeriodTransfers).DefaultIfEmpty(0).Max());
+    string CategoryLabel(CategoryDistribution c) => c.IsOther ? L["Other ({0} categories)", c.OtherCategories].Value : c.CategoryName;
+    // A share of every transfer in the period, so the rows add up to the whole
+    long Percent(int count) => Model.TotalTransfers == 0 ? 0 : (long)Math.Round(count * 100.0 / Model.TotalTransfers);
+    var categoryChart = Model.CategoryDistributions.Select(c => new { categoryName = CategoryLabel(c), count = c.Count, isOther = c.IsOther });
+    var faultyNames = string.Join(", ", Model.NotWorkingNames);
+    var faultyMore = Model.NotWorking - Model.NotWorkingNames.Count;
+    var activity = Model.TransferActivityData;
+    // yyyy-MM-dd to dd.MM.yyyy without going through a culture
+    string Day(string iso) => string.Join(".", iso.Split('-').Reverse());
 }
 
 <div class="container-fluid px-4">
@@ -36,10 +44,10 @@
             <h1>@L["Dashboard"]</h1>
         </div>
         <nav class="ip-tabs ink border-0" aria-label="@L["Period"]">
-            <a class="ip-tab @(currentPeriod == "last7days" ? "active" : "")" href="/Home/Dashboard?period=last7days">@L["7 days"]</a>
-            <a class="ip-tab @(currentPeriod == "last30days" ? "active" : "")" href="/Home/Dashboard?period=last30days">@L["30 days"]</a>
-            <a class="ip-tab @(currentPeriod == "last90days" ? "active" : "")" href="/Home/Dashboard?period=last90days">@L["90 days"]</a>
-            <a class="ip-tab @(allTime ? "active" : "")" href="/Home/Dashboard?period=all">@L["All"]</a>
+            <a class="ip-tab @(currentPeriod == "last7days" ? "active" : "")" aria-current="@(currentPeriod == "last7days" ? "page" : null)" href="/Home/Dashboard?period=last7days">@L["7 days"]</a>
+            <a class="ip-tab @(currentPeriod == "last30days" ? "active" : "")" aria-current="@(currentPeriod == "last30days" ? "page" : null)" href="/Home/Dashboard?period=last30days">@L["30 days"]</a>
+            <a class="ip-tab @(currentPeriod == "last90days" ? "active" : "")" aria-current="@(currentPeriod == "last90days" ? "page" : null)" href="/Home/Dashboard?period=last90days">@L["90 days"]</a>
+            <a class="ip-tab @(allTime ? "active" : "")" aria-current="@(allTime ? "page" : null)" href="/Home/Dashboard?period=all">@L["All"]</a>
         </nav>
     </div>
 
@@ -53,7 +61,21 @@
         <a class="ip-kpi" href="@ProductLink("/Products?status=false")">
             <span class="label">@L["Faulty"]</span>
             <span class="value">@Model.NotWorking.ToString("N0")</span>
-            <span class="trend text-truncate">@(Model.NotWorkingNames.Count > 0 ? string.Join(", ", Model.NotWorkingNames) : L["None"].Value)</span>
+            @if (Model.NotWorkingNames.Count > 0)
+            {
+                @* The names are a sample, so the rest is counted after them *@
+                <span class="trend ip-kpi-names">
+                    <span class="text-truncate" title="@faultyNames">@faultyNames</span>
+                    @if (faultyMore > 0)
+                    {
+                        <span class="text-nowrap">+@faultyMore</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <span class="trend">@L["None"]</span>
+            }
         </a>
         <a class="ip-kpi" href="@RouteLink(transfersUrl + "&isCompleted=true")">
             <span class="label">@L["Completed transfers"]</span>
@@ -73,11 +95,11 @@
     </div>
 
     <div class="row g-5 mt-0" id="dashboardCharts">
-        <div class="col-xl-8">
+        <div class="col-lg-8">
             <section class="ip-section">
                 <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
                     <h2>@L["Transfer Activity"]</h2>
-                    <div class="ip-legend">
+                    <div class="ip-legend" aria-hidden="true">
                         <span><i style="background: var(--ip-chart-1)"></i>@L["Completed"]</span>
                         <span><i style="background: var(--ip-chart-pending)"></i>@L["Pending"]</span>
                     </div>
@@ -89,6 +111,19 @@
                                 data-chart="@Json.Serialize(Model.TransferActivityData).ToString()" data-link="@RouteLink("/Routes?routeType=Transfer")"></canvas>
                     </div>
                     <p class="ip-hint mt-2 mb-0">@L["Click a bar to open those transfers."]</p>
+                    @* The chart's figures as text and links for screen readers and the keyboard *@
+                    <ul class="visually-hidden-focusable ip-chart-links">
+                        @for (var i = 0; i < activity.Labels.Count; i++)
+                        {
+                            if (activity.CompletedData[i] + activity.PendingData[i] == 0) continue;
+                            var start = activity.BucketStarts[i];
+                            var end = activity.BucketEnds[i];
+                            var when = start == end ? activity.Labels[i] : $"{Day(start)} – {Day(end)}";
+                            <li>
+                                <a href="@RouteLink($"/Routes?routeType=Transfer&startDate={start}&endDate={end}")">@when: @L["Completed"] @activity.CompletedData[i], @L["Pending"] @activity.PendingData[i]</a>
+                            </li>
+                        }
+                    </ul>
                 }
                 else
                 {
@@ -97,8 +132,8 @@
             </section>
         </div>
 
-        @* On phones CSS order moves this block above the chart *@
-        <div class="col-xl-4 ip-dash-attention">
+        @* In one column CSS order moves this block above the chart *@
+        <div class="col-lg-4 ip-dash-attention">
             <section class="ip-section">
                 <h2 class="mb-3">@L["Needs attention"]</h2>
                 @if (pendingApprovals is int approvals)
@@ -119,26 +154,27 @@
             </section>
         </div>
 
-        <div class="col-xl-5">
+        <div class="col-lg-6">
             <section class="ip-section">
                 <h2 class="mb-3">@L["Categories in Transfers"]</h2>
                 @if (Model.CategoryDistributions.Any())
                 {
                     <div class="d-flex gap-4 align-items-center flex-wrap">
-                        <div style="position: relative; width: 168px; height: 168px;">
+                        <div class="ip-dash-doughnut">
                             <canvas id="categoryChart" role="img" aria-label="@L["Categories in Transfers"]"
-                                    data-chart="@Json.Serialize(Model.CategoryDistributions).ToString()" data-link="@RouteLink(transfersUrl)"></canvas>
+                                    data-chart="@Json.Serialize(categoryChart).ToString()" data-link="@RouteLink(transfersUrl)"></canvas>
                         </div>
                         <div class="flex-grow-1" style="min-width: 200px">
                             @for (var i = 0; i < Model.CategoryDistributions.Count; i++)
                             {
                                 var category = Model.CategoryDistributions[i];
-                                <a class="ip-list-link" href="@RouteLink(transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
+                                var label = CategoryLabel(category);
+                                <a class="ip-list-link" href="@RouteLink(category.IsOther ? transfersUrl : transfersUrl + "&categoryName=" + Uri.EscapeDataString(category.CategoryName))">
                                     <span class="d-flex align-items-center gap-2" style="min-width: 0">
-                                        <i class="ip-swatch" style="background: var(--ip-cat-@(i % 8 + 1))"></i>
-                                        <span class="text-truncate">@category.CategoryName</span>
+                                        <i class="ip-swatch" style="background: var(--ip-cat-@(category.IsOther ? 8 : i % 8 + 1))"></i>
+                                        <span class="text-truncate" title="@label">@label</span>
                                     </span>
-                                    <span class="ip-num ip-muted text-nowrap">@(categoryTotal == 0 ? 0 : Math.Round(category.Count * 100.0 / categoryTotal))% · @category.Count</span>
+                                    <span class="ip-num ip-muted text-nowrap">@L.Plural(category.Count, "{0} transfer", "{0} transfers") · @Percent(category.Count)%</span>
                                 </a>
                             }
                         </div>
@@ -151,19 +187,17 @@
             </section>
         </div>
 
-        <div class="col-xl-7" id="dashboardRecent">
+        <div class="col-lg-6" id="dashboardRecent">
             <section class="ip-section">
-                <h2 class="mb-3">@L["Top Departments by Transfer Activity"]</h2>
+                <h2 class="mb-3">@L["Transfers by department"]</h2>
                 @if (Model.DepartmentStats.Any())
                 {
                     @foreach (var dept in Model.DepartmentStats)
                     {
                         <a class="ip-list-link" href="@RouteLink(transfersUrl + "&departmentName=" + Uri.EscapeDataString(dept.DepartmentName))">
-                            <span class="text-truncate" style="width: 30%">@dept.DepartmentName</span>
+                            <span class="text-truncate" title="@dept.DepartmentName">@dept.DepartmentName</span>
                             <span class="ip-bar" aria-hidden="true"><i style="width: @(dept.PeriodTransfers * 100 / maxDepartment)%"></i></span>
-                            <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">
-                                @L.Plural(dept.PeriodTransfers, "{0} transfer", "{0} transfers")
-                            </span>
+                            <span class="ip-num ip-muted text-nowrap" title="@L["Unique Products"]: @dept.ProductCount · @L["Active Workers"]: @dept.ActiveWorkers">@dept.PeriodTransfers.ToString("N0")</span>
                         </a>
                     }
                 }
@@ -186,6 +220,7 @@
         function initializeCharts() {
             Chart.defaults.font.family = v('--ip-font-sans');
             Chart.defaults.color = v('--ip-text-3');
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) Chart.defaults.animation = false;
             initializeTransferChart();
             initializeCategoryChart();
         }
@@ -211,11 +246,18 @@
             event.native.target.style.cursor = elements.length && event.native.target.dataset.link ? 'pointer' : 'default';
         }
 
+        // The tooltip covers the whole column, but a click opens only the segment under the pointer
+        function hitSegment(chart, event) {
+            return chart.getElementsAtEventForMode(event.native, 'nearest', { intersect: true }, false)[0];
+        }
+
+        const isoDay = iso => iso.split('-').reverse().join('.');
+
         function tooltip() {
             return { backgroundColor: v('--ip-text-1'), titleColor: v('--ip-surface'), bodyColor: v('--ip-surface'), padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4 };
         }
 
-        // Clicking a bar opens that bucket's transfers, and a single segment also filters by status
+        // Clicking a segment opens that bucket's transfers with that status
         function initializeTransferChart() {
             const ctx = document.getElementById('transferChart');
             if (!ctx) return;
@@ -235,29 +277,42 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: false }, tooltip: tooltip() },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: Object.assign(tooltip(), {
+                            callbacks: {
+                                // A bucket longer than a day is named by its first and last day
+                                title: items => {
+                                    const i = items[0].dataIndex;
+                                    return data.bucketStarts[i] === data.bucketEnds[i] ? data.labels[i] : isoDay(data.bucketStarts[i]) + ' – ' + isoDay(data.bucketEnds[i]);
+                                }
+                            }
+                        })
+                    },
                     scales: {
                         x: {
                             stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') },
-                            // Phones show only the day numbers so the labels fit
+                            // Phones show the day number of a day and the first day of a week so the labels fit unrotated
                             ticks: {
-                                callback: function (value) {
-                                    const label = this.getLabelForValue(value);
-                                    if (window.innerWidth >= 768 || typeof label !== 'string') return label;
-                                    const range = /^(\d{2})[–-](\d{2})\.\d{2}$/.exec(label);
-                                    if (range) return (+range[1]) + '–' + (+range[2]);
-                                    const day = /(\d{2})\.\d{2}$/.exec(label);
-                                    return day ? String(+day[1]) : label;
+                                autoSkip: true, maxRotation: 0,
+                                callback: function (value, i) {
+                                    if (window.innerWidth >= 768) return this.getLabelForValue(value);
+                                    const start = data.bucketStarts[i], end = data.bucketEnds[i];
+                                    const days = (new Date(end) - new Date(start)) / 864e5;
+                                    if (days === 0) return String(+start.slice(8));
+                                    if (days < 28) return isoDay(start).slice(0, 5);
+                                    return this.getLabelForValue(value);
                                 }
                             }
                         },
                         y: { stacked: true, beginAtZero: true, grid: { color: v('--ip-border') }, border: { display: false }, ticks: { precision: 0 } }
                     },
-                    onHover: pointerOnHover,
-                    onClick: function (event, elements) {
-                        if (!elements.length || !ctx.dataset.link) return;
-                        const i = elements[0].index;
-                        const status = elements.length === 1 ? (elements[0].datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false') : '';
+                    onHover: (event, elements, chart) => pointerOnHover(event, hitSegment(chart, event) ? [1] : []),
+                    onClick: function (event, elements, chart) {
+                        const hit = hitSegment(chart, event);
+                        if (!hit || !ctx.dataset.link) return;
+                        const i = hit.index;
+                        const status = hit.datasetIndex === 0 ? '&isCompleted=true' : '&isCompleted=false';
                         window.location.href = ctx.dataset.link + '&startDate=' + data.bucketStarts[i] + '&endDate=' + data.bucketEnds[i] + status;
                     }
                 }
@@ -277,7 +332,7 @@
                     labels: data.map(c => c.categoryName),
                     datasets: [{
                         data: data.map(c => c.count),
-                        backgroundColor: data.map((c, i) => v('--ip-cat-' + (i % 8 + 1))),
+                        backgroundColor: data.map((c, i) => v('--ip-cat-' + (c.isOther ? 8 : i % 8 + 1))),
                         borderColor: v('--ip-surface'),
                         borderWidth: 2
                     }]
@@ -290,7 +345,9 @@
                     onHover: pointerOnHover,
                     onClick: function (event, elements) {
                         if (!elements.length || !ctx.dataset.link) return;
-                        window.location.href = ctx.dataset.link + '&categoryName=' + encodeURIComponent(data[elements[0].index].categoryName);
+                        const category = data[elements[0].index];
+                        // The joined row has no single category, so it opens all the period's transfers
+                        window.location.href = ctx.dataset.link + (category.isOther ? '' : '&categoryName=' + encodeURIComponent(category.categoryName));
                     }
                 }
             });
