@@ -1332,3 +1332,6 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 }
 /* Transfer: the found product's text keeps its place beside the thumbnail however long the name is, and the current place moves under it when the row is full */
 .ip-found-text { flex: 1 1 0; min-width: min(240px, calc(100% - 60px)); }
+/* Banners: a message in a span shrinks beside its icon like a div, and the link at the end keeps to one line */
+.ip-banner > span { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.ip-banner > a { flex: none; }
