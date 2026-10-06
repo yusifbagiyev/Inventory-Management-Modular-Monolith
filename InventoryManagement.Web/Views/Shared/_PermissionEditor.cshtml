@@ -9,6 +9,11 @@
 }
 
 <div class="ip-perm-editor" data-save-url="@Model.SaveUrl" data-readonly="@(Model.ReadOnly ? "true" : "false")">
+    @if (!Model.ReadOnly)
+    {
+        @* Changes save on their own, so each saved one is confirmed here *@
+        <p class="ip-hint ip-perm-saved" role="status" aria-live="polite" data-perm-saved></p>
+    }
     <div class="ip-perm-grid">
         @foreach (var area in PermissionCatalog.Areas)
         {
@@ -30,14 +35,16 @@
                     var ownLevel = Level(item, own);
                     var shown = Rank(roleLevel) >= Rank(ownLevel) ? roleLevel : ownLevel;
                     var label = L[item.Label].Value;
-                    <div class="ip-perm-row" data-search="@($"{label} {string.Join(' ', item.Names)}".ToLowerInvariant())">
-                        <div class="ip-perm-text">
+                    @* A switch row is its label, so the whole row toggles it; the three-way choice stays a plain row *@
+                    var rowTag = !Model.ReadOnly && item.Direct == null ? "label" : "div";
+                    @:<@rowTag class="ip-perm-row" data-search="@($"{label} {string.Join(' ', item.Names)}".ToLowerInvariant())">
+                        <span class="ip-perm-text">
                             <span class="label" title="@string.Join(", ", item.Names)">@label</span>
                             @if (roleLevel != "none")
                             {
                                 <span class="ip-tag-plain" title="@L["Granted by the role; change it on the role's permissions page."]">@L["From role"]</span>
                             }
-                        </div>
+                        </span>
                         @if (Model.ReadOnly)
                         {
                             <span class="ip-perm-level">@L[shown switch { "direct" => "Direct", "approval" => "With approval", _ => "Allowed" }]</span>
@@ -55,13 +62,14 @@
                                  data-base="@item.Permission" data-direct="@item.Direct" data-own="@ownLevel">
                                 @foreach (var (level, text) in new[] { ("none", "No"), ("approval", "With approval"), ("direct", "Direct") })
                                 {
-                                    <button type="button" role="radio" data-level="@level"
+                                    @* One tab stop per group, on the chosen level; the arrow keys move between levels *@
+                                    <button type="button" role="radio" data-level="@level" tabindex="@(shown == level ? "0" : "-1")"
                                             class="@(shown == level ? "active" : "")" aria-checked="@(shown == level ? "true" : "false")"
                                             disabled="@(Rank(level) < Rank(roleLevel))">@L[text]</button>
                                 }
                             </div>
                         }
-                    </div>
+                    @:</@rowTag>
                 }
             </section>
         }
@@ -79,8 +87,9 @@
                 @foreach (var other in others)
                 {
                     var label = string.IsNullOrEmpty(other.Description) ? other.Name : L[other.Description].Value;
-                    <div class="ip-perm-row" data-search="@($"{label} {other.Name}".ToLowerInvariant())">
-                        <div class="ip-perm-text"><span class="label" title="@other.Name">@label</span></div>
+                    var otherTag = Model.ReadOnly ? "div" : "label";
+                    @:<@otherTag class="ip-perm-row" data-search="@($"{label} {other.Name}".ToLowerInvariant())">
+                        <span class="ip-perm-text"><span class="label" title="@other.Name">@label</span></span>
                         @if (Model.ReadOnly)
                         {
                             <span class="ip-perm-level">@L["Allowed"]</span>
@@ -91,7 +100,7 @@
                                    data-own="@(own.Contains(other.Name) ? "true" : "false")"
                                    checked="@held.Contains(other.Name)" disabled="@role.Contains(other.Name)" />
                         }
-                    </div>
+                    @:</@otherTag>
                 }
             </section>
         }

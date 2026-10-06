@@ -7,6 +7,7 @@
     // After a failed save the posted choice is shown, never a default that the next save would store
     var chosenRoles = Model.SelectedRoles is { Count: > 0 } ? Model.SelectedRoles : Model.CurrentRoles;
     var userRole = chosenRoles.Contains("Admin") ? "Admin" : "User";
+    var fullName = $"{Model.FirstName} {Model.LastName}".Trim();
 }
 
 <div class="container-fluid px-4">
@@ -17,7 +18,22 @@
                 <li class="breadcrumb-item"><a href="@Url.Action("Details", new { id = Model.Id })">@Model.Username</a></li>
                 <li class="breadcrumb-item active">@L["Edit"]</li>
             </ol>
-            <h1>@L["Edit User"]</h1>
+            <h1>@(string.IsNullOrWhiteSpace(fullName) ? Model.Username : fullName)</h1>
+            <div class="ip-sub d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span>@Model.Username</span>
+                @if (Model.IsActive)
+                {
+                    <span class="ip-badge ip-badge-success">@L["Active"]</span>
+                }
+                else
+                {
+                    <span class="ip-badge ip-badge-neutral">@L["Inactive"]</span>
+                }
+                @if (Model.CurrentRoles.Any())
+                {
+                    <span class="ip-tag-plain">@string.Join(", ", Model.CurrentRoles.Select(r => L[r].Value))</span>
+                }
+            </div>
         </div>
         <div class="ip-page-actions">
             <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="ip-btn ip-btn-secondary">
@@ -26,126 +42,170 @@
         </div>
     </div>
 
-    <form asp-action="Edit" method="post" class="ip-form" id="editUserForm">
-        @Html.AntiForgeryToken()
-        <input asp-for="Id" type="hidden" />
-        <input asp-for="Username" type="hidden" />
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
-        }
+    @* The account form saves with its button and the permissions save each change at once, so they are kept on separate tabs *@
+    @if (isAdminViewer)
+    {
+        <div class="ip-tabs mb-4" role="tablist" aria-label="@L["Edit User"]" id="editUserTabs">
+            <a class="ip-tab active" role="tab" id="tab-account" href="#account" aria-controls="accountPanel" aria-selected="true">@L["Account"]</a>
+            <a class="ip-tab" role="tab" id="tab-permissions" href="#permissions" aria-controls="permissionsPanel" aria-selected="false" tabindex="-1">@L["Permissions"]</a>
+        </div>
+    }
 
-        <section class="ip-form-section">
-            <h2>@L["Account"]</h2>
-            <div class="ip-form-grid">
-                <div class="ip-field">
-                    <label for="UsernameDisplay" class="ip-label">@L["Username"]</label>
-                    <input id="UsernameDisplay" value="@Model.Username" class="ip-input" readonly disabled />
-                    <span class="ip-hint">@L["Username cannot be changed."]</span>
-                </div>
-                <div class="ip-field">
-                    <label asp-for="Email" class="ip-label"><span>@L["Email"]</span> <span class="req">*</span></label>
-                    <input asp-for="Email" class="ip-input" placeholder="@L["Enter email address"]" />
-                    <span asp-validation-for="Email" class="ip-error"></span>
-                </div>
-                <div class="ip-field">
-                    <label asp-for="FirstName" class="ip-label"><span>@L["First Name"]</span> <span class="req">*</span></label>
-                    <input asp-for="FirstName" class="ip-input" placeholder="@L["Enter first name"]" />
-                    <span asp-validation-for="FirstName" class="ip-error"></span>
-                </div>
-                <div class="ip-field">
-                    <label asp-for="LastName" class="ip-label"><span>@L["Last Name"]</span> <span class="req">*</span></label>
-                    <input asp-for="LastName" class="ip-input" placeholder="@L["Enter last name"]" />
-                    <span asp-validation-for="LastName" class="ip-error"></span>
-                </div>
-            </div>
-        </section>
+    <div id="accountPanel" role="@(isAdminViewer ? "tabpanel" : null)" aria-labelledby="@(isAdminViewer ? "tab-account" : null)">
+        <form asp-action="Edit" method="post" class="ip-form" id="editUserForm">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+            <input asp-for="Username" type="hidden" />
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="ModelOnly" class="ip-banner ip-banner-danger mb-3" role="alert"></div>
+            }
 
-        <section class="ip-form-section">
-            <h2>@L["Status"]</h2>
-            <div class="ip-switch-list">
-                @if (isOwnAccount)
-                {
-                    @* Only someone else could switch the account on again, so its owner cannot switch it off *@
-                    <label class="ip-switch-row">
-                        <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["You cannot delete or deactivate your own account."]</span></span>
-                        <input type="hidden" name="IsActive" value="true" />
-                        <input type="checkbox" role="switch" class="ip-switch" checked disabled />
-                    </label>
-                }
-                else
-                {
-                    <label class="ip-switch-row">
-                        <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
-                        <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
-                    </label>
-                }
-            </div>
-        </section>
-
-        @* Only Admins see and change the role *@
-        @if (isAdminViewer)
-        {
             <section class="ip-form-section">
-                <h2>@L["Role"]</h2>
-                <div class="d-flex flex-column">
-                    @foreach (var (role, hint) in new[] { ("User", "The role's permissions, plus those granted below."), ("Admin", "All pages and actions; no permissions need to be granted.") })
+                <h2>@L["Account"]</h2>
+                <div class="ip-form-grid cols-2">
+                    <div class="ip-field">
+                        <label asp-for="FirstName" class="ip-label"><span>@L["First Name"]</span> <span class="req">*</span></label>
+                        <input asp-for="FirstName" class="ip-input" placeholder="@L["Enter first name"]" />
+                        <span asp-validation-for="FirstName" class="ip-error"></span>
+                    </div>
+                    <div class="ip-field">
+                        <label asp-for="LastName" class="ip-label"><span>@L["Last Name"]</span> <span class="req">*</span></label>
+                        <input asp-for="LastName" class="ip-input" placeholder="@L["Enter last name"]" />
+                        <span asp-validation-for="LastName" class="ip-error"></span>
+                    </div>
+                    <div class="ip-field">
+                        <label for="UsernameDisplay" class="ip-label">@L["Username"]</label>
+                        <input id="UsernameDisplay" value="@Model.Username" class="ip-input" readonly disabled />
+                        <span class="ip-hint">@L["Username cannot be changed."]</span>
+                    </div>
+                    <div class="ip-field">
+                        <label asp-for="Email" class="ip-label"><span>@L["Email"]</span> <span class="req">*</span></label>
+                        <input asp-for="Email" class="ip-input" placeholder="@L["Enter email address"]" />
+                        <span asp-validation-for="Email" class="ip-error"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ip-form-section">
+                <h2>@L["Status"]</h2>
+                <div class="ip-switch-list">
+                    @if (isOwnAccount)
                     {
-                        <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
-                            <input type="radio" class="ip-check" name="SelectedRoles" value="@role" id="role_@role"
-                                   @(userRole == role ? "checked" : "") />
-                            <span><span class="d-block fw-medium">@L[role]</span><span class="ip-hint">@L[hint]</span></span>
+                        @* Only someone else could switch the account on again, so its owner cannot switch it off *@
+                        <label class="ip-switch-row">
+                            <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["You cannot delete or deactivate your own account."]</span></span>
+                            <input type="hidden" name="IsActive" value="true" />
+                            <input type="checkbox" role="switch" class="ip-switch" checked disabled />
+                        </label>
+                    }
+                    else
+                    {
+                        <label class="ip-switch-row">
+                            <span><span class="d-block fw-medium">@L["Active User"]</span><span class="ip-hint">@L["Inactive users cannot login to the system."]</span></span>
+                            <input asp-for="IsActive" type="checkbox" role="switch" class="ip-switch" />
                         </label>
                     }
                 </div>
             </section>
-        }
 
-        <div class="ip-form-foot">
-            <span class="note"></span>
-            <a href="@Url.Action("Index")" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
-            <button type="submit" class="ip-btn ip-btn-primary">
-                <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
-            </button>
-        </div>
-    </form>
+            @* Only Admins see and change the role *@
+            @if (isAdminViewer)
+            {
+                <section class="ip-form-section">
+                    <h2>@L["Role"]</h2>
+                    <div class="d-flex flex-column">
+                        @foreach (var (role, hint) in new[] { ("User", "The role's permissions, plus those granted below."), ("Admin", "All pages and actions; no permissions need to be granted.") })
+                        {
+                            <label class="d-flex align-items-center gap-3 py-2 border-bottom" for="role_@role">
+                                <input type="radio" class="ip-check" name="SelectedRoles" value="@role" id="role_@role"
+                                       @(userRole == role ? "checked" : "") />
+                                <span><span class="d-block fw-medium">@L[role]</span><span class="ip-hint">@L[hint]</span></span>
+                            </label>
+                        }
+                    </div>
+                </section>
+            }
 
-    @* Each permission change saves on its own, so this sits outside the form and its Save button *@
-    @if (isAdminViewer && isAdminAccount)
-    {
-        <section class="ip-section ip-form mt-5">
-            <h2 class="mb-1">@L["User Permissions"]</h2>
-            <p class="ip-hint mb-0">@L["Administrators hold every permission."]</p>
-        </section>
-    }
-    else if (isAdminViewer && ViewBag.PermissionEditor is PermissionEditorModel editor)
-    {
-        @* The user's own permissions on top of the role's, which are shown locked *@
-        <section class="ip-section mt-5" id="permissionsSection">
-            <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
-                <div>
-                    <h2 class="mb-1">@L["User Permissions"]</h2>
-                    <p class="ip-hint mb-0">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
-                </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    <label class="ip-filter search">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="search" id="permissionSearch" autocomplete="off"
-                               placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
-                    </label>
-                    <a href="@Url.Action("RolePermissions", new { role = "User" })" class="ip-btn ip-btn-secondary">
-                        <i class="fa-solid fa-user-shield"></i><span>@L["Role permissions"]</span>
-                    </a>
-                </div>
+            <div class="ip-form-foot">
+                <span class="note"></span>
+                <a href="@Url.Action("Index")" class="ip-btn ip-btn-secondary">@L["Cancel"]</a>
+                <button type="submit" class="ip-btn ip-btn-primary">
+                    <span>@L["Save"]</span><i class="fa-solid fa-check"></i>
+                </button>
             </div>
-            <partial name="_PermissionEditor" model="editor" />
-        </section>
+        </form>
+    </div>
+
+    @if (isAdminViewer)
+    {
+        <div id="permissionsPanel" role="tabpanel" aria-labelledby="tab-permissions" hidden>
+            @if (isAdminAccount)
+            {
+                <p class="ip-hint mb-0">@L["Administrators hold every permission."]</p>
+            }
+            else if (ViewBag.PermissionEditor is PermissionEditorModel editor)
+            {
+                @* The user's own permissions on top of the role's, which are shown locked *@
+                <section id="permissionsSection">
+                    <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
+                        <p class="ip-hint mb-0">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <label class="ip-filter search">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="search" id="permissionSearch" autocomplete="off"
+                                       placeholder="@L["Search permissions..."]" aria-label="@L["Search permissions..."]" />
+                            </label>
+                            <a href="@Url.Action("RolePermissions", new { role = "User" })" class="ip-btn ip-btn-secondary">
+                                <i class="fa-solid fa-user-shield"></i><span>@L["Role permissions"]</span>
+                            </a>
+                        </div>
+                    </div>
+                    <partial name="_PermissionEditor" model="editor" />
+                </section>
+            }
+        </div>
     }
 </div>
 
 @section Scripts {
     <script src="~/js/permission-editor.js" asp-append-version="true"></script>
     <script>
+        // The tab follows the address, so a link to #permissions opens the permissions and Back returns to the account
+        (function () {
+            const tabs = document.getElementById('editUserTabs');
+            if (!tabs) return;
+            const list = Array.from(tabs.querySelectorAll('[role="tab"]'));
+            function show(name) {
+                list.forEach(function (tab) {
+                    const on = tab.getAttribute('href') === '#' + name;
+                    tab.classList.toggle('active', on);
+                    tab.setAttribute('aria-selected', on ? 'true' : 'false');
+                    tab.tabIndex = on ? 0 : -1;
+                    document.getElementById(tab.getAttribute('aria-controls')).hidden = !on;
+                });
+            }
+            const fromHash = () => location.hash === '#permissions' ? 'permissions' : 'account';
+            tabs.addEventListener('click', function (e) {
+                const tab = e.target.closest('[role="tab"]');
+                if (!tab) return;
+                e.preventDefault();
+                const name = tab.getAttribute('href').slice(1);
+                if (name !== fromHash()) history.pushState(null, '', name === 'account' ? location.pathname + location.search : '#' + name);
+                show(name);
+            });
+            tabs.addEventListener('keydown', function (e) {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                const current = list.findIndex(tab => tab.classList.contains('active'));
+                const next = list[(current + (e.key === 'ArrowRight' ? 1 : list.length - 1)) % list.length];
+                next.click();
+                next.focus();
+            });
+            window.addEventListener('popstate', () => show(fromHash()));
+            show(fromHash());
+        })();
+
         // If someone else changes this user while it is open, warn but leave the form alone
         LiveUpdates.watch({
             mode: 'warn',

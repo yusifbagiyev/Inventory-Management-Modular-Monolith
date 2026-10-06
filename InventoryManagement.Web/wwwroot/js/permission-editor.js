@@ -20,6 +20,14 @@ window.PermissionEditor = (function () {
         const url = editor.dataset.saveUrl;
         if (!url || editor.dataset.readonly === 'true') return;
 
+        const saved = editor.querySelector('[data-perm-saved]');
+        function markSaved() {
+            if (!saved) return;
+            const now = new Date();
+            const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            saved.textContent = t('Saved · {0}', time);
+        }
+
         function updateCount(area) {
             const count = area.querySelector('[data-count]');
             if (!count) return;
@@ -54,6 +62,7 @@ window.PermissionEditor = (function () {
                 await post(url, sw.dataset.perm, grant);
                 sw.dataset.own = grant ? 'true' : 'false';
                 if (grant && sw.dataset.view !== 'true') await ensureView(area);
+                markSaved();
             } catch (err) {
                 sw.checked = !grant;
                 showToast(err.message, 'error');
@@ -67,6 +76,8 @@ window.PermissionEditor = (function () {
             const button = e.target.closest('.ip-seg [data-level]');
             if (!button || button.disabled || button.classList.contains('active')) return;
             const seg = button.closest('.ip-seg');
+            // Keys can choose again while the last choice is still being saved
+            if (seg.classList.contains('is-saving')) return;
             const area = seg.closest('.ip-perm-area');
             const from = seg.dataset.own;
             const to = button.dataset.level;
@@ -74,6 +85,7 @@ window.PermissionEditor = (function () {
             const select = level => buttons.forEach(b => {
                 b.classList.toggle('active', b.dataset.level === level);
                 b.setAttribute('aria-checked', b.dataset.level === level ? 'true' : 'false');
+                b.tabIndex = b.dataset.level === level ? 0 : -1;
             });
 
             select(to);
@@ -85,6 +97,7 @@ window.PermissionEditor = (function () {
                 if (to !== 'none') await post(url, to === 'direct' ? seg.dataset.direct : seg.dataset.base, true);
                 seg.dataset.own = to;
                 if (to !== 'none') await ensureView(area);
+                markSaved();
             } catch (err) {
                 select(from);
                 showToast(err.message, 'error');
@@ -92,6 +105,25 @@ window.PermissionEditor = (function () {
                 seg.classList.remove('is-saving');
                 updateCount(area);
             }
+        });
+
+        // Radio-group keys: the arrows, Home and End move to the next level that can be chosen and choose it
+        editor.addEventListener('keydown', function (e) {
+            const button = e.target.closest('.ip-seg [data-level]');
+            if (!button) return;
+            if (button.closest('.ip-seg').classList.contains('is-saving')) { e.preventDefault(); return; }
+            const buttons = Array.from(button.closest('.ip-seg').querySelectorAll('[data-level]')).filter(b => !b.disabled);
+            const index = buttons.indexOf(button);
+            let next = null;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = buttons[(index + 1) % buttons.length];
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = buttons[(index - 1 + buttons.length) % buttons.length];
+            else if (e.key === 'Home') next = buttons[0];
+            else if (e.key === 'End') next = buttons[buttons.length - 1];
+            if (!next) return;
+            e.preventDefault();
+            if (next === button) return;
+            next.focus();
+            next.click();
         });
     }
 
