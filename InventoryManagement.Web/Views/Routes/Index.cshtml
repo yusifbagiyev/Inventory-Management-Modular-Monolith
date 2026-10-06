@@ -55,7 +55,7 @@
         }
     }
 
-    <div class="ip-page-head">
+    <div class="ip-page-head ip-list-head">
         <div>
             <h1>@L["Routes"]</h1>
             <div class="ip-sub ip-num" id="routesSummary">
@@ -73,7 +73,7 @@
         <div class="ip-page-actions">
             @if (User.HasPermission("route.export"))
             {
-                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()">
+                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportRoutesToPDF()" title="@L["Export PDF"]" aria-label="@L["Export PDF"]">
                     <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
                 </button>
             }

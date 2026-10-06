@@ -32,7 +32,7 @@
         var canTransfer = User.HasPermission("route.create") || User.HasPermission("route.create.direct");
         var canChangeCode = User.HasPermission("product.code.update");
     }
-    <div class="ip-page-head">
+    <div class="ip-page-head ip-list-head">
         <div>
             <h1>@L["Products"]</h1>
             @if (counts != null)
@@ -55,7 +55,7 @@
             }
             @if (User.HasPermission("product.export"))
             {
-                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()">
+                <button type="button" class="ip-btn ip-btn-secondary" onclick="exportProductsToPDF()" title="@L["Export PDF"]" aria-label="@L["Export PDF"]">
                     <span>@L["Export PDF"]</span><i class="fa-solid fa-file-pdf"></i>
                 </button>
             }

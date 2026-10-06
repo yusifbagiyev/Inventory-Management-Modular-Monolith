@@ -1320,3 +1320,13 @@ label.ip-perm-row:has(.ip-switch:not(:disabled)) { cursor: pointer; }
 .ip-confirm-detail { margin: 0 0 var(--ip-space-2); font-weight: 600; color: var(--ip-text-1); overflow-wrap: anywhere; }
 #globalConfirmModal .modal-footer .ip-btn { min-width: 0; justify-content: center; }
 @media (max-width: 767.98px) { #globalConfirmModal .modal-footer .ip-btn { flex: 1 1 0; } }
+/* List heads on phones: the app bar already names the page, so the count and the export button (as an icon) share one row; Deleted products stays in the drawer */
+@media (max-width: 767.98px) {
+  .ip-list-head { flex-wrap: nowrap; align-items: center; margin: var(--ip-space-3) 0; }
+  .ip-list-head > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .ip-list-head h1 { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .ip-list-head .ip-sub { margin-top: 0; }
+  .ip-list-head .ip-page-actions { width: auto; flex: none; flex-wrap: nowrap; }
+  .ip-list-head .ip-page-actions > .ip-btn-secondary { flex: none; width: 44px; padding: 0; justify-content: center; }
+  .ip-list-head .ip-page-actions > .ip-btn-secondary > span, .ip-list-head .ip-page-actions > .ip-btn-ghost { display: none; }
+}

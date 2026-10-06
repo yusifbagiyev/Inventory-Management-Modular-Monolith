@@ -17,7 +17,7 @@
 }
 
 <div class="container-fluid px-4">
-    <div class="ip-page-head">
+    <div class="ip-page-head ip-list-head">
         <div>
             <h1>@L["Departments"]</h1>
             <div class="ip-sub ip-num" id="departmentsSummary">
@@ -25,7 +25,7 @@
             </div>
         </div>
         <div class="ip-page-actions">
-            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportDepartmentsToPDF()">
+            <button type="button" class="ip-btn ip-btn-secondary" onclick="exportDepartmentsToPDF()" title="@L["Export PDF"]" aria-label="@L["Export PDF"]">
                 <span>@L["Export PDF"]</span><i class="fa-regular fa-file-pdf"></i>
             </button>
             @if (User.HasPermission("department.create"))
