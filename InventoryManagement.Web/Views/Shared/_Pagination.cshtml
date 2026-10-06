@@ -17,9 +17,10 @@
     var pages = new SortedSet<int> { 1, totalPages };
     for (var p = current - 2; p <= current + 2; p++)
         if (p >= 1 && p <= totalPages) pages.Add(p);
+    var pageStatus = $"{current} / {totalPages}";
 }
 <div class="ip-table-foot">
-    @* Phones hide .range and .page-size and keep only the page numbers *@
+    @* Phones hide .range and .page-size and keep only previous, the page status and next *@
     <span class="ip-num range">@L["{0}–{1} of {2}", Model.FirstItem, Model.LastItem, Model.TotalCount]</span>
     <div class="d-flex align-items-center gap-3 flex-wrap">
         <label class="ip-filter page-size">
@@ -35,8 +36,20 @@
         {
             <nav aria-label="@L["Pages"]">
                 <ul class="ip-pagination">
-                    <li class="@(current == 1 ? "disabled" : "")">
-                        <a href="@PageUrl(current - 1)" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left"></i></a>
+                    @* At either end the arrow has no address, so the keyboard does not stop on it *@
+                    <li class="prev @(current == 1 ? "disabled" : "")">
+                        @if (current == 1)
+                        {
+                            <a role="link" aria-disabled="true" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+                        }
+                        else
+                        {
+                            <a href="@PageUrl(current - 1)" aria-label="@L["Previous"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+                        }
+                    </li>
+                    @* Phones show this in place of the page numbers, which do not fit beside the fixed button *@
+                    <li class="ip-page-status @(pageStatus.Length > 7 ? "long" : "")">
+                        <span aria-current="page"><span class="visually-hidden">@L["Page {0} of {1}", current, totalPages]</span><span aria-hidden="true">@pageStatus</span></span>
                     </li>
                     @{ var previous = 0; }
                     @foreach (var p in pages)
@@ -57,8 +70,15 @@
                         </li>
                         previous = p;
                     }
-                    <li class="@(current == totalPages ? "disabled" : "")">
-                        <a href="@PageUrl(current + 1)" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right"></i></a>
+                    <li class="next @(current == totalPages ? "disabled" : "")">
+                        @if (current == totalPages)
+                        {
+                            <a role="link" aria-disabled="true" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+                        }
+                        else
+                        {
+                            <a href="@PageUrl(current + 1)" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+                        }
                     </li>
                 </ul>
             </nav>

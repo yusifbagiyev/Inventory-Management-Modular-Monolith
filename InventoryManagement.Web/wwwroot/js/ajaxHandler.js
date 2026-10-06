@@ -112,7 +112,10 @@ window.AjaxHandler = (function () {
 
                 const formData = new FormData(form);
 
+                // Once a redirect is scheduled the form stays locked, or a second click in the delay saves twice
+                let leaving = false;
                 const restoreButton = () => {
+                    if (leaving) return;
                     $currentSubmitBtn.prop('disabled', originalButtonDisabled)
                         .html(originalButtonHtml);
                     formState.isSubmitting = false;
@@ -130,7 +133,7 @@ window.AjaxHandler = (function () {
                         if (contentType.indexOf('text/html') > -1) {
                             handleHtmlResponse(response);
                         } else {
-                            handleSuccess(response, form, settings);
+                            leaving = handleSuccess(response, form, settings) === true;
                         }
                         restoreButton();
                     },
@@ -156,11 +159,13 @@ window.AjaxHandler = (function () {
         if (isApprovalRequest(response)) {
             const message = response.message || t('Request submitted for approval');
             showToast(message, 'info');
+            FieldErrors.clear(form);
 
             if (settings.successRedirect) {
                 setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
+                return true;
             }
-            return;
+            return false;
         }
 
         if (response && (
@@ -171,15 +176,17 @@ window.AjaxHandler = (function () {
             const errorMessage = response.message || t('Operation failed');
             showToast(errorMessage, 'error');
 
+            if (response.errors) FieldErrors.show(form, response.errors);
             if (settings.onError) {
                 settings.onError(errorMessage, response);
             }
-            return;
+            return false;
         }
 
+        FieldErrors.clear(form);
         if (settings.onSuccess) {
             const result = settings.onSuccess(response);
-            if (result === false) return;
+            if (result === false) return false;
         }
 
         showToast(settings.successMessage, 'success');
@@ -190,7 +197,9 @@ window.AjaxHandler = (function () {
 
         if (settings.successRedirect) {
             setTimeout(() => window.location.href = settings.successRedirect, settings.redirectDelay);
+            return true;
         }
+        return false;
     }
 
     function handleError(xhr, form, settings) {
@@ -253,21 +262,7 @@ window.AjaxHandler = (function () {
     }
 
     function displayValidationErrors(form, errors) {
-        $(form).find('.field-validation-error').removeClass('field-validation-error');
-        $(form).find('.validation-message').remove();
-
-        if (typeof errors === 'object') {
-            for (const field in errors) {
-                // Messages can echo what was typed, so they go in as text, never HTML
-                const $field = $(form).find(`[name="${CSS.escape(field)}"]`);
-                if ($field.length) {
-                    $field.addClass('is-invalid');
-                    const messages = Array.isArray(errors[field]) ?
-                        errors[field] : [errors[field]];
-                    $field.after($('<span class="text-danger validation-message"></span>').text(messages.join(', ')));
-                }
-            }
-        }
+        if (errors && typeof errors === 'object') FieldErrors.show(form, errors);
     }
 
     // HTML instead of JSON means the session expired or the server failed, and either needs a visible message

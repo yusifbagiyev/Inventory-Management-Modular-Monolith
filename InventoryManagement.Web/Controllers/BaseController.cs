@@ -51,7 +51,13 @@ namespace InventoryManagement.Web.Controllers
             }
             catch (ValidationException ex)
             {
-                return Failure<T>(string.Join("; ", ex.Errors.Select(e => Tr(e.ErrorMessage)).Distinct()));
+                var failure = Failure<T>(string.Join("; ", ex.Errors.Select(e => Tr(e.ErrorMessage)).Distinct()));
+                // Keyed by property name so the page can put each message under its field
+                failure.Errors = ex.Errors
+                    .Where(e => !string.IsNullOrEmpty(e.PropertyName))
+                    .GroupBy(e => e.PropertyName)
+                    .ToDictionary(g => g.Key, g => g.Select(e => Tr(e.ErrorMessage)).Distinct().ToArray());
+                return failure;
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -92,7 +98,8 @@ namespace InventoryManagement.Web.Controllers
                     isApprovalRequest = response.IsApprovalRequest,
                     approvalRequestId = response.ApprovalRequestId,
                     message = response.Message,
-                    data = response.Data
+                    data = response.Data,
+                    errors = response.Errors
                 });
             }
 

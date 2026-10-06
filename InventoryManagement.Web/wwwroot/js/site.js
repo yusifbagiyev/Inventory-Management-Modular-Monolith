@@ -73,21 +73,14 @@ function confirmAction(options, onConfirm) {
         modal.hide();
     });
 
-    function onKeydown(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            freshOk.click();
-        }
-    }
-    modalEl.addEventListener('keydown', onKeydown);
-
+    // Enter acts on the focused button only, and a destructive action starts on Cancel so a stray key cannot confirm it
     modalEl.addEventListener('shown.bs.modal', function onShown() {
-        freshOk.focus();
+        const cancel = modalEl.querySelector('.modal-footer [data-bs-dismiss]');
+        (opts.danger && cancel ? cancel : freshOk).focus();
         modalEl.removeEventListener('shown.bs.modal', onShown);
     });
 
     modalEl.addEventListener('hidden.bs.modal', function onHidden() {
-        modalEl.removeEventListener('keydown', onKeydown);
         modalEl.removeEventListener('hidden.bs.modal', onHidden);
         if (modalEl.__confirmToken !== token) return;   // A newer dialog owns the modal now
         if (modalEl.__confirmAccepted) onConfirm?.();   // Runs after the modal is gone so redirects are clean
@@ -99,6 +92,52 @@ function confirmAction(options, onConfirm) {
     } else {
         modal.show();
     }
+}
+
+// Bootstrap returns focus only for dialogs opened by data-bs-toggle, and these are opened from script
+document.addEventListener('show.bs.modal', function (e) {
+    const opener = document.activeElement;
+    e.target.__opener = opener && opener !== document.body && !e.target.contains(opener) ? opener : null;
+});
+document.addEventListener('hidden.bs.modal', function (e) {
+    const opener = e.target.__opener;
+    e.target.__opener = null;
+    if (opener && opener.isConnected && !document.querySelector('.modal.show')) opener.focus();
+});
+
+/** Replaces a region with fresh markup and keeps keyboard focus on the same control, or the same kind of control in the row that took its place. */
+function replaceKeepingFocus(current, fresh) {
+    const active = document.activeElement;
+    if (!active || active === document.body || !current.contains(active)) {
+        current.replaceWith(fresh);
+        return;
+    }
+    const focusable = 'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [data-image-preview]';
+    const keys = ['href', 'data-id', 'name', 'aria-label', 'title'];
+    const rowKey = el => { const tr = el.closest('tr'); return tr ? (tr.dataset.href || tr.dataset.id || '') : ''; };
+    const sameKind = el => el.tagName === active.tagName && keys.every(k => el.getAttribute(k) === active.getAttribute(k));
+    const row = active.closest('tr');
+    const rowIndex = row && row.parentElement ? Array.from(row.parentElement.children).indexOf(row) : -1;
+
+    current.replaceWith(fresh);
+
+    let target = active.id ? document.getElementById(active.id) : null;
+    if (!target || !fresh.contains(target)) {
+        const candidates = Array.from(fresh.querySelectorAll(focusable)).filter(el => el.getClientRects().length > 0);
+        target = candidates.find(el => sameKind(el) && rowKey(el) === rowKey(active)) || null;
+        // The row is gone, like an approved request, so the row now in its place takes focus
+        if (!target && rowIndex >= 0) {
+            const rows = fresh.querySelectorAll('tbody > tr');
+            const next = rows[Math.min(rowIndex, rows.length - 1)];
+            const inRow = next ? candidates.filter(el => next.contains(el)) : [];
+            target = inRow.find(el => el.getAttribute('title') === active.getAttribute('title') && el.getAttribute('aria-label') === active.getAttribute('aria-label')) || inRow[0] || null;
+        }
+    }
+    if (!target) {
+        if (!fresh.hasAttribute('tabindex')) fresh.setAttribute('tabindex', '-1');
+        target = fresh;
+    }
+    target.focus({ preventScroll: true });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -121,6 +160,115 @@ document.addEventListener('DOMContentLoaded', function () {
 
     setupSessionMonitor();
 });
+
+/** Inline field errors: the message sits under its field, tied to it for screen readers, and clears once the field is edited. */
+window.FieldErrors = (function () {
+    'use strict';
+
+    const CONTROLS = 'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), select, textarea';
+
+    // Module validators name nested properties, like Dto.Model, while the form posts Model
+    function fieldFor(form, key) {
+        const exact = Array.from(form.querySelectorAll(`[name="${CSS.escape(key)}"]`)).filter(el => el.matches(CONTROLS));
+        if (exact.length) return exact[0];
+        const last = key.split('.').pop().toLowerCase();
+        return Array.from(form.querySelectorAll(CONTROLS)).find(el => el.name && el.name.split('.').pop().toLowerCase() === last) || null;
+    }
+
+    function messageFor(field) {
+        const form = field.form || field.closest('form') || document;
+        let message = form.querySelector(`[data-valmsg-for="${CSS.escape(field.name)}"]`);
+        if (!message) {
+            message = document.createElement('span');
+            message.className = 'ip-error';
+            message.setAttribute('data-inline-error', '');
+            const box = field.closest('.ip-field');
+            if (box) box.appendChild(message); else field.after(message);
+        }
+        if (!message.id) message.id = (field.id || field.name.replace(/[^\w-]/g, '_')) + '-error';
+        return message;
+    }
+
+    function describe(field, id, on) {
+        const ids = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(x => x && x !== id);
+        if (on) ids.push(id);
+        if (ids.length) field.setAttribute('aria-describedby', ids.join(' ')); else field.removeAttribute('aria-describedby');
+    }
+
+    function markInvalid(field, message) {
+        field.classList.add('is-invalid');
+        field.setAttribute('aria-invalid', 'true');
+        message.classList.remove('field-validation-valid');
+        message.classList.add('field-validation-error');
+        describe(field, message.id, true);
+    }
+
+    function clearField(field) {
+        if (field.getAttribute('aria-invalid') !== 'true' && !field.classList.contains('is-invalid')) return;
+        field.classList.remove('is-invalid', 'input-validation-error');
+        field.removeAttribute('aria-invalid');
+        const form = field.form || document;
+        const message = form.querySelector(`[data-valmsg-for="${CSS.escape(field.name)}"]`) || document.getElementById((field.getAttribute('aria-describedby') || '').split(/\s+/).find(id => id.endsWith('-error')) || '');
+        if (!message) return;
+        describe(field, message.id, false);
+        if (message.hasAttribute('data-inline-error')) message.remove();
+        else { message.textContent = ''; message.classList.remove('field-validation-error'); message.classList.add('field-validation-valid'); }
+    }
+
+    function clear(form) {
+        form.querySelectorAll('[aria-invalid="true"], .is-invalid').forEach(clearField);
+        form.querySelectorAll('.validation-message, [data-inline-error]').forEach(el => el.remove());
+    }
+
+    /** Shows server validation errors keyed by field name and focuses the first invalid field; returns how many were placed. */
+    function show(form, errors) {
+        clear(form);
+        let first = null, placed = 0;
+        Object.keys(errors || {}).forEach(function (key) {
+            const texts = [].concat(errors[key] || []).filter(Boolean);
+            const field = key && texts.length ? fieldFor(form, key) : null;
+            if (!field) return;
+            const message = messageFor(field);
+            message.textContent = texts.join(' ');   // As text, since messages can echo what was typed
+            markInvalid(field, message);
+            placed++;
+            if (!first) first = field;
+        });
+        if (first) first.focus();
+        return placed;
+    }
+
+    // Required fields are marked by an asterisk in their label, which assistive technology also needs to hear
+    function markRequired(root) {
+        (root || document).querySelectorAll('label .req').forEach(function (star) {
+            star.setAttribute('aria-hidden', 'true');
+            const label = star.closest('label');
+            const field = label.control || (label.htmlFor ? document.getElementById(label.htmlFor) : null);
+            if (field && field.matches(CONTROLS)) field.setAttribute('aria-required', 'true');
+        });
+    }
+
+    // Messages rendered by the server on a plain post get the same wiring
+    function wireRendered() {
+        let first = null;
+        document.querySelectorAll('[data-valmsg-for].field-validation-error').forEach(function (message) {
+            if (!message.textContent.trim()) return;
+            const form = message.closest('form');
+            const field = form ? fieldFor(form, message.getAttribute('data-valmsg-for')) : null;
+            if (!field) return;
+            if (!message.id) message.id = (field.id || field.name) + '-error';
+            markInvalid(field, message);
+            if (!first) first = field;
+        });
+        if (first) first.focus();
+    }
+
+    document.addEventListener('input', e => { if (e.target.matches && e.target.matches(CONTROLS)) clearField(e.target); });
+    document.addEventListener('change', e => { if (e.target.matches && e.target.matches(CONTROLS)) clearField(e.target); });
+    document.addEventListener('DOMContentLoaded', function () { markRequired(document); wireRendered(); });
+
+    return { show: show, clear: clear, markRequired: markRequired };
+})();
 
 /** Server-made thumbnail URL for an uploaded photo, leaving other URLs unchanged. */
 function thumbUrl(url, width) {
@@ -253,7 +401,8 @@ window.ListNav = (function () {
     // Filter controls are never swapped, so typing and open pickers are not disturbed
     const SWAPPED = ['[data-list-region]', '[data-list-tabs]', '.ip-page-head .ip-sub'];
     let pending = null;
-    let loadedAt = 0;
+    // When the request behind the last completed load was sent, so changes received before it are already shown
+    let loadedFrom = 0;
 
     function available() { return !!document.querySelector('[data-list-region]'); }
 
@@ -273,6 +422,7 @@ window.ListNav = (function () {
         options = options || {};
         if (pending) pending.abort();
         const request = pending = new AbortController();
+        const sentAt = Date.now();
         const region = document.querySelector('[data-list-region]');
         if (options.quiet) region?.classList.add('is-loading'); else showListSkeleton();
 
@@ -292,7 +442,7 @@ window.ListNav = (function () {
         }
         if (request !== pending) return;
         pending = null;
-        loadedAt = Date.now();
+        loadedFrom = sentAt;
 
         if (window.LiveUpdates) LiveUpdates.beforeSwap();
         const swapped = new Set();
@@ -302,7 +452,7 @@ window.ListNav = (function () {
             document.querySelectorAll(selector).forEach(function (current, i) {
                 if (swapped.has(current) || !fresh[i]) return;
                 const node = document.importNode(fresh[i], true);
-                current.replaceWith(node);
+                replaceKeepingFocus(current, node);
                 swapped.add(node);
             });
         });
@@ -381,9 +531,9 @@ window.ListNav = (function () {
         go: go,
         /** Refreshes the list in place after the page's own action, like an approval. */
         reload: () => load({ quiet: true }),
-        /** Lets LiveUpdates skip a refresh while a load runs or just finished. */
+        /** Lets LiveUpdates wait while a load runs and skip changes the last load already fetched. */
         busy: () => pending !== null,
-        freshWithin: ms => Date.now() - loadedAt < ms
+        loadedSince: time => loadedFrom >= time
     };
 })();
 
@@ -490,19 +640,34 @@ window.Rail = (function () {
 
     function backdrop() { return document.querySelector('.ip-rail-backdrop'); }
 
+    let opener = null;
+
+    function setExpanded(open) {
+        document.querySelectorAll('[data-rail-open]').forEach(b => b.setAttribute('aria-expanded', open ? 'true' : 'false'));
+    }
+
     function openDrawer() {
         const r = rail();
         if (!r) return;
+        opener = document.activeElement;
         r.classList.add('open');
         backdrop()?.classList.add('show');
         document.body.classList.add('ip-drawer-open');
+        setExpanded(true);
         r.querySelector('.ip-rail-close')?.focus();
     }
 
     function closeDrawer() {
-        rail()?.classList.remove('open');
+        const r = rail();
+        const wasOpen = !!r && r.classList.contains('open');
+        r?.classList.remove('open');
         backdrop()?.classList.remove('show');
         document.body.classList.remove('ip-drawer-open');
+        setExpanded(false);
+        // Focus goes back to the menu button only when it was left inside the closing drawer
+        if (wasOpen && opener && opener.isConnected && (r.contains(document.activeElement) || document.activeElement === document.body))
+            opener.focus();
+        if (wasOpen) opener = null;
     }
 
     function layout() {
@@ -760,6 +925,29 @@ document.addEventListener('click', async function (e) {
     }
 });
 
+// The active tab is announced too, not only shown by colour: a link tab is the current page, a filter button is pressed
+(function () {
+    function syncTabs() {
+        document.querySelectorAll('.ip-tab').forEach(function (tab) {
+            const on = tab.classList.contains('active');
+            if (tab.matches('button')) tab.setAttribute('aria-pressed', on ? 'true' : 'false');
+            else if (on) tab.setAttribute('aria-current', 'page');
+            else tab.removeAttribute('aria-current');
+        });
+    }
+    document.addEventListener('DOMContentLoaded', syncTabs);
+    document.addEventListener('listnav:loaded', syncTabs);
+    document.addEventListener('live:refreshed', syncTabs);
+    // After the page's own handler has moved the active class
+    document.addEventListener('click', e => { if (e.target.closest('button.ip-tab')) setTimeout(syncTabs); });
+})();
+
+// Back on the error pages, which go home when there is no page to go back to
+document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-history-back]')) return;
+    if (history.length > 1) history.back(); else window.location.href = '/';
+});
+
 // Breadcrumb back button that uses history.back() from the parent page to keep its filters and scroll
 (function () {
     function addBackButtons() {
@@ -774,17 +962,6 @@ document.addEventListener('click', async function (e) {
             back.setAttribute('data-no-prefetch', '');
             back.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span></span>';
             back.querySelector('span').textContent = t('Back');
-            function onBack(e) {
-                if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-                let from = null;
-                try { from = document.referrer ? new URL(document.referrer) : null; } catch { from = null; }
-                const target = new URL(back.href, location.href);
-                if (from && from.origin === location.origin && history.length > 1
-                    && from.pathname.toLowerCase() === target.pathname.toLowerCase()) {
-                    e.preventDefault();
-                    history.back();
-                }
-            }
             back.addEventListener('click', onBack);
 
             const row = document.createElement('div');
@@ -797,13 +974,32 @@ document.addEventListener('click', async function (e) {
             if (appBack) {
                 appBack.href = back.href;
                 appBack.hidden = false;
-                appBack.addEventListener('click', onBack);
+                if (!appBack.dataset.backReady) {
+                    appBack.dataset.backReady = '1';
+                    appBack.addEventListener('click', onBack);
+                }
                 document.querySelector('.ip-appbar [data-rail-open]')?.setAttribute('hidden', '');
             }
         });
     }
+
+    function onBack(e) {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        let from = null;
+        try { from = document.referrer ? new URL(document.referrer) : null; } catch { from = null; }
+        const target = new URL(e.currentTarget.href, location.href);
+        if (from && from.origin === location.origin && history.length > 1
+            && from.pathname.toLowerCase() === target.pathname.toLowerCase()) {
+            e.preventDefault();
+            history.back();
+        }
+    }
+
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBackButtons);
     else addBackButtons();
+    // Details pages keep the breadcrumb inside a region that list reloads and live updates replace
+    document.addEventListener('listnav:loaded', addBackButtons);
+    document.addEventListener('live:refreshed', addBackButtons);
 })();
 
 // Dashboard figures count up once when the page opens, not on live refreshes
@@ -883,6 +1079,7 @@ document.addEventListener('click', async function (e) {
     function focusable() { document.querySelectorAll('[data-image-preview]:not([tabindex])').forEach(function (el) { el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', t('View image')); }); }
     document.addEventListener('DOMContentLoaded', focusable);
     document.addEventListener('listnav:loaded', focusable);
+    document.addEventListener('live:refreshed', focusable);
 })();
 
 // Thumbnails marked data-fallback whose file is gone show a placeholder instead of a broken image

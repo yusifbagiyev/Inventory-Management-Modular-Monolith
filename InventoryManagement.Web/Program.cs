@@ -20,6 +20,9 @@ try
 
     Log.Information("Starting InventoryManagement (modular monolith)");
 
+    // A save can carry ten photos of up to 5 MB each, and nginx lets 55 MB through, more than Kestrel's 28.6 MB default
+    builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 60L * 1024 * 1024);
+
     // Uploaded images live under the web root so they are served as static files
     builder.Configuration["ImageSettings:RootPath"] ??= Path.Combine(builder.Environment.WebRootPath, "images");
 

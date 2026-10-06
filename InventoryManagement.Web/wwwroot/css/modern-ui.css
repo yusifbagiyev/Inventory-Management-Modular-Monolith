@@ -149,10 +149,20 @@ table.dataTable > thead > tr > th { color: var(--ink-3); }
 .modal-header .btn-close { width: 36px; height: 36px; padding: 0; margin: -4px -8px 0 auto; border-radius: var(--ip-radius-md); opacity: .7; background-size: 12px; }
 .modal-header .btn-close:hover { background-color: var(--ip-surface-hover); opacity: 1; }
 [data-bs-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+/* Dialog and toast close buttons draw the cross as a mask in the text colour, since their backgrounds removed the image and the dark filter would invert the hover ground */
+.ip-modal .btn-close, .ip-toast .btn-close { display: grid; place-items: center; background-image: none; filter: none; }
+.ip-modal .btn-close::before, .ip-toast .btn-close::before { content: ""; width: 12px; height: 12px; background: currentColor; -webkit-mask: var(--bs-btn-close-bg) center / contain no-repeat; mask: var(--bs-btn-close-bg) center / contain no-repeat; }
+.ip-toast .btn-close { opacity: 1; color: var(--ip-text-3); }
+.ip-toast .btn-close::before { width: 10px; height: 10px; }
+.ip-modal .btn-close:hover, .ip-toast .btn-close:hover { color: var(--ip-text-1); }
 
-/* Toasts built by showToast in site.js */
-.toast-container { z-index: 1090; }
-.ip-toast.toast { width: 380px; }
+/* Toasts built by showToast in site.js sit above the fixed bars and below dialogs; the id outranks the Bootstrap position utilities on the container */
+#toastContainer.toast-container { z-index: 1035; top: auto !important; right: var(--ip-space-6) !important; bottom: var(--ip-space-6) !important; padding: 0 !important; }
+body:has(.ip-form-foot) #toastContainer.toast-container { bottom: 88px !important; }
+@media (max-width: 767.98px) {
+    #toastContainer.toast-container, body:has(.ip-form-foot) #toastContainer.toast-container { left: var(--ip-space-4) !important; right: var(--ip-space-4) !important; bottom: calc(80px + env(safe-area-inset-bottom)) !important; width: auto; }
+    .ip-toast.toast { width: 100%; max-width: none; }
+}
 
 hr { border-color: var(--line); opacity: 1; }
 
@@ -227,6 +237,8 @@ body .air-datepicker {
     --adp-btn-color: var(--ip-accent-text);
     --adp-btn-background-color-hover: var(--surface-2);
     --adp-font-family: inherit;
+    /* Above the fixed bars and dialogs, since a filter sheet or dialog can open it */
+    --adp-z-index: 1060;
 }
 /* The library transitions every property, which makes day colours lag on a theme switch */
 body .air-datepicker-body { transition-property: opacity, transform; }
@@ -246,3 +258,17 @@ body .air-datepicker-body { transition-property: opacity, transform; }
 .ip-gallery .chip[hidden] { display: none; }
 .ip-gallery img[data-ig-main] { background: var(--ip-sunken); }
 
+
+/* Skip link, kept above the top edge until it has keyboard focus */
+.ip-skip { position: fixed; top: var(--ip-space-3); left: var(--ip-space-3); z-index: 1070; min-height: 44px; display: inline-flex; align-items: center; padding: 0 var(--ip-space-4); border-radius: var(--ip-radius-md); background: var(--ip-surface); color: var(--ip-text-1); font-weight: 600; text-decoration: none; box-shadow: var(--ip-shadow-md); transform: translateY(calc(-100% - 2 * var(--ip-space-3))); }
+.ip-skip:focus { transform: none; outline: 2px solid var(--ip-accent); outline-offset: 2px; color: var(--ip-text-1); }
+@media (prefers-reduced-motion: no-preference) { .ip-skip { transition: transform .12s ease; } }
+.ip-skip-target { outline: none; }
+
+/* Pages shown while signed out, like the error pages, carry the sign-in page's header and background */
+body:has(.ip-guest) { background-color: var(--ip-bg); }
+.ip-main.ip-guest { padding-top: 0; }
+.ip-guest > .ip-login-head { padding-left: 0; padding-right: 0; gap: var(--ip-space-3); }
+.ip-guest-brand { display: flex; align-items: center; min-height: 44px; gap: var(--ip-space-2); min-width: 0; color: var(--ip-text-1); text-decoration: none; }
+.ip-guest-brand:hover { color: var(--ip-text-1); text-decoration: none; }
+.ip-guest-tools { display: flex; align-items: center; gap: var(--ip-space-2); flex: none; }

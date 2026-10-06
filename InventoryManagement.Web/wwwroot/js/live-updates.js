@@ -61,6 +61,7 @@ window.LiveUpdates = (function () {
 
     function schedule(w, update) {
         w.pending = merge(w.pending, update);
+        w.receivedAt = Date.now();
         clearTimeout(w.timer);
         w.timer = setTimeout(() => tryRefresh(w), DEBOUNCE_MS);
     }
@@ -94,8 +95,8 @@ window.LiveUpdates = (function () {
     async function refresh(w) {
         const update = w.pending;
         w.pending = null;
-        // The page just reloaded these regions itself, so the change is already on screen
-        if (window.ListNav && ListNav.freshWithin(3000)) return;
+        // A list load requested after the last change arrived already shows it, while a later change still refreshes
+        if (window.ListNav && ListNav.loadedSince(w.receivedAt)) return;
 
         let doc;
         try {
@@ -129,11 +130,13 @@ window.LiveUpdates = (function () {
             if (!current || !fresh) return;
             const node = document.importNode(fresh, true);
             node.setAttribute('data-quiet', '');   // Rows skip their entrance animation on a live refresh
-            current.replaceWith(node);
+            replaceKeepingFocus(current, node);
             node.classList.add('live-refreshed');
             setTimeout(() => node.classList.remove('live-refreshed'), 1600);
         });
         if (typeof w.afterRefresh === 'function') w.afterRefresh();
+        // Lets shared decorations, like the breadcrumb Back button, be added to the new markup
+        document.dispatchEvent(new CustomEvent('live:refreshed'));
     }
 
     function isDeletion(w, update) {

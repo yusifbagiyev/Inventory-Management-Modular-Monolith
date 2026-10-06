@@ -98,8 +98,10 @@ namespace InventoryManagement.Web.Localization
             return message.Contains(", ") ? TranslateParts(message) : message;
         }
 
-        /// <summary>Translates each part of a comma-joined list, one level deep only.</summary>
-        private static string TranslateParts(string value)
+        /// <summary>Translates each part of a comma-joined list, and a message wrapped in another, like an execution error, a few levels deep.</summary>
+        private static string TranslateParts(string value) => TranslateParts(value, 0);
+
+        private static string TranslateParts(string value, int depth)
             => string.Join(", ", SplitItems(value).Select(part =>
             {
                 var table = Table!;
@@ -108,8 +110,12 @@ namespace InventoryManagement.Web.Localization
                 foreach (var (pattern, template) in Patterns)
                 {
                     var m = pattern.Match(part);
-                    if (m.Success)
-                        return string.Format(CultureInfo.CurrentCulture, template, m.Groups.Cast<Group>().Skip(1).Select(g => (object)Value(g.Value)).ToArray());
+                    if (!m.Success)
+                        continue;
+                    // A change's old and new values are real data, while other wrappers hold a message of their own
+                    var isChange = pattern.ToString().Contains('→') || pattern.ToString().Contains("->");
+                    return string.Format(CultureInfo.CurrentCulture, template, m.Groups.Cast<Group>().Skip(1)
+                        .Select(g => (object)(isChange || depth >= 2 ? Value(g.Value) : TranslateParts(g.Value, depth + 1))).ToArray());
                 }
                 return part;
             }));
@@ -173,7 +179,8 @@ namespace InventoryManagement.Web.Localization
                     .Select((part, i) => i % 2 == 0 ? Regex.Escape(part) : "(.*?)")) + "$";
                 // Placeholders may appear out of order in the key, so renumber them by capture position
                 var template = Placeholder().Replace(value, m => "{" + order.IndexOf(int.Parse(m.Groups[1].Value)) + "}");
-                list.Add((new Regex(regex, RegexOptions.CultureInvariant), template));
+                // Singleline because a captured value, like a typed rejection reason, can span lines
+                list.Add((new Regex(regex, RegexOptions.CultureInvariant | RegexOptions.Singleline), template));
             }
             // Longest pattern first so the most specific one wins
             return list.OrderByDescending(p => p.Item1.ToString().Length).ToList();

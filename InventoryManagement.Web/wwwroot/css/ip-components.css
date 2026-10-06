@@ -537,6 +537,7 @@ button.ip-rail-link { width: 100%; border: 0; background: transparent; font: inh
 .ip-filter.search { flex-basis: 220px; min-width: 200px; }
 .ip-filterbar > .ip-btn { flex: none; white-space: nowrap; }
 .ip-filter input.date-range-input { cursor: pointer; font-weight: 500; width: 13ch; }
+.ip-filter input.date-range-input:not(:placeholder-shown) { width: 23ch; }   /* A chosen range, dd.MM.yyyy - dd.MM.yyyy */
 .ip-filter input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }
 .ip-btn.is-on { background: var(--ip-surface-active); color: var(--ip-text-1); font-weight: 600; }
 .ip-table a.cell-title:hover { color: var(--ip-accent-text) !important; text-decoration: none; }
@@ -641,7 +642,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 .dt-container > .row > [class*="col"] { padding-left: 0; padding-right: 0; }
 
 /* The package's negative margins assume a full-width page and push the footer under the rail */
-.ip-form .ip-form-foot { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+@media (min-width: 768px) { .ip-form .ip-form-foot { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; } }
 
 /* Absolute children of a table need a positioned ancestor or they widen the page on phones */
 .ip-table-wrap { position: relative; }
@@ -696,7 +697,7 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 
 /* Phone cards, placed by role classes on list pages and by MobileLayout labels elsewhere */
 .ip-filter-toggle { display: none; }
-.ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--ip-accent); color: #fff; font-size: 12px; line-height: 20px; text-align: center; }
+.ip-filter-toggle .count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--ip-radius-sm); background: var(--ip-accent-soft); color: var(--ip-accent-text); font-size: var(--ip-fs-xs); font-weight: 600; line-height: 20px; text-align: center; }
 /* On desktop the actions cell stays a table cell, since .ip-table .actions also matches it */
 @media (min-width: 768px) { .ip-table td.actions { display: table-cell; } }
 @media (max-width: 767.98px) {
@@ -882,7 +883,8 @@ select option:disabled { color: var(--ip-text-3); }
 /* A flex item needs min-height 0 to shrink, or the drawer links would not scroll */
 .ip-rail-nav { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 @media (max-width: 767.98px) {
-  .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { overflow: hidden; }
+  /* The base rail aligns to the start, which sizes a fixed box to its content instead of the screen */
+  .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { overflow: hidden; align-self: stretch; }
   .ip-rail-foot { flex: none; padding-bottom: calc(var(--ip-space-3) + env(safe-area-inset-bottom)); }
 }
 
@@ -1028,7 +1030,8 @@ select option:disabled { color: var(--ip-text-3); }
                transition: opacity 140ms ease, transform 140ms ease; }
 .ip-img-peek.show { opacity: 1; transform: none; }
 .ip-img-peek img { width: 100%; height: 100%; object-fit: contain; border-radius: var(--ip-radius-md); background: var(--ip-sunken); }
-.ip-found { color: var(--ip-text-1); font-weight: 600; }
+/* The filtered count under a page title shares its class with the transfer page's found-product strip, so undo the strip here */
+.ip-sub .ip-found { display: inline; padding: 0; border-radius: 0; background: none; color: var(--ip-text-2); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .ip-img-peek { transition: none; } }
 
 /* Column headers that sort and filter (table-columns.js) */
@@ -1079,3 +1082,111 @@ th.is-sorted .ip-th-sort { color: var(--ip-text-1); }
 
 /* A thumbnail whose file is gone, such as an old photo in the audit log */
 .ip-img-missing { width: 36px; height: 36px; display: inline-grid; place-items: center; border: 1px dashed var(--ip-border-strong); border-radius: var(--ip-radius-sm); color: var(--ip-text-3); font-size: 13px; vertical-align: middle; }
+
+/* Phone pager: previous, "page / pages" and next, which always fit beside the fixed primary button */
+.ip-pagination .ip-page-status { display: none; }
+.ip-page-status span span { display: inline; min-width: 0; height: auto; padding: 0; }
+@media (max-width: 767.98px) {
+  .ip-table-foot .ip-pagination { gap: 0; flex-wrap: nowrap; }
+  .ip-table-foot .ip-pagination li:not(.prev):not(.next):not(.ip-page-status) { display: none; }
+  .ip-table-foot .ip-pagination .ip-page-status { display: block; }
+  .ip-page-status > span { min-width: 44px; padding: 0 4px; color: var(--ip-text-1); font-weight: 600; white-space: nowrap; }
+  .ip-page-status.long > span { font-size: var(--ip-fs-xs); }
+  /* The pager ends within 150px of the left edge (192px once the status is longer than "12 / 34") and the button takes the rest */
+  .ip-page-head .ip-btn-primary { max-width: calc(100vw - 2 * var(--ip-space-5)); }
+  .ip-page-head .ip-btn-primary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  body:has(.ip-table-foot .ip-pagination) .ip-page-head .ip-btn-primary { max-width: calc(100vw - 182px); }
+  body:has(.ip-page-status.long) .ip-page-head .ip-btn-primary { max-width: calc(100vw - 224px); }
+}
+/* Narrow phones give the button's room to its label */
+@media (max-width: 429.98px) { body:has(.ip-table-foot .ip-pagination) .ip-page-head .ip-btn-primary > i { display: none; } }
+
+/* List tables that fit their page: text cells shrink to an ellipsis, columns drop by the width of the table area and the row actions stay in view */
+
+/* .ip-clip: one line of text that shrinks with its column and ends in an ellipsis, so give it a title with the full text */
+.ip-clip, .ip-clip-2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; white-space: normal; overflow-wrap: anywhere; word-break: break-all; }
+/* .ip-clip-2: the same over two lines, broken between words */
+.ip-clip-2 { -webkit-line-clamp: 2; word-break: normal; }
+/* .ip-min0: lets a flex or grid child shrink below its content */
+.ip-min0 { min-width: 0; }
+/* show-md / show-lg / show-xl: inline text shown only while the hide- columns of that size are hidden, to repeat their value in another cell; phones ignore both, their cards use the role classes and hide-sm */
+.show-md, .show-lg, .show-xl { display: none; }
+@media (min-width: 768px) {
+  /* The column classes below measure the table area, which also changes when the menu is collapsed */
+  .ip-table-wrap { container-type: inline-size; }
+  /* Table text never narrows below a few words */
+  .ip-table :is(.ip-clip, .ip-clip-2, .cell-title, .cell-sub), .ip-table .cell-text > span:has(> .cell-title) { min-width: 12ch; }
+  /* Titles and second lines get the .ip-clip behaviour, since a nowrap cell widens its column instead of truncating */
+  .ip-table .cell-title, .ip-table .cell-sub, .ip-table .cell-text > span:has(> .cell-title) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; white-space: normal; overflow-wrap: anywhere; word-break: break-all; }
+  /* A title that shares its line with a tag is clipped together with it */
+  .ip-table .cell-text > span:has(> .cell-title) > .cell-title { display: inline; min-width: 0; overflow: visible; }
+  /* A long header label wraps to a second line before it widens its column */
+  .ip-table .ip-th-sort, .ip-table .ip-th-label { white-space: normal; text-align: left; }
+  /* The header buttons sit closer and the funnel reaches into the cell padding, so short columns are not as wide as their header */
+  .ip-table .ip-th { gap: 0; }
+  .ip-table .ip-th-sort { gap: 4px; padding: 4px; margin-left: -4px; }
+  .ip-table th:not(:last-child) .ip-th-filter { margin-right: -6px; }
+  /* The row actions stay at the right edge whenever a table still has to scroll */
+  .ip-table th.actions-column, .ip-table td.actions { position: sticky; right: 0; z-index: 1; background: var(--ip-surface); transition: background-color 120ms ease; }
+  .ip-table tbody tr:hover > td.actions { background: var(--ip-surface-hover); }
+}
+/* hide-md / hide-lg / hide-xl on a th and its cells: the column is dropped while the table area is narrower than 744 / 952 / 1272px (a 1024 / 1280 / 1600px screen with the menu open) and on phones */
+@container (max-width: 1271.98px) { .ip-table .hide-xl { display: none; } .ip-table .show-xl { display: inline; } }
+@container (max-width: 951.98px) { .ip-table .hide-lg { display: none; } .ip-table .show-lg { display: inline; } }
+@container (max-width: 743.98px) { .ip-table .hide-md { display: none; } .ip-table .show-md { display: inline; } }
+/* Cells sit closer together while the table area is under 1120px wide, and closer still under 1000px */
+@container (max-width: 1119.98px) { .ip-table th, .ip-table td { padding-left: 10px; padding-right: 10px; } }
+@container (max-width: 999.98px) { .ip-table th, .ip-table td { padding-left: 8px; padding-right: 8px; } .ip-table .ip-th-sort { gap: 2px; } .ip-table .ip-th-filter { width: 20px; } }
+/* The tablet edge fade could not tell whether anything was hidden and lay over the last column */
+.ip-table-wrap::after { content: none; }
+/* Instead the pinned actions show an edge over the cells that slide under them, tied to the scroll position so it is gone once nothing is hidden */
+@media (min-width: 768px) {
+  .ip-table th.actions-column::before, .ip-table td.actions::before { content: ""; position: absolute; top: -1px; bottom: 0; right: 100%; width: 10px; border-right: 1px solid var(--ip-border-strong); background: linear-gradient(to left, var(--ip-backdrop), transparent); opacity: 0; pointer-events: none; }
+}
+@supports (animation-timeline: scroll()) {
+  @keyframes ip-actions-edge { from, 98% { opacity: .3; } to { opacity: 0; } }
+  .ip-table th.actions-column::before, .ip-table td.actions::before { animation: ip-actions-edge linear both; animation-timeline: scroll(inline nearest); }
+}
+@media (prefers-reduced-motion: reduce) { .ip-table td.actions { transition: none; } }
+
+/* Shell: fields reached with Tab scroll clear of the sticky or fixed form footer */
+html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
+@media (max-width: 767.98px) { html:has(.ip-form-foot) { scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); } }
+/* Shell: a closed phone drawer casts no shadow onto the page and leaves the tab order, hidden once it has slid away */
+@media (max-width: 767.98px) {
+  .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded) { box-shadow: none; visibility: hidden; transition: transform .22s ease, visibility 0s .22s; }
+  .ip-rail.open { box-shadow: var(--ip-shadow-lg); visibility: visible; transition: transform .22s ease; }
+}
+@media (max-width: 767.98px) and (prefers-reduced-motion: reduce) { .ip-rail, .ip-rail.collapsed, .ip-rail:not(.expanded), .ip-rail.open { transition: none; } }
+/* Shell: the rail shows a thin scrollbar when its links do not fit, and short windows tighten it so the whole list usually fits */
+.ip-rail-nav { scrollbar-width: thin; scrollbar-color: var(--ip-border-strong) transparent; }
+.ip-rail-nav::-webkit-scrollbar { display: block; width: 6px; }
+.ip-rail-nav::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--ip-border-strong); }
+@media (min-width: 768px) and (max-height: 720px) { .ip-rail-brand { height: 52px; } .ip-rail-nav { gap: var(--ip-space-2); } .ip-rail-link { height: 32px; } }
+/* Shell: the segmented switch clips its children, so their focus ring is drawn inside; the code search gets the field ring */
+.ip-seg > :focus-visible { outline-offset: -2px; border-radius: var(--ip-radius-md); }
+.ip-toolbar-search:focus-within { border-color: var(--ip-accent); box-shadow: 0 0 0 3px var(--ip-focus-ring); }
+/* Shell: column icons, inactive switch options, the active rail count, placeholders and the off switch reach 3:1 or 4.5:1 */
+.ip-th-sort-icon, .ip-th-filter { opacity: 1; }
+.ip-seg > * { color: var(--ip-text-2); }
+.ip-rail-link.active .ip-rail-count:not(.alert) { color: var(--ip-text-2); }
+.ip-input::placeholder, .ip-textarea::placeholder { color: var(--ip-text-3); opacity: 1; }
+.ip-switch:not(:checked) { box-shadow: inset 0 0 0 1px var(--ip-text-3); }
+/* Shell: a browser print keeps the page content and drops the menu, bars, controls and row actions; a portrait sheet still gets the phone layout */
+@media print {
+  .ip-rail, .ip-rail-backdrop, .ip-appbar, .ip-toolbar, .ip-filterbar, .ip-tabs, .ip-table-foot, .ip-form-foot, .ip-page-actions, .ip-page-head .ip-btn-primary,
+  .ip-crumbs .ip-back, .toast-container, .ip-table td.actions, .ip-table th.actions-column, .ip-th-filter, .ip-th-sort-icon, .ip-colfilter, .ip-img-peek,
+  .ip-gallery .nav, .ip-gallery-dots, .ip-link-danger, .modal, .modal-backdrop { display: none !important; }
+  .ip-app { display: block; }
+  .ip-main { padding: 0 !important; }
+  .ip-table-wrap { overflow: visible; }
+  .ip-gallery { margin: 0; max-width: 120mm; border-radius: var(--ip-radius-lg); }
+  .ip-dl > div, .ip-table tr { break-inside: avoid; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+/* Shell: long unbroken values such as host names and serial numbers wrap instead of widening the page */
+.ip-dl dd, .ip-notif-item .text, .ip-banner > div, .ip-page-head h1, .ip-page-head .ip-sub, .ip-toast .text, .modal-title { overflow-wrap: anywhere; min-width: 0; }
+/* Shell: the phone "Filters" button looks like the filter sheet button, and the small logo chevron uses the brand token */
+.ip-filter-toggle .count:empty { display: none; }
+@media (max-width: 767.98px) { .ip-filterbar .ip-filter-toggle { padding: 0 14px; border-color: transparent; background: var(--ip-sunken); color: var(--ip-text-1); font-weight: 500; } }
+.ip-brand-fill { fill: var(--ip-brand); }

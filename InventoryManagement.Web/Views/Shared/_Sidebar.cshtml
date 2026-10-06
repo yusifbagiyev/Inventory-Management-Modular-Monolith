@@ -15,6 +15,8 @@
     var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
     string Active(bool on) => on ? "ip-rail-link active" : "ip-rail-link";
+    // Null leaves the attribute out, so only the current page is announced as such
+    string? Current(bool on) => on ? "page" : null;
 }
 @* The rail stays dark in both themes, and the script below restores its collapsed state before first paint *@
 <aside class="ip-rail" id="ipRail" data-bs-theme="dark" aria-label="@L["Main menu"]">
@@ -31,7 +33,7 @@
         @if (Can("dashboard.view"))
         {
             <div class="ip-rail-group">
-                <a href="/Home/Dashboard" class="@Active(action == "Dashboard")" title="@L["Dashboard"]">
+                <a href="/Home/Dashboard" class="@Active(action == "Dashboard")" aria-current="@Current(action == "Dashboard")" title="@L["Dashboard"]">
                     <i class="fa-solid fa-table-cells-large"></i><span>@L["Dashboard"]</span>
                 </a>
             </div>
@@ -43,7 +45,7 @@
             <div class="ip-rail-title">@L["Operations"]</div>
             @if (Can("product.view"))
             {
-            <a href="/Products" class="@Active(controller == "Products" && action != "Deleted")" title="@L["Products"]">
+            <a href="/Products" class="@Active(controller == "Products" && action != "Deleted")" aria-current="@Current(controller == "Products" && action != "Deleted")" title="@L["Products"]">
                 <i class="fa-solid fa-box"></i><span>@L["Products"]</span>
                 @if (productTotal is int total)
                 {
@@ -53,19 +55,19 @@
             }
             @if (Can("product.deleted.view"))
             {
-            <a href="/Products/Deleted" class="@Active(controller == "Products" && action == "Deleted")" title="@L["Deleted products"]">
+            <a href="/Products/Deleted" class="@Active(controller == "Products" && action == "Deleted")" aria-current="@Current(controller == "Products" && action == "Deleted")" title="@L["Deleted products"]">
                 <i class="fa-solid fa-trash-can"></i><span>@L["Deleted products"]</span>
             </a>
             }
             @if (Can("route.view"))
             {
-            <a href="/Routes" class="@Active(controller == "Routes" && action != "Transfer")" title="@L["Routes"]">
+            <a href="/Routes" class="@Active(controller == "Routes" && action != "Transfer")" aria-current="@Current(controller == "Routes" && action != "Transfer")" title="@L["Routes"]">
                 <i class="fa-solid fa-route"></i><span>@L["Routes"]</span>
             </a>
             }
             @if (User.HasPermission("route.create") || User.HasPermission("route.create.direct"))
             {
-                <a href="/Routes/Transfer" class="@Active(controller == "Routes" && action == "Transfer")" title="@L["Transfer"]">
+                <a href="/Routes/Transfer" class="@Active(controller == "Routes" && action == "Transfer")" aria-current="@Current(controller == "Routes" && action == "Transfer")" title="@L["Transfer"]">
                     <i class="fa-solid fa-arrow-right-arrow-left"></i><span>@L["Transfer"]</span>
                 </a>
             }
@@ -76,30 +78,30 @@
             <div class="ip-rail-title">@L["Oversight"]</div>
             @if (Can("approval.view") || Can("approval.decide"))
             {
-                <a href="/Approvals" class="@Active(controller == "Approvals")" title="@L["Approvals"]">
+                <a href="/Approvals" class="@Active(controller == "Approvals")" aria-current="@Current(controller == "Approvals")" title="@L["Approvals"]">
                     <i class="fa-solid fa-clipboard-check"></i><span>@L["Approvals"]</span>
                     <span class="ip-rail-count is-alert" id="sidebarPendingCount" style="display: none;"></span>
                 </a>
             }
             @if (!isAdmin)
             {
-                <a href="/MyRequests" class="@Active(controller == "MyRequests")" title="@L["My Requests"]">
+                <a href="/MyRequests" class="@Active(controller == "MyRequests")" aria-current="@Current(controller == "MyRequests")" title="@L["My Requests"]">
                     <i class="fa-solid fa-clock-rotate-left"></i><span>@L["My Requests"]</span>
                 </a>
             }
-            <a href="/Notifications" class="@Active(controller == "Notifications")" title="@L["Notifications"]">
+            <a href="/Notifications" class="@Active(controller == "Notifications")" aria-current="@Current(controller == "Notifications")" title="@L["Notifications"]">
                 <i class="fa-regular fa-bell"></i><span>@L["Notifications"]</span>
                 <span class="ip-rail-count is-alert" id="sidebarUnreadCount" style="display: none;"></span>
             </a>
             @if (Can("audit.view"))
             {
-                <a href="/Audit" class="@Active(controller == "Audit")" title="@L["Audit log"]">
+                <a href="/Audit" class="@Active(controller == "Audit")" aria-current="@Current(controller == "Audit")" title="@L["Audit log"]">
                     <i class="fa-solid fa-clipboard-list"></i><span>@L["Audit log"]</span>
                 </a>
             }
             @if (Can("user.view"))
             {
-                <a href="/UserManagement" class="@Active(controller == "UserManagement")" title="@L["Users"]">
+                <a href="/UserManagement" class="@Active(controller == "UserManagement")" aria-current="@Current(controller == "UserManagement")" title="@L["Users"]">
                     <i class="fa-solid fa-users"></i><span>@L["Users"]</span>
                 </a>
             }
@@ -111,13 +113,13 @@
                 <div class="ip-rail-title">@L["Catalog"]</div>
                 @if (Can("category.view"))
                 {
-                    <a href="/Categories" class="@Active(controller == "Categories")" title="@L["Categories"]">
+                    <a href="/Categories" class="@Active(controller == "Categories")" aria-current="@Current(controller == "Categories")" title="@L["Categories"]">
                         <i class="fa-solid fa-tags"></i><span>@L["Categories"]</span>
                     </a>
                 }
                 @if (Can("department.view"))
                 {
-                    <a href="/Departments" class="@Active(controller == "Departments")" title="@L["Departments"]">
+                    <a href="/Departments" class="@Active(controller == "Departments")" aria-current="@Current(controller == "Departments")" title="@L["Departments"]">
                         <i class="fa-solid fa-sitemap"></i><span>@L["Departments"]</span>
                     </a>
                 }

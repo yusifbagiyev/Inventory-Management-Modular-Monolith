@@ -65,12 +65,13 @@
 </head>
 <body>
     @{ var signedIn = User.Identity?.IsAuthenticated ?? false; }
+    <a class="ip-skip" href="#page-body">@L["Skip to content"]</a>
     <div class="ip-app" id="wrapper">
         @if (signedIn)
         {
             @* Phone app bar below 768px, where site.js turns the menu button into a back arrow on breadcrumb pages *@
             <header class="ip-appbar">
-                <button type="button" class="ip-btn-icon" data-rail-open aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
+                <button type="button" class="ip-btn-icon" data-rail-open aria-controls="ipRail" aria-expanded="false" aria-label="@L["Main menu"]"><i class="fa-solid fa-bars"></i></button>
                 <a class="ip-btn-icon ip-appbar-back" href="/" hidden aria-label="@L["Back"]"><i class="fa-solid fa-arrow-left"></i></a>
                 <div class="title">
                     @(ViewData["Title"] is string appBarTitle ? L[appBarTitle] : L["166 Inventory"])
@@ -86,7 +87,25 @@
             <partial name="_Sidebar" />
         }
 
-        <main class="ip-main page-content" id="page-content-wrapper">
+        <main class="ip-main page-content@(signedIn ? "" : " ip-guest")" id="page-content-wrapper">
+            @if (!signedIn)
+            {
+                @* Error pages reached while signed out get the sign-in page's header instead of the toolbar *@
+                <header class="ip-login-head">
+                    <a class="ip-guest-brand" href="/Account/Login">
+                        <span class="ip-logo brand" aria-hidden="true"><partial name="_BrandMark" /></span>
+                        <strong class="ip-rail-name">@L["166 Inventory"]<small>@L["IT department"]</small></strong>
+                    </a>
+                    <div class="ip-guest-tools">
+                        <partial name="_LanguageSwitch" />
+                        <button type="button" class="ip-btn-icon lg" data-theme-toggle title="@L["Dark mode"]" aria-label="@L["Toggle dark mode"]">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+                </header>
+            }
+            else
+            {
             <header class="ip-toolbar">
                 @if (signedIn)
                 {
@@ -136,7 +155,10 @@
                     </div>
                 }
             </header>
+            }
 
+            @* Target of the skip link, so the next Tab goes into the page instead of through the rail and toolbar *@
+            <div id="page-body" class="ip-skip-target" tabindex="-1"></div>
             @RenderBody()
         </main>
     </div>
@@ -144,12 +166,12 @@
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-4">
     </div>
 
-    <div class="modal fade ip-modal" id="globalImageModal" tabindex="-1">
+    <div class="modal fade ip-modal" id="globalImageModal" tabindex="-1" aria-labelledby="globalImageTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@L["Image Preview"]</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title" id="globalImageTitle">@L["Image Preview"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@L["Close"]"></button>
                 </div>
                 <div class="modal-body text-center p-0" style="max-height: 70vh; overflow: auto;">
                     <img id="globalModalImage" class="img-fluid" alt="@L["Preview"]"
@@ -208,6 +230,9 @@
         int? unreadCount = signedIn ? await RailCounts.UnreadAsync() : null;
         int? pendingCount = signedIn && canSeeApprovals ? await RailCounts.PendingApprovalsAsync() : null;
     }
+    @* The bell, the counts and the live connection exist only for a signed-in user *@
+    @if (signedIn)
+    {
     <script>
         $(document).ready(function() {
                 // Whoever may see the approvals page also follows the pending-approvals count
@@ -244,6 +269,13 @@
                 const notificationId = $(this).data('id');
                 if (notificationId) {
                     markNotificationAsRead(notificationId);
+                }
+            });
+            // The items act as buttons, so Enter and Space work like a click
+            $(document).on('keydown', '#notificationList .ip-notif-item', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    $(this).trigger('click');
                 }
             });
         }
@@ -473,6 +505,7 @@
         }
 
     </script>
+    }
 
     @* Shows TempData messages from redirect-based actions as toasts *@
     @{

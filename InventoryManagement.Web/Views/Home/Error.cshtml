@@ -2,25 +2,51 @@
 @{
     ViewData["Title"] = "Error";
     Layout = "_Layout";
+
+    // The failing request redirects here with its status and the reference its log entry was written under
+    var status = Model is { StatusCode: > 0 } m ? m.StatusCode : int.TryParse(Context.Request.Query["statusCode"], out var code) ? code : 0;
+    var reference = Context.Request.Query["ref"].ToString();
+    if (reference.Length is 0 or > 64 || !reference.All(c => char.IsAsciiLetterOrDigit(c) || c is ':' or '-' or '.'))
+        reference = Context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>() != null ? Context.TraceIdentifier : "";
+    var message = Model?.Message ?? status switch
+    {
+        400 => "The request could not be completed",
+        401 or 403 => "You are not authorized to access this resource",
+        404 => "The requested resource was not found",
+        408 => "The request timed out. Please try again.",
+        503 => "Unable to connect to the service. Please try again later.",
+        _ => "An error occurred while processing your request."
+    };
+    var signedIn = User.Identity?.IsAuthenticated ?? false;
 }
 
 <div class="container-fluid px-4">
     <div class="ip-empty">
         <span class="icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-        <h1 class="title">@L["An error has occurred."]</h1>
-        <p class="text mb-0">@L[Model?.Message ?? "An error occurred while processing your request."]</p>
-        @if (Model?.ShowRequestId ?? false)
+        <h1 class="title">@L["An error has occurred"]</h1>
+        <p class="text mb-0">@L[message]</p>
+        @if (reference.Length > 0)
         {
             <p class="ip-faint mb-0">
-                @if (Model.StatusCode > 0)
+                @if (status > 0)
                 {
-                    <span class="ip-num">@Model.StatusCode</span><span> · </span>
+                    <span class="ip-num">@status</span><span> · </span>
                 }
-                @L["Request ID"]: <span class="ip-mono">@Model.RequestId</span>
+                @L["Reference"]: <span class="ip-mono" style="white-space: nowrap; user-select: all">@reference</span>
             </p>
         }
-        <a href="/" class="ip-btn ip-btn-secondary">
-            <span>@L["Go to Dashboard"]</span>
-        </a>
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            <button type="button" class="ip-btn ip-btn-ghost" data-history-back>
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>@L["Back"]</span>
+            </button>
+            @if (signedIn)
+            {
+                <a href="/" class="ip-btn ip-btn-secondary"><span>@L["Go to Dashboard"]</span></a>
+            }
+            else
+            {
+                <a href="/Account/Login" class="ip-btn ip-btn-secondary"><span>@L["Sign in"]</span></a>
+            }
+        </div>
     </div>
 </div>

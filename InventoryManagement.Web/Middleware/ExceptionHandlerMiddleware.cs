@@ -51,24 +51,21 @@ namespace InventoryManagement.Web.Middleware
                 RequestMethod = requestMethod
             };
 
+            // Framework, EF Core and LINQ throw these same types for real bugs, so only the modules' own ones count as the caller's mistake
+            var callerMistake = SharedServices.Web.UserFacingErrors.IsUserFacing(exception);
+
             switch (exception)
             {
                 case UnauthorizedAccessException:
                     response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     errorResponse.Message = "You are not authorized to access this resource";
                     errorResponse.Type = "UnauthorizedAccess";
-
-                    _logger.LogWarning("Unauthorized access: {UserId} to {RequestPath} ({RequestId})",
-                        userId, requestPath, requestId);
                     break;
 
                 case KeyNotFoundException:
                     response.StatusCode = (int)HttpStatusCode.NotFound;
                     errorResponse.Message = "The requested resource was not found";
                     errorResponse.Type = "NotFound";
-
-                    _logger.LogInformation("Resource not found: {RequestPath} for {UserId} ({RequestId})",
-                        requestPath, userId, requestId);
                     break;
 
                 case InvalidOperationException:
@@ -78,27 +75,21 @@ namespace InventoryManagement.Web.Middleware
                         ? exception.Message
                         : "The request could not be completed";
                     errorResponse.Type = "InvalidOperation";
-
-                    _logger.LogWarning("Invalid operation: {ExceptionMessage} by {UserId} ({RequestId})",
-                        exception.Message, userId, requestId);
                     break;
 
                 case HttpRequestException:
                     response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                     errorResponse.Message = "Unable to connect to the service. Please try again later.";
                     errorResponse.Type = "ServiceUnavailable";
-
-                    _logger.LogError("Service unavailable: {ExceptionMessage} ({RequestId})",
-                        exception.Message, requestId);
+                    callerMistake = false;
                     break;
 
                 case TaskCanceledException:
                     response.StatusCode = (int)HttpStatusCode.RequestTimeout;
                     errorResponse.Message = "The request timed out. Please try again.";
                     errorResponse.Type = "RequestTimeout";
-
-                    _logger.LogWarning("Request timeout: {RequestPath} by {UserId} ({RequestId})",
-                        requestPath, userId, requestId);
+                    // A browser that went away is no failure, while any other timeout is
+                    callerMistake = context.RequestAborted.IsCancellationRequested;
                     break;
 
                 case ArgumentException:
@@ -107,9 +98,6 @@ namespace InventoryManagement.Web.Middleware
                         ? exception.Message
                         : "Invalid request parameters";
                     errorResponse.Type = "BadRequest";
-
-                    _logger.LogWarning("Bad request: {ExceptionMessage} for {RequestPath} ({RequestId})",
-                        exception.Message, requestPath, requestId);
                     break;
 
                 default:
@@ -118,11 +106,16 @@ namespace InventoryManagement.Web.Middleware
                         ? exception.Message
                         : "An error occurred while processing your request";
                     errorResponse.Type = "InternalServerError";
-
-                    _logger.LogError(exception, "Unhandled exception: {ExceptionType} for {UserId} on {RequestPath} ({RequestId})",
-                        exception.GetType().Name, userId, requestPath, requestId);
+                    callerMistake = false;
                     break;
             }
+
+            if (callerMistake)
+                _logger.LogWarning(exception, "{ErrorType} on {RequestMethod} {RequestPath} for {UserId}: {ExceptionMessage} ({RequestId})",
+                    errorResponse.Type, requestMethod, requestPath, userId, exception.Message, requestId);
+            else
+                _logger.LogError(exception, "Unhandled {ExceptionType} on {RequestMethod} {RequestPath} for {UserId} ({RequestId})",
+                    exception.GetType().Name, requestMethod, requestPath, userId, requestId);
 
             if (_environment.IsDevelopment())
             {
@@ -138,12 +131,24 @@ namespace InventoryManagement.Web.Middleware
                 });
                 await response.WriteAsync(jsonResponse);
             }
+            else if (IsErrorPage(context.Request))
+            {
+                // The error page itself failed, for example while the sign-in cookie was checked, so redirecting again would loop
+                response.ContentType = "text/html; charset=utf-8";
+                await response.WriteAsync("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Error</title></head>"
+                    + "<body style=\"font-family: sans-serif; padding: 2rem\"><h1>An error has occurred</h1>"
+                    + $"<p>Please try again in a moment. Reference: {WebUtility.HtmlEncode(requestId)}</p></body></html>");
+            }
             else
             {
-                context.Items["ErrorResponse"] = errorResponse;
-                context.Response.Redirect($"/Home/Error?statusCode={response.StatusCode}");
+                // The reference is this request's, so the error page can show what the log was written under
+                context.Response.Redirect($"/Home/Error?statusCode={response.StatusCode}&ref={Uri.EscapeDataString(requestId)}");
             }
         }
+        private static bool IsErrorPage(HttpRequest request)
+            => request.Path.StartsWithSegments("/Home/Error", StringComparison.OrdinalIgnoreCase)
+               || request.Path.StartsWithSegments("/NotFound", StringComparison.OrdinalIgnoreCase);
+
         private bool IsAjaxRequest(HttpRequest request)
         {
             return request.Headers["X-Requested-With"] == "XMLHttpRequest" ||

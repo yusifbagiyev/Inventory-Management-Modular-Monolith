@@ -22,10 +22,11 @@ namespace InventoryManagement.Web.Services
         {
             // The marker file in _thumbs keeps the job from running twice
             var marker = Path.Combine(_root, "_thumbs", Marker);
-            if (File.Exists(marker)) return;
 
             try
             {
+                if (File.Exists(marker)) return;
+
                 // Let startup and the warm-up queries go first
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 var watch = Stopwatch.StartNew();
@@ -72,6 +73,11 @@ namespace InventoryManagement.Web.Services
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 // The marker is only written on completion, so it runs again on the next start
+            }
+            catch (Exception ex)
+            {
+                // An exception leaving a background service stops the whole host, and this job is optional
+                _logger.LogError(ex, "Photo metadata cleanup stopped early and will run again on the next start");
             }
         }
     }

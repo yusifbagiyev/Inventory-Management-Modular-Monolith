@@ -21,9 +21,32 @@ namespace InventoryManagement.Web.Localization
         {
             services.AddSingleton<IStringLocalizerFactory, JsonStringLocalizerFactory>();
             services.AddLocalization();
-            services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
-                options.ModelMetadataDetailsProviders.Add(new DefaultValidationMessages()));
+            // PostConfigure so it runs after MVC's data-annotations provider has filled in the attributes it reads
+            services.PostConfigure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+            {
+                options.ModelMetadataDetailsProviders.Add(new DefaultValidationMessages());
+                LocalizeBindingMessages(options.ModelBindingMessageProvider);
+            });
             return services;
+        }
+
+        /// <summary>Replaces the framework's English model-binding messages, read at binding time so they follow the request's language.</summary>
+        private static void LocalizeBindingMessages(Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelBindingMessageProvider messages)
+        {
+            var localizer = new JsonStringLocalizer();
+            string Required() => localizer["This field is required."];
+            string Invalid(string? value) => string.IsNullOrEmpty(value) ? Required() : localizer["The value '{0}' is not valid.", value];
+
+            messages.SetMissingBindRequiredValueAccessor(_ => Required());
+            messages.SetMissingKeyOrValueAccessor(Required);
+            messages.SetValueMustNotBeNullAccessor(_ => Required());
+            messages.SetAttemptedValueIsInvalidAccessor((value, _) => Invalid(value));
+            messages.SetNonPropertyAttemptedValueIsInvalidAccessor(Invalid);
+            messages.SetValueIsInvalidAccessor(Invalid);
+            messages.SetUnknownValueIsInvalidAccessor(_ => localizer["The value is not valid."]);
+            messages.SetNonPropertyUnknownValueIsInvalidAccessor(() => localizer["The value is not valid."]);
+            messages.SetValueMustBeANumberAccessor(_ => localizer["The field must be a number."]);
+            messages.SetNonPropertyValueMustBeANumberAccessor(() => localizer["The field must be a number."]);
         }
 
         public static IApplicationBuilder UseUiLocalization(this IApplicationBuilder app)
