@@ -9,7 +9,7 @@
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
-<div class="container-fluid px-4" id="detailsRegion">
+<div class="container-fluid px-4" id="detailsRegion" data-product-name="@($"{Or(Model.Model, L["N/A"].Value)} ({Model.InventoryCode})")">
     <div class="ip-page-head mb-3">
         <div>
             <ol class="breadcrumb">
@@ -42,6 +42,12 @@
 
     @* Phones get these actions in the fixed bar at the end of the page *@
     <div class="ip-page-actions mb-4 d-none d-md-flex">
+        @if (canDelete)
+        {
+            <button type="button" class="ip-btn ip-btn-danger-ghost" data-delete-product>
+                <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
+            </button>
+        }
         @if (canUpdate)
         {
             <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary">
@@ -95,10 +101,6 @@
                     <div><dt>@L["Description"]</dt><dd>@Model.Description</dd></div>
                 }
             </dl>
-            @if (canDelete)
-            {
-                <button type="button" class="ip-link-danger mt-3" id="deleteProductBtn" onclick="confirmDelete(@Model.Id)">@L["Delete product"]</button>
-            }
         </div>
     </div>
 
@@ -158,9 +160,9 @@
                         {
                             <tr data-href="@Url.Action("Details", "Routes", new { id = route.Id })">
                                 <td class="date ip-num text-nowrap" data-order="@route.CreatedAt.ToString("yyyy-MM-dd HH:mm")">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
-                                <td class="meta route-from" data-filter-value="@(route.FromDepartmentName ?? "-")" data-filter-label="@(route.FromDepartmentName ?? "-")">@(route.FromDepartmentName ?? "-")<div class="sub">@route.FromWorker</div></td>
+                                <td class="meta route-from" data-filter-value="@(route.FromDepartmentName ?? "-")" data-filter-label="@(route.FromDepartmentName ?? "-")"><span class="cell-text">@(route.FromDepartmentName ?? "-")</span><div class="sub">@route.FromWorker</div></td>
                                 <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
-                                <td class="meta route-to" data-filter-value="@route.ToDepartmentName" data-filter-label="@route.ToDepartmentName">@route.ToDepartmentName<div class="sub">@route.ToWorker</div></td>
+                                <td class="meta route-to" data-filter-value="@route.ToDepartmentName" data-filter-label="@route.ToDepartmentName"><span class="cell-text">@route.ToDepartmentName</span><div class="sub">@route.ToWorker</div></td>
                                 <td class="state" data-filter-value="@(route.IsCompleted ? "completed" : "pending")">
                                     @if (route.IsCompleted)
                                     {
@@ -179,9 +181,15 @@
         }
     </section>
     }
-    @if (canUpdate || (canTransfer && Model.IsActive))
+    @if (canDelete || canUpdate || (canTransfer && Model.IsActive))
     {
         <div class="ip-form-foot d-md-none">
+            @if (canDelete)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" data-delete-product title="@L["Delete"]" aria-label="@L["Delete"]">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            }
             @if (canUpdate)
             {
                 <a asp-action="Edit" asp-route-id="@Model.Id" class="ip-btn ip-btn-secondary"><i class="fa-solid fa-pen"></i><span>@L["Edit"]</span></a>
@@ -196,22 +204,28 @@
 
 @section Scripts {
     <script>
-        function confirmDelete(productId) {
+        const productId = @Model.Id;
+        const productName = document.getElementById('detailsRegion').dataset.productName;
+        const deleteDirect = @Json.Serialize(User.HasPermission("product.delete.direct"));
+
+        // Delegated, because live updates swap the region holding the buttons
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-delete-product]')) return;
             confirmAction({
                 title: t('Delete product'),
-                message: t('Delete this product? It will be kept on the Deleted products page.'),
+                message: deleteDirect
+                    ? t('Delete {0}? It will be kept on the Deleted products page.', productName)
+                    : t('Delete {0}? The request is sent for approval, and once approved the product is kept on the Deleted products page.', productName),
                 okText: t('Delete'),
                 danger: true
-            }, function () {
-                deleteProduct(productId);
-            });
-        }
+            }, deleteProduct);
+        });
 
-        function deleteProduct(productId) {
-            const $deleteBtn = $('#deleteProductBtn');
-            const originalHtml = $deleteBtn.html();
+        function deleteProduct() {
+            const $deleteBtn = $('[data-delete-product]');
+            const originalHtml = $deleteBtn.map((i, el) => el.innerHTML).get();
             $deleteBtn.prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm"></span> ' + t('Deleting...'));
+                .html('<span class="spinner-border spinner-border-sm"></span>');
 
             $.ajax({
                 url: '/Products/Delete/' + productId,
@@ -229,7 +243,7 @@
                     }
                 },
                 error: function(xhr) {
-                    $deleteBtn.prop('disabled', false).html(originalHtml);
+                    $deleteBtn.prop('disabled', false).each((i, el) => { el.innerHTML = originalHtml[i]; });
 
                     let errorMsg = t('Failed to delete product');
                     if (xhr.status === 403) {
