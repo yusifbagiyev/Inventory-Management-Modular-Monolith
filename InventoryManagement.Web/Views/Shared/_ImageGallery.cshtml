@@ -1,5 +1,5 @@
 @model ImageGalleryModel
-@* image-manager.js switches the images, and clicking the large one opens the preview modal *@
+@* image-manager.js switches the images, and clicking the large one or pressing Enter on it opens the preview modal *@
 @if (Model.Images.Count == 0)
 {
     <div class="ip-gallery" role="img" aria-label="@L[Model.EmptyText]">
@@ -13,8 +13,8 @@ else
 {
     <div data-image-gallery>
         <div class="ip-gallery">
-            <img src="@Model.Images[0]" alt="@Model.Title" data-ig-main style="cursor: zoom-in"
-                 onclick="showImageModal(this.getAttribute('src'), this.alt)" />
+            <img src="@Model.Images[0]" alt="@Model.Title" data-ig-main data-ig-zoom style="cursor: zoom-in"
+                 tabindex="0" role="button" aria-label="@L["View image"]" />
             <span class="chip" data-ig-cover><i class="fa-solid fa-star"></i>@L["Cover image"]</span>
             @if (Model.Images.Count > 1)
             {
@@ -22,10 +22,10 @@ else
                 <button type="button" class="nav next" data-ig-step="1" aria-label="@L["Next"]"><i class="fa-solid fa-chevron-right"></i></button>
                 <span class="counter" data-ig-counter>1 / @Model.Images.Count</span>
                 @* Phones show dots instead of arrows and thumbnails and swipe between images *@
-                <div class="ip-gallery-dots" aria-hidden="true">
+                <div class="ip-gallery-dots">
                     @for (var i = 0; i < Model.Images.Count; i++)
                     {
-                        <i class="@(i == 0 ? "active" : "")"></i>
+                        <button type="button" class="@(i == 0 ? "active" : "")" data-ig-dot="@i" aria-label="@L["Image {0}", i + 1]" aria-current="@(i == 0 ? "true" : "false")"></button>
                     }
                 </div>
             }

@@ -208,7 +208,10 @@ window.ImageManager = (function () {
         if (counter) counter.textContent = `${index + 1} / ${thumbs.length}`;
         const cover = gallery.querySelector('[data-ig-cover]');
         if (cover) cover.hidden = index !== 0;
-        gallery.querySelectorAll('.ip-gallery-dots i').forEach((d, i) => d.classList.toggle('active', i === index));
+        gallery.querySelectorAll('[data-ig-dot]').forEach((d, i) => {
+            d.classList.toggle('active', i === index);
+            d.setAttribute('aria-current', i === index ? 'true' : 'false');
+        });
     }
 
     function currentIndex(gallery) {
@@ -241,10 +244,33 @@ window.ImageManager = (function () {
     document.addEventListener('click', function (e) {
         const thumb = e.target.closest('[data-ig-thumb]');
         const step = e.target.closest('[data-ig-step]');
-        const gallery = (thumb || step) && (thumb || step).closest('[data-image-gallery]');
+        const dot = e.target.closest('[data-ig-dot]');
+        const control = thumb || step || dot;
+        const gallery = control && control.closest('[data-image-gallery]');
         if (!gallery) return;
         const thumbs = Array.from(gallery.querySelectorAll('[data-ig-thumb]'));
-        showGalleryImage(gallery, thumb ? thumbs.indexOf(thumb) : currentIndex(gallery) + parseInt(step.dataset.igStep, 10));
+        if (dot) showGalleryImage(gallery, parseInt(dot.dataset.igDot, 10));
+        else showGalleryImage(gallery, thumb ? thumbs.indexOf(thumb) : currentIndex(gallery) + parseInt(step.dataset.igStep, 10));
+    });
+
+    // The large gallery photo and saved picker tiles open the preview by click, Enter or Space
+    function previewTarget(e) {
+        const el = e.target.closest && e.target.closest('[data-ig-zoom], [data-im-preview]');
+        if (!el) return null;
+        return el.matches('[data-ig-zoom]')
+            ? { src: el.getAttribute('src'), title: el.alt }
+            : { src: el.dataset.src, title: el.dataset.title };
+    }
+    document.addEventListener('click', function (e) {
+        const target = previewTarget(e);
+        if (target) showImageModal(target.src, target.title);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const target = previewTarget(e);
+        if (!target) return;
+        e.preventDefault();
+        showImageModal(target.src, target.title);
     });
 
     document.addEventListener('DOMContentLoaded', function () { initAll(); });

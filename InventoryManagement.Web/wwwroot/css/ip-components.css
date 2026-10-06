@@ -1203,8 +1203,8 @@ html:has(.ip-form-foot) { scroll-padding-bottom: 96px; }
   /* Two photos a row on every phone, where 168px tiles would leave one */
   .ip-images { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ip-space-3); }
   /* Dots are buttons with a finger-sized hit area around the small dot */
-  .ip-gallery-dots { gap: 0; left: calc(var(--ip-space-5) - 8px); bottom: 4px; }
-  .ip-gallery-dots button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+  .ip-gallery-dots { gap: 0; left: calc(var(--ip-space-5) - 12px); bottom: 0; }
+  .ip-gallery-dots button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: none; cursor: pointer; }
   .ip-gallery-dots button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ip-border-strong); }
   .ip-gallery-dots button.active::before { background: var(--ip-text-1); }
   .ip-gallery-dots button:focus-visible { outline-offset: -2px; border-radius: 50%; }
