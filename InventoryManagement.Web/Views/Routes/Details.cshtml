@@ -6,6 +6,7 @@
     var canComplete = User.HasPermission("route.complete");
     var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
     var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
+    var canPurge = User.HasPermission("route.purge") && Model.IsCompleted;
     var hasFootActions = !Model.IsCompleted && (canDelete || canUpdate || canComplete);
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
@@ -35,6 +36,12 @@
 
     @* Phones get the record actions in the fixed bar at the end of the page, and history and print under the details *@
     <div class="ip-page-actions mb-4 d-none d-md-flex">
+        @if (canPurge)
+        {
+            <button type="button" class="ip-btn ip-btn-danger-ghost" data-purge-route="@Model.Id" data-summary="@Model.Summary">
+                <i class="fa-regular fa-trash-can"></i><span>@L["Delete permanently"]</span>
+            </button>
+        }
         @if (canDelete && !Model.IsCompleted)
         {
             <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)">
@@ -156,6 +163,12 @@
                 <button type="button" class="ip-btn ip-btn-secondary" onclick="printRoute()">
                     <i class="fa-solid fa-print"></i><span>@L["Print Details"]</span>
                 </button>
+                @if (canPurge)
+                {
+                    <button type="button" class="ip-btn ip-btn-danger-ghost" data-purge-route="@Model.Id" data-summary="@Model.Summary">
+                        <i class="fa-regular fa-trash-can"></i><span>@L["Delete permanently"]</span>
+                    </button>
+                }
             </div>
         </div>
         @if (Model.ImageUrls.Count > 0)

@@ -32,6 +32,8 @@ namespace SharedServices.Identity
         public const string ProductDeletedView = "product.deleted.view";
         /// <summary>Removes a deleted product for good, with its photos and its route history, for one created by mistake.</summary>
         public const string ProductDeletedPurge = "product.deleted.purge";
+        /// <summary>Removes a completed route record for good, for a test or mistaken transfer, leaving the product where it is.</summary>
+        public const string RoutePurge = "route.purge";
 
         // Categories
         public const string CategoryView = "category.view";

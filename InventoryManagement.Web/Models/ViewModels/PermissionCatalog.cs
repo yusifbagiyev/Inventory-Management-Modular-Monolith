@@ -38,6 +38,7 @@ namespace InventoryManagement.Web.Models.ViewModels
                 new(AllPermissions.RouteDelete, "Delete routes", AllPermissions.RouteDeleteDirect),
                 new(AllPermissions.RouteComplete, "Complete transfers"),
                 new(AllPermissions.RouteExport, "Export routes and timelines to PDF"),
+                new(AllPermissions.RoutePurge, "Permanently delete completed routes"),
             ]),
             new("categories", "Categories", "fa-tags",
             [

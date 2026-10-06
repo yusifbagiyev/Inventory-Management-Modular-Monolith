@@ -51,7 +51,7 @@ namespace InventoryManagement.Web.Controllers
             string[]? fromDepartment = null,
             string[]? toDepartment = null,
             string[]? whatsApp = null,
-            int[]? codes = null,
+            string[]? models = null,
             CancellationToken cancellationToken = default)
         {
             // The filter bar sends one value and the column headers several, so both arrive as lists
@@ -61,7 +61,7 @@ namespace InventoryManagement.Web.Controllers
                 Sort = sort,
                 Descending = dir == "desc",
                 Product = product,
-                Codes = codes,
+                Models = NonEmpty(models),
                 FromDepartments = NonEmpty(fromDepartment),
                 ToDepartments = NonEmpty(toDepartment),
                 Categories = NonEmpty(categoryName),
@@ -108,7 +108,7 @@ namespace InventoryManagement.Web.Controllers
             }
         }
 
-        /// <summary>The products in use among the routes the list's other filters leave, offered by the product column's filter.</summary>
+        /// <summary>The models in use among the routes the list's other filters leave, offered by the product column's filter.</summary>
         [PermissionAuthorize(AllPermissions.RouteView)]
         public async Task<IActionResult> ColumnValues(
             string column, string? search = null, bool? isCompleted = null, DateTime? startDate = null, DateTime? endDate = null,
@@ -119,7 +119,7 @@ namespace InventoryManagement.Web.Controllers
             if (column != "product")
                 return Json(Array.Empty<object>());
 
-            // The product column's own filters are left out, so its list still offers the products around the ones picked
+            // The product column's own filters are left out, so its list still offers the models around the ones picked
             var filter = new RouteListFilter
             {
                 FromDepartments = NonEmpty(fromDepartment),
@@ -132,12 +132,17 @@ namespace InventoryManagement.Web.Controllers
                 1, int.MaxValue, search, isCompleted, startDate, endDate,
                 departmentId, null, null, departmentName, filter), cancellationToken);
 
-            // A code is labelled with the model of its newest route, since the model can change over its history
+            // The vendor rides along in the label, so typing a vendor finds its models
+            var byText = StringComparer.CurrentCultureIgnoreCase;
             var values = routes.Items
-                .GroupBy(r => r.InventoryCode)
-                .OrderBy(g => g.Key)
-                .Select(g => g.OrderByDescending(r => r.CreatedAt).First())
-                .Select(r => new { value = r.InventoryCode.ToString(), label = $"{r.InventoryCode} · {r.Model}" })
+                .Where(r => !string.IsNullOrWhiteSpace(r.Model))
+                .GroupBy(r => r.Model)
+                .OrderBy(g => g.Key, byText)
+                .Select(g => new
+                {
+                    value = g.Key,
+                    label = string.Join(" · ", new[] { g.Key, string.Join(", ", g.Select(r => r.Vendor).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
+                })
                 .ToList();
             return Json(values);
         }
@@ -362,6 +367,18 @@ namespace InventoryManagement.Web.Controllers
             return HandleApiResponse(response, nameof(Index));
         }
 
+
+        /// <summary>Removes a completed route record for good, leaving the product where it is.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.RoutePurge)]
+        public async Task<IActionResult> Purge(int id)
+        {
+            var response = await RunAsync(
+                () => _mediator.Send(new RouteService.Application.Features.Routes.Commands.PurgeRoute.Command(id)),
+                "The route was deleted permanently.");
+            return HandleApiResponse(response, nameof(Index));
+        }
 
         private static RouteType? ParseRouteType(string? routeType)
             => Enum.TryParse<RouteType>(routeType, ignoreCase: true, out var parsed) ? parsed : null;

@@ -1011,22 +1011,26 @@ document.addEventListener('click', function (e) {
     });
 });
 
-// Delete permanently removes a deleted product with its photos and route history, after a confirmation naming it
+// Delete permanently removes a deleted product with its photos and route history, or a completed route record, after a confirmation naming it
 document.addEventListener('click', function (e) {
-    const button = e.target.closest('[data-purge-product]');
+    const button = e.target.closest('[data-purge-product], [data-purge-route]');
     if (!button) return;
     e.preventDefault();
     e.stopPropagation();
+    const route = button.hasAttribute('data-purge-route');
     confirmAction({
         title: t('Delete permanently'),
         detail: button.dataset.summary,
-        message: t('The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.'),
+        message: route
+            ? t('The route record and its photos are removed for good. The product stays where it is now. This cannot be undone.')
+            : t('The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.'),
         okText: t('Delete permanently'),
         danger: true
     }, async function () {
         button.disabled = true;
         try {
-            const response = await fetch('/Products/Purge/' + encodeURIComponent(button.dataset.purgeProduct), {
+            const url = route ? '/Routes/Purge/' + encodeURIComponent(button.dataset.purgeRoute) : '/Products/Purge/' + encodeURIComponent(button.dataset.purgeProduct);
+            const response = await fetch(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, AppConfig.antiforgeryHeaders())
@@ -1034,9 +1038,9 @@ document.addEventListener('click', function (e) {
             const body = await response.json().catch(() => ({}));
             showToast(body.message || t('Failed'), body.isSuccess ? 'success' : 'error');
             if (!body.isSuccess) { button.disabled = false; return; }
-            // The list drops the row in place, while the product's own page has nothing left to show
+            // The list drops the row in place, while the record's own page has nothing left to show
             if (document.querySelector('[data-list-region]')) ListNav.reload();
-            else window.location.href = '/Products/Deleted';
+            else window.location.href = route ? '/Routes' : '/Products/Deleted';
         } catch (err) {
             showToast(t('Failed'), 'error');
             button.disabled = false;

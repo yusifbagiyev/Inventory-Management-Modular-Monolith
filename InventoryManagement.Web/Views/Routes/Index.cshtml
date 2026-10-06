@@ -41,6 +41,7 @@
         var canComplete = User.HasPermission("route.complete");
         var canUpdate = User.HasPermission("route.update") || User.HasPermission("route.update.direct");
         var canDelete = User.HasPermission("route.delete") || User.HasPermission("route.delete.direct");
+        var canPurge = User.HasPermission("route.purge");
 
         // Keeps the other filters, swaps the completion state and goes back to page 1
         string TabUrl(bool? completed)
@@ -163,7 +164,7 @@
                 <thead>
                     <tr>
                         <th data-sort="date" data-sort-first="desc" data-filter="date" data-param-from="startDate" data-param-to="endDate">@L["Date"]</th>
-                        <th data-sort="product" data-filter="list" data-param="codes" data-text-param="product" data-options-url="@Url.Action("ColumnValues", new { column = "product" })">@L["Product"]</th>
+                        <th data-sort="product" data-filter="list" data-param="models" data-text-param="product" data-options-url="@Url.Action("ColumnValues", new { column = "product" })">@L["Product"]</th>
                         <th data-sort="from" data-filter="list" data-param="fromDepartment" data-options="@fromOptions">@L["From"]</th>
                         <th></th>
                         <th data-sort="to" data-filter="list" data-param="toDepartment" data-options="@toOptions">@L["To"]</th>
@@ -294,6 +295,13 @@
                                         <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-summary="@route.Summary" onclick="deleteRoute(@route.Id, this.dataset.summary)"
                                                 title="@L["Delete"]" aria-label="@L["Delete"] @route.InventoryCode">
                                             <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    }
+                                    @if (canPurge && route.IsCompleted)
+                                    {
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger pdf-omit" data-purge-route="@route.Id" data-summary="@route.Summary"
+                                                title="@L["Delete permanently"]" aria-label="@L["Delete permanently {0}", route.InventoryCode]">
+                                            <i class="fa-regular fa-trash-can"></i>
                                         </button>
                                     }
                                 </div>

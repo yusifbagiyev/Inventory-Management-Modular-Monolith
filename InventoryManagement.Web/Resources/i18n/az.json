@@ -1178,5 +1178,9 @@
   "Permanently delete deleted products": "Silinmiş məhsulları birdəfəlik silmək",
   "The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.": "Məhsul, onun şəkilləri və bütün marşrut tarixçəsi birdəfəlik silinəcək, inventar kodu yenidən istifadə oluna biləcək. Bu əməliyyatı geri qaytarmaq mümkün deyil.",
   "The product was deleted permanently.": "Məhsul birdəfəlik silindi.",
-  "Deleted product with ID {0} not found": "{0} ID-li silinmiş məhsul tapılmadı"
+  "Deleted product with ID {0} not found": "{0} ID-li silinmiş məhsul tapılmadı",
+  "Permanently delete completed routes": "Tamamlanmış marşrutları birdəfəlik silmək",
+  "The route record and its photos are removed for good. The product stays where it is now. This cannot be undone.": "Marşrut qeydi və onun şəkilləri birdəfəlik silinəcək. Məhsul hazırda olduğu yerdə qalacaq. Bu əməliyyatı geri qaytarmaq mümkün deyil.",
+  "The route was deleted permanently.": "Marşrut birdəfəlik silindi.",
+  "Only a completed route can be deleted permanently. Delete a pending transfer instead.": "Birdəfəlik yalnız tamamlanmış marşrutu silmək olar. Gözləmədə olan transferi adi qaydada silin."
 }

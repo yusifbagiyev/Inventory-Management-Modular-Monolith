@@ -165,6 +165,7 @@ namespace IdentityService.Infrastructure.Data
                 new Permission { Id = 33, Name = AllPermissions.AuditView, Category = "Audit", Description = "View the audit log" },
                 new Permission { Id = 34, Name = AllPermissions.ProductDeletedView, Category = "Product", Description = "View deleted products" },
                 new Permission { Id = 35, Name = AllPermissions.ProductDeletedPurge, Category = "Product", Description = "Permanently delete deleted products" },
+                new Permission { Id = 36, Name = AllPermissions.RoutePurge, Category = "Route", Description = "Permanently delete completed routes" },
             };
             builder.Entity<Permission>().HasData(permissions);
 

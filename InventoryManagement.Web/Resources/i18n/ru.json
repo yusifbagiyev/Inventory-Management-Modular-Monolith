@@ -1178,5 +1178,9 @@
   "Permanently delete deleted products": "Удалять удалённые товары навсегда",
   "The product, its photos and its whole route history are removed for good, and its inventory code can be used again. This cannot be undone.": "Товар, его фотографии и вся история маршрутов будут удалены навсегда, а инвентарный номер можно будет использовать снова. Это действие нельзя отменить.",
   "The product was deleted permanently.": "Товар удалён навсегда.",
-  "Deleted product with ID {0} not found": "Удалённый товар с ID {0} не найден"
+  "Deleted product with ID {0} not found": "Удалённый товар с ID {0} не найден",
+  "Permanently delete completed routes": "Удалять завершённые маршруты навсегда",
+  "The route record and its photos are removed for good. The product stays where it is now. This cannot be undone.": "Запись маршрута и её фотографии будут удалены навсегда. Товар останется там, где он находится сейчас. Это действие нельзя отменить.",
+  "The route was deleted permanently.": "Маршрут удалён навсегда.",
+  "Only a completed route can be deleted permanently. Delete a pending transfer instead.": "Навсегда можно удалить только завершённый маршрут. Ожидающее перемещение удалите обычным способом."
 }
