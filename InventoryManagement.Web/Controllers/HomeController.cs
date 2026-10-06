@@ -9,7 +9,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using ProductService.Application.Features.Lookups;
 using ProductService.Application.Features.Products.Queries;
 using RouteService.Application.Features.Routes.Queries;
 using RouteService.Domain.Common;
@@ -56,12 +55,10 @@ namespace InventoryManagement.Web.Controllers
             {
                 "last30days" => now.Date.AddDays(-29),
                 "last90days" => now.Date.AddDays(-89),
-                // Starts on the 1st so every monthly bar covers a whole month
-                "last6months" => new DateTime(now.Year, now.Month, 1).AddMonths(-5),
                 "all" => DateTime.MinValue,
                 _ => now.Date.AddDays(-6)
             };
-            if (period is not ("last30days" or "last90days" or "last6months" or "all"))
+            if (period is not ("last30days" or "last90days" or "all"))
                 period = "last7days";
 
             var transfers = await _mediator.Send(new GetTransferActivityQuery(startDate, endDate));
@@ -203,14 +200,6 @@ namespace InventoryManagement.Web.Controllers
                     }
                     break;
 
-                case "last6months":
-                    for (var i = 5; i >= 0; i--)
-                    {
-                        var monthStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddMonths(-i);
-                        AddBucket($"{MonthName(monthStart)} {monthStart.Year}", monthStart, monthStart.AddMonths(1));
-                    }
-                    break;
-
                 case "all":
                     var first = transfers.Min(t => t.CreatedAt);
                     for (var quarter = new DateTime(first.Year, ((first.Month - 1) / 3) * 3 + 1, 1); quarter <= endDate; quarter = quarter.AddMonths(3))
@@ -230,16 +219,9 @@ namespace InventoryManagement.Web.Controllers
         }
 
         // Hand-written because the formatting culture stays en-US
-        private static readonly string[] AzMonths = ["Yan", "Fev", "Mar", "Apr", "May", "İyn", "İyl", "Avq", "Sen", "Okt", "Noy", "Dek"];
         private static readonly string[] AzDays = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
-        private static readonly string[] RuMonths = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
         private static readonly string[] RuDays = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
         private static readonly string[] Roman = ["I", "II", "III", "IV"];
-
-        private static string MonthName(DateTime date)
-            => JsonStringLocalizer.IsAzerbaijani ? AzMonths[date.Month - 1]
-             : JsonStringLocalizer.IsRussian ? RuMonths[date.Month - 1]
-             : date.ToString("MMM");
 
         private static string DayName(DateTime date)
             => JsonStringLocalizer.IsAzerbaijani ? $"{AzDays[(int)date.DayOfWeek]} {date:dd}.{date:MM}"

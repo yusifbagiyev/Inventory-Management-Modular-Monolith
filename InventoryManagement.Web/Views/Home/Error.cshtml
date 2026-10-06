@@ -4,11 +4,11 @@
     Layout = "_Layout";
 
     // The failing request redirects here with its status and the reference its log entry was written under
-    var status = Model is { StatusCode: > 0 } m ? m.StatusCode : int.TryParse(Context.Request.Query["statusCode"], out var code) ? code : 0;
+    var status = int.TryParse(Context.Request.Query["statusCode"], out var code) ? code : 0;
     var reference = Context.Request.Query["ref"].ToString();
     if (reference.Length is 0 or > 64 || !reference.All(c => char.IsAsciiLetterOrDigit(c) || c is ':' or '-' or '.'))
         reference = Context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>() != null ? Context.TraceIdentifier : "";
-    var message = Model?.Message ?? status switch
+    var message = status switch
     {
         400 => "The request could not be completed",
         401 or 403 => "You are not authorized to access this resource",

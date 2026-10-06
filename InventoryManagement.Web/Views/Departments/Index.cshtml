@@ -2,9 +2,9 @@
 @{
     ViewData["Title"] = "Departments";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
-    object activeCount = Model.ActiveItems ?? ViewBag.ActiveDepartments ?? 0;
-    object inactiveCount = Model.InActiveItems ?? ViewBag.InActiveDepartments ?? 0;
-    object withProductsCount = Model.ItemsInWithProducts ?? ViewBag.DepartmentsInWithProducts ?? 0;
+    object activeCount = ViewBag.ActiveDepartments ?? 0;
+    object inactiveCount = ViewBag.InActiveDepartments ?? 0;
+    object withProductsCount = ViewBag.DepartmentsInWithProducts ?? 0;
     // Any query value besides paging is a filter or sort the reset button undoes
     var hasFilters = Context.Request.Query.Keys.Any(k => k is not ("pageNumber" or "pageSize"));
     // The counts are totals, so a narrowed list says how many it shows before them

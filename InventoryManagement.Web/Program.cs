@@ -3,7 +3,6 @@ using InventoryManagement.Web.HealthChecks;
 using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Middleware;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http;
 using Serilog;
 
 try

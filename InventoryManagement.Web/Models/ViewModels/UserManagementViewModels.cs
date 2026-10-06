@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
 namespace InventoryManagement.Web.Models.ViewModels
@@ -50,8 +49,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string SelectedRole { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
-
-        public List<SelectListItem> Roles { get; set; } = new List<SelectListItem>();
     }
 
     public record EditUserViewModel
@@ -78,7 +75,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public List<string> CurrentRoles { get; set; } = new List<string>();
         /// <summary>Holds a single role, and null leaves the roles unchanged.</summary>
         public List<string>? SelectedRoles { get; set; } = new List<string>();
-        public List<SelectListItem> AvailableRoles { get; set; } = new List<SelectListItem>();
     }
 
     public record ResetPasswordViewModel

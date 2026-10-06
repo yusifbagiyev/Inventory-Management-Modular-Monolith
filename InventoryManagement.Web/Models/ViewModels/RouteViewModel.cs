@@ -7,7 +7,6 @@ namespace InventoryManagement.Web.Models.ViewModels
     public record RouteViewModel
     {
         public int Id { get; set; }
-        public string RouteType { get; set; } = string.Empty;
         public string RouteTypeName { get; set; } = string.Empty;
         /// <summary>English text key for the route type.</summary>
         public string RouteTypeLabel => RouteTypeName == "CodeChange" ? "Code change" : RouteTypeName;
@@ -16,7 +15,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string Model { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
-        public int? FromDepartmentId { get; set; }
         public string? FromDepartmentName { get; set; }
         public int ToDepartmentId { get; set; }
         public string ToDepartmentName { get; set; } = string.Empty;
@@ -88,12 +86,6 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int TotalCount { get; set; }
         public int PageNumber { get; set; }
         public int PageSize { get; set; }
-        public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
-        public bool HasPreviousPage => PageNumber > 1;
-        public bool HasNextPage => PageNumber < TotalPages;
-        public int? ActiveItems { get; set; }
-        public int? InActiveItems { get; set; }
-        public int? ItemsInWithProducts { get; set; }
     }
 
     public record UpdateRouteViewModel

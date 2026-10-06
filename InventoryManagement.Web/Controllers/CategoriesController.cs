@@ -1,5 +1,4 @@
 using InventoryManagement.Web.Filters;
-using InventoryManagement.Web.Models.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services;
 using MediatR;
@@ -46,8 +45,6 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.InActiveCategories = stats.Inactive;
             ViewBag.CategoriesInWithProducts = stats.WithProducts;
             ViewBag.CurrentSearch = search;
-            ViewBag.PageNumber = pageNumber;
-            ViewBag.PageSize = pageSize;
 
             return View(ModelMapper.Map<PagedResultDto<CategoryViewModel>>(page));
         }

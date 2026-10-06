@@ -17,8 +17,6 @@ namespace InventoryManagement.Web.Controllers
     /// <summary>Sign-in, sign-out, the profile page and the user's own password change.</summary>
     public class AccountController : Controller
     {
-        // Old username cookie that sign-in deletes
-        private const string OldUsernameCookie = "username";
 
         private readonly IdentityAuth _identity;
         private readonly IUserManagementService _userManagementService;
@@ -81,7 +79,6 @@ namespace InventoryManagement.Web.Controllers
         /// <summary>Fills the account list and the chosen account's name for any step.</summary>
         private LoginViewModel Prepare(LoginViewModel model)
         {
-            ViewData["ReturnUrl"] = model.ReturnUrl;
             var recent = RecentAccounts.Read(Request);
             model.Recent = recent.Select(a => new RecentAccountView(a.Login, a.Name,
                 JsonStringLocalizer.TranslateMessage(a.Role == SharedServices.Identity.AllRoles.Admin ? "Administrator" : "User"),
@@ -145,7 +142,6 @@ namespace InventoryManagement.Web.Controllers
                     displayName.Length > 0 ? displayName : user.Username,
                     user.Roles.Contains(SharedServices.Identity.AllRoles.Admin) ? SharedServices.Identity.AllRoles.Admin : SharedServices.Identity.AllRoles.User,
                     DateTime.UtcNow));
-                Response.Cookies.Delete(OldUsernameCookie);
 
                 _logger.LogInformation("User {Username} signed in from {Ip}", model.Username, HttpContext.Connection.RemoteIpAddress);
                 await _sessionAudit.SignedInAsync(user);

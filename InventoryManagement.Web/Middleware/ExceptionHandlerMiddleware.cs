@@ -32,12 +32,9 @@ namespace InventoryManagement.Web.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            context.Items["ExceptionHandled"] = true;
-
             var userId = context.User?.Identity?.Name ?? "Anonymous";
             var requestPath = context.Request.Path.Value ?? "Unknown";
             var requestMethod = context.Request.Method;
-            var userAgent = context.Request.Headers["User-Agent"].FirstOrDefault() ?? "Unknown";
             var requestId = context.TraceIdentifier;
 
             var response = context.Response;

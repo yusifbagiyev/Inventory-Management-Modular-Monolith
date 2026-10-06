@@ -510,7 +510,7 @@
     @* Shows TempData messages from redirect-based actions as toasts *@
     @{
         var tdSuccess = JsonStringLocalizer.TranslateMessage(TempData["Success"] as string);
-        var tdError = JsonStringLocalizer.TranslateMessage((TempData["Error"] ?? TempData["ErrorMessage"]) as string);
+        var tdError = JsonStringLocalizer.TranslateMessage(TempData["Error"] as string);
     }
     @if (!string.IsNullOrEmpty(tdSuccess) || !string.IsNullOrEmpty(tdError))
     {

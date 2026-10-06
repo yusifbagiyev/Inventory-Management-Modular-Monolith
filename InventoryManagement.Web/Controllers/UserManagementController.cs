@@ -4,7 +4,6 @@ using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using SharedServices.Identity;
 using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
@@ -33,12 +32,7 @@ namespace InventoryManagement.Web.Controllers
 
         [HttpGet]
         [PermissionAuthorize(AllPermissions.UserManage)]
-        public async Task<IActionResult> Create()
-        {
-            var model = new CreateUserViewModel();
-            await LoadRoles(model);
-            return View(model);
-        }
+        public IActionResult Create() => View(new CreateUserViewModel());
 
 
         [HttpPost]
@@ -47,10 +41,7 @@ namespace InventoryManagement.Web.Controllers
         public async Task<IActionResult> Create(CreateUserViewModel model)
         {
             if (!ModelState.IsValid)
-            {
-                await LoadRoles(model);
                 return HandleValidationErrors(model);
-            }
 
             // Only Admins choose the role, everyone else creates plain users
             if (!User.IsInRole(AllRoles.Admin))
@@ -67,7 +58,6 @@ namespace InventoryManagement.Web.Controllers
             }
 
             ModelState.AddModelError(CreateErrorField(error), Tr(error ?? "Failed to create user"));
-            await LoadRoles(model);
             return View(model);
         }
 
@@ -117,7 +107,6 @@ namespace InventoryManagement.Web.Controllers
         private async Task ReloadEditAsync(EditUserViewModel model)
         {
             model.CurrentRoles = (await _identity.GetUserAsync(model.Id))?.Roles ?? [];
-            await LoadRoles(model);
             await LoadPermissionEditorAsync(model);
         }
 
@@ -212,24 +201,6 @@ namespace InventoryManagement.Web.Controllers
                 return AjaxResponse(success, message);
 
             TempData[success ? "Success" : "Error"] = Tr(message);
-            return RedirectToAction(nameof(Index));
-        }
-
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [PermissionAuthorize(AllPermissions.UserManage)]
-        public async Task<IActionResult> ToggleStatus(int id)
-        {
-            if (await IsProtectedAsync(id))
-                return Forbidden();
-
-            var (success, error) = await ToggleStatusAsync(id);
-            if (IsAjaxRequest())
-                return AjaxResponse(success, success ? "User status updated successfully" : error ?? "Failed to update user status");
-
-            if (!success)
-                TempData["Error"] = Tr(error ?? "Failed to update user status");
             return RedirectToAction(nameof(Index));
         }
 
@@ -333,15 +304,5 @@ namespace InventoryManagement.Web.Controllers
         private IActionResult Forbidden() => IsAjaxRequest()
             ? StatusCode(StatusCodes.Status403Forbidden, new { isSuccess = false, success = false, message = Tr("Only an administrator can change this account: it is an administrator or holds permissions you do not have.") })
             : RedirectToAction("AccessDenied", "Account");
-
-        private async Task LoadRoles(CreateUserViewModel model)
-            => model.Roles = (await _userManagementService.GetAllRolesAsync())
-                .Select(r => new SelectListItem { Value = r, Text = r })
-                .ToList();
-
-        private async Task LoadRoles(EditUserViewModel model)
-            => model.AvailableRoles = (await _userManagementService.GetAllRolesAsync())
-                .Select(r => new SelectListItem { Value = r, Text = r, Selected = model.SelectedRoles?.Contains(r) == true })
-                .ToList();
     }
 }

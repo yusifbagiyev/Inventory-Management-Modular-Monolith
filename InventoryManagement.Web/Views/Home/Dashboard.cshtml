@@ -12,7 +12,6 @@
     {
         "last30days" => L["in the last {0} days", 30].Value,
         "last90days" => L["in the last {0} days", 90].Value,
-        "last6months" => L["in the last 6 months"].Value,
         "all" => L["over all time"].Value,
         _ => L["in the last {0} days", 7].Value
     };
@@ -20,7 +19,6 @@
     // Figures, chart bars and rows link to the lists filtered to this period
     string PeriodQuery() => Model.PeriodStart is null ? "" : $"&startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
     var transfersUrl = "/Routes?routeType=Transfer" + PeriodQuery();
-    var productsUrl = Model.PeriodStart is null ? "/Products" : $"/Products?startDate={Model.PeriodStart}&endDate={Model.PeriodEnd}";
     // Without the permission these return null and Razor drops the href
     var canProducts = User.HasPermission("product.view");
     var canRoutes = User.HasPermission("route.view");

@@ -2,7 +2,6 @@ using System.Security.Claims;
 using IdentityService.Application.DTOs;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using IdentityAuth = IdentityService.Application.Services.IAuthService;
 
 namespace InventoryManagement.Web.Services
@@ -42,7 +41,6 @@ namespace InventoryManagement.Web.Services
             if (user == null)
                 return null;
 
-            var roles = await GetAllRolesAsync();
             return new EditUserViewModel
             {
                 Id = user.Id,
@@ -52,10 +50,7 @@ namespace InventoryManagement.Web.Services
                 LastName = user.LastName,
                 IsActive = user.IsActive,
                 CurrentRoles = user.Roles,
-                SelectedRoles = user.Roles,
-                AvailableRoles = roles
-                    .Select(r => new SelectListItem { Value = r, Text = r, Selected = user.Roles.Contains(r) })
-                    .ToList()
+                SelectedRoles = user.Roles
             };
         }
 
@@ -80,8 +75,6 @@ namespace InventoryManagement.Web.Services
                 Permissions = user.Permissions.Select(p => new Permissions
                 {
                     Name = p,
-                    DisplayName = descriptions.TryGetValue(p, out var d) ? d.Description : p,
-                    Category = descriptions.TryGetValue(p, out var c) ? c.Category : p.Split('.')[0],
                     Description = descriptions.TryGetValue(p, out var e) ? e.Description : string.Empty
                 }).ToList()
             };

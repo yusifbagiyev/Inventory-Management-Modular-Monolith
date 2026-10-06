@@ -69,8 +69,6 @@ namespace InventoryManagement.Web.Controllers
                 p.PendingRequestId = pending.TryGetValue(p.Id, out var requestId) ? requestId : null;
 
 
-            ViewBag.PageNumber = pageNumber ?? 1;
-            ViewBag.PageSize = pageSize ?? 30;
             ViewBag.CurrentSearch = search;
             ViewBag.CurrentStatus = status;
             ViewBag.CurrentAvailability = availability;

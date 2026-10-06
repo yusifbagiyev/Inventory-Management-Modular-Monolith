@@ -70,11 +70,7 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.CurrentFilter = isCompleted;
             ViewBag.StartDate = startDate;
             ViewBag.CurrentSearch = search;
-            ViewBag.CurrentStatus = isCompleted;
             ViewBag.EndDate = endDate;
-            ViewBag.PageNumber = pageNumber ?? 1;
-            ViewBag.PageSize = pageSize ?? 30;
-            ViewBag.CurrentDepartmentId = departmentId;
             ViewBag.CurrentDepartmentName = departmentName;
 
             try
@@ -259,7 +255,6 @@ namespace InventoryManagement.Web.Controllers
                 CategoryName = route.CategoryName,
                 FromDepartmentName = route.FromDepartmentName ?? string.Empty,
                 FromWorker = route.FromWorker,
-                ToDepartmentId = route.ToDepartmentId,
                 ToDepartmentName = route.ToDepartmentName,
                 ToWorker = route.ToWorker,
                 Notes = route.Notes,
