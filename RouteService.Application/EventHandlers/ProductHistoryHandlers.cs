@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RouteService.Domain.Entities;
 using RouteService.Domain.Repositories;
 using RouteService.Domain.ValueObjects;
+using SharedServices.Contracts;
 using SharedServices.Events;
 using SharedServices.Persistence;
 using SharedServices.Storage;
@@ -19,17 +20,20 @@ namespace RouteService.Application.EventHandlers
         private readonly IUnitOfWork _unitOfWork;
         private readonly ImageStorage _images;
         private readonly DbSession _session;
+        private readonly IWhatsAppRouteNotifier _whatsApp;
 
         public ProductHistoryHandlers(
             IInventoryRouteRepository repository,
             IUnitOfWork unitOfWork,
             ImageStorage images,
-            DbSession session)
+            DbSession session,
+            IWhatsAppRouteNotifier whatsApp)
         {
             _repository = repository;
             _unitOfWork = unitOfWork;
             _images = images;
             _session = session;
+            _whatsApp = whatsApp;
         }
 
         public async Task Handle(ProductCreatedEvent notification, CancellationToken cancellationToken)
@@ -46,6 +50,9 @@ namespace RouteService.Application.EventHandlers
                 imageUrl,
                 "Auto-created from product service");
             route.Complete();
+            // The new product's group message goes out after the commit, and this route shows how it went
+            if (_whatsApp.Enabled)
+                route.SetWhatsAppStatus(WhatsAppStatus.Queued, null);
 
             await SaveAsync(route, cancellationToken);
         }

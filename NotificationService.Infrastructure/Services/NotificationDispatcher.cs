@@ -19,6 +19,7 @@ namespace NotificationService.Infrastructure.Services
         private readonly IUserDirectory _users;
         private readonly IHubContext<NotificationHub> _hub;
         private readonly WhatsAppRouteNotifier _whatsApp;
+        private readonly IRouteWhatsAppStatus _whatsAppStatus;
         private readonly ILogger<NotificationDispatcher> _logger;
 
         public NotificationDispatcher(
@@ -27,6 +28,7 @@ namespace NotificationService.Infrastructure.Services
             IUserDirectory users,
             IHubContext<NotificationHub> hub,
             WhatsAppRouteNotifier whatsApp,
+            IRouteWhatsAppStatus whatsAppStatus,
             ILogger<NotificationDispatcher> logger)
         {
             _repository = repository;
@@ -34,6 +36,7 @@ namespace NotificationService.Infrastructure.Services
             _users = users;
             _hub = hub;
             _whatsApp = whatsApp;
+            _whatsAppStatus = whatsAppStatus;
             _logger = logger;
         }
 
@@ -90,6 +93,14 @@ namespace NotificationService.Infrastructure.Services
         public async Task ProductCreatedAsync(ProductCreatedEvent e, int? actorId, CancellationToken cancellationToken)
         {
             var product = e.Product;
+
+            // Queued first, as for transfers; the product's entry route shows how it went and offers Send again
+            if (_whatsApp.Enabled)
+            {
+                var routeId = await _whatsAppStatus.FindEntryRouteIdAsync(product.ProductId, cancellationToken);
+                _whatsApp.Queue(WhatsAppRouteNotifier.ProductCreatedMessage(e), routeId);
+            }
+
             var users = await OtherActiveUsersAsync(actorId, AllPermissions.ProductView, cancellationToken);
             var data = Json(new { productId = product.ProductId, inventoryCode = product.InventoryCode, model = product.Model });
 
@@ -99,22 +110,6 @@ namespace NotificationService.Infrastructure.Services
                 "New Product Added",
                 $"Product {product.Model} by {product.Vendor} (Code: {product.InventoryCode}) has been added to {product.DepartmentName}",
                 data)), cancellationToken);
-
-            await SendWhatsAppAsync(new WhatsAppProductNotification
-            {
-                InventoryCode = product.InventoryCode,
-                Model = product.Model,
-                Vendor = product.Vendor,
-                CategoryName = product.CategoryName,
-                ToDepartmentName = product.DepartmentName,
-                ToWorker = product.Worker,
-                CreatedAt = e.CreatedAt,
-                IsNewItem = product.IsNewItem,
-                IsWorking = product.IsWorking,
-                Notes = product.Description,
-                NotificationType = "created",
-                ImageUrl = product.ImageUrl
-            }, cancellationToken);
         }
 
         public async Task ProductDeletedAsync(ProductDeletedEvent e, int? actorId, CancellationToken cancellationToken)
@@ -174,13 +169,6 @@ namespace NotificationService.Infrastructure.Services
                     data = n.Data
                 }, cancellationToken);
             }
-        }
-
-        /// <summary>Queues a WhatsApp group message for the outbox.</summary>
-        private Task SendWhatsAppAsync(WhatsAppProductNotification notification, CancellationToken cancellationToken)
-        {
-            _whatsApp.Queue(notification, routeId: null);
-            return Task.CompletedTask;
         }
 
         private static string Json(object value) => JsonSerializer.Serialize(value);

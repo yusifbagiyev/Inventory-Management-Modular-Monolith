@@ -29,10 +29,15 @@ namespace InventoryManagement.Web.Models.ViewModels
         public string? FullImageUrl => string.IsNullOrEmpty(ImageUrl) ? null : ImageUrl;
         public DateTime CreatedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
-        /// <summary>Queued, Sent or Failed, null when no message was sent.</summary>
+        /// <summary>Queued, Sent, Failed or Deleted, null when no message was sent.</summary>
         public string? WhatsAppStatus { get; set; }
         public string? WhatsAppError { get; set; }
         public DateTime? WhatsAppAt { get; set; }
+        public long? WhatsAppMessageId { get; set; }
+
+        /// <summary>A sent message whose id is known and that is still young enough to be deleted for everyone in the group.</summary>
+        public bool CanDeleteWhatsApp(TimeSpan window)
+            => WhatsAppStatus == "Sent" && WhatsAppMessageId != null && WhatsAppAt is DateTime sentAt && DateTime.Now - sentAt < window;
 
         /// <summary>Translates the words stored in place of a missing model, vendor, worker or destination.</summary>
         public RouteViewModel LocalizePlaceholders()

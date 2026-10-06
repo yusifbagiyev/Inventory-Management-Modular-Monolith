@@ -1,4 +1,5 @@
 @model RouteViewModel
+@inject SharedServices.Contracts.IWhatsAppRouteNotifier WhatsAppNotifier
 @{
     ViewData["Title"] = "Route Details";
     ViewData["Subtitle"] = Model.InventoryCode.ToString();
@@ -125,6 +126,16 @@
                             @if (Model.WhatsAppStatus == "Sent")
                             {
                                 <span class="ip-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Sent {0}", Model.WhatsAppAt?.ToString("dd.MM.yyyy HH:mm") ?? ""]</span></span>
+                                @if (canComplete && Model.CanDeleteWhatsApp(WhatsAppNotifier.DeleteWindow))
+                                {
+                                    <button type="button" class="ip-btn ip-btn-ghost ip-btn-sm ip-wa-resend" data-wa-delete="@Model.Id">
+                                        <i class="fa-regular fa-trash-can"></i><span>@L["Delete message"]</span>
+                                    </button>
+                                }
+                            }
+                            else if (Model.WhatsAppStatus == "Deleted")
+                            {
+                                <span class="ip-wa ip-wa-queued"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Deleted from the group {0}", Model.WhatsAppAt?.ToString("dd.MM.yyyy HH:mm") ?? ""]</span></span>
                             }
                             else
                             {

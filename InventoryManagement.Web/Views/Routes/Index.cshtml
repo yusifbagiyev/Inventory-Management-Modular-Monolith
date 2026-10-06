@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @model PagedResultDto<RouteViewModel>
+@inject SharedServices.Contracts.IWhatsAppRouteNotifier WhatsAppNotifier
 @{
     ViewData["Title"] = "Routes";
     var currentSearch = ViewBag.CurrentSearch as string ?? null;
@@ -23,7 +24,7 @@
     var typeOptions = Json.Serialize(routeTypes.Select(t => new { value = t.Item1, label = L[t.Item2].Value })).ToString();
     var statusOptions = Json.Serialize(new[] { new { value = "false", label = L["Pending"].Value }, new { value = "true", label = L["Completed"].Value } }).ToString();
     var curWhatsApp = QueryValues("whatsApp");
-    var whatsAppStatuses = new[] { ("Sent", "Sent"), ("Queued", "Queued"), ("Failed", "Failed"), ("None", "None") };
+    var whatsAppStatuses = new[] { ("Sent", "Sent"), ("Queued", "Queued"), ("Failed", "Failed"), ("Deleted", "Deleted"), ("None", "None") };
     var whatsAppOptions = Json.Serialize(whatsAppStatuses.Select(s => new { value = s.Item1, label = L[s.Item2].Value })).ToString();
 }
 <div class="container-fluid px-4">
@@ -256,7 +257,19 @@
                                 }
                                 else if (route.WhatsAppStatus == "Sent")
                                 {
-                                    <span class="ip-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Sent"]</span></span>
+                                    <div class="d-flex align-items-center gap-1" data-no-row-link>
+                                        <span class="ip-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Sent"]</span></span>
+                                        @if (canComplete && route.CanDeleteWhatsApp(WhatsAppNotifier.DeleteWindow))
+                                        {
+                                            <button type="button" class="ip-btn-icon pdf-omit" data-wa-delete="@route.Id" title="@L["Delete message"]" aria-label="@L["Delete message"]">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                else if (route.WhatsAppStatus == "Deleted")
+                                {
+                                    <span class="ip-wa ip-wa-queued"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span>@L["Deleted"]</span></span>
                                 }
                                 else
                                 {

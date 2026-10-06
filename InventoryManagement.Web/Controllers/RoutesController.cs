@@ -227,7 +227,7 @@ namespace InventoryManagement.Web.Controllers
             return HandleApiResponse(response, nameof(Index));
         }
 
-        /// <summary>Queues a failed WhatsApp message of a completed transfer again.</summary>
+        /// <summary>Queues a failed WhatsApp message of a completed transfer or a new product again.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [PermissionAuthorize(AllPermissions.RouteComplete)]
@@ -236,8 +236,9 @@ namespace InventoryManagement.Web.Controllers
             [FromServices] SharedServices.Contracts.IRouteWhatsAppStatus status)
         {
             var route = await _mediator.Send(new GetRouteByIdQuery(id));
-            if (route == null || !route.IsCompleted || route.RouteType != RouteService.Domain.Enums.RouteType.Transfer)
-                return Json(new { isSuccess = false, message = Tr("WhatsApp messages are sent only for completed transfers.") });
+            var isEntry = route?.RouteType is RouteType.New or RouteType.Existing;
+            if (route == null || !route.IsCompleted || !(isEntry || route.RouteType == RouteType.Transfer))
+                return Json(new { isSuccess = false, message = Tr("WhatsApp messages are sent only for completed transfers and new products.") });
             if (!whatsApp.Enabled)
                 return Json(new { isSuccess = false, message = Tr("WhatsApp is not configured.") });
             // Failed messages only, since resending others could flood the group and WaSender bans accounts for that
@@ -245,23 +246,72 @@ namespace InventoryManagement.Web.Controllers
                 return Json(new { isSuccess = false, message = Tr("Only a message that failed to send can be resent.") });
 
             await status.SetAsync(id, SharedServices.Contracts.WhatsAppStatus.Queued, null);
-            await whatsApp.QueueRouteCompletedAsync(new SharedServices.Events.RouteCompletedEvent
+            if (isEntry)
             {
-                RouteId = route.Id,
-                ProductId = route.ProductId,
-                InventoryCode = route.InventoryCode,
-                Model = route.Model,
-                Vendor = route.Vendor,
-                CategoryName = route.CategoryName,
-                FromDepartmentName = route.FromDepartmentName ?? string.Empty,
-                FromWorker = route.FromWorker,
-                ToDepartmentName = route.ToDepartmentName,
-                ToWorker = route.ToWorker,
-                Notes = route.Notes,
-                ImageUrl = route.ImageUrl,
-                CompletedAt = route.CompletedAt ?? DateTime.Now
-            });
+                // The product as this route recorded it; its description is not kept on routes
+                await whatsApp.QueueProductCreatedAsync(new SharedServices.Events.ProductCreatedEvent(new SharedServices.Events.ProductState
+                {
+                    ProductId = route.ProductId,
+                    InventoryCode = route.InventoryCode,
+                    Model = route.Model,
+                    Vendor = route.Vendor,
+                    CategoryName = route.CategoryName,
+                    DepartmentId = route.ToDepartmentId,
+                    DepartmentName = route.ToDepartmentName,
+                    Worker = route.ToWorker,
+                    IsWorking = route.IsWorking,
+                    IsNewItem = route.RouteType == RouteType.New,
+                    ImageUrl = route.ImageUrl
+                }, route.CreatedAt), route.Id);
+            }
+            else
+            {
+                await whatsApp.QueueRouteCompletedAsync(new SharedServices.Events.RouteCompletedEvent
+                {
+                    RouteId = route.Id,
+                    ProductId = route.ProductId,
+                    InventoryCode = route.InventoryCode,
+                    Model = route.Model,
+                    Vendor = route.Vendor,
+                    CategoryName = route.CategoryName,
+                    FromDepartmentName = route.FromDepartmentName ?? string.Empty,
+                    FromWorker = route.FromWorker,
+                    ToDepartmentName = route.ToDepartmentName,
+                    ToWorker = route.ToWorker,
+                    Notes = route.Notes,
+                    ImageUrl = route.ImageUrl,
+                    CompletedAt = route.CompletedAt ?? DateTime.Now
+                });
+            }
             return Json(new { isSuccess = true, message = Tr("The WhatsApp message is queued and will be sent in a few seconds.") });
+        }
+
+        /// <summary>Deletes a sent WhatsApp message from the group, which WhatsApp allows only for a while after sending.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [PermissionAuthorize(AllPermissions.RouteComplete)]
+        public async Task<IActionResult> DeleteWhatsApp(int id,
+            [FromServices] SharedServices.Contracts.IWhatsAppRouteNotifier whatsApp,
+            [FromServices] SharedServices.Contracts.IRouteWhatsAppStatus status,
+            CancellationToken cancellationToken)
+        {
+            var route = await _mediator.Send(new GetRouteByIdQuery(id), cancellationToken);
+            if (route == null)
+                return Json(new { isSuccess = false, message = Tr("Route not found.") });
+            if (route.WhatsAppStatus != SharedServices.Contracts.WhatsAppStatus.Sent || route.WhatsAppMessageId is not long messageId)
+                return Json(new { isSuccess = false, message = Tr("Only a sent message can be deleted.") });
+            if (!(route.WhatsAppAt is DateTime sentAt && DateTime.Now - sentAt < whatsApp.DeleteWindow))
+                return Json(new { isSuccess = false, message = Tr("This message is too old to be deleted for everyone in the group.") });
+
+            var error = await whatsApp.DeleteMessageAsync(messageId, cancellationToken);
+            if (error != null)
+            {
+                _logger?.LogWarning("WhatsApp message of route {RouteId} was not deleted: {Error}", id, error);
+                return Json(new { isSuccess = false, message = Tr("WhatsApp did not delete the message. Try again later or delete it in the group.") });
+            }
+
+            await status.SetAsync(id, SharedServices.Contracts.WhatsAppStatus.Deleted, null, cancellationToken: CancellationToken.None);
+            return Json(new { isSuccess = true, message = Tr("The WhatsApp message was deleted from the group.") });
         }
 
 

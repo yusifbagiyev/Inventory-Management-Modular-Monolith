@@ -11,24 +11,56 @@ using SharedServices.Storage;
 
 namespace NotificationService.Infrastructure.Services
 {
-    /// <summary>One WhatsApp group message waiting to go out, with RouteId set for a completed transfer.</summary>
+    /// <summary>One WhatsApp group message waiting to go out, with RouteId set for the route that shows its outcome.</summary>
     public sealed record WhatsAppJob(string Message, string? ImageUrl, int InventoryCode, int? RouteId);
 
-    /// <summary>In-memory queue that lets WhatsApp messages out one at a time, since WaSender allows one every 5 seconds.</summary>
+    /// <summary>In-memory queue that lets WhatsApp messages out one at a time, since WaSender allows one call every 5 seconds.</summary>
     public sealed class WhatsAppOutbox
     {
         private readonly Channel<WhatsAppJob> _channel = Channel.CreateUnbounded<WhatsAppJob>();
         private readonly IConfiguration _configuration;
+        private readonly SemaphoreSlim _gate = new(1, 1);
+        private DateTime _lastCallUtc = DateTime.MinValue;
 
-        public WhatsAppOutbox(IConfiguration configuration) => _configuration = configuration;
+        public WhatsAppOutbox(IConfiguration configuration)
+        {
+            _configuration = configuration;
+            MinInterval = TimeSpan.FromSeconds(configuration.GetValue("WhatsApp:MinIntervalSeconds", 5.5));
+        }
 
         public string? GroupId => _configuration.GetValue("WhatsApp:Enabled", true) ? _configuration["WhatsApp:DefaultGroupId"] : null;
 
         public bool Enabled => !string.IsNullOrEmpty(GroupId);
 
+        public TimeSpan MinInterval { get; }
+
         public void Enqueue(WhatsAppJob job) => _channel.Writer.TryWrite(job);
 
         internal ChannelReader<WhatsAppJob> Reader => _channel.Reader;
+
+        /// <summary>Runs one WaSender call at least MinInterval after the previous one, so sends and deletes share the account's limit.</summary>
+        public async Task<T> PacedAsync<T>(Func<Task<T>> call, CancellationToken cancellationToken)
+        {
+            await _gate.WaitAsync(cancellationToken);
+            try
+            {
+                var wait = _lastCallUtc + MinInterval - DateTime.UtcNow;
+                if (wait > TimeSpan.Zero)
+                    await Task.Delay(wait, cancellationToken);
+                try
+                {
+                    return await call();
+                }
+                finally
+                {
+                    _lastCallUtc = DateTime.UtcNow;
+                }
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
     }
 
     /// <summary>Sends the outbox in order and at least WhatsApp:MinIntervalSeconds apart, retrying failed messages.</summary>
@@ -45,17 +77,14 @@ namespace NotificationService.Infrastructure.Services
         private readonly IServiceScopeFactory _scopes;
         private readonly ImageStorage _images;
         private readonly ILogger<WhatsAppOutboxWorker> _logger;
-        private readonly TimeSpan _minInterval;
-        private DateTime _lastSentUtc = DateTime.MinValue;
 
         public WhatsAppOutboxWorker(WhatsAppOutbox outbox, IServiceScopeFactory scopes, ImageStorage images,
-            IConfiguration configuration, ILogger<WhatsAppOutboxWorker> logger)
+            ILogger<WhatsAppOutboxWorker> logger)
         {
             _outbox = outbox;
             _scopes = scopes;
             _images = images;
             _logger = logger;
-            _minInterval = TimeSpan.FromSeconds(configuration.GetValue("WhatsApp:MinIntervalSeconds", 5.5));
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken)
@@ -123,18 +152,14 @@ namespace NotificationService.Infrastructure.Services
 
             for (var attempt = 1; attempt <= MaxAttempts; attempt++)
             {
-                var wait = _lastSentUtc + _minInterval - DateTime.UtcNow;
-                if (wait > TimeSpan.Zero)
-                    await Task.Delay(wait, cancellationToken);
-
-                var result = await whatsApp.SendAsync(groupId, job.Message, image, fileName, uploaded, cancellationToken);
-                _lastSentUtc = DateTime.UtcNow;
+                var result = await _outbox.PacedAsync(
+                    () => whatsApp.SendAsync(groupId, job.Message, image, fileName, uploaded, cancellationToken), cancellationToken);
                 // Retries reuse the uploaded image instead of uploading it again
                 uploaded ??= result.UploadedImageUrl;
 
                 if (result.Success)
                 {
-                    await RecordAsync(job, WhatsAppStatus.Sent, null);
+                    await RecordAsync(job, WhatsAppStatus.Sent, null, result.MessageId);
                     return;
                 }
 
@@ -144,7 +169,7 @@ namespace NotificationService.Infrastructure.Services
                 // A rate limit waits as asked and does not use up one of the MaxOtherErrors tries
                 if (result.RateLimited)
                 {
-                    await Task.Delay((result.RetryAfter ?? _minInterval) + TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay((result.RetryAfter ?? _outbox.MinInterval) + TimeSpan.FromSeconds(1), cancellationToken);
                     continue;
                 }
                 if (++otherErrors >= MaxOtherErrors) break;
@@ -155,8 +180,8 @@ namespace NotificationService.Infrastructure.Services
             await RecordAsync(job, WhatsAppStatus.Failed, lastError);
         }
 
-        /// <summary>Stores a completed transfer's outcome on its route, while product messages are not recorded anywhere.</summary>
-        private async Task RecordAsync(WhatsAppJob job, string status, string? error)
+        /// <summary>Stores the outcome on the job's route: the completed transfer, or the entry route of a new product.</summary>
+        private async Task RecordAsync(WhatsAppJob job, string status, string? error, long? messageId = null)
         {
             if (job.RouteId is not int routeId) return;
             // Not cancelled by a stop and tried again after a failure, or the route would stay queued with nothing left to send
@@ -165,7 +190,7 @@ namespace NotificationService.Infrastructure.Services
                 try
                 {
                     await using var scope = _scopes.CreateAsyncScope();
-                    await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>().SetAsync(routeId, status, error);
+                    await scope.ServiceProvider.GetRequiredService<IRouteWhatsAppStatus>().SetAsync(routeId, status, error, messageId);
                     return;
                 }
                 catch (Exception ex)
@@ -178,19 +203,26 @@ namespace NotificationService.Infrastructure.Services
         }
     }
 
-    /// <summary>Queues WhatsApp messages for new products, completed transfers and resends from the route pages.</summary>
+    /// <summary>Queues WhatsApp messages for new products, completed transfers and resends from the route pages, and deletes sent ones.</summary>
     public sealed class WhatsAppRouteNotifier : IWhatsAppRouteNotifier
     {
+        private const int MaxDeleteAttempts = 3;
+
         private readonly WhatsAppOutbox _outbox;
         private readonly IWhatsAppService _whatsApp;
+        private readonly IConfiguration _configuration;
 
-        public WhatsAppRouteNotifier(WhatsAppOutbox outbox, IWhatsAppService whatsApp)
+        public WhatsAppRouteNotifier(WhatsAppOutbox outbox, IWhatsAppService whatsApp, IConfiguration configuration)
         {
             _outbox = outbox;
             _whatsApp = whatsApp;
+            _configuration = configuration;
         }
 
         public bool Enabled => _outbox.Enabled;
+
+        // WhatsApp lets a message be deleted for everyone for about two days after sending
+        public TimeSpan DeleteWindow => TimeSpan.FromHours(_configuration.GetValue("WhatsApp:DeleteWithinHours", 48.0));
 
         public Task QueueRouteCompletedAsync(RouteCompletedEvent e, CancellationToken cancellationToken = default)
         {
@@ -211,6 +243,42 @@ namespace NotificationService.Infrastructure.Services
             }, e.RouteId);
             return Task.CompletedTask;
         }
+
+        public Task QueueProductCreatedAsync(ProductCreatedEvent e, int routeId, CancellationToken cancellationToken = default)
+        {
+            Queue(ProductCreatedMessage(e), routeId);
+            return Task.CompletedTask;
+        }
+
+        public async Task<string?> DeleteMessageAsync(long messageId, CancellationToken cancellationToken = default)
+        {
+            WhatsAppDeleteResult result;
+            var attempt = 0;
+            do
+            {
+                result = await _outbox.PacedAsync(() => _whatsApp.DeleteAsync(messageId, cancellationToken), cancellationToken);
+            }
+            // A rate limit only means a message went out a moment ago, so the next paced call goes through
+            while (!result.Success && result.RateLimited && ++attempt < MaxDeleteAttempts);
+            return result.Success ? null : result.Error;
+        }
+
+        /// <summary>The group message for a new product.</summary>
+        public static WhatsAppProductNotification ProductCreatedMessage(ProductCreatedEvent e) => new()
+        {
+            InventoryCode = e.Product.InventoryCode,
+            Model = e.Product.Model,
+            Vendor = e.Product.Vendor,
+            CategoryName = e.Product.CategoryName,
+            ToDepartmentName = e.Product.DepartmentName,
+            ToWorker = e.Product.Worker,
+            CreatedAt = e.CreatedAt,
+            IsNewItem = e.Product.IsNewItem,
+            IsWorking = e.Product.IsWorking,
+            Notes = e.Product.Description,
+            NotificationType = "created",
+            ImageUrl = e.Product.ImageUrl
+        };
 
         public void Queue(WhatsAppProductNotification notification, int? routeId)
         {

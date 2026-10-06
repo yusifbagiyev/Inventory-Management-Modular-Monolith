@@ -18,7 +18,7 @@ namespace NotificationService.Application.EventHandlers
 
         public Task Handle(RouteCompletedEvent e, CancellationToken cancellationToken)
             => _whatsApp.Enabled
-                ? _status.SetAsync(e.RouteId, WhatsAppStatus.Queued, null, cancellationToken)
+                ? _status.SetAsync(e.RouteId, WhatsAppStatus.Queued, null, cancellationToken: cancellationToken)
                 : Task.CompletedTask;
     }
 }

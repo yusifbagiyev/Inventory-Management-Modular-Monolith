@@ -28,7 +28,7 @@ namespace SharedServices.Auditing
         [
             "ConcurrencyStamp", "SecurityStamp", "LastLoginAt", "NormalizedUserName", "NormalizedEmail",
             "NormalizedName", "AccessFailedCount", "xmin", "UpdatedAt", "PasswordHash",
-            "WhatsAppStatus", "WhatsAppError", "WhatsAppAt"
+            "WhatsAppStatus", "WhatsAppError", "WhatsAppAt", "WhatsAppMessageId"
         ];
 
         /// <summary>Recorded as changed, never with their value.</summary>

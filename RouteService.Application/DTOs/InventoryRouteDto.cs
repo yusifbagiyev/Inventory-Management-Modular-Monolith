@@ -12,6 +12,7 @@ namespace RouteService.Application.DTOs
         public string Model { get; set; } = string.Empty;
         public string Vendor { get; set; } = string.Empty;
         public string CategoryName { get; set; } = string.Empty;
+        public bool IsWorking { get; set; }
         public int? FromDepartmentId { get; set; }
         public string? FromDepartmentName { get; set; }
         public int ToDepartmentId { get; set; }
@@ -28,5 +29,6 @@ namespace RouteService.Application.DTOs
         public string? WhatsAppStatus { get; set; }
         public string? WhatsAppError { get; set; }
         public DateTime? WhatsAppAt { get; set; }
+        public long? WhatsAppMessageId { get; set; }
     }
 }

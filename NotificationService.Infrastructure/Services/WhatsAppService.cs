@@ -75,7 +75,7 @@ namespace NotificationService.Infrastructure.Services
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation("WhatsApp message sent to group {Group}", groupId);
-                    return new WhatsAppSendResult(true, false, null, null, imageUrl);
+                    return new WhatsAppSendResult(true, false, null, null, imageUrl, MessageId: ReadMessageId(body));
                 }
 
                 var error = $"{(int)response.StatusCode} {response.StatusCode}: {(body.Length > 300 ? body[..300] : body)}";
@@ -107,6 +107,47 @@ namespace NotificationService.Infrastructure.Services
             {
                 _logger.LogError(ex, "WhatsApp message to group {Group} got no answer and may have been delivered", groupId);
                 return new WhatsAppSendResult(false, false, null, NoAnswerError, imageUrl, OutcomeUnknown: true);
+            }
+        }
+
+        /// <summary>The id WaSender gives a sent message (data.msgId), needed to delete it later.</summary>
+        private static long? ReadMessageId(string body)
+        {
+            try
+            {
+                using var json = JsonDocument.Parse(body);
+                if (json.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object
+                    && data.TryGetProperty("msgId", out var id))
+                {
+                    if (id.ValueKind == JsonValueKind.Number && id.TryGetInt64(out var number)) return number;
+                    if (id.ValueKind == JsonValueKind.String && long.TryParse(id.GetString(), out var text)) return text;
+                }
+            }
+            catch (JsonException) { }
+            return null;
+        }
+
+        /// <summary>Deletes a sent message for everyone in the group, which WhatsApp allows only for a while after sending.</summary>
+        public async Task<WhatsAppDeleteResult> DeleteAsync(long messageId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var response = await _httpClient.DeleteAsync($"messages/{messageId}", cancellationToken);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("WhatsApp message {MessageId} deleted", messageId);
+                    return new WhatsAppDeleteResult(true, false, null);
+                }
+
+                var error = $"{(int)response.StatusCode} {response.StatusCode}: {(body.Length > 300 ? body[..300] : body)}";
+                _logger.LogWarning("WhatsApp message {MessageId} was not deleted: {Error}", messageId, error);
+                return new WhatsAppDeleteResult(false, (int)response.StatusCode == 429, error);
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is (TaskCanceledException or HttpRequestException))
+            {
+                _logger.LogError(ex, "Deleting WhatsApp message {MessageId} failed", messageId);
+                return new WhatsAppDeleteResult(false, false, ex.Message);
             }
         }
 

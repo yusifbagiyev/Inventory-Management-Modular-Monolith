@@ -14,6 +14,7 @@ namespace RouteService.Application.Mappings
             Model = route.ProductSnapshot.Model,
             Vendor = route.ProductSnapshot.Vendor,
             CategoryName = route.ProductSnapshot.CategoryName,
+            IsWorking = route.ProductSnapshot.IsWorking,
             FromDepartmentId = route.FromDepartmentId,
             FromDepartmentName = route.FromDepartmentName,
             ToDepartmentId = route.ToDepartmentId,
@@ -28,7 +29,8 @@ namespace RouteService.Application.Mappings
             CompletedAt = route.CompletedAt,
             WhatsAppStatus = route.WhatsAppStatus,
             WhatsAppError = route.WhatsAppError,
-            WhatsAppAt = route.WhatsAppAt
+            WhatsAppAt = route.WhatsAppAt,
+            WhatsAppMessageId = route.WhatsAppMessageId
         };
     }
 }

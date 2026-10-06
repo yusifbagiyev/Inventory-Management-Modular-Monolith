@@ -28,10 +28,12 @@ namespace RouteService.Domain.Entities
         public DateTime CreatedAt { get; private set; }
         public DateTime CompletedAt { get;private set; }
 
-        /// <summary>Queued, Sent or Failed for the transfer's WhatsApp message, null when none was sent.</summary>
+        /// <summary>Queued, Sent, Failed or Deleted for the WhatsApp message of a completed transfer or a new product, null when none was sent.</summary>
         public string? WhatsAppStatus { get; private set; }
         public string? WhatsAppError { get; private set; }
         public DateTime? WhatsAppAt { get; private set; }
+        /// <summary>WaSender's id of the sent message, which deleting it needs.</summary>
+        public long? WhatsAppMessageId { get; private set; }
 
         // For EF Core
         protected InventoryRoute() { }
@@ -196,12 +198,15 @@ namespace RouteService.Domain.Entities
             return text[..keep] + "…";
         }
 
-        public void SetWhatsAppStatus(string status, string? error)
+        public void SetWhatsAppStatus(string status, string? error, long? messageId = null)
         {
             WhatsAppStatus = status;
             // The error column holds 500 characters
             WhatsAppError = error is { Length: > 500 } ? error[..500] : error;
             WhatsAppAt = DateTime.Now;
+            // A deleted or failed message keeps the id it had, a message queued again waits for the id of its new copy
+            if (messageId != null || status == "Queued")
+                WhatsAppMessageId = messageId;
         }
 
         public void Complete()

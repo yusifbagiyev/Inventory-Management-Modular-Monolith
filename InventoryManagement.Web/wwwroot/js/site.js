@@ -909,6 +909,36 @@ document.addEventListener('click', async function (e) {
     }
 });
 
+// Delete message removes a sent WhatsApp message from the group for everyone, after a confirmation
+document.addEventListener('click', function (e) {
+    const button = e.target.closest('[data-wa-delete]');
+    if (!button) return;
+    e.preventDefault();
+    e.stopPropagation();
+    confirmAction({
+        title: t('Delete WhatsApp message'),
+        message: t('The message will be deleted from the WhatsApp group for everyone. This cannot be undone.'),
+        okText: t('Delete message'),
+        danger: true
+    }, async function () {
+        button.disabled = true;
+        try {
+            const response = await fetch('/Routes/DeleteWhatsApp/' + encodeURIComponent(button.dataset.waDelete), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest' }, AppConfig.antiforgeryHeaders())
+            });
+            const body = await response.json().catch(() => ({}));
+            showToast(body.message || t('Failed'), body.isSuccess ? 'success' : 'error');
+            if (body.isSuccess) ListNav.reload();
+            else button.disabled = false;
+        } catch (err) {
+            showToast(t('Failed'), 'error');
+            button.disabled = false;
+        }
+    });
+});
+
 // The active tab is announced too, not only shown by colour: a link tab is the current page, a filter button is pressed
 (function () {
     function syncTabs() {
