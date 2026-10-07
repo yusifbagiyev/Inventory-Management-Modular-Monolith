@@ -8,7 +8,8 @@
     <div class="ip-page-head">
         <div>
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-action="Deleted">@L["Deleted products"]</a></li>
+                @* The list and this page share the action, so the id this page was opened with is cleared or the link would lead back here *@
+                <li class="breadcrumb-item"><a asp-action="Deleted" asp-route-id="">@L["Deleted products"]</a></li>
                 <li class="breadcrumb-item active ip-mono">@Model.InventoryCode</li>
             </ol>
             <h1>@Or(Model.Model, "-")</h1>
