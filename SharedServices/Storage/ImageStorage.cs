@@ -7,6 +7,8 @@ namespace SharedServices.Storage
     {
         public const string Products = "products";
         public const string Routes = "routes";
+        /// <summary>Folder under the root where the list thumbnails of these images are made, one subfolder per width.</summary>
+        public const string Thumbnails = "_thumbs";
 
         public const long MaxBytes = 5 * 1024 * 1024;
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
@@ -77,8 +79,23 @@ namespace SharedServices.Storage
         public Task DeleteAsync(string? url)
         {
             var path = GetPhysicalPath(url);
-            if (path != null && File.Exists(path))
+            if (path == null) return Task.CompletedTask;
+            if (File.Exists(path))
                 File.Delete(path);
+
+            // The thumbnails made from it would otherwise stay on disk for good
+            var thumbnails = Path.Combine(_root, Thumbnails);
+            if (Directory.Exists(thumbnails))
+            {
+                var relative = Path.GetRelativePath(_root, path);
+                foreach (var width in Directory.EnumerateDirectories(thumbnails))
+                {
+                    var thumbnail = Path.Combine(width, relative) + ".jpg";
+                    foreach (var file in new[] { thumbnail, thumbnail + ".failed" })
+                        if (File.Exists(file))
+                            File.Delete(file);
+                }
+            }
             return Task.CompletedTask;
         }
 

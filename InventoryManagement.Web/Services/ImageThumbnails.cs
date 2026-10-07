@@ -36,7 +36,7 @@ namespace InventoryManagement.Web.Services
                 || !File.Exists(source))
                 return null;
 
-            var target = Path.Combine(_root, "_thumbs", width.ToString(), relativePath) + ".jpg";
+            var target = Path.Combine(_root, ImageStorage.Thumbnails, width.ToString(), relativePath) + ".jpg";
             if (File.Exists(target)) return target;
             // A marker file keeps a broken photo from being retried on every request
             var failed = target + ".failed";

@@ -21,7 +21,7 @@ namespace InventoryManagement.Web.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // The marker file in _thumbs keeps the job from running twice
-            var marker = Path.Combine(_root, "_thumbs", Marker);
+            var marker = Path.Combine(_root, ImageStorage.Thumbnails, Marker);
 
             try
             {
