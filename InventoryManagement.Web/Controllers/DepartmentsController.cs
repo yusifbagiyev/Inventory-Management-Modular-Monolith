@@ -162,7 +162,7 @@ namespace InventoryManagement.Web.Controllers
         {
             var products = await _mediator.Send(new GetAllProductsQuery(1, MaxProductsListed,
                 departmentId: departmentId, availability: activeOnly ? true : null));
-            return ModelMapper.MapList<ProductViewModel>(products.Items);
+            return ModelMapper.MapList<ProductViewModel>(products.Items).Select(p => p.LocalizePlaceholders()).ToList();
         }
     }
 }

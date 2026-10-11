@@ -141,7 +141,7 @@ namespace InventoryManagement.Web.Controllers
                 .Select(g => new
                 {
                     value = g.Key,
-                    label = string.Join(" · ", new[] { g.Key, string.Join(", ", g.Select(r => r.Vendor).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
+                    label = string.Join(" · ", new[] { StoredPlaceholders.Name(g.Key), string.Join(", ", g.Select(r => StoredPlaceholders.Name(r.Vendor)).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
                 })
                 .ToList();
             return Json(values);

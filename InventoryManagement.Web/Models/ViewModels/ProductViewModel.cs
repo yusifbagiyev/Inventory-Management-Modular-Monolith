@@ -14,6 +14,14 @@ namespace InventoryManagement.Web.Models.ViewModels
 
     public class ProductViewModel
     {
+        /// <summary>Translates the words stored in place of a missing model or vendor, for pages that show the product; never for the edit form, which would save the translation.</summary>
+        public ProductViewModel LocalizePlaceholders()
+        {
+            Model = StoredPlaceholders.Name(Model);
+            Vendor = StoredPlaceholders.Name(Vendor);
+            return this;
+        }
+
         public int Id { get; set; }
 
         [Required]

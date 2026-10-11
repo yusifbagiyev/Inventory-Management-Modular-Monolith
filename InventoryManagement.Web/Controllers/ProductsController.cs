@@ -70,6 +70,8 @@ namespace InventoryManagement.Web.Controllers
             var products = ModelMapper.Map<PagedResultDto<ProductViewModel>>(result);
             var pending = await _mediator.Send(new ApprovalService.Application.Features.Queries.GetPendingProductRequests.Query());
             foreach (var p in products.Items)
+                p.LocalizePlaceholders();
+            foreach (var p in products.Items)
                 p.PendingRequestId = pending.TryGetValue(p.Id, out var requestId) ? requestId : null;
 
 
@@ -125,8 +127,8 @@ namespace InventoryManagement.Web.Controllers
                 {
                     id = p.Id,
                     code = p.InventoryCode,
-                    model = p.Model,
-                    vendor = p.Vendor,
+                    model = StoredPlaceholders.Name(p.Model),
+                    vendor = StoredPlaceholders.Name(p.Vendor),
                     department = p.DepartmentName,
                     category = p.CategoryName,
                     imageUrl = p.ImageUrl
@@ -145,7 +147,7 @@ namespace InventoryManagement.Web.Controllers
             if (id.HasValue)
             {
                 var deleted = await _mediator.Send(new GetDeletedProductByIdQuery(id.Value));
-                return deleted == null ? RedirectToNotFound() : View("DeletedDetails", ModelMapper.Map<ProductViewModel>(deleted));
+                return deleted == null ? RedirectToNotFound() : View("DeletedDetails", ModelMapper.Map<ProductViewModel>(deleted).LocalizePlaceholders());
             }
 
             var filter = new ProductListFilter
@@ -160,7 +162,7 @@ namespace InventoryManagement.Web.Controllers
             ViewBag.TotalCount = page.TotalCount;
             ViewBag.PageNumber = page.PageNumber;
             ViewBag.PageSize = page.PageSize;
-            return View(ModelMapper.MapList<ProductViewModel>(page.Items));
+            return View(ModelMapper.MapList<ProductViewModel>(page.Items).Select(p => p.LocalizePlaceholders()).ToList());
         }
 
         /// <summary>The codes, models or workers in use among the products the list's other filters leave, offered by that column's filter.</summary>
@@ -200,7 +202,7 @@ namespace InventoryManagement.Web.Controllers
                     .Select(g => new
                     {
                         value = g.Key,
-                        label = string.Join(" · ", new[] { g.Key, string.Join(", ", g.Select(p => p.Vendor).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
+                        label = string.Join(" · ", new[] { StoredPlaceholders.Name(g.Key), string.Join(", ", g.Select(p => StoredPlaceholders.Name(p.Vendor)).Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(byText)) }.Where(s => s != ""))
                     }).ToList(),
                 "worker" => items.Where(p => !string.IsNullOrWhiteSpace(p.Worker)).Select(p => p.Worker!).Distinct().Order(byText)
                     .Select(w => new { value = w, label = w }).ToList(),
@@ -231,7 +233,7 @@ namespace InventoryManagement.Web.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(10)
                 .ToList();
-            var model = ModelMapper.Map<ProductViewModel>(product);
+            var model = ModelMapper.Map<ProductViewModel>(product).LocalizePlaceholders();
             var pending = await _mediator.Send(new ApprovalService.Application.Features.Queries.GetPendingProductRequests.Query());
             model.PendingRequestId = pending.TryGetValue(id, out var requestId) ? requestId : null;
             return View(model);

@@ -311,6 +311,11 @@ function categoryIcon(categoryName) {
     return rule ? rule[1] : 'fa-box';
 }
 
+/** A model or vendor from the API, where a product saved without one holds the words "No Name". */
+function storedName(value) {
+    return value === 'No Name' ? t('No Name') : value;
+}
+
 /** Server-made thumbnail URL for an uploaded photo, leaving other URLs unchanged. */
 function thumbUrl(url, width) {
     return typeof url === 'string' && url.startsWith('/images/') ? '/thumbs/' + (width || 160) + url : url;

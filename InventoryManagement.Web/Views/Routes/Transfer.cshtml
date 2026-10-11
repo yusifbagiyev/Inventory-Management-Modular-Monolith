@@ -247,9 +247,9 @@
             }
 
             function displayProductInfo(product) {
-                $('#productModel').text(product.model || t('N/A'));
+                $('#productModel').text(storedName(product.model) || t('N/A'));
                 $('#productCode').text('#' + product.inventoryCode);
-                $('#productMeta').text([product.vendor, product.categoryName].filter(Boolean).join(' · '));
+                $('#productMeta').text([storedName(product.vendor), product.categoryName].filter(Boolean).join(' · '));
                 $('#currentDepartment').text(product.departmentName || t('N/A'));
                 $('#currentWorker').text(product.worker || t('No worker assigned'));
                 $('#workingStatus').html(product.isWorking

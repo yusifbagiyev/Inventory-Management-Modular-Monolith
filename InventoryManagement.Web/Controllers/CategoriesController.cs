@@ -60,7 +60,7 @@ namespace InventoryManagement.Web.Controllers
             var products = await _mediator.Send(new GetAllProductsQuery(1, MaxProductsListed, categoryId: id));
             var model = ModelMapper.Map<CategoryViewModel>(category);
             model.ProductCount = products.TotalCount;
-            ViewBag.Products = ModelMapper.MapList<ProductViewModel>(products.Items);
+            ViewBag.Products = ModelMapper.MapList<ProductViewModel>(products.Items).Select(p => p.LocalizePlaceholders()).ToList();
 
             return View(model);
         }
