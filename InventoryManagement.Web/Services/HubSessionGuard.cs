@@ -31,12 +31,10 @@ namespace InventoryManagement.Web.Services
             connection.Features.Get<IConnectionHeartbeatFeature>()?.OnHeartbeat(static state => ((Watch)state).Tick(), watch);
         }
 
-        /// <summary>The same rules as the cookie's own re-check: the user is active, the stamp is unchanged and the sign-in is not too old.</summary>
+        /// <summary>The same rules as the cookie's own re-check: the user is active and the stamp is unchanged.</summary>
         private static async Task<bool> SessionEndedAsync(ClaimsPrincipal user, IdentityAuth auth)
         {
             if (!int.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
-                return true;
-            if (DateTimeOffset.UtcNow - UserPrincipalFactory.SignedInAt(user) > UserPrincipalFactory.MaxSessionAge)
                 return true;
 
             // Null for a deactivated or deleted user

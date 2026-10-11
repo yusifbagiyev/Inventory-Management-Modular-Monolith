@@ -30,7 +30,8 @@ namespace InventoryManagement.Web.Extensions
                 options.LoginPath = "/Account/Login";
                 options.LogoutPath = "/Account/Logout";
                 options.AccessDeniedPath = "/Account/AccessDenied";
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue("Authentication:CookieExpirationMinutes", 480));
+                // Thirty days from the user's last activity: the claims re-read every five minutes renews the cookie for the full span
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(configuration.GetValue("Authentication:CookieExpirationMinutes", 43200));
                 options.SlidingExpiration = true;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Lax;
@@ -38,7 +39,7 @@ namespace InventoryManagement.Web.Extensions
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
                 options.Events.OnValidatePrincipal = UserPrincipalFactory.RefreshAsync;
-                // An open tab's session check must not keep an unattended session alive past the idle timeout
+                // An open tab's session check must not keep an unattended session alive past the thirty days
                 options.Events.OnCheckSlidingExpiration = context =>
                 {
                     if (IsSessionCheck(context.Request))

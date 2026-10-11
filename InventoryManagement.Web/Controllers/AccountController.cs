@@ -39,18 +39,14 @@ namespace InventoryManagement.Web.Controllers
         }
 
         /// <summary>Issues the auth cookie, also after a password change so the new stamp does not end this session.</summary>
-        private async Task SignInAsync(IdentityService.Application.DTOs.UserDto user, bool persistent, DateTimeOffset? signedInAt = null)
+        private async Task SignInAsync(IdentityService.Application.DTOs.UserDto user)
         {
             var stamp = await _identity.GetSessionStampAsync(user.Id);
+            // Kept across browser restarts, and its lifetime comes from the cookie options so every renewal gets the full span
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                UserPrincipalFactory.Create(user, stamp, signedInAt ?? DateTimeOffset.UtcNow),
-                new AuthenticationProperties
-                {
-                    IsPersistent = persistent,
-                    ExpiresUtc = persistent ? DateTimeOffset.UtcNow.AddDays(30) : null,
-                    AllowRefresh = true
-                });
+                UserPrincipalFactory.Create(user, stamp),
+                new AuthenticationProperties { IsPersistent = true, AllowRefresh = true });
         }
 
         /// <summary>Sign-in in two steps, picking an account remembered on this browser and then entering the password.</summary>
@@ -135,8 +131,7 @@ namespace InventoryManagement.Web.Controllers
             try
             {
                 var user = await _identity.ValidateCredentialsAsync(model.Username, model.Password);
-                // Session cookie that ends with the browser, while the account stays in the picker list
-                await SignInAsync(user, persistent: false);
+                await SignInAsync(user);
                 var displayName = $"{user.FirstName} {user.LastName}".Trim();
                 RecentAccounts.Remember(HttpContext, new RecentAccounts.Entry(user.Username,
                     displayName.Length > 0 ? displayName : user.Username,
@@ -213,11 +208,10 @@ namespace InventoryManagement.Web.Controllers
             if (success)
             {
                 // The new stamp ends the other sessions, so re-issue this one to keep it alive
-                var auth = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 var me = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var myId)
                     ? await _identity.GetUserAsync(myId) : null;
                 if (me != null)
-                    await SignInAsync(me, auth.Properties?.IsPersistent == true, UserPrincipalFactory.SignedInAt(User));
+                    await SignInAsync(me);
 
                 TempData["Success"] = JsonStringLocalizer.TranslateMessage("Your password has been changed.");
                 return RedirectToAction(nameof(Profile));

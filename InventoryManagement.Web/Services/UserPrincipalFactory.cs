@@ -13,11 +13,9 @@ namespace InventoryManagement.Web.Services
         public const string PermissionClaim = "permission";
         private const string RefreshedAtClaim = "ClaimsRefreshedAt";
         private const string SessionStampClaim = InventoryManagement.Web.Extensions.AuthenticationExtensions.SessionStampClaim;
-        private const string SignedInAtClaim = "SignedInAt";
         private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
-        public static readonly TimeSpan MaxSessionAge = TimeSpan.FromDays(30);
 
-        public static ClaimsPrincipal Create(UserDto user, string? sessionStamp, DateTimeOffset signedInAt)
+        public static ClaimsPrincipal Create(UserDto user, string? sessionStamp)
         {
             var claims = new List<Claim>
             {
@@ -26,8 +24,7 @@ namespace InventoryManagement.Web.Services
                 new(ClaimTypes.Email, user.Email),
                 new("FirstName", user.FirstName),
                 new("LastName", user.LastName),
-                new(RefreshedAtClaim, DateTimeOffset.UtcNow.ToString("o")),
-                new(SignedInAtClaim, signedInAt.ToString("o"))
+                new(RefreshedAtClaim, DateTimeOffset.UtcNow.ToString("o"))
             };
             if (sessionStamp != null)
                 claims.Add(new Claim(SessionStampClaim, sessionStamp));
@@ -37,12 +34,7 @@ namespace InventoryManagement.Web.Services
             return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         }
 
-        /// <summary>Falls back to now for sessions that predate the claim.</summary>
-        public static DateTimeOffset SignedInAt(ClaimsPrincipal principal)
-            => DateTimeOffset.TryParse(principal.FindFirst(SignedInAtClaim)?.Value, CultureInfo.InvariantCulture,
-                   DateTimeStyles.RoundtripKind, out var at) ? at : DateTimeOffset.UtcNow;
-
-        /// <summary>Cookie OnValidatePrincipal hook, which also ends the session on a stamp change or after MaxSessionAge.</summary>
+        /// <summary>Cookie OnValidatePrincipal hook, which also ends the session on a stamp change.</summary>
         public static async Task RefreshAsync(CookieValidatePrincipalContext context)
         {
             var principal = context.Principal;
@@ -63,18 +55,16 @@ namespace InventoryManagement.Web.Services
             var user = await auth.GetUserAsync(userId);
             var stamp = user is { IsActive: true } ? await auth.GetSessionStampAsync(userId) : null;
             var held = principal.FindFirst(SessionStampClaim)?.Value;
-            var signedInAt = SignedInAt(principal);
             // A session from before the stamp claim existed takes the current stamp once
             if (user == null || !user.IsActive || stamp == null
-                || (held != null && held != stamp)
-                || DateTimeOffset.UtcNow - signedInAt > MaxSessionAge)
+                || (held != null && held != stamp))
             {
                 context.RejectPrincipal();
                 await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 return;
             }
 
-            context.ReplacePrincipal(Create(user, stamp, signedInAt));
+            context.ReplacePrincipal(Create(user, stamp));
             // The session check is still validated above, but only the user's own requests extend the session
             context.ShouldRenew = !InventoryManagement.Web.Extensions.AuthenticationExtensions.IsSessionCheck(context.Request);
         }
