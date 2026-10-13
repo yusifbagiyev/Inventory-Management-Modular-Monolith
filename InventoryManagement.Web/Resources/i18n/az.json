@@ -721,8 +721,8 @@
   "Destination: {0} -> department #{1}": "Təyinat: {0} → şöbə #{1}",
   "Product is new now": "Məhsul yeni kimi qeyd edildi",
   "Product's status changed to old": "Məhsul işlənmiş kimi qeyd edildi",
-  "Product is active now": "Məhsul yerindədir kimi qeyd edildi",
-  "Product is not available": "Məhsul itkin kimi qeyd edildi",
+  "Product is active now": "Məhsul mövcuddur kimi qeyd edildi",
+  "Product is not available": "Məhsul mövcud deyil kimi qeyd edildi",
   "Product is working now": "Məhsul işlək kimi qeyd edildi",
   "Product is not working": "Məhsul nasaz kimi qeyd edildi",
   "Notes updated": "Qeydlər yeniləndi",
@@ -1180,10 +1180,10 @@
   "The route record and its photos are removed for good. The product stays where it is now. This cannot be undone.": "Marşrut qeydi və onun şəkilləri birdəfəlik silinəcək. Məhsul hazırda olduğu yerdə qalacaq. Bu əməliyyatı geri qaytarmaq mümkün deyil.",
   "The route was deleted permanently.": "Marşrut birdəfəlik silindi.",
   "Only a completed route can be deleted permanently. Delete a pending transfer instead.": "Birdəfəlik yalnız tamamlanmış marşrutu silmək olar. Gözləmədə olan transferi adi qaydada silin.",
-  "In place": "Yerindədir",
-  "Missing": "İtkin",
+  "Present": "Mövcuddur",
+  "Not present": "Mövcud deyil",
   "Presence": "Mövcudluq",
-  "{0} missing": "{0} itkin",
-  "{0} in place · {1} missing": "{0} yerindədir · {1} itkin",
-  "Switch off when the item cannot be found. It stays in the lists and the history, and the Word export lists it as missing.": "Avadanlıq tapılmırsa söndürün. O, siyahılarda və tarixçədə qalır, Word ixracında isə itkin kimi göstərilir."
+  "{0} not present": "{0} mövcud deyil",
+  "{0} present · {1} not present": "{0} mövcuddur · {1} mövcud deyil",
+  "Switch off when the item is not there. It stays in the lists and the history, and the Word export lists it separately.": "Avadanlıq mövcud deyilsə söndürün. O, siyahılarda və tarixçədə qalır, Word ixracında isə ayrıca göstərilir."
 }

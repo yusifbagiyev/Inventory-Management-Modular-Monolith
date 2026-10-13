@@ -721,8 +721,8 @@
   "Destination: {0} -> department #{1}": "Назначение: {0} → отдел #{1}",
   "Product is new now": "Товар отмечен как новый",
   "Product's status changed to old": "Товар отмечен как б/у",
-  "Product is active now": "Товар отмечен как находящийся на месте",
-  "Product is not available": "Товар отмечен как утерянный",
+  "Product is active now": "Товар отмечен как имеющийся в наличии",
+  "Product is not available": "Товар отмечен как отсутствующий",
   "Product is working now": "Товар отмечен как исправный",
   "Product is not working": "Товар отмечен как неисправный",
   "Notes updated": "Примечания обновлены",
@@ -1180,10 +1180,10 @@
   "The route record and its photos are removed for good. The product stays where it is now. This cannot be undone.": "Запись маршрута и её фотографии будут удалены навсегда. Товар останется там, где он находится сейчас. Это действие нельзя отменить.",
   "The route was deleted permanently.": "Маршрут удалён навсегда.",
   "Only a completed route can be deleted permanently. Delete a pending transfer instead.": "Навсегда можно удалить только завершённый маршрут. Ожидающее перемещение удалите обычным способом.",
-  "In place": "На месте",
-  "Missing": "Утерян",
+  "Present": "В наличии",
+  "Not present": "Нет в наличии",
   "Presence": "Наличие",
-  "{0} missing": "{0} утеряно",
-  "{0} in place · {1} missing": "{0} на месте · {1} утеряно",
-  "Switch off when the item cannot be found. It stays in the lists and the history, and the Word export lists it as missing.": "Выключите, если оборудование не удаётся найти. Оно остаётся в списках и истории, а в экспорте Word указывается как утерянное."
+  "{0} not present": "{0} нет в наличии",
+  "{0} present · {1} not present": "{0} в наличии · {1} нет в наличии",
+  "Switch off when the item is not there. It stays in the lists and the history, and the Word export lists it separately.": "Выключите, если оборудования нет на месте. Оно остаётся в списках и истории, а в экспорте Word указывается отдельно."
 }

@@ -145,7 +145,7 @@ namespace InventoryManagement.Web.Controllers
             if (department == null)
                 return RedirectToNotFound();
 
-            // Missing items are the department's too, and the document lists them under their own heading
+            // Items that are not there are the department's too, and the document lists them under their own heading
             var products = await GetDepartmentProducts(id);
             var exportedByFullName = $"{User.FindFirst("FirstName")?.Value} {User.FindFirst("LastName")?.Value}".Trim();
 

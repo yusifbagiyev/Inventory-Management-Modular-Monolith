@@ -307,7 +307,7 @@ namespace InventoryManagement.Web.Services
             headerRow.Append(CreateHeaderCell("İnventar kodu", ColumnWidths[4]));
             table.Append(headerRow);
 
-            // Items that cannot be found are still the department's, so they follow the rest under their own heading
+            // Items that are not there are still the department's, so they follow the rest under their own heading
             var inPlace = products.Where(p => p.IsActive).OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode).ToList();
             var missing = products.Where(p => !p.IsActive).OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode).ToList();
 
@@ -316,14 +316,14 @@ namespace InventoryManagement.Web.Services
 
             if (missing.Count > 0)
             {
-                table.Append(CreateBandRow("İtkin avadanlıq"));
+                table.Append(CreateBandRow("Mövcud olmayan avadanlıq"));
                 foreach (var product in missing)
                     table.Append(CreateProductRow(product));
             }
 
             table.Append(CreateTotalRow("Cəmi:", inPlace.Count));
             if (missing.Count > 0)
-                table.Append(CreateTotalRow("İtkin:", missing.Count));
+                table.Append(CreateTotalRow("Mövcud deyil:", missing.Count));
 
             body.Append(table);
         }

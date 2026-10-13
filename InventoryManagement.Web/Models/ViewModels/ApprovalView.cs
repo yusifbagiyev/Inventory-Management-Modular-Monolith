@@ -39,8 +39,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         {
             ["Product is working now"] = new("Working state", "Not working", "Working", true),
             ["Product is not working"] = new("Working state", "Working", "Not working", true),
-            ["Product is active now"] = new("Presence", "Missing", "In place", true),
-            ["Product is not available"] = new("Presence", "In place", "Missing", true),
+            ["Product is active now"] = new("Presence", "Not present", "Present", true),
+            ["Product is not available"] = new("Presence", "Present", "Not present", true),
             ["Product is new now"] = new("Condition", "Used", "New", true),
             ["Product's status changed to old"] = new("Condition", "New", "Used", true),
         };
@@ -84,7 +84,7 @@ namespace InventoryManagement.Web.Models.ViewModels
             Add(view, "Color", null, Str(d, "color"));
             Add(view, "Specifications", null, SpecificationText(d));
             view.Changes.Add(new("Working state", null, Bool(d, "isWorking", true) ? "Working" : "Not working", true));
-            view.Changes.Add(new("Presence", null, Bool(d, "isActive", true) ? "In place" : "Missing", true));
+            view.Changes.Add(new("Presence", null, Bool(d, "isActive", true) ? "Present" : "Not present", true));
             if (Bool(d, "isNewItem", false))
                 view.Changes.Add(new("Condition", null, "New", true));
             return view;

@@ -318,8 +318,8 @@
                                                             @foreach (var change in shownChanges)
                                                             {
                                                                 <div>
-                                                                    @* A product's IsActive says whether the item can be found, which "Is Active" does not tell *@
-                                                                    <dt title="@change.Field">@L[entry.EntityType == "Product" && change.Field == "IsActive" ? "In place" : FieldLabel(change.Field)]</dt>
+                                                                    @* A product's IsActive says whether the item is there, which "Is Active" does not tell *@
+                                                                    <dt title="@change.Field">@L[entry.EntityType == "Product" && change.Field == "IsActive" ? "Present" : FieldLabel(change.Field)]</dt>
                                                                     <dd>
                                                                         @if (entry.Operation == "Updated")
                                                                         {
