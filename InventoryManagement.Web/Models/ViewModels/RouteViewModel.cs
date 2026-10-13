@@ -9,7 +9,8 @@ namespace InventoryManagement.Web.Models.ViewModels
         public int Id { get; set; }
         public string RouteTypeName { get; set; } = string.Empty;
         /// <summary>English text key for the route type.</summary>
-        public string RouteTypeLabel => RouteTypeName == "CodeChange" ? "Code change" : RouteTypeName;
+        // A product that entered the inventory second-hand is shown as Used, the word its condition has on the product pages
+        public string RouteTypeLabel => RouteTypeName switch { "CodeChange" => "Code change", "Existing" => "Used", _ => RouteTypeName };
         public int ProductId { get; set; }
         public int InventoryCode { get; set; }
         public string Model { get; set; } = string.Empty;

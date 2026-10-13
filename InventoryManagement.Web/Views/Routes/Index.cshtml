@@ -12,7 +12,7 @@
     string[] QueryValues(string key) => Context.Request.Query[key].Where(v => !string.IsNullOrEmpty(v)).Select(v => v!).ToArray();
     var curCategories = QueryValues("categoryName");
     var curRouteTypes = QueryValues("routeType");
-    var routeTypes = new[] { ("New", "New"), ("Existing", "Existing"), ("Update", "Update"), ("CodeChange", "Code change"), ("Transfer", "Transfer"), ("Removal", "Removal") };
+    var routeTypes = new[] { ("New", "New"), ("Existing", "Used"), ("Update", "Update"), ("CodeChange", "Code change"), ("Transfer", "Transfer"), ("Removal", "Removal") };
 
     // Department and category choices are the names stored on routes, plus any chosen one the lists no longer hold
     string NameOptions(IEnumerable<string?> names, string[] chosen) => Json.Serialize(names
