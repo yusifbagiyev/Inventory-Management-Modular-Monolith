@@ -657,6 +657,8 @@ table.dataTable th.dt-type-numeric, table.dataTable td.dt-type-numeric { text-al
 
 /* Centers the icon in links too, with :where() keeping specificity low so [hidden] and d-none still win */
 :where(.ip-btn-icon) { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 1; text-decoration: none; cursor: pointer; }
+/* The underline of a hovered link is for text links, not for links drawn as buttons or holding only a photo */
+a:is(.ip-btn-icon, .ip-back, .ip-skip):hover, .ip-audit-thumbs a:hover { text-decoration: none; }
 
 /* Resizing stops at about three lines and at 60% of the screen */
 .ip-textarea { min-height: 88px; max-height: 60vh; }
