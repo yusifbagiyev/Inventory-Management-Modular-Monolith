@@ -307,44 +307,80 @@ namespace InventoryManagement.Web.Services
             headerRow.Append(CreateHeaderCell("İnventar kodu", ColumnWidths[4]));
             table.Append(headerRow);
 
-            var sortedProducts = products
-                .OrderBy(p => p.CategoryName)
-                .ThenBy(p => p.InventoryCode)
-                .ToList();
+            // Items that cannot be found are still the department's, so they follow the rest under their own heading
+            var inPlace = products.Where(p => p.IsActive).OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode).ToList();
+            var missing = products.Where(p => !p.IsActive).OrderBy(p => p.CategoryName).ThenBy(p => p.InventoryCode).ToList();
 
-            foreach (var product in sortedProducts)
+            foreach (var product in inPlace)
+                table.Append(CreateProductRow(product));
+
+            if (missing.Count > 0)
             {
-                var dataRow = new TableRow();
-
-                dataRow.Append(CreateCenteredDataCell(product.CategoryName ?? "N/A"));
-                dataRow.Append(CreateCenteredDataCell(product.Vendor ?? "N/A"));
-                dataRow.Append(CreateCenteredDataCell(product.Model ?? "N/A"));
-                // An unassigned product gets a blank cell, the same as in the PDF export
-                dataRow.Append(CreateCenteredDataCell(
-                    string.IsNullOrWhiteSpace(product.Worker) ? string.Empty : product.Worker));
-                dataRow.Append(CreateCenteredDataCell(product.InventoryCode.ToString()));
-
-                table.Append(dataRow);
+                table.Append(CreateBandRow("İtkin avadanlıq"));
+                foreach (var product in missing)
+                    table.Append(CreateProductRow(product));
             }
 
-            var totalRow = new TableRow();
+            table.Append(CreateTotalRow("Cəmi:", inPlace.Count));
+            if (missing.Count > 0)
+                table.Append(CreateTotalRow("İtkin:", missing.Count));
 
-            var totalLabelCell = new TableCell();
-            var totalLabelCellProp = new TableCellProperties();
+            body.Append(table);
+        }
+
+        private TableRow CreateProductRow(ProductViewModel product)
+        {
+            var row = new TableRow();
+            row.Append(CreateCenteredDataCell(product.CategoryName ?? "N/A"));
+            row.Append(CreateCenteredDataCell(product.Vendor ?? "N/A"));
+            row.Append(CreateCenteredDataCell(product.Model ?? "N/A"));
+            // An unassigned product gets a blank cell, the same as in the PDF export
+            row.Append(CreateCenteredDataCell(string.IsNullOrWhiteSpace(product.Worker) ? string.Empty : product.Worker));
+            row.Append(CreateCenteredDataCell(product.InventoryCode.ToString()));
+            return row;
+        }
+
+        /// <summary>A shaded row across the whole table that names the rows under it.</summary>
+        private TableRow CreateBandRow(string text)
+        {
+            var cell = new TableCell();
+            var cellProp = new TableCellProperties();
+            cellProp.Append(new TableCellWidth { Width = ColumnWidths.Sum().ToString(), Type = TableWidthUnitValues.Dxa });
+            cellProp.Append(new GridSpan { Val = ColumnWidths.Length });
+            cellProp.Append(new Shading { Val = ShadingPatternValues.Clear, Fill = "D9D9D9" });
+            cellProp.Append(new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center });
+            cell.Append(cellProp);
+
+            var para = new Paragraph();
+            var paraProp = new ParagraphProperties();
+            paraProp.Append(new Justification { Val = JustificationValues.Left });
+            para.Append(paraProp);
+            para.Append(CreateTextRun(text, 20, true, true));
+            cell.Append(para);
+
+            var row = new TableRow();
+            row.Append(cell);
+            return row;
+        }
+
+        private TableRow CreateTotalRow(string label, int count)
+        {
+            var row = new TableRow();
+
+            var labelCell = new TableCell();
+            var labelCellProp = new TableCellProperties();
             // Spans all but the last column so the count lines up under the inventory code header
-            totalLabelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
-            totalLabelCellProp.Append(new GridSpan { Val = 4 });
-            totalLabelCell.Append(totalLabelCellProp);
+            labelCellProp.Append(new TableCellWidth { Width = "7500", Type = TableWidthUnitValues.Dxa });
+            labelCellProp.Append(new GridSpan { Val = 4 });
+            labelCell.Append(labelCellProp);
 
-            var totalLabelPara = new Paragraph();
-            var totalLabelParaProp = new ParagraphProperties();
-            totalLabelParaProp.Append(new Justification { Val = JustificationValues.Left });
-            totalLabelPara.Append(totalLabelParaProp);
-
-            var totalLabelRun = CreateTextRun("Cəmi:", 22, true, true);
-            totalLabelPara.Append(totalLabelRun);
-            totalLabelCell.Append(totalLabelPara);
-            totalRow.Append(totalLabelCell);
+            var labelPara = new Paragraph();
+            var labelParaProp = new ParagraphProperties();
+            labelParaProp.Append(new Justification { Val = JustificationValues.Left });
+            labelPara.Append(labelParaProp);
+            labelPara.Append(CreateTextRun(label, 22, true, true));
+            labelCell.Append(labelPara);
+            row.Append(labelCell);
 
             var countCell = new TableCell();
             var countCellProp = new TableCellProperties();
@@ -356,14 +392,11 @@ namespace InventoryManagement.Web.Services
             var countParaProp = new ParagraphProperties();
             countParaProp.Append(new Justification { Val = JustificationValues.Center });
             countPara.Append(countParaProp);
-
-            var countRun = CreateTextRun($"{products.Count}", 22, true, true);
-            countPara.Append(countRun);
+            countPara.Append(CreateTextRun(count.ToString(), 22, true, true));
             countCell.Append(countPara);
-            totalRow.Append(countCell);
+            row.Append(countCell);
 
-            table.Append(totalRow);
-            body.Append(table);
+            return row;
         }
 
 

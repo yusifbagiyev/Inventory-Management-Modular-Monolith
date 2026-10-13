@@ -42,7 +42,7 @@
                     {
                         <strong class="ip-found">@L["{0} found", Model.TotalCount]</strong><span> · </span>
                     }
-                    @L.Plural(counts.Total, "{0} product", "{0} products") · @L["{0} active", counts.Active] · @L["{0} not working", counts.NotWorking]
+                    @L.Plural(counts.Total, "{0} product", "{0} products") · @L["{0} missing", counts.Total - counts.Active] · @L["{0} not working", counts.NotWorking]
                 </div>
             }
         </div>
@@ -103,11 +103,11 @@
             </select>
         </label>
         <label class="ip-filter">
-            <span>@L["Availability"]</span>
+            <span>@L["Presence"]</span>
             <select id="availabilityFilter" onchange="applyProductFilters()">
                 <option value="">@L["All"]</option>
-                <option value="true" selected="@(curAvailability == true)">@L["Active"]</option>
-                <option value="false" selected="@(curAvailability == false)">@L["Inactive"]</option>
+                <option value="true" selected="@(curAvailability == true)">@L["In place"]</option>
+                <option value="false" selected="@(curAvailability == false)">@L["Missing"]</option>
             </select>
         </label>
         <label class="ip-filter">
@@ -225,7 +225,7 @@
                                         }
                                         @if (!product.IsActive)
                                         {
-                                            <span class="ip-tag-plain">@L["Inactive"]</span>
+                                            <span class="ip-badge ip-badge-warning">@L["Missing"]</span>
                                         }
                                     </div>
                                 </td>

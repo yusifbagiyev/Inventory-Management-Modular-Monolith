@@ -57,7 +57,7 @@
         <a class="ip-kpi" href="@ProductLink("/Products")">
             <span class="label">@L["Total products"]</span>
             <span class="value">@Model.TotalProducts.ToString("N0")</span>
-            <span class="trend">@L["{0} active · {1} inactive", Model.ActiveProducts.ToString("N0"), Model.InactiveProducts.ToString("N0")]</span>
+            <span class="trend">@L["{0} in place · {1} missing", Model.ActiveProducts.ToString("N0"), Model.InactiveProducts.ToString("N0")]</span>
         </a>
         <a class="ip-kpi" href="@ProductLink("/Products?status=false")">
             <span class="label">@L["Broken devices"]</span>
