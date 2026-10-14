@@ -12,7 +12,7 @@ USER $APP_UID
 WORKDIR /app
 EXPOSE 80
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
