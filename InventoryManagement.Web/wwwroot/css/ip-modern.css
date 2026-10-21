@@ -152,13 +152,18 @@ a.ip-kpi:nth-child(4):not([href]):hover { border-color: var(--ip-ink); }
 .ip-login-hero::after { content: ""; position: absolute; right: -120px; bottom: -160px; width: 560px; height: 560px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,192,0,.22), transparent 60%); }
 .ip-login-hero h1 { margin-top: auto; font-size: 44px; line-height: 1.05; letter-spacing: -.03em; max-width: 520px; text-wrap: pretty; }
 .ip-login-hero p, .ip-login-hero small { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
+.ip-login-hero > * { position: relative; z-index: 1; } /* above the glow */
+.ip-login-hero .brand { display: flex; align-items: center; gap: 10px; }
+.ip-login-hero .ip-logo.brand { color: var(--ip-on-ink); }
+/* the hero carries the brand and the version on wide screens; the head's brand and the footer take over below 1025px */
+@media (min-width: 1025px) { .ip-login-head > .ip-login-brand, .ip-login-foot { display: none; } }
 .ip-login-head, .ip-login-main, .ip-login-foot { grid-column: 2; }
 .ip-login-head { height: 72px; padding: 0 48px; justify-content: flex-end; }
 .ip-login-main { padding: 24px 48px; }
 .ip-account-grid { grid-template-columns: 1fr; gap: 10px; }
 .ip-account { border-radius: 14px; }
 .ip-account .ip-avatar { width: 44px; height: 44px; }
-@media (max-width: 1024px) { .ip-login { grid-template-columns: 1fr; } .ip-login-hero { display: none; } .ip-login-head, .ip-login-main, .ip-login-foot { grid-column: 1; } }
+@media (max-width: 1024px) { .ip-login { grid-template-columns: 1fr; } .ip-login-hero { display: none; } .ip-login-head, .ip-login-main, .ip-login-foot { grid-column: 1; } .ip-login-head { justify-content: space-between; } }
 
 /* ---------- phone: keep the existing responsive layer, soften shapes ---------- */
 @media (max-width: 767px) {
