@@ -95,7 +95,7 @@
         </a>
     </div>
 
-    <div class="row g-5 mt-0" id="dashboardCharts">
+    <div class="row g-4 mt-0" id="dashboardCharts">
         @* The chart, categories and departments all count the period's transfers, so an empty period shows one empty state for them *@
         <div class="@(showAttention ? "col-lg-8" : "col-12")">
             @if (hasTransfers)
@@ -294,8 +294,8 @@
                 data: {
                     labels: data.labels,
                     datasets: [
-                        { label: t('Completed'), data: data.completedData, backgroundColor: v('--ip-chart-1'), borderRadius: 4, maxBarThickness: 64 },
-                        { label: t('Pending'), data: data.pendingData, backgroundColor: v('--ip-chart-pending'), borderRadius: 4, maxBarThickness: 64 }
+                        { label: t('Completed'), data: data.completedData, backgroundColor: v('--ip-chart-1'), borderRadius: 4, barPercentage: .8, categoryPercentage: .7, maxBarThickness: 64 },
+                        { label: t('Pending'), data: data.pendingData, backgroundColor: v('--ip-chart-pending'), borderRadius: 4, barPercentage: .8, categoryPercentage: .7, maxBarThickness: 64 }
                     ]
                 },
                 options: {
@@ -319,7 +319,7 @@
                             stacked: true, grid: { display: false }, border: { color: v('--ip-border-strong') },
                             // Phones show the day number of a day and the first day of a week so the labels fit unrotated
                             ticks: {
-                                autoSkip: true, maxRotation: 0,
+                                autoSkip: true, maxRotation: 0, font: { family: v('--ip-font-num') },
                                 callback: function (value, i) {
                                     if (window.innerWidth >= 768) return this.getLabelForValue(value);
                                     const start = data.bucketStarts[i], end = data.bucketEnds[i];
@@ -330,7 +330,7 @@
                                 }
                             }
                         },
-                        y: { stacked: true, beginAtZero: true, grid: { color: v('--ip-border') }, border: { display: false }, ticks: { precision: 0 } }
+                        y: { stacked: true, beginAtZero: true, grid: { color: v('--ip-border') }, border: { display: false }, ticks: { precision: 0, font: { family: v('--ip-font-num') } } }
                     },
                     onHover: (event, elements, chart) => pointerOnHover(event, hitSegment(chart, event) ? [1] : []),
                     onClick: function (event, elements, chart) {

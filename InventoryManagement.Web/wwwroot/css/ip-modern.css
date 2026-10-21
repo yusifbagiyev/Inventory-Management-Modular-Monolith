@@ -118,6 +118,9 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 .ip-kpi:nth-child(4) { background: var(--ip-ink); color: var(--ip-on-ink); border-color: var(--ip-ink); } /* "Gözləyən transfer" — the one dark tile */
 .ip-kpi:nth-child(4) .label, .ip-kpi:nth-child(4) .trend { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
 .ip-kpi:nth-child(4) .trend b { color: #E2B45C; }
+/* a tile without a link (no permission for its list) keeps its card edge on hover, not the old top rule */
+a.ip-kpi:not([href]):hover { border-color: var(--ip-card-border); }
+a.ip-kpi:nth-child(4):not([href]):hover { border-color: var(--ip-ink); }
 #dashboardCharts { --bs-gutter-x: 16px; --bs-gutter-y: 16px; margin-top: 16px !important; }
 .ip-list-link { border-top: 0; padding: 12px 14px; border-radius: 12px; }
 .ip-list-link:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
