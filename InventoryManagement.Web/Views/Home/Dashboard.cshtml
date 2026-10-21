@@ -153,14 +153,14 @@
                     <a class="ip-list-link" href="/Approvals">
                         <span>@L["Requests awaiting approval"]</span>
                         <span class="ip-dash-count">
-                            <b class="ip-num fs-6 @(pendingApprovals > 0 ? "ip-status-text warning" : "")">@pendingApprovals</b>
+                            <b class="ip-num @(pendingApprovals > 0 ? "ip-status-text warning" : "")">@pendingApprovals</b>
                             <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                         </span>
                     </a>
                     <a class="ip-list-link" href="@RouteLink("/Routes?isCompleted=false")">
                         <span>@L["Pending transfers"]</span>
                         <span class="ip-dash-count">
-                            <b class="ip-num fs-6 @(openTransfers > 0 ? "ip-status-text warning" : "")">@openTransfers</b>
+                            <b class="ip-num @(openTransfers > 0 ? "ip-status-text warning" : "")">@openTransfers</b>
                             @if (canRoutes)
                             {
                                 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -170,7 +170,7 @@
                     <a class="ip-list-link" href="@ProductLink("/Products?status=false")">
                         <span>@L["Broken devices"]</span>
                         <span class="ip-dash-count">
-                            <b class="ip-num fs-6 @(notWorking > 0 ? "ip-status-text danger" : "")">@notWorking</b>
+                            <b class="ip-num @(notWorking > 0 ? "ip-status-text danger" : "")">@notWorking</b>
                             @if (canProducts)
                             {
                                 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
@@ -258,6 +258,13 @@
 
         window.addEventListener('themechange', function () { destroyCharts(); initializeCharts(); });
         $(initializeCharts);
+
+        // The charts are drawn before the web fonts arrive and Chart.js does not redraw for them, so they are measured again once loaded
+        if (document.fonts?.load) {
+            Promise.all([document.fonts.load('12px "Plus Jakarta Sans"'), document.fonts.load('12px "Space Grotesk"')])
+                .then(() => { transferChart?.update('none'); categoryChart?.update('none'); })
+                .catch(() => { });
+        }
 
         LiveUpdates.watch({
             entities: ['product', 'route', 'category', 'department', 'approval'],
