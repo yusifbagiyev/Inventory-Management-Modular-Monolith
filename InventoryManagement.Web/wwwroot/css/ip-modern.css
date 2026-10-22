@@ -233,6 +233,8 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
 /* ---------- login: split ---------- */
 .ip-login { display: grid; grid-template-columns: minmax(0, 1fr) 560px; grid-template-rows: auto 1fr auto; }
 .ip-login-hero { grid-row: 1 / -1; display: flex; flex-direction: column; gap: 20px; padding: 40px 56px; background: var(--ip-ink); color: var(--ip-on-ink); }
+/* dark theme flips --ip-ink to near-white; the panel stays a dark one there instead of a bright slab beside the dark column */
+[data-bs-theme="dark"] .ip-login-hero { --ip-ink: var(--ip-surface); --ip-on-ink: var(--ip-text-1); border-right: 1px solid var(--ip-border); }
 .ip-login-hero h1 { margin-top: auto; font-size: 44px; line-height: 1.05; letter-spacing: -.03em; max-width: 520px; text-wrap: pretty; }
 .ip-login-hero p, .ip-login-hero small { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
 .ip-login-hero .brand { display: flex; align-items: center; gap: 10px; }
