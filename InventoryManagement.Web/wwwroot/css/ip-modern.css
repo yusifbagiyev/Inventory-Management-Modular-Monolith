@@ -33,6 +33,8 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 .ip-rule, .ip-rule-soft { border-top: 1px solid var(--ip-border); }
 .ip-section { border-top: 0; padding: 22px 24px; background: var(--ip-card); border: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg); }
 .ip-main { padding: 0 32px 32px; }
+/* the component layer's 24px sides up to 1200px, so tables keep their room on tablets and small laptops */
+@media (min-width: 768px) and (max-width: 1200px) { .ip-main { padding-left: var(--ip-space-6); padding-right: var(--ip-space-6); } }
 @media (min-width: 768px) { .ip-page-head { margin: 28px 0 20px; } }
 
 /* ---------- rail: light surface, ink active pill ---------- */
@@ -80,6 +82,7 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 
 /* ---------- toolbar ---------- */
 .ip-toolbar { height: 73px; margin: 0 -32px 0; padding: 0 32px; border-bottom: 1px solid var(--ip-border); justify-content: flex-start; }
+@media (min-width: 768px) and (max-width: 1200px) { .ip-toolbar { margin: 0 calc(-1 * var(--ip-space-6)); padding: 0 var(--ip-space-6); } } /* follows the page's 24px sides */
 .ip-toolbar > .dropdown, .ip-toolbar > .ip-seg, .ip-toolbar > [data-theme-toggle] { margin-left: 8px; }
 .ip-toolbar > .ip-seg { margin-left: auto; flex: none; } /* the switch clips its buttons, so it must not shrink */
 .ip-toolbar-search { width: 420px; height: 40px; border-radius: 12px; background: var(--ip-surface); border-color: var(--ip-border); }
@@ -141,16 +144,21 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 /* the sticky actions column matches its row */
 .ip-table th.actions-column { background: var(--ip-card-head); }
 .ip-table tbody tr:hover > td.actions { background: var(--ip-surface-2); }
-/* the component layer narrows the cells when the table's container is narrow; the padding above would undo that and make tables scroll sideways at 1366-1440 */
+/* narrower cells as the table's container narrows, as the component layer does, but from 1400px: Plus Jakarta Sans and
+   Space Grotesk set wider than Segoe UI, and the padding above would make lists scroll sideways on 1280-1440 laptops */
+@container (max-width: 1399.98px) {
+  .ip-table th, .ip-table td { padding-left: 9px; padding-right: 9px; }
+  .ip-table th:first-child, .ip-table td:first-child { padding-left: 14px; }
+  .ip-table th:last-child, .ip-table td:last-child { padding-right: 14px; }
+}
 @container (max-width: 1119.98px) {
-  .ip-table th, .ip-table td { padding-left: 10px; padding-right: 10px; }
-  .ip-table th:first-child, .ip-table td:first-child { padding-left: 16px; }
-  .ip-table th:last-child, .ip-table td:last-child { padding-right: 16px; }
+  .ip-table th, .ip-table td { padding-left: 8px; padding-right: 8px; }
+  .ip-table th:first-child, .ip-table td:first-child { padding-left: 10px; }
+  .ip-table th:last-child, .ip-table td:last-child { padding-right: 10px; }
 }
 @container (max-width: 999.98px) {
-  .ip-table th, .ip-table td { padding-left: 8px; padding-right: 8px; }
-  .ip-table th:first-child, .ip-table td:first-child { padding-left: 12px; }
-  .ip-table th:last-child, .ip-table td:last-child { padding-right: 12px; }
+  .ip-table th, .ip-table td, .ip-table th:first-child, .ip-table td:first-child, .ip-table th:last-child, .ip-table td:last-child { padding-left: 6px; padding-right: 6px; }
+  .ip-table th { font-weight: 500; }
 }
 .ip-table tr.ip-colfilter-empty td { padding: 32px 0; } /* the column filters' "no match" row keeps its spacing over the cell padding above */
 /* the foot closes the table card on tablet and desktop; phones keep the component layer's fixed pager bar */
