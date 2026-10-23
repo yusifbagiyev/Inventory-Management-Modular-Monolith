@@ -17,7 +17,7 @@
 
 /* Typography and page header */
 .ip-main > .container-fluid { padding-left: 0 !important; padding-right: 0 !important; max-width: none; }
-h1 { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+h1 { font-size: 30px; line-height: 34px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
 .ip-page-head .ip-sub { font-size: var(--ip-fs-base); }
 .ip-page-actions { display: flex; gap: var(--ip-space-2); flex-wrap: wrap; align-items: center; }
 

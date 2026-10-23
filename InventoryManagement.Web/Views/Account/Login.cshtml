@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true">
     <link rel="stylesheet" href="~/css/ip-components.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/ip-modern.css" asp-append-version="true">
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--ip-bg); }
@@ -46,8 +47,18 @@
 </head>
 <body>
     <div class="ip-login">
+        @* Wide screens only. No figures here: the page is public, so it says nothing about the inventory *@
+        <aside class="ip-login-hero">
+            <div class="brand">
+                <span class="ip-logo brand" aria-hidden="true"><partial name="_BrandMark" /></span>
+                <strong class="ip-rail-name">@L["166 Inventory"]<small>@L["IT department"]</small></strong>
+            </div>
+            <h1>@L["Every device, its place and its owner on one screen."]</h1>
+            <small><span class="ip-num">@(version.Length > 0 ? "v" + version + " · " : "")</span>© @DateTime.Now.Year @L["IT department"]</small>
+        </aside>
         <header class="ip-login-head">
-            <div>
+            @* Shown where the hero is hidden *@
+            <div class="ip-login-brand">
                 <span class="ip-logo brand" aria-hidden="true"><partial name="_BrandMark" /></span>
                 <strong class="ip-rail-name">@L["166 Inventory"]<small>@L["IT department"]</small></strong>
             </div>

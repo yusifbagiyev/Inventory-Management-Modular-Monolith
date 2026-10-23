@@ -1,0 +1,281 @@
+/* "Modern UI" override layer.
+   Load AFTER ip-components.css and BEFORE site.css. Same class names, no markup contract changes.
+   The component layer reshapes many components inside @media/@container blocks. A rule here wins there too
+   (same specificity, later file), so desktop shapes are scoped to >=768px or put back in the phone block at the end. */
+
+/* ---------- fonts (self-hosted, OFL, licences beside them in /fonts) ----------
+   Plus Jakarta Sans for text: it has ə/Ə, which Figtree lacks. */
+@font-face { font-family: "Plus Jakarta Sans"; src: url("../fonts/PlusJakartaSans-Variable.woff2") format("woff2"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("../fonts/SpaceGrotesk-Variable.woff2") format("woff2"); font-weight: 300 700; font-display: swap; }
+
+:root, [data-bs-theme="light"] {
+  --ip-font-sans: "Plus Jakarta Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --ip-font-num: "Space Grotesk", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; /* figures, codes, dates; no monospace fallback, so words in these lines never turn into a code font */
+  --ip-font-mono: var(--ip-font-num);
+  --ip-radius-sm: 8px; --ip-radius-md: 12px; --ip-radius-lg: 16px; --ip-radius-xl: 20px;
+  --ip-control-md: 40px;
+  --ip-ink: #1B1C1E;        /* active nav, selected segment, active page */
+  --ip-on-ink: #FFFFFF;
+  --ip-card: var(--ip-surface);
+  --ip-card-border: var(--ip-border);
+  --ip-card-head: var(--ip-surface-2);
+}
+[data-bs-theme="dark"] { --ip-ink: #ECECE9; --ip-on-ink: #121314; }
+/* neither font has Cyrillic, so Russian uses the system face throughout instead of two faces per word */
+:root:lang(ru), :lang(ru) [data-bs-theme] { --ip-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; --ip-font-num: var(--ip-font-sans); }
+
+/* ---------- base ---------- */
+body { background: var(--ip-bg); }
+h1, .ip-h1 { font-size: 30px; line-height: 34px; font-weight: 700; letter-spacing: -.02em; }
+h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.ip-num, .ip-mono, .ip-kpi .value, .ip-table .code, .ip-table .date, .ip-rail-count, .ip-pagination a, .ip-pagination span, .ip-tab .count, .ip-stat-value { font-family: var(--ip-font-num); font-variant-numeric: tabular-nums; }
+/* the 2px modernist rules become card edges */
+.ip-rule, .ip-rule-soft { border-top: 1px solid var(--ip-border); }
+.ip-section { border-top: 0; padding: 22px 24px; background: var(--ip-card); border: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg); }
+.ip-main { padding: 0 32px 32px; }
+@media (min-width: 768px) { .ip-page-head { margin: 28px 0 20px; } }
+
+/* ---------- rail: light surface, ink active pill ---------- */
+.ip-rail { background: var(--ip-surface); border-right: 1px solid var(--ip-border); width: 248px; } /* follows the page theme */
+.ip-rail-brand { height: 76px; padding: 0 20px; }
+.ip-logo { width: 36px; height: 36px; border-radius: 10px; }
+.ip-rail-nav { padding: 4px 14px; gap: 12px; }
+.ip-rail-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 8px 12px 6px; }
+.ip-rail-link { height: 44px; border-radius: 12px; color: var(--ip-text-1); font-weight: 500; }
+.ip-rail-link i { font-size: 15px; }
+.ip-rail-link:hover { background: var(--ip-surface-hover); }
+.ip-rail-link.active { background: var(--ip-ink); color: var(--ip-on-ink); font-weight: 600; }
+.ip-rail-link.active .ip-rail-count:not(.alert) { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); } /* the component's colour was for a light active row */
+.ip-rail-count.is-alert, .ip-rail-count.alert { min-width: 24px; height: 22px; padding: 0 8px; border-radius: 999px; font-weight: 600; line-height: 22px; background: var(--ip-accent-soft); color: var(--ip-accent-text); }
+#sidebarPendingCount.is-alert { background: var(--ip-warning-soft); color: var(--ip-warning-text); }
+/* soft pills vanish on the ink pill (in dark mode most), so the active row's pill is inverted */
+.ip-rail-link.active .ip-rail-count.is-alert, .ip-rail-link.active #sidebarPendingCount.is-alert { background: var(--ip-on-ink); color: var(--ip-ink); }
+.ip-rail-foot { border-top: 0; padding: 14px; }
+.ip-rail-account { display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 14px; background: var(--ip-bg); }
+.ip-rail-account .ip-rail-user:hover { background: var(--ip-surface-active); } /* surface-hover is almost the tile's own colour */
+.ip-avatar { width: 36px; height: 36px; background: var(--ip-accent); color: var(--ip-on-accent); }
+.ip-rail.collapsed { width: 76px; }
+/* collapsed: the component's dot, drawn only while a count is shown, becomes the 8px dot; approvals take the warning colour */
+.ip-rail.collapsed .ip-rail-link:has(.ip-rail-count.is-alert:not(:empty):not([style*="none"]))::after { top: 8px; right: 8px; width: 8px; height: 8px; }
+.ip-rail.collapsed .ip-rail-link:has(#sidebarPendingCount:not(:empty):not([style*="none"]))::after { background: var(--ip-warning-solid); }
+.ip-rail.collapsed .ip-rail-account { padding: 0; background: transparent; }
+.ip-rail.collapsed .ip-rail-user { justify-content: center; padding: 5px; }
+.ip-rail.collapsed .ip-rail-group + .ip-rail-group { border-top: 0; padding-top: 0; }
+.ip-rail.collapsed .ip-rail-group + .ip-rail-group::before { content: ""; display: block; width: 28px; height: 1px; margin: 6px auto 10px; background: var(--ip-border); }
+/* the full-size menu needs ~880px of height; shorter windows get compact rows so nothing scrolls out of sight. Phones keep their touch-size drawer rows */
+@media (min-width: 768px) and (max-height: 880px) {
+  .ip-rail-brand { height: 64px; }
+  .ip-rail-link { height: 38px; }
+  .ip-rail-nav { gap: 6px; }
+  .ip-rail-title { padding-top: 4px; }
+}
+/* 1366x768 laptops leave a ~650px viewport: the component layer's tightest rail, which the rules above would undo */
+@media (min-width: 768px) and (max-height: 720px) {
+  .ip-rail-brand { height: 52px; }
+  .ip-rail-link { height: 32px; }
+  .ip-rail-nav { gap: 4px; }
+  .ip-rail-title { padding: 2px 12px 4px; }
+  .ip-rail-foot { padding: 10px; }
+}
+
+/* ---------- toolbar ---------- */
+.ip-toolbar { height: 73px; margin: 0 -32px 0; padding: 0 32px; border-bottom: 1px solid var(--ip-border); justify-content: flex-start; }
+.ip-toolbar > .dropdown, .ip-toolbar > .ip-seg, .ip-toolbar > [data-theme-toggle] { margin-left: 8px; }
+.ip-toolbar > .ip-seg { margin-left: auto; flex: none; } /* the switch clips its buttons, so it must not shrink */
+.ip-toolbar-search { width: 420px; height: 40px; border-radius: 12px; background: var(--ip-surface); border-color: var(--ip-border); }
+@media (min-width: 768px) and (max-width: 1024px) { .ip-toolbar-search { width: 240px; } }
+.ip-seg { background: var(--ip-surface); border: 1px solid var(--ip-border); padding: 3px; border-radius: 10px; gap: 0; }
+.ip-seg > * { height: 30px; border-radius: 7px; }
+.ip-seg > .active { background: var(--ip-ink); color: var(--ip-on-ink); }
+.ip-seg.ip-seg-sm { background: var(--ip-sunken); } /* the permission editor's track, so a chosen "No" still stands out */
+.ip-btn-icon.lg { width: 40px; height: 40px; border-radius: 10px; background: var(--ip-surface); border: 1px solid var(--ip-border); }
+.ip-btn-icon.lg:hover { background: var(--ip-surface-hover); border-color: var(--ip-border-strong); }
+.ip-dot { background: var(--ip-danger-solid); }
+
+/* ---------- buttons / fields ---------- */
+.ip-btn { border-radius: 12px; justify-content: center; gap: 8px; }
+.ip-btn-primary { min-width: 0; box-shadow: 0 1px 2px color-mix(in srgb, var(--ip-accent) 30%, transparent); }
+.ip-btn-secondary { border-color: var(--ip-border); font-weight: 600; }
+.ip-btn-ghost { font-weight: 600; }
+.ip-btn-ghost.is-on { background: var(--ip-ink); color: var(--ip-on-ink); }
+.ip-input, .ip-select, .ip-textarea, .form-control, .form-select { border-radius: 12px; border-color: var(--ip-border); }
+.ip-field > label, .ip-label, .image-manager .form-label { font-size: 13px; color: var(--ip-text-2); }
+.ip-switch { width: 44px; height: 26px; border-radius: 13px; }
+.ip-switch::after { width: 20px; height: 20px; } .ip-switch:checked::after { left: 21px; }
+
+/* ---------- filter bar → chips ---------- */
+.ip-filterbar { border: 0; padding: 0 0 20px; gap: 8px; }
+.ip-filter { height: 40px; border-radius: 12px; background: var(--ip-surface); border: 1px solid var(--ip-border); color: var(--ip-text-2); font-size: 13px; font-weight: 500; }
+@media (min-width: 768px) { .ip-filter.search { flex: 0 1 360px; } }
+/* a chip holding a chosen value flips to ink: a select with an "All" option set to something else (rows per page and sort have none), or a chosen date range */
+.ip-filter:has(select > option[value=""]:not(:checked)), .ip-filter:has(input.date-range-input:not(:placeholder-shown)) { background: var(--ip-ink); color: var(--ip-on-ink); border-color: var(--ip-ink); }
+.ip-filter:has(select > option[value=""]:not(:checked)) select, .ip-filter:has(input.date-range-input:not(:placeholder-shown)) input { color: var(--ip-on-ink); font-weight: 700; }
+/* the ink border hides the component's focus border, so the chip takes the global focus ring */
+.ip-filter:has(select:focus-visible, input:focus-visible) { outline: 2px solid var(--ip-accent); outline-offset: 2px; }
+.ip-filter-more { background: var(--ip-surface); border: 1px solid var(--ip-border); border-radius: 12px; }
+.ip-filter-more:hover { background: var(--ip-surface-hover); }
+.ip-filterbar .ip-btn-ghost[data-flag] { height: 40px; border-radius: 999px; border: 1px dashed var(--ip-border-strong); font-weight: 500; font-size: 13px; }
+.ip-filterbar .ip-btn-ghost[data-flag].is-on { border-style: solid; }
+
+/* ---------- tabs → segmented pill ---------- */
+/* max-width keeps the phone row scrolling inside the column (the component layer's overflow-x) */
+.ip-tabs, .ip-tabs.strong, .ip-tabs.ink { display: inline-flex; max-width: 100%; gap: 0; padding: 4px; border: 1px solid var(--ip-border) !important; border-radius: 12px; background: var(--ip-surface); }
+.ip-tab { height: 32px; padding: 0 14px; margin: 0 !important; border: 0 !important; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--ip-text-3); }
+@media (pointer: coarse), (max-width: 767.98px) { .ip-tab { height: 40px; } }
+.ip-tab.active { background: var(--ip-ink); color: var(--ip-on-ink); }
+.ip-tab.active .count, .ip-tab.active .count.warning { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
+.container-fluid > .ip-tabs { margin-bottom: var(--ip-space-4); }
+/* Notifications: the pill hugs its two tabs and the old rule under the bar goes; phones split the row between them */
+.ip-notif-bar > .ip-tabs { flex: 0 0 auto; margin-right: auto; }
+@media (min-width: 576px) { .ip-notif-bar { border-bottom: 0; align-items: center; } .ip-notif-bar > .ip-filter { margin-bottom: 0; } }
+@media (max-width: 575.98px) { .ip-notif-bar > .ip-tabs { flex: 1 1 100%; } .ip-notif-bar > .ip-tabs > .ip-tab { flex: 1 1 0; justify-content: center; } }
+
+/* ---------- table → card ---------- */
+.ip-table-wrap { background: var(--ip-card); border: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg); }
+.ip-table th { padding: 12px 16px; font-weight: 600; background: var(--ip-card-head); border-bottom: 1px solid var(--ip-border); }
+.ip-table th:first-child, .ip-table td:first-child { padding-left: 20px; }
+.ip-table th:last-child, .ip-table td:last-child { padding-right: 20px; }
+.ip-table td { padding: 10px 16px; border-top: 1px solid var(--ip-surface-active); }
+.ip-table tbody tr:first-child td { border-top: 0; }
+.ip-table tbody tr:hover { background: var(--ip-surface-2); }
+/* the sticky actions column matches its row */
+.ip-table th.actions-column { background: var(--ip-card-head); }
+.ip-table tbody tr:hover > td.actions { background: var(--ip-surface-2); }
+/* the component layer narrows the cells when the table's container is narrow; the padding above would undo that and make tables scroll sideways at 1366-1440 */
+@container (max-width: 1119.98px) {
+  .ip-table th, .ip-table td { padding-left: 10px; padding-right: 10px; }
+  .ip-table th:first-child, .ip-table td:first-child { padding-left: 16px; }
+  .ip-table th:last-child, .ip-table td:last-child { padding-right: 16px; }
+}
+@container (max-width: 999.98px) {
+  .ip-table th, .ip-table td { padding-left: 8px; padding-right: 8px; }
+  .ip-table th:first-child, .ip-table td:first-child { padding-left: 12px; }
+  .ip-table th:last-child, .ip-table td:last-child { padding-right: 12px; }
+}
+.ip-table tr.ip-colfilter-empty td { padding: 32px 0; } /* the column filters' "no match" row keeps its spacing over the cell padding above */
+/* the foot closes the table card on tablet and desktop; phones keep the component layer's fixed pager bar */
+@media (min-width: 768px) {
+  .ip-table-wrap + .ip-table-foot { margin-top: -1px; padding: 12px 20px; border: 1px solid var(--ip-card-border); border-top: 1px solid var(--ip-border); border-radius: 0 0 var(--ip-radius-lg) var(--ip-radius-lg); background: var(--ip-card-head); }
+  .ip-table-wrap:has(+ .ip-table-foot) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .ip-notif-day ~ .ip-table-foot { border-top: 0; }
+  .ip-pagination a, .ip-pagination span { min-width: 32px; height: 32px; }
+}
+.ip-pagination a, .ip-pagination span { border-radius: 8px; font-weight: 600; }
+.ip-pagination .active > * { background: var(--ip-ink); color: var(--ip-on-ink); }
+.ip-thumb { border-radius: 10px; }
+/* a table inside a card section runs to the card's edges instead of drawing a second card */
+@media (min-width: 768px) {
+  .ip-section > .ip-table-wrap:last-child { margin: 0 -24px -22px; border: 0; border-top: 1px solid var(--ip-border); border-radius: 0 0 15px 15px; background: transparent; }
+  .ip-section > .ip-table-wrap:last-child .ip-table :is(th, td):first-child { padding-left: 24px; }
+  .ip-section > .ip-table-wrap:last-child .ip-table :is(th, td):last-child { padding-right: 24px; }
+}
+.modal-body .ip-table-wrap { border: 0; border-radius: 0; background: transparent; }
+.modal-body .ip-section { border: 0; border-radius: 0; padding: 0; background: transparent; }
+
+/* ---------- badges → pills ---------- */
+.ip-badge { height: 24px; border-radius: 999px; font-weight: 600; }
+.ip-tag-plain { padding: 1px 7px; border-radius: 999px; background: var(--ip-accent-soft); color: var(--ip-accent-text); font-weight: 600; }
+
+/* ---------- dashboard: bento ---------- */
+.ip-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (min-width: 768px) and (max-width: 1024px) { .ip-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.ip-kpi { gap: 12px; padding: 20px 22px; border: 1px solid var(--ip-card-border); border-top: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg); background: var(--ip-card); }
+.ip-kpi:hover { border-color: var(--ip-border-strong); }
+.ip-kpi .label { font-size: 13px; font-weight: 500; }
+.ip-kpi .value { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -.03em; }
+.ip-kpi:nth-child(4) { background: var(--ip-ink); color: var(--ip-on-ink); border-color: var(--ip-ink); } /* "Gözləyən transfer" — the one dark tile */
+.ip-kpi:nth-child(4) .label, .ip-kpi:nth-child(4) .trend { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
+/* a tile without a link (no permission for its list) keeps its card edge on hover, not the old top rule */
+a.ip-kpi:not([href]):hover { border-color: var(--ip-card-border); }
+a.ip-kpi:nth-child(4):not([href]):hover { border-color: var(--ip-ink); }
+#dashboardCharts { --bs-gutter-x: 16px; --bs-gutter-y: 16px; }
+.ip-list-link { border-top: 0; padding: 12px 14px; border-radius: 12px; }
+.ip-list-link:hover { background: var(--ip-surface-hover); color: var(--ip-text-1); }
+.ip-list-link:first-of-type:has(.warning) { background: var(--ip-warning-soft); }
+a.ip-list-link:not([href]):hover { background: transparent; } /* rows the user cannot open */
+a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(in srgb, var(--ip-warning-soft), var(--ip-warning-text) 8%); }
+.ip-dash-count b { font-family: var(--ip-font-num); font-size: 18px; }
+.ip-bar { height: 6px; }
+
+/* ---------- banners, modal, toast, dropdown ---------- */
+.ip-banner { border-radius: 14px; padding: 12px 16px; }
+.ip-modal .modal-content { border-radius: 20px; }
+.ip-modal .modal-header { border-bottom: 1px solid var(--ip-border); }
+.ip-modal .modal-footer { background: var(--ip-surface-2); border-top: 1px solid var(--ip-border); border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
+.ip-diff .new { background: var(--ip-accent-soft); color: var(--ip-accent-text); border-radius: 6px; padding: 3px 8px; }
+.ip-dropdown.dropdown-menu, .ip-toast.toast { border-radius: 16px; }
+.ip-notif-item { border-radius: 0; }
+.ip-notif-icon { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border-radius: 10px; background: var(--ip-surface-hover); color: var(--ip-text-2); }
+.ip-notif-item:hover .ip-notif-icon:not(.ok):not(.bad) { background: var(--ip-surface-active); } /* the row hover uses the tile's colour */
+.ip-notif-item .unread-dot { margin-top: 14px; }        /* level with the 36px icon */
+.ip-notif-item button.unread-dot { margin-top: 2px; }
+.ip-day-head { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ip-text-3); }
+/* each day's notifications on one card, the day above it */
+.ip-notif-day > .ip-day-head { padding: 20px 4px 10px; }
+.ip-notif-day > .ip-notif-item { background: var(--ip-card); border: 1px solid var(--ip-card-border); border-top: 0; padding: 14px 20px; }
+.ip-notif-day > .ip-day-head + .ip-notif-item { border-top: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg) var(--ip-radius-lg) 0 0; }
+.ip-notif-day > .ip-notif-item:last-child { border-radius: 0 0 var(--ip-radius-lg) var(--ip-radius-lg); }
+.ip-notif-day > .ip-day-head + .ip-notif-item:last-child { border-radius: var(--ip-radius-lg); }
+.ip-notif-day > .ip-notif-item:hover { background: var(--ip-surface-2); }
+
+/* ---------- forms ---------- */
+.ip-form-section { padding: 22px 24px; background: var(--ip-card); border: 1px solid var(--ip-card-border); border-radius: var(--ip-radius-lg); }
+.ip-form-section ~ .ip-form-section { margin-top: 16px; }
+.ip-form-section:first-of-type { border-top-color: var(--ip-card-border); }
+#accountPanel[role="tabpanel"] .ip-form-section:first-of-type { border-top: 1px solid var(--ip-card-border); padding-top: 22px; }
+.ip-found-row { border: 0; border-radius: var(--ip-radius-md); background: var(--ip-surface-2); padding: 12px 14px; }
+.ip-form-foot { margin: 0 -32px; padding: 16px 32px; border-top: 1px solid var(--ip-border); background: color-mix(in srgb, var(--ip-bg) 92%, transparent); backdrop-filter: blur(8px); }
+.ip-image-tile, .ip-image-add { border-radius: 12px; }
+.ip-dl > div { padding: 11px 0; border-bottom: 1px solid var(--ip-surface-active); }
+.ip-dl dd { font-weight: 500; }
+.ip-empty { align-items: center; text-align: center; margin: 0 auto; }
+
+/* ---------- login: split ---------- */
+.ip-login { display: grid; grid-template-columns: minmax(0, 1fr) 560px; grid-template-rows: auto 1fr auto; }
+.ip-login-hero { grid-row: 1 / -1; display: flex; flex-direction: column; gap: 20px; padding: 40px 56px; background: var(--ip-ink); color: var(--ip-on-ink); }
+/* dark theme flips --ip-ink to near-white; the panel stays a dark one there instead of a bright slab beside the dark column */
+[data-bs-theme="dark"] .ip-login-hero { --ip-ink: var(--ip-surface); --ip-on-ink: var(--ip-text-1); border-right: 1px solid var(--ip-border); }
+.ip-login-hero h1 { margin-top: auto; font-size: 44px; line-height: 1.05; letter-spacing: -.03em; max-width: 520px; text-wrap: pretty; }
+.ip-login-hero p, .ip-login-hero small { color: color-mix(in srgb, var(--ip-on-ink) 70%, transparent); }
+.ip-login-hero .brand { display: flex; align-items: center; gap: 10px; }
+.ip-login-hero .ip-logo.brand { color: var(--ip-on-ink); }
+.ip-login > .ip-login-head, .ip-login > .ip-login-main, .ip-login > .ip-login-foot { grid-column: 2; }
+/* the hero carries the brand and the version on wide screens; the head's brand and the footer take over below 1025px.
+   Scoped to the sign-in grid: signed-out error pages use the same head */
+@media (min-width: 1025px) {
+  .ip-login-head > .ip-login-brand, .ip-login > .ip-login-foot { display: none; }
+  .ip-login > .ip-login-head { height: 72px; padding: 0 48px; justify-content: flex-end; }
+  .ip-login > .ip-login-main { padding: 24px 48px; }
+}
+.ip-account-grid { grid-template-columns: 1fr; gap: 10px; }
+.ip-account { border-radius: 14px; }
+.ip-account .ip-avatar { width: 44px; height: 44px; }
+@media (max-width: 1024px) { .ip-login { grid-template-columns: 1fr; } .ip-login-hero { display: none; } .ip-login > .ip-login-head, .ip-login > .ip-login-main, .ip-login > .ip-login-foot { grid-column: 1; } }
+
+/* ---------- phone: keep the component layer's responsive shapes, soften them ---------- */
+@media (max-width: 767px) {
+  .ip-main { padding: 0 20px 96px; }
+  .ip-toolbar { display: none; }
+  .ip-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .ip-kpi { padding: 16px; gap: 8px; }
+  .ip-kpi .value { font-size: 30px; line-height: 36px; }
+  .ip-kpi .label { font-size: var(--ip-fs-sm); }
+  .ip-table-wrap { background: transparent; border: 0; }
+  .ip-table tr { background: var(--ip-card); border: 1px solid var(--ip-card-border); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  /* rows are cards here: the cell padding, rules and row hover set above for tables don't apply (as in the component layer) */
+  .ip-table td, .ip-table td:first-child, .ip-table td:last-child { padding: 0; border: 0; }
+  .ip-table td.title { padding-right: 72px; }
+  .catalog-list td.title { padding-right: 0; } /* no code in the corner of department and category cards */
+  .ip-table tbody tr:hover { background: var(--ip-card); }
+  .ip-table td.code { top: 12px; right: 12px; } .ip-table td.date { right: 12px; bottom: 12px; }
+  /* not cards: the empty states and the approval's change list */
+  .ip-table tr.ip-empty-row, .ip-table tr.ip-colfilter-empty { background: transparent; border: 0; border-radius: 0; padding: var(--ip-space-3) 0; margin: 0; }
+  .ip-table tbody tr.ip-colfilter-empty:hover { background: transparent; }
+  .ip-table.ip-diff tbody tr { background: none; border: 0; border-bottom: 1px solid var(--ip-border); border-radius: 0; padding: 10px 6px 10px 0; margin: 0; }
+  .ip-section:has(> .ip-table-wrap) { padding: 0; background: transparent; border: 0; }
+  .ip-form-section { padding: 18px 16px; }
+  .ip-form-foot { margin: 0; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
+  .ip-modal .modal-content { border-radius: 20px 20px 0 0; } /* bottom sheet */
+  .ip-rail-prefs .ip-seg > * { height: 38px; min-width: 44px; justify-content: center; }
+}
+@media (max-width: 767.98px) { .ip-filterbar .ip-filter-toggle { background: var(--ip-surface); border-color: var(--ip-border); border-radius: 12px; } }
