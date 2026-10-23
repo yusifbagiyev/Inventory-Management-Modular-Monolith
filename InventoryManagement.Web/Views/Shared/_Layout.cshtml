@@ -441,6 +441,7 @@
 
         function markAllNotificationsAsRead() {
             const token = $('input[name="__RequestVerificationToken"]').first().val();
+            const $button = $('#markAllAsRead').prop('disabled', true);   // One request at a time
 
             $.ajax({
                 url: '/Notifications/MarkAllAsRead',
@@ -462,6 +463,9 @@
                 error: function(xhr, status, error) {
                     console.error('Failed to mark all as read:', error);
                     showToast(t('Failed to mark notifications as read'), 'error');
+                },
+                complete: function() {
+                    $button.prop('disabled', false);
                 }
             });
         }

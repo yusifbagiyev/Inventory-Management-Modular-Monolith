@@ -71,7 +71,11 @@ namespace InventoryManagement.Web.Controllers
                 if (!SharedServices.Web.UserFacingErrors.IsUserFacing(ex))
                     HttpContext.RequestServices.GetRequiredService<ILogger<BaseController>>()
                         .LogWarning(ex, "Request failed: {Message}", ex.Message);
-                return Failure<T>(Tr(SharedServices.Web.UserFacingErrors.MessageOf(ex)));
+                var failure = Failure<T>(Tr(SharedServices.Web.UserFacingErrors.MessageOf(ex)));
+                // A taken name or code is also shown under its field
+                if (ex is DuplicateEntityException { Field: { } field })
+                    failure.Errors = new Dictionary<string, string[]> { [field] = [failure.Message!] };
+                return failure;
             }
         }
 

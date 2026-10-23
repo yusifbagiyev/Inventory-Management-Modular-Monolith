@@ -15,7 +15,7 @@ namespace ProductService.Application.Features.Lookups
             if (taken != null)
                 throw new DuplicateEntityException(taken.IsActive
                     ? $"A department named '{taken.Name}' already exists"
-                    : $"A department named '{taken.Name}' already exists but is inactive. Activate it or choose another name.");
+                    : $"A department named '{taken.Name}' already exists but is inactive. Activate it or choose another name.", "Name");
         }
 
         public static async Task EnsureNameIsFreeAsync(
@@ -25,7 +25,7 @@ namespace ProductService.Application.Features.Lookups
             if (taken != null)
                 throw new DuplicateEntityException(taken.IsActive
                     ? $"A category named '{taken.Name}' already exists"
-                    : $"A category named '{taken.Name}' already exists but is inactive. Activate it or choose another name.");
+                    : $"A category named '{taken.Name}' already exists but is inactive. Activate it or choose another name.", "Name");
         }
 
         /// <summary>True when the name differs from the stored one by more than the spaces around either of them.</summary>

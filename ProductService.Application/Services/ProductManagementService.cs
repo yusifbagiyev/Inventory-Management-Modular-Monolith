@@ -204,7 +204,7 @@ namespace ProductService.Application.Services
             if (existingProduct != null)
             {
                 _logger.LogWarning($"Attempt to create duplicate product with inventory code {inventoryCode}");
-                throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists");
+                throw new DuplicateEntityException($"Product with inventory code {inventoryCode} already exists", "InventoryCode");
             }
         }
 

@@ -181,6 +181,15 @@
         </footer>
     </div>
 
+    @* The page has no Bootstrap scripts, so its one confirmation is a native dialog styled like the app's *@
+    <dialog class="ip-confirm" id="forgetDialog" aria-labelledby="forgetDialogText">
+        <p id="forgetDialogText"></p>
+        <div class="actions">
+            <button type="button" class="ip-btn ip-btn-secondary" data-dialog-cancel>@L["Cancel"]</button>
+            <button type="button" class="ip-btn ip-btn-danger" data-dialog-ok>@L["Remove"]</button>
+        </div>
+    </dialog>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var toggle = document.getElementById('togglePassword');
@@ -196,11 +205,24 @@
             });
 
             // Removing an account from the list means typing its username again, so a stray tap asks first
+            var forgetDialog = document.getElementById('forgetDialog');
+            var pendingForget = null;
             document.querySelectorAll('.ip-account-forget').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
-                    if (!window.confirm(form.dataset.confirm)) e.preventDefault();
+                    e.preventDefault();
+                    pendingForget = form;
+                    document.getElementById('forgetDialogText').textContent = form.dataset.confirm;
+                    forgetDialog.showModal();
+                    forgetDialog.querySelector('[data-dialog-cancel]').focus();
                 });
             });
+            forgetDialog.querySelector('[data-dialog-cancel]').addEventListener('click', function () { forgetDialog.close(); });
+            forgetDialog.querySelector('[data-dialog-ok]').addEventListener('click', function () {
+                forgetDialog.close();
+                if (pendingForget) pendingForget.submit();   // submit() skips the listener above
+            });
+            // A click on the backdrop dismisses it, as the app's dialogs do
+            forgetDialog.addEventListener('click', function (e) { if (e.target === forgetDialog) forgetDialog.close(); });
 
             // One sign-in per press: a double click would otherwise count twice toward the lockout. Back from the cache it is usable again
             var loginForm = document.querySelector('.ip-login-form');

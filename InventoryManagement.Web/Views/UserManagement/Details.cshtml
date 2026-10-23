@@ -39,10 +39,10 @@
         @* Nobody deletes or deactivates the account they are signed in with *@
         @if (!isOwnAccount)
         {
-        <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" onclick="deleteUser(@Model.Id, this.dataset.name)">
+        <button type="button" class="ip-btn ip-btn-danger-ghost" data-name="@Model.Username" data-delete-user="@Model.Id">
             <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
         </button>
-        <button type="button" class="ip-btn ip-btn-secondary" onclick="toggleUserStatus(@Model.Id, @Model.IsActive.ToString().ToLower())">
+        <button type="button" class="ip-btn ip-btn-secondary" data-toggle-user="@Model.Id" data-active="@(Model.IsActive ? "true" : "false")">
             @if (Model.IsActive)
             {
                 <i class="fa-solid fa-user-slash"></i><span>@L["Deactivate User"]</span>
@@ -101,7 +101,15 @@
 
 @section Scripts {
     <script>
-        function toggleUserStatus(userId, isActive) {
+        // The page's status and delete buttons carry the user's id, state and name
+        document.addEventListener('click', function (e) {
+            const toggle = e.target.closest('[data-toggle-user]');
+            if (toggle) { toggleUserStatus(Number(toggle.dataset.toggleUser), toggle.dataset.active === 'true', toggle); return; }
+            const remove = e.target.closest('[data-delete-user]');
+            if (remove) deleteUser(Number(remove.dataset.deleteUser), remove.dataset.name);
+        });
+
+        function toggleUserStatus(userId, isActive, button) {
             const deactivating = !!isActive;
             confirmAction({
                 title: deactivating ? t('Deactivate user') : t('Activate user'),
@@ -111,6 +119,7 @@
                 okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
+                if (button) button.disabled = true;   // One request at a time
                 // The id goes in the route because the action does not bind it from a JSON body
                 fetch(`@Url.Action("QuickToggleStatus")/${userId}`, {
                     method: 'POST',
@@ -119,6 +128,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        showToast(deactivating ? t('User deactivated') : t('User activated'), 'success');
                         ListNav.reload();
                     } else {
                         showToast(t('Error updating user status: {0}', data.message || t('Unknown error')), 'error');
@@ -127,7 +137,8 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showToast(t('Error updating user status'), 'error');
-                });
+                })
+                .finally(() => { if (button) button.disabled = false; });
             });
         }
 

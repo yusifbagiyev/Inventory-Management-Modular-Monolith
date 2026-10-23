@@ -44,7 +44,7 @@
         }
         @if (canDelete && !Model.IsCompleted)
         {
-            <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)">
+            <button type="button" class="ip-btn ip-btn-danger-ghost" data-delete-route="@Model.Id">
                 <i class="fa-solid fa-trash-can"></i><span>@L["Delete"]</span>
             </button>
         }
@@ -62,7 +62,7 @@
         }
         @if (canComplete && !Model.IsCompleted)
         {
-            <button type="button" class="ip-btn ip-btn-primary" onclick="completeRoute(@Model.Id)">
+            <button type="button" class="ip-btn ip-btn-primary" data-complete-route="@Model.Id">
                 <span>@L["Complete"]</span><i class="fa-solid fa-check"></i>
             </button>
         }
@@ -184,7 +184,7 @@
         <div class="ip-form-foot d-md-none">
             @if (canDelete)
             {
-                <button type="button" class="ip-btn ip-btn-danger-ghost" onclick="deleteRoute(@Model.Id)" title="@L["Delete"]" aria-label="@L["Delete"]">
+                <button type="button" class="ip-btn ip-btn-danger-ghost" data-delete-route="@Model.Id" title="@L["Delete"]" aria-label="@L["Delete"]">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             }
@@ -194,7 +194,7 @@
             }
             @if (canComplete)
             {
-                <button type="button" class="ip-btn ip-btn-primary flex-fill" onclick="completeRoute(@Model.Id)">
+                <button type="button" class="ip-btn ip-btn-primary flex-fill" data-complete-route="@Model.Id">
                     <span>@L["Complete"]</span><i class="fa-solid fa-check"></i>
                 </button>
             }
@@ -206,6 +206,14 @@
     <script>
         // Read when asked, because live updates replace the region
         const routeSummary = () => document.getElementById('detailsRegion').dataset.summary;
+
+        // The page head's and the phone bar's Complete and Delete buttons carry the route id
+        document.addEventListener('click', function (e) {
+            const complete = e.target.closest('[data-complete-route]');
+            if (complete) { completeRoute(Number(complete.dataset.completeRoute)); return; }
+            const remove = e.target.closest('[data-delete-route]');
+            if (remove) deleteRoute(Number(remove.dataset.deleteRoute));
+        });
 
         function completeRoute(id) {
             confirmAction({

@@ -16,7 +16,13 @@
 
     public class DuplicateEntityException : Exception
     {
-        public DuplicateEntityException(string message) : base(message) { }
+        /// <summary>The form field holding the taken value, so the page can show the message under it.</summary>
+        public string? Field { get; }
+
+        public DuplicateEntityException(string message, string? field = null) : base(message)
+        {
+            Field = field;
+        }
     }
 
     public class InsufficientPermissionsException : Exception

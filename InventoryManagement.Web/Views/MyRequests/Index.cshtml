@@ -54,13 +54,12 @@
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
                             var statusLabel = L[StatusLabel(request.Status)].Value;
-                            <tr data-status="@GetStatusFilter(request.Status)" class="ip-clickable" onclick="viewDetails(@request.Id)">
+                            <tr data-status="@GetStatusFilter(request.Status)" class="ip-clickable" data-request-id="@request.Id">
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
                                         @* The title is the row's control for the keyboard and on phones, where the actions cell is hidden *@
-                                        <a class="fw-semibold request-link" href="?open=@request.Id" aria-haspopup="dialog"
-                                           onclick="event.preventDefault(); event.stopPropagation(); viewDetails(@request.Id)">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
+                                        <a class="fw-semibold request-link" href="?open=@request.Id" aria-haspopup="dialog">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
                                         @if (fields.Count > 0)
                                         {
                                             <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
@@ -113,15 +112,13 @@
                                 </td>
                                 <td class="actions text-end">
                                     <div class="actions">
-                                        <button type="button" class="ip-btn-icon" title="@L["View details"]" aria-label="@L["View details"]"
-                                                onclick="event.stopPropagation(); viewDetails(@request.Id)">
+                                        <button type="button" class="ip-btn-icon" title="@L["View details"]" aria-label="@L["View details"]">
                                             <i class="fa-regular fa-eye"></i>
                                         </button>
                                         @if (request.Status == "Pending")
                                         {
                                             <button type="button" class="ip-btn ip-btn-danger-ghost ip-btn-sm" data-cancel-id="@request.Id"
-                                                    title="@L["Cancel request"]" aria-label="@L["Cancel request"]"
-                                                    onclick="event.stopPropagation(); cancelRequest(@request.Id)">
+                                                    title="@L["Cancel request"]" aria-label="@L["Cancel request"]">
                                                 <i class="fa-solid fa-xmark"></i><span>@L["Cancel request"]</span>
                                             </button>
                                         }
@@ -228,6 +225,16 @@
                     .data('request-id', head ? head.dataset.requestId : null);
             });
         }
+
+        // A row, its title link or its view button opens the request here; the row's Cancel button only cancels
+        document.addEventListener('click', function (e) {
+            const row = e.target.closest('tr[data-request-id]');
+            if (!row) return;
+            const cancel = e.target.closest('[data-cancel-id]');
+            if (cancel) { cancelRequest(Number(cancel.dataset.cancelId)); return; }
+            if (e.target.closest('a.request-link')) e.preventDefault();
+            viewDetails(Number(row.dataset.requestId));
+        });
 
         $('#modalCancelBtn').on('click', function () {
             const requestId = $(this).data('request-id');

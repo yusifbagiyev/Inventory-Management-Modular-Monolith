@@ -58,13 +58,12 @@
                             var view = ApprovalView.From(request.RequestType, request.ActionData);
                             var fields = view.FieldNames.Select(f => L[f].Value).ToList();
                             var statusLabel = L[request.Status is "Pending" or "Rejected" or "Failed" ? request.Status : "Approved"].Value;
-                            <tr class="ip-clickable" onclick="viewDetails(@request.Id)">
+                            <tr class="ip-clickable" data-request-id="@request.Id">
                                 <td class="code ip-mono ip-muted" data-filter-value="@request.Id">#@request.Id</td>
                                 <td class="title">
                                     <div class="cell-text">
                                         @* The title is the row's control for the keyboard and on phones, where the actions cell is hidden *@
-                                        <a class="fw-semibold request-link" href="@Url.Action("Index", new { status = pendingTab ? null : Model.Tab, open = request.Id })" aria-haspopup="dialog"
-                                           onclick="event.preventDefault(); event.stopPropagation(); viewDetails(@request.Id)">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
+                                        <a class="fw-semibold request-link" href="@Url.Action("Index", new { status = pendingTab ? null : Model.Tab, open = request.Id })" aria-haspopup="dialog">@L[view.Kind]@(string.IsNullOrEmpty(view.Subject) ? "" : ": " + view.Subject)</a>
                                         @if (fields.Count > 0)
                                         {
                                             <span class="sub">@string.Join(", ", fields) · @L["{0} fields", fields.Count]</span>
@@ -104,8 +103,7 @@
                                 }
                                 <td class="actions text-end">
                                     @{ var actionLabel = pendingTab && canDecide ? L["Review and decide"].Value : L["View"].Value; }
-                                    <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" title="@actionLabel" aria-label="@actionLabel"
-                                            onclick="event.stopPropagation(); viewDetails(@request.Id)">
+                                    <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm" title="@actionLabel" aria-label="@actionLabel">
                                         <i class="@(pendingTab && canDecide ? "fa-solid fa-clipboard-check" : "fa-regular fa-eye")" aria-hidden="true"></i><span>@actionLabel</span>
                                     </button>
                                 </td>
@@ -202,6 +200,14 @@
                 $('#ownRequestNote').toggleClass('d-none', !own);
             });
         }
+
+        // A click anywhere on a request's row, its title link or its button opens it here, and the link does not navigate
+        document.addEventListener('click', function (e) {
+            const row = e.target.closest('tr[data-request-id]');
+            if (!row) return;
+            if (e.target.closest('a.request-link')) e.preventDefault();
+            viewDetails(Number(row.dataset.requestId));
+        });
 
         $('#modalRejectBtn').on('click', () => setMode('reject'));
         $('#rejectBackBtn').on('click', () => setMode('decide'));

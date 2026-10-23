@@ -281,7 +281,7 @@
                                 <div class="actions align-items-center">
                                     @if (canComplete && !route.IsCompleted)
                                     {
-                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" data-summary="@route.Summary" onclick="completeRoute(@route.Id, this.dataset.summary, this)"
+                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" data-summary="@route.Summary" data-complete-route="@route.Id"
                                                 aria-label="@L["Complete"] @route.InventoryCode">@L["Complete"]</button>
                                     }
                                     @if (canUpdate && !route.IsCompleted)
@@ -292,7 +292,7 @@
                                     }
                                     @if (canDelete && !route.IsCompleted)
                                     {
-                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-summary="@route.Summary" onclick="deleteRoute(@route.Id, this.dataset.summary)"
+                                        <button type="button" class="ip-btn-icon ip-btn-icon-danger" data-summary="@route.Summary" data-delete-route="@route.Id"
                                                 title="@L["Delete"]" aria-label="@L["Delete"] @route.InventoryCode">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
@@ -389,6 +389,14 @@
         function resetFilters() { routeFilters.reset(); }
 
         // The dialog covers the rows, so it names the route it acts on
+        // Each row's Complete and Delete buttons carry the route id and its summary for the confirmation
+        document.addEventListener('click', function (e) {
+            const complete = e.target.closest('[data-complete-route]');
+            if (complete) { completeRoute(Number(complete.dataset.completeRoute), complete.dataset.summary, complete); return; }
+            const remove = e.target.closest('[data-delete-route]');
+            if (remove) deleteRoute(Number(remove.dataset.deleteRoute), remove.dataset.summary);
+        });
+
         function completeRoute(id, summary, button) {
             confirmAction({
                 title: t('Complete route'),

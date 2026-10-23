@@ -150,6 +150,8 @@
         });
 
         function markAllAsRead() {
+            const button = document.querySelector('.ip-notif-markall');
+            if (button) button.disabled = true;   // One request at a time
             $.ajax({
                 url: '/Notifications/MarkAllAsRead',
                 type: 'POST',
@@ -161,6 +163,9 @@
                 },
                 error: function () {
                     showToast(t('Failed to mark all as read'), 'error');
+                },
+                complete: function () {
+                    if (button) button.disabled = false;
                 }
             });
         }

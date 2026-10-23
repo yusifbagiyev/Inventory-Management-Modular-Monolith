@@ -1037,6 +1037,8 @@
   "Change account": "Hesabı dəyiş",
   "If you have forgotten your password, please contact the IT department.": "Şifrənizi unutmusunuzsa, İT departamentinə müraciət edin.",
   "Notifications, {0} unread": "Bildirişlər, {0} oxunmamış",
+  "User activated": "İstifadəçi aktiv edildi",
+  "User deactivated": "İstifadəçi deaktiv edildi",
   "Internal system": "Daxili sistem",
   "Every device, its place and its owner on one screen.": "Hər cihazın yeri və sahibi bir ekranda.",
   "Administrator": "Administrator",

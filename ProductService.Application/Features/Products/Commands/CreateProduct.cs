@@ -90,7 +90,7 @@ namespace ProductService.Application.Features.Products.Commands
                 var dto = request.ProductDto;
 
                 if (await _productRepository.GetByInventoryCodeAsync(dto.InventoryCode, cancellationToken) != null)
-                    throw new DuplicateEntityException($"Product with inventory code {dto.InventoryCode} already exists");
+                    throw new DuplicateEntityException($"Product with inventory code {dto.InventoryCode} already exists", "InventoryCode");
                 await ProductDetails.RequireActiveDepartmentAsync(_departmentRepository, dto.DepartmentId, cancellationToken);
 
                 var imageUrls = new List<string>();

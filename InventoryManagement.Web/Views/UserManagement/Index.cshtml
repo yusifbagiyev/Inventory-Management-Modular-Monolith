@@ -154,7 +154,7 @@
                                     if (!isOwn)
                                     {
                                     <button type="button" class="ip-btn-icon"
-                                            onclick="toggleUserStatus(@user.Id, @user.IsActive.ToString().ToLower())"
+                                            data-toggle-user="@user.Id" data-active="@(user.IsActive ? "true" : "false")"
                                             title="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])"
                                             aria-label="@(user.IsActive ? L["Deactivate User"] : L["Activate User"])">
                                         <i class="fa-solid @(user.IsActive ? "fa-user-slash" : "fa-user-check")"></i>
@@ -167,7 +167,7 @@
                                     if (!isOwn)
                                     {
                                     <button type="button" class="ip-btn-icon ip-btn-icon-danger"
-                                            data-name="@user.Username" onclick="deleteUser(@user.Id, this.dataset.name)"
+                                            data-name="@user.Username" data-delete-user="@user.Id"
                                             title="@L["Delete User"]" aria-label="@L["Delete User"]">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
@@ -272,8 +272,15 @@
 
         document.getElementById('searchInput').addEventListener('input', applyUserFilters);
 
-        // Razor renders the flag unquoted, so isActive is a real boolean
-        function toggleUserStatus(userId, isActive) {
+        // Each row's status and delete buttons carry the user's id, state and name
+        document.addEventListener('click', function (e) {
+            const toggle = e.target.closest('[data-toggle-user]');
+            if (toggle) { toggleUserStatus(Number(toggle.dataset.toggleUser), toggle.dataset.active === 'true', toggle); return; }
+            const remove = e.target.closest('[data-delete-user]');
+            if (remove) deleteUser(Number(remove.dataset.deleteUser), remove.dataset.name);
+        });
+
+        function toggleUserStatus(userId, isActive, button) {
             const deactivating = isActive === true;
             confirmAction({
                 title: deactivating ? t('Deactivate user') : t('Activate user'),
@@ -283,6 +290,7 @@
                 okText: deactivating ? t('Deactivate') : t('Activate'),
                 danger: deactivating
             }, function () {
+                if (button) button.disabled = true;   // One request at a time
                 $.ajax({
                     url: '@Url.Action("QuickToggleStatus")',
                     type: 'POST',
@@ -292,6 +300,7 @@
                     },
                     success: function(data) {
                         if (data.success) {
+                            showToast(deactivating ? t('User deactivated') : t('User activated'), 'success');
                             ListNav.reload();
                         } else {
                             showToast(t('Error updating user status: {0}', data.message || t('Unknown error')), 'error');
@@ -300,6 +309,9 @@
                     error: function(xhr, status, error) {
                         console.error('Error:', error);
                         showToast(t('Error updating user status'), 'error');
+                    },
+                    complete: function() {
+                        if (button) button.disabled = false;
                     }
                 });
             });

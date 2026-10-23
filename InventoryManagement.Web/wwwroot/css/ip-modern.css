@@ -266,6 +266,11 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
   .ip-login > .ip-login-head { height: 72px; padding: 0 48px; justify-content: flex-end; }
   .ip-login > .ip-login-main { padding: 24px 48px; }
 }
+/* the sign-in page's confirmation (a native dialog, as the page has no Bootstrap scripts) */
+.ip-confirm { width: min(400px, calc(100vw - 32px)); padding: 24px; border: 1px solid var(--ip-border); border-radius: var(--ip-radius-xl); background: var(--ip-surface); color: var(--ip-text-1); box-shadow: var(--ip-shadow-lg); }
+.ip-confirm::backdrop { background: var(--ip-backdrop); }
+.ip-confirm p { margin: 0 0 20px; font-weight: 600; text-wrap: pretty; }
+.ip-confirm .actions { display: flex; justify-content: flex-end; gap: 8px; }
 .ip-account-grid { grid-template-columns: 1fr; gap: 10px; }
 .ip-account { border-radius: 14px; }
 .ip-account .ip-avatar { width: 44px; height: 44px; }
