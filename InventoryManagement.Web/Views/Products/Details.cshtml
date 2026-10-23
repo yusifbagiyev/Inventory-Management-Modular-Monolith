@@ -162,8 +162,10 @@
                     <tbody>
                         @foreach (var route in transfers)
                         {
-                            <tr data-href="@Url.Action("Details", "Routes", new { id = route.Id })">
-                                <td class="date ip-num text-nowrap" data-order="@route.CreatedAt.ToString("yyyy-MM-dd HH:mm")">@route.CreatedAt.ToString("dd.MM.yyyy")<div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
+                            var routeUrl = Url.Action("Details", "Routes", new { id = route.Id });
+                            <tr data-href="@routeUrl">
+                                @* The date is the row's link, so the keyboard reaches the transfer too *@
+                                <td class="date ip-num text-nowrap" data-order="@route.CreatedAt.ToString("yyyy-MM-dd HH:mm")"><a class="text-reset" href="@routeUrl" aria-label="@L["View route"] @route.CreatedAt.ToString("dd.MM.yyyy HH:mm")">@route.CreatedAt.ToString("dd.MM.yyyy")</a><div class="sub">@route.CreatedAt.ToString("HH:mm")</div></td>
                                 <td class="meta route-from" data-filter-value="@(route.FromDepartmentName ?? "-")" data-filter-label="@(route.FromDepartmentName ?? "-")"><span class="cell-text">@(route.FromDepartmentName ?? "-")</span><div class="sub">@route.FromWorker</div></td>
                                 <td class="hide-sm ip-muted" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></td>
                                 <td class="meta route-to" data-filter-value="@route.ToDepartmentName" data-filter-label="@route.ToDepartmentName"><span class="cell-text">@route.ToDepartmentName</span><div class="sub">@route.ToWorker</div></td>

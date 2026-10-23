@@ -279,7 +279,10 @@
                         showTransferFields();
                     }
                 } catch (error) {
+                    // The server still refuses a second pending transfer, so the form stays open and says the check was skipped
                     console.error('Failed to check pending routes:', error);
+                    showWarning(t('Pending transfers could not be checked. If this product already has one, the transfer will be refused.'),
+                        null, 'fa-solid fa-triangle-exclamation');
                     showTransferFields();
                 }
             }
@@ -350,12 +353,12 @@
             }
 
             // A pending transfer is a wait, not a failure, so the banner leads to that transfer
-            function showWarning(message, pendingRouteId) {
+            function showWarning(message, pendingRouteId, icon = 'fa-regular fa-clock') {
                 const link = pendingRouteId
                     ? `<a href="/Routes/Details/${encodeURIComponent(pendingRouteId)}">${escapeHtml(t('Open the pending transfer'))}</a>`
                     : '';
                 $('#warningContainer').html(
-                    `<div class="ip-banner ip-banner-warning mt-3" role="status"><i class="fa-regular fa-clock" aria-hidden="true"></i><div>${escapeHtml(message)}</div>${link}</div>`);
+                    `<div class="ip-banner ip-banner-warning mt-3" role="status"><i class="${icon}" aria-hidden="true"></i><div>${escapeHtml(message)}</div>${link}</div>`);
             }
             function hideWarning() { $('#warningContainer').empty(); }
 

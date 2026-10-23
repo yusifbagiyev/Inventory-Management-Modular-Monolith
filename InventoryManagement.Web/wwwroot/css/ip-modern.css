@@ -167,6 +167,7 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 .ip-table button.inventory-code-display { padding: 0 2px; margin: 0 -2px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-family: var(--ip-font-num); font-weight: 600; cursor: pointer; }
 .ip-table button.inventory-code-display:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
 .ip-table tr.ip-colfilter-empty td { padding: 32px 0; } /* the column filters' "no match" row keeps its spacing over the cell padding above */
+.ip-table tbody tr.ip-colfilter-empty:hover { background: transparent; } /* a message, not a row to open */
 /* the foot closes the table card on tablet and desktop; phones keep the component layer's fixed pager bar */
 @media (min-width: 768px) {
   .ip-table-wrap + .ip-table-foot { margin-top: -1px; padding: 12px 20px; border: 1px solid var(--ip-card-border); border-top: 1px solid var(--ip-border); border-radius: 0 0 var(--ip-radius-lg) var(--ip-radius-lg); background: var(--ip-card-head); }
@@ -295,7 +296,7 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
   .ip-table td.code:has(.inventory-code-edit:not(.d-none)) { position: static; margin-top: 8px; } /* the open code editor gets its own line in the card */
   /* not cards: the empty states and the approval's change list */
   .ip-table tr.ip-empty-row, .ip-table tr.ip-colfilter-empty { background: transparent; border: 0; border-radius: 0; padding: var(--ip-space-3) 0; margin: 0; }
-  .ip-table tbody tr.ip-colfilter-empty:hover { background: transparent; }
+  .ip-table tr.ip-empty-row td, .ip-table tr.ip-colfilter-empty td { grid-column: 1 / -1; } /* the whole width, not the column beside the photo */
   .ip-table.ip-diff tbody tr { background: none; border: 0; border-bottom: 1px solid var(--ip-border); border-radius: 0; padding: 10px 6px 10px 0; margin: 0; }
   .ip-section:has(> .ip-table-wrap) { padding: 0; background: transparent; border: 0; }
   .ip-form-section { padding: 18px 16px; }

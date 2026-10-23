@@ -36,7 +36,7 @@
             @if (signedIn || !canReload)
             {
                 <a href="@(signedIn ? "/" : "/Account/Login")" class="ip-btn @(canReload ? "ip-btn-ghost" : "ip-btn-secondary")">
-                    <span>@L[signedIn ? "Go to Dashboard" : "Sign in"]</span>
+                    <span>@L[signedIn ? "Go to start page" : "Sign in"]</span>
                 </a>
             }
             @if (canReload)

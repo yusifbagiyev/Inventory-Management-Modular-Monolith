@@ -148,6 +148,8 @@
             {
                 @* The user's own permissions on top of the role's, which are shown locked *@
                 <section id="permissionsSection">
+                    @* The editor's areas are h3, so the panel names the level between them for screen readers *@
+                    <h2 class="visually-hidden">@L["Permissions"]</h2>
                     <div class="d-flex justify-content-between align-items-end gap-3 flex-wrap mb-3">
                         <p class="ip-hint mb-0">@L["Permission changes apply immediately (within 5 minutes for a signed-in user)."]</p>
                         <div class="d-flex gap-2 flex-wrap">

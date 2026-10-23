@@ -3,6 +3,8 @@
     ViewData["Title"] = "User Details";
     var fullName = $"{Model.FirstName} {Model.LastName}".Trim();
     var isOwnAccount = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == Model.Id.ToString();
+    // Admin accounts are changed by Admins only
+    var canManage = User.HasPermission("user.manage") && (User.IsInRole("Admin") || !Model.CurrentRoles.Contains("Admin"));
     string Or(string? value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
@@ -32,10 +34,9 @@
         </div>
     </div>
 
-    @* Admin accounts are changed by Admins only *@
-    @if (User.HasPermission("user.manage") && (User.IsInRole("Admin") || !Model.CurrentRoles.Contains("Admin")))
+    @if (canManage)
     {
-    <div class="ip-page-actions mb-4">
+    <div class="ip-page-actions mb-4 d-none d-md-flex">
         @* Nobody deletes or deactivates the account they are signed in with *@
         @if (!isOwnAccount)
         {
@@ -92,6 +93,28 @@
             </dl>
         </div>
     </div>
+    @if (canManage)
+    {
+        @* Phones keep the actions in the fixed bar, as the other details pages do *@
+        <div class="ip-form-foot d-md-none">
+            @if (!isOwnAccount)
+            {
+                <button type="button" class="ip-btn ip-btn-danger-ghost" title="@L["Delete"]" aria-label="@L["Delete"]" data-name="@Model.Username" data-delete-user="@Model.Id">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                var toggleLabel = Model.IsActive ? L["Deactivate User"] : L["Activate User"];
+                <button type="button" class="ip-btn ip-btn-secondary" title="@toggleLabel" aria-label="@toggleLabel" data-toggle-user="@Model.Id" data-active="@(Model.IsActive ? "true" : "false")">
+                    <i class="fa-solid @(Model.IsActive ? "fa-user-slash" : "fa-user-check")"></i>
+                </button>
+            }
+            <a href="@Url.Action("ResetPassword", new { id = Model.Id })" class="ip-btn ip-btn-secondary" title="@L["Reset Password"]" aria-label="@L["Reset Password"]">
+                <i class="fa-solid fa-key"></i>
+            </a>
+            <a href="@Url.Action("Edit", new { id = Model.Id })" class="ip-btn ip-btn-primary">
+                <span>@L["Edit"]</span><i class="fa-solid fa-pen"></i>
+            </a>
+        </div>
+    }
 </div>
 
 @* Posted after the shared confirm dialog, so the result comes back as the usual redirect and notice *@

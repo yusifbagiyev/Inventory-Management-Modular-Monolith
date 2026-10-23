@@ -23,6 +23,8 @@
     </div>
 
     <p class="ip-hint mb-3">@L["Changes are saved immediately and take effect for signed-in users within 5 minutes. Administrators hold all permissions."]</p>
+    @* The editor's areas are h3, so the page names the level between them for screen readers *@
+    <h2 class="visually-hidden">@L["Permissions"]</h2>
     <partial name="_PermissionEditor" model="Model" />
 </div>
 
