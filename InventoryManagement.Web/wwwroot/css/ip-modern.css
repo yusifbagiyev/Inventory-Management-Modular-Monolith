@@ -87,13 +87,16 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 .ip-toolbar > .ip-seg { margin-left: auto; flex: none; } /* the switch clips its buttons, so it must not shrink */
 .ip-toolbar-search { width: 420px; height: 40px; border-radius: 12px; background: var(--ip-surface); border-color: var(--ip-border); }
 @media (min-width: 768px) and (max-width: 1024px) { .ip-toolbar-search { width: 240px; } }
+/* the keyboard shortcut site.js sets on the box; gone while typing and on touch screens */
+.ip-toolbar-search[data-shortcut]::after { content: attr(data-shortcut); flex: none; margin-right: 8px; padding: 2px 6px; border: 1px solid var(--ip-border); border-radius: 6px; background: var(--ip-surface-hover); color: var(--ip-text-2); font-family: var(--ip-font-num); font-size: 11px; line-height: 16px; pointer-events: none; }
+.ip-toolbar-search:focus-within::after { display: none; }
+@media (pointer: coarse) { .ip-toolbar-search::after { display: none; } }
 .ip-seg { background: var(--ip-surface); border: 1px solid var(--ip-border); padding: 3px; border-radius: 10px; gap: 0; }
 .ip-seg > * { height: 30px; border-radius: 7px; }
 .ip-seg > .active { background: var(--ip-ink); color: var(--ip-on-ink); }
 .ip-seg.ip-seg-sm { background: var(--ip-sunken); } /* the permission editor's track, so a chosen "No" still stands out */
 .ip-btn-icon.lg { width: 40px; height: 40px; border-radius: 10px; background: var(--ip-surface); border: 1px solid var(--ip-border); }
 .ip-btn-icon.lg:hover { background: var(--ip-surface-hover); border-color: var(--ip-border-strong); }
-.ip-dot { background: var(--ip-danger-solid); }
 
 /* ---------- buttons / fields ---------- */
 .ip-btn { border-radius: 12px; justify-content: center; gap: 8px; }
@@ -160,6 +163,9 @@ h2, .ip-h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
   .ip-table th, .ip-table td, .ip-table th:first-child, .ip-table td:first-child, .ip-table th:last-child, .ip-table td:last-child { padding-left: 6px; padding-right: 6px; }
   .ip-table th { font-weight: 500; }
 }
+/* the product list's code is a button that opens its editor; it keeps the look of the plain code */
+.ip-table button.inventory-code-display { padding: 0 2px; margin: 0 -2px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-family: var(--ip-font-num); font-weight: 600; cursor: pointer; }
+.ip-table button.inventory-code-display:hover { text-decoration: underline dotted; text-underline-offset: 3px; }
 .ip-table tr.ip-colfilter-empty td { padding: 32px 0; } /* the column filters' "no match" row keeps its spacing over the cell padding above */
 /* the foot closes the table card on tablet and desktop; phones keep the component layer's fixed pager bar */
 @media (min-width: 768px) {
@@ -212,6 +218,11 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
 .ip-modal .modal-footer { background: var(--ip-surface-2); border-top: 1px solid var(--ip-border); border-bottom-left-radius: inherit; border-bottom-right-radius: inherit; }
 .ip-diff .new { background: var(--ip-accent-soft); color: var(--ip-accent-text); border-radius: 6px; padding: 3px 8px; }
 .ip-dropdown.dropdown-menu, .ip-toast.toast { border-radius: 16px; }
+/* the bell menu's head and foot rules match the rest of the cards */
+.ip-notif-menu .head { border-bottom: 1px solid var(--ip-border); }
+.ip-notif-foot { border-top: 1px solid var(--ip-border); }
+/* the busy spinner takes the button's text colour, white on the primary button */
+.ip-btn .spinner-border { color: inherit; }
 .ip-notif-item { border-radius: 0; }
 .ip-notif-icon { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border-radius: 10px; background: var(--ip-surface-hover); color: var(--ip-text-2); }
 .ip-notif-item:hover .ip-notif-icon:not(.ok):not(.bad) { background: var(--ip-surface-active); } /* the row hover uses the tile's colour */
@@ -276,6 +287,7 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
   .catalog-list td.title { padding-right: 0; } /* no code in the corner of department and category cards */
   .ip-table tbody tr:hover { background: var(--ip-card); }
   .ip-table td.code { top: 12px; right: 12px; } .ip-table td.date { right: 12px; bottom: 12px; }
+  .ip-table td.code:has(.inventory-code-edit:not(.d-none)) { position: static; margin-top: 8px; } /* the open code editor gets its own line in the card */
   /* not cards: the empty states and the approval's change list */
   .ip-table tr.ip-empty-row, .ip-table tr.ip-colfilter-empty { background: transparent; border: 0; border-radius: 0; padding: var(--ip-space-3) 0; margin: 0; }
   .ip-table tbody tr.ip-colfilter-empty:hover { background: transparent; }
@@ -283,6 +295,7 @@ a.ip-list-link[href]:first-of-type:has(.warning):hover { background: color-mix(i
   .ip-section:has(> .ip-table-wrap) { padding: 0; background: transparent; border: 0; }
   .ip-form-section { padding: 18px 16px; }
   .ip-form-foot { margin: 0; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
+  .ip-table-foot { border-top: 1px solid var(--ip-border); } /* the fixed pager bar, like the fixed action bar */
   .ip-modal .modal-content { border-radius: 20px 20px 0 0; } /* bottom sheet */
   .ip-rail-prefs .ip-seg > * { height: 38px; min-width: 44px; justify-content: center; }
 }

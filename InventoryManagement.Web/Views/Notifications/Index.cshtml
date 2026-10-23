@@ -178,35 +178,7 @@
 
     // Builds the link from the ids stored in the notification's Data
     (string Url, string Label)? Link(NotificationDto notification)
-    {
-        if (string.IsNullOrWhiteSpace(notification.Data)) return null;
-        try
-        {
-            var data = Newtonsoft.Json.Linq.JObject.Parse(notification.Data);
-            int? Id(string name) => data.GetValue(name, StringComparison.OrdinalIgnoreCase)
-                is Newtonsoft.Json.Linq.JValue { Type: Newtonsoft.Json.Linq.JTokenType.Integer } value ? (int)value : null;
-
-            if (Id("approvalRequestId") is int requestId)
-                return (((User.HasPermission("approval.view") || User.HasPermission("approval.decide")) && notification.Type == "ApprovalRequest" ? "/Approvals" : "/MyRequests") + "?open=" + requestId,
-                        L["View request #{0}", requestId].Value);
-            if (Id("routeId") is int routeId && User.HasPermission("route.view"))
-                return ($"/Routes/Details/{routeId}", L["View route"].Value);
-            // A deleted product links to the Deleted products page, or to the audit log without that permission
-            if (notification.Title == "Product Deleted" || notification.Title == L["Product Deleted"].Value)   // Stored in English, shown translated
-            {
-                if (Id("productId") is not int deletedId) return null;
-                if (User.HasPermission("product.deleted.view"))
-                    return ($"/Products/Deleted/{deletedId}", L["View deleted product"].Value);
-                return User.HasPermission("audit.view")
-                    ? ($"/Audit?entityType=Product&entityId={deletedId}", L["View in audit log"].Value)
-                    : null;
-            }
-            if (Id("productId") is int productId && User.HasPermission("product.view"))
-                return ($"/Products/Details/{productId}", L["View product"].Value);
-        }
-        catch (Newtonsoft.Json.JsonException) { }
-        return null;
-    }
+        => InventoryManagement.Web.Services.NotificationLinks.For(notification, User, L);
 
     // Same mapping as createNotificationItem in _Layout, where only approval answers use status colours
     (string Icon, string Tone) Icon(NotificationDto notification)

@@ -32,11 +32,14 @@
                 if (rail) rail.style.viewTransitionName = on ? 'ip-rail' : '';
                 if (bar) bar.style.viewTransitionName = on ? 'ip-toolbar' : '';
             }
-            window.addEventListener('pageswap', function (e) { if (e.viewTransition) name(true); });
+            // A skipped transition (a quick second click, reduced motion) rejects its promises, on the old page and the new, which would surface as uncaught errors
+            function quiet(vt) { [vt.ready, vt.finished, vt.updateCallbackDone].forEach(function (p) { if (p) p.catch(function () { }); }); }
+            window.addEventListener('pageswap', function (e) { if (e.viewTransition) { quiet(e.viewTransition); name(true); } });
             window.addEventListener('pagereveal', function (e) {
                 if (!e.viewTransition) return;
+                quiet(e.viewTransition);
                 name(true);
-                e.viewTransition.finished.finally(function () { name(false); });
+                e.viewTransition.finished.then(function () { name(false); }, function () { name(false); });
             });
             // A page restored from the back/forward cache still has the names from its swap
             window.addEventListener('pageshow', function (e) { if (e.persisted) name(false); });
@@ -267,11 +270,12 @@
                 markAllNotificationsAsRead();
             });
 
+            // A bell item about a record opens it, as on the Notifications page, once the read mark is saved or has failed
             $(document).on('click', '.ip-notif-item', function() {
                 const notificationId = $(this).data('id');
-                if (notificationId) {
-                    markNotificationAsRead(notificationId);
-                }
+                const marking = notificationId ? markNotificationAsRead(notificationId) : null;
+                const href = this.dataset.href;
+                if (href) $.when(marking).always(function () { window.location.href = href; });
             });
             // The items act as buttons, so Enter and Space work like a click
             $(document).on('keydown', '#notificationList .ip-notif-item', function(e) {
@@ -402,7 +406,7 @@
             const unreadClass = notification.isRead ? '' : 'unread';
             const [icon, tone] = notificationIcon(notification);
             return `
-                <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}" role="button" tabindex="0">
+                <div class="ip-notif-item ${unreadClass}" data-id="${escapeHtml(String(notification.id))}"${notification.link ? ` data-href="${escapeHtml(notification.link)}" role="link"` : ' role="button"'} tabindex="0">
                     <span class="unread-dot" aria-hidden="true"></span>
                     <span class="ip-notif-icon ${tone}" aria-hidden="true"><i class="fa-solid ${icon}"></i></span>
                     <div class="flex-grow-1 ip-min0">
@@ -417,7 +421,7 @@
         }
 
         function markNotificationAsRead(notificationId) {
-            $.ajax({
+            return $.ajax({
                 url: '/Notifications/MarkAsRead',
                 type: 'POST',
                 data: JSON.stringify(notificationId),
@@ -479,6 +483,9 @@
                     }
                 }
             });
+            // The dot is hidden from screen readers by the bell's own name, so the name carries the count
+            const bell = document.getElementById('notificationIcon');
+            if (bell) bell.setAttribute('aria-label', count > 0 ? t('Notifications, {0} unread', count) : t('Notifications'));
         }
 
 
@@ -496,11 +503,7 @@
             if (diffHours < 24) return t('{0}h ago', diffHours);
             if (diffDays < 30) return t('{0}d ago', diffDays);
 
-            return date.toLocaleDateString(uiLocale(), {
-                month: 'short',
-                day: 'numeric',
-                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-            });
+            return formatDate(date);   // dd.MM.yyyy, as every other date
         }
 
     </script>

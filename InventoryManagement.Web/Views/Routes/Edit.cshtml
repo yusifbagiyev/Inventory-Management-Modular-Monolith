@@ -203,8 +203,7 @@
 
                         $submitBtn.prop('disabled', false)
                             .html(originalButtonHtml);
-
-                        showToast(errorMessage || t('Failed to update route'), 'error');
+                        // AjaxHandler has already shown the error
                     }
                 });
             }

@@ -18,7 +18,7 @@
     // Null leaves the attribute out, so only the current page is announced as such
     string? Current(bool on) => on ? "page" : null;
 }
-@* The rail stays dark in both themes, and the script below restores its collapsed state before first paint *@
+@* The rail follows the page theme, and the script below restores its collapsed state before first paint *@
 <aside class="ip-rail" id="ipRail" aria-label="@L["Main menu"]">
     <div class="ip-rail-brand">
         <a class="ip-rail-home" href="/">

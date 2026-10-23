@@ -121,6 +121,10 @@
                                     {
                                         <span class="ip-badge ip-badge-danger">@L["Not working"]</span>
                                     }
+                                    @if (!product.IsActive)
+                                    {
+                                        <span class="ip-badge ip-badge-warning">@L["Not present"]</span>
+                                    }
                                 </td>
                                 <td class="actions" data-no-row-link>
                                     <div class="actions">

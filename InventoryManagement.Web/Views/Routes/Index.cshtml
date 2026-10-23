@@ -281,7 +281,7 @@
                                 <div class="actions align-items-center">
                                     @if (canComplete && !route.IsCompleted)
                                     {
-                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" data-summary="@route.Summary" onclick="completeRoute(@route.Id, this.dataset.summary)"
+                                        <button type="button" class="ip-btn ip-btn-secondary ip-btn-sm me-1" data-summary="@route.Summary" onclick="completeRoute(@route.Id, this.dataset.summary, this)"
                                                 aria-label="@L["Complete"] @route.InventoryCode">@L["Complete"]</button>
                                     }
                                     @if (canUpdate && !route.IsCompleted)
@@ -348,7 +348,7 @@
         @@media (max-width: 767.98px) {
             /* On cards the date sits beside the title, so the WhatsApp line and its Send again button get the whole width */
             #routesTable td.date { top: var(--ip-space-3); bottom: auto; }
-            #routesTable td.title { padding-right: 104px; }
+            #routesTable td.title { padding-right: 120px; } /* the date and time beside it, plus a gap */
             #routesTable .route-wa-inline { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--ip-space-2); margin-top: 0 !important; }
             /* A route with no source shows only its destination, with the arrow in front */
             #routesTable td.route-from.is-empty { display: none; }
@@ -389,13 +389,15 @@
         function resetFilters() { routeFilters.reset(); }
 
         // The dialog covers the rows, so it names the route it acts on
-        function completeRoute(id, summary) {
+        function completeRoute(id, summary, button) {
             confirmAction({
                 title: t('Complete route'),
                 detail: summary,
                 message: t('The product moves to the destination above and the route can no longer be changed. Complete it?'),
                 okText: t('Complete')
             }, function () {
+                // Busy until the answer, so a second click cannot send the transfer twice
+                if (button) button.disabled = true;
                 $.ajax({
                     url: '/Routes/Complete/' + id,
                     type: 'POST',
@@ -407,6 +409,7 @@
                         ListNav.reload();
                     },
                     error: function(xhr) {
+                        if (button) button.disabled = false;
                         const errorMsg = ErrorHandler.parseErrorMessage(xhr, t('Failed to complete route'));
                         showToast(errorMsg, 'error');
                     }

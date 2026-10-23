@@ -155,6 +155,7 @@
                 // Keeps site.js from switching the button to its spinner
                 e.stopImmediatePropagation();
                 showToast(t('Passwords do not match!'), 'error');
+                FieldErrors.show(this, { ConfirmPassword: [t('Passwords do not match!')] });
                 return false;
             }
         });

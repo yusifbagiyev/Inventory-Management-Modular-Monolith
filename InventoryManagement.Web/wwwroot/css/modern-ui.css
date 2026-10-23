@@ -1,6 +1,6 @@
 /* Restyles the Bootstrap classes of the older markup and loads after tokens.css and site.css */
 
-/* Declared on every [data-bs-theme] element because inherited values would keep the sidebar light */
+/* Declared on every [data-bs-theme] element, so a part with its own theme gets its own values */
 :root, [data-bs-theme] {
     --surface: var(--ip-surface);
     --surface-2: var(--ip-sunken);
@@ -117,7 +117,7 @@ hr { border-color: var(--line); opacity: 1; }
 .skeleton-title { height: 1rem; width: 42% !important; margin-bottom: .9rem; }
 @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
 
-/* Bootstrap variables tokens.css leaves out, on every dark element since the sidebar is always dark */
+/* Bootstrap variables tokens.css leaves out, on every dark element */
 [data-bs-theme="dark"] {
     color-scheme: dark;
     --bs-body-bg: var(--ip-surface);
@@ -164,7 +164,7 @@ body .air-datepicker-body { transition-property: opacity, transform; }
 /* Image picker from _ImageManager, where the first tile is the cover */
 .image-manager.im-dragover .ip-image-add { border-color: var(--accent); color: var(--ip-accent-text); background: var(--ip-accent-soft); }
 .im-tile { min-width: 0; }
-.im-tile .ip-image-tile img { cursor: zoom-in; }
+.im-tile .ip-image-tile img[data-im-preview] { cursor: zoom-in; }   /* saved photos open large; a just-added one does not */
 .im-tile.is-cover .ip-image-tile { border-color: var(--ip-accent); }
 .im-tile.is-cover .ctl.star { color: var(--ip-brand); }
 .im-tile:not(.is-cover) .cover-label { visibility: hidden; }

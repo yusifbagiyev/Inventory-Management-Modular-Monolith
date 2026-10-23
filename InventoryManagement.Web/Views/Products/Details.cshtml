@@ -141,7 +141,10 @@
         </div>
         @if (transfers.Count == 0)
         {
-            <p class="ip-muted py-3 mb-0">@L["This product has not been transferred yet."]</p>
+            <div class="ip-empty">
+                <span class="icon"><i class="fa-solid fa-right-left" aria-hidden="true"></i></span>
+                <div class="text">@L["This product has not been transferred yet."]</div>
+            </div>
         }
         else
         {

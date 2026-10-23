@@ -237,7 +237,7 @@
             const count = document.getElementById('userCount');
             if (count) {
                 const total = rows.length;
-                count.textContent = shown === total ? t('{0} users', total) : t('{0} of {1} users', shown, total);
+                count.textContent = shown === total ? t(total === 1 ? '{0} user' : '{0} users', total) : t('{0} of {1} users', shown, total);
             }
 
             const barFiltered = ['searchInput', 'roleFilter', 'statusFilter', 'loginFilter'].some(id => document.getElementById(id).value.trim());

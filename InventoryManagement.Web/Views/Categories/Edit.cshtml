@@ -69,35 +69,14 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/ajaxHandler.js" asp-append-version="true"></script>
     <script>
+        // The shared handler marks the fields the server rejects (a taken name) and returns to the category, as Cancel does
         $(document).ready(function() {
-            $('#categoryForm').on('submit', function(e) {
-                e.preventDefault();
-                var form = this;
-                var $btn = $(form).find('button[type="submit"]');
-                var originalText = $btn.html();
-
-                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>' + t('Saving...'));
-
-                $.ajax({
-                    url: form.action,
-                    type: form.method,
-                    data: new FormData(form),
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        showToast(t('Category updated successfully!'), 'success');
-                        setTimeout(() => window.location.href = '@Url.Action("Index")', 1500);
-                    },
-                    error: function(xhr) {
-                        $btn.prop('disabled', false).html(originalText);
-                        var error = t('Failed to update category');
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            error = xhr.responseJSON.message;
-                        }
-                        showToast(error, 'error');
-                    }
-                });
+            AjaxHandler.handleForm('#categoryForm', {
+                successMessage: t('Category updated successfully!'),
+                successRedirect: '@Url.Action("Details", new { id = Model.Id })',
+                redirectDelay: 1500
             });
         });
 

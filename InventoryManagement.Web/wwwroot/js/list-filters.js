@@ -434,6 +434,7 @@ window.ListFilters = (function () {
             more.className = 'ip-filter-more';
             more.innerHTML = '<i class="fa-solid fa-sliders" aria-hidden="true"></i><span></span><span class="count"></span>';
             more.querySelector('span').textContent = t('Filter');
+            more.setAttribute('aria-haspopup', 'dialog');
             const search = bar.querySelector(':scope > .search');
             if (search) search.after(more); else bar.prepend(more);
 
@@ -442,9 +443,10 @@ window.ListFilters = (function () {
             sheetEl.id = 'filterSheet';
             sheetEl.tabIndex = -1;
             sheetEl.setAttribute('aria-hidden', 'true');
+            sheetEl.setAttribute('aria-labelledby', 'filterSheetTitle');   // The dialog is named by its heading
             sheetEl.innerHTML =
                 '<div class="modal-dialog modal-dialog-scrollable"><div class="modal-content">' +
-                '<div class="modal-header"><h2 class="modal-title flex-grow-1"></h2>' +
+                '<div class="modal-header"><h2 class="modal-title flex-grow-1" id="filterSheetTitle"></h2>' +
                 '<button type="button" class="ip-btn ip-btn-ghost ip-btn-sm" data-filter-reset></button></div>' +
                 '<div class="modal-body"></div>' +
                 '<div class="modal-footer"><button type="button" class="ip-btn ip-btn-secondary" data-bs-dismiss="modal"></button>' +

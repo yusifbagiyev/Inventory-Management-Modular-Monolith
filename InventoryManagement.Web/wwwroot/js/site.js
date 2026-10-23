@@ -857,6 +857,21 @@ document.addEventListener('DOMContentLoaded', function () {
     form.addEventListener('submit', function (e) {
         if (!input.value.trim()) { e.preventDefault(); input.focus(); }
     });
+
+    // Ctrl+K (Cmd+K on a Mac), or "/" outside a field, jumps here; the box shows the shortcut as its hint
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    form.dataset.shortcut = mac ? '⌘K' : 'Ctrl K';
+    input.setAttribute('aria-keyshortcuts', mac ? 'Meta+K /' : 'Control+K /');
+    document.addEventListener('keydown', function (e) {
+        const key = e.key.toLowerCase();
+        const chord = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && key === 'k';
+        const slash = key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest('input, textarea, select, [contenteditable]');
+        if (!chord && !slash) return;
+        if (form.offsetParent === null || document.querySelector('.modal.show')) return;   // Phones hide the toolbar; a dialog keeps the focus
+        e.preventDefault();
+        input.focus();
+        input.select();
+    });
 });
 
 // Phone cards get header labels on cells without a role class, and plain filter bars fold away
@@ -1057,6 +1072,7 @@ document.addEventListener('click', function (e) {
 (function () {
     function syncTabs() {
         document.querySelectorAll('.ip-tab').forEach(function (tab) {
+            if (tab.getAttribute('role') === 'tab') return;   // Real tabs (Edit user) carry aria-selected from their own script
             const on = tab.classList.contains('active');
             if (tab.matches('button')) tab.setAttribute('aria-pressed', on ? 'true' : 'false');
             else if (on) tab.setAttribute('aria-current', 'page');

@@ -215,9 +215,7 @@ window.LiveUpdates = (function () {
         if (!change) return '';
         const set = NOTICES[w.label || change.entity] || NOTICES.page;
         const sentences = change.action === 'deleted' ? set.deleted : set.changed;
-        const at = update.at
-            ? new Date(update.at).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' })
-            : '';
+        const at = update.at ? formatDate(update.at, true).slice(-5) : '';   // HH:mm in every language, as the rest of the app
         const index = (update.actorName ? 1 : 0) + (at ? 2 : 0);
         return t(sentences[index], update.actorName || '', at);
     }

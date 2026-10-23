@@ -64,7 +64,8 @@
             </div>
             <div>
                 <partial name="_LanguageSwitch" />
-                <button type="button" class="ip-btn-icon lg" id="themeToggle" aria-label="@L["Toggle dark mode"]" title="@L["Dark mode"]">
+                <button type="button" class="ip-btn-icon lg" id="themeToggle" aria-label="@L["Toggle dark mode"]" title="@L["Dark mode"]"
+                        data-title-dark="@L["Dark mode"]" data-title-light="@L["Light mode"]">
                     <i class="fa-solid fa-moon"></i>
                 </button>
             </div>
@@ -201,11 +202,21 @@
                 });
             });
 
-            // The theme toggle uses the same storage key as site.js
+            // One sign-in per press: a double click would otherwise count twice toward the lockout. Back from the cache it is usable again
+            var loginForm = document.querySelector('.ip-login-form');
+            if (loginForm) {
+                var loginButton = loginForm.querySelector('button[type="submit"]');
+                loginForm.addEventListener('submit', function () { loginButton.disabled = true; });
+                window.addEventListener('pageshow', function () { loginButton.disabled = false; });
+            }
+
+            // The theme toggle uses the same storage key as site.js, and like it names the theme a press switches to
             var root = document.documentElement;
             var themeButton = document.getElementById('themeToggle');
             function syncTheme() {
-                themeButton.querySelector('i').className = root.getAttribute('data-bs-theme') === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                var dark = root.getAttribute('data-bs-theme') === 'dark';
+                themeButton.querySelector('i').className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                themeButton.title = dark ? themeButton.dataset.titleLight : themeButton.dataset.titleDark;
             }
             themeButton.addEventListener('click', function () {
                 var next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';

@@ -1,9 +1,12 @@
 using InventoryManagement.Web.Extensions;
+using InventoryManagement.Web.Localization;
 using InventoryManagement.Web.Models.DTOs;
+using InventoryManagement.Web.Services;
 using InventoryManagement.Web.Models.ViewModels;
 using InventoryManagement.Web.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using SharedServices.Identity;
 
 namespace InventoryManagement.Web.Controllers
@@ -12,11 +15,13 @@ namespace InventoryManagement.Web.Controllers
     public class NotificationsController : BaseController
     {
         private readonly INotificationService _notificationService;
+        private readonly IStringLocalizer<SharedResource> _localizer;
 
-        public NotificationsController(INotificationService notificationService, ILogger<NotificationsController> logger)
+        public NotificationsController(INotificationService notificationService, IStringLocalizer<SharedResource> localizer, ILogger<NotificationsController> logger)
             :base(logger)
         {
             _notificationService = notificationService;
+            _localizer = localizer;
         }
 
         /// <summary>Every notification type the user can receive, plus any older type still in their list.</summary>
@@ -116,7 +121,13 @@ namespace InventoryManagement.Web.Controllers
         {
             try
             {
-                return Json(await _notificationService.GetNotificationsAsync(unreadOnly: true, limit: 5));
+                // Each item carries where it leads, so the bell opens the same record as the Notifications page
+                var recent = await _notificationService.GetNotificationsAsync(unreadOnly: true, limit: 5);
+                return Json(recent.Select(n => new
+                {
+                    n.Id, n.Type, n.Title, n.Message, n.Data, n.IsRead, n.CreatedAt,
+                    Link = NotificationLinks.For(n, User, _localizer)?.Url
+                }));
             }
             catch (Exception ex)
             {

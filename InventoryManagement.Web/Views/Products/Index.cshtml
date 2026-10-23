@@ -161,7 +161,7 @@
                                 <td class="code" data-no-row-link>
                                     @if (canChangeCode)
                                     {
-                                        <span class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Double-click to change the code"]">@product.InventoryCode</span>
+                                        <button type="button" class="ip-mono inventory-code-display" data-id="@product.Id" title="@L["Click to change the code"]" aria-label="@L["Change code {0}", product.InventoryCode]">@product.InventoryCode</button>
                                         <div class="inventory-code-edit d-none" data-id="@product.Id">
                                             <div class="d-flex align-items-center gap-1">
                                                 <input type="number" class="ip-input ip-input-sm mono inventory-code-input"
@@ -315,13 +315,18 @@
             }
         }
 
-        // Double-click a code to edit it in place
-        $(document).on('dblclick', '.inventory-code-display', function() {
+        // The code is a button, so a click, a tap or Enter opens it for editing in place
+        $(document).on('click', '.inventory-code-display', function() {
             const id = $(this).data('id');
             $(this).addClass('d-none');
             $(`.inventory-code-edit[data-id="${id}"]`).removeClass('d-none');
             $(`.inventory-code-input[data-id="${id}"]`).focus().select();
         });
+
+        function closeCodeEditor(id) {
+            $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
+            $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none').trigger('focus');
+        }
 
         $(document).on('click', '.save-inventory-code', function() {
             const id = $(this).data('id');
@@ -348,8 +353,8 @@
                     'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                 },
                 success: function() {
-                    $(`.inventory-code-display[data-id="${id}"]`).text(newCode).removeClass('d-none');
-                    $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
+                    $(`.inventory-code-display[data-id="${id}"]`).text(newCode).attr('aria-label', t('Change code {0}', newCode));
+                    closeCodeEditor(id);
                     showToast(t('Inventory code updated successfully'), 'success');
                 },
                 error: function(xhr) {
@@ -363,9 +368,7 @@
         });
 
         $(document).on('click', '.cancel-inventory-code', function() {
-            const id = $(this).data('id');
-            $(`.inventory-code-display[data-id="${id}"]`).removeClass('d-none');
-            $(`.inventory-code-edit[data-id="${id}"]`).addClass('d-none');
+            closeCodeEditor($(this).data('id'));
         });
 
         $(document).on('keydown', '.inventory-code-input', function(e) {

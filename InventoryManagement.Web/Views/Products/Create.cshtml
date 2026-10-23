@@ -60,7 +60,9 @@
                 redirectDelay: 1500,
 
                 onBeforeSubmit: function() {
-                    if (isSubmitting || ProductForm.codeTaken()) return false;
+                    if (isSubmitting) return false;
+                    // A taken code blocks the save, so the field with its message gets the focus
+                    if (ProductForm.codeTaken()) { document.querySelector('[data-code-check]')?.focus(); return false; }
                     isSubmitting = true;
                     return true;
                 },

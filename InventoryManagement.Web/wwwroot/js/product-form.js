@@ -27,11 +27,14 @@ window.ProductForm = (function () {
         let timer = null;
         let lastChecked = null;
 
+        message.setAttribute('role', 'alert');   // Read out as soon as it appears
+
         function show(text) {
             taken = !!text;
             message.textContent = text || '';
             message.classList.toggle('d-none', !text);
             input.classList.toggle('is-invalid', !!text);
+            input.setAttribute('aria-invalid', text ? 'true' : 'false');
         }
 
         async function check() {
@@ -47,7 +50,7 @@ window.ProductForm = (function () {
                 if (String(code) !== String(parseInt(input.value, 10))) return;   // Input changed while waiting
                 if (response.ok) {
                     const product = await response.json();
-                    show(t('This code is already in use: {0}', product.model || product.Model || code));
+                    show(t('This code is already in use: {0}', storedName(product.model || product.Model) || code));
                 } else {
                     show('');   // 404 means free, and other errors are left to the save
                 }
